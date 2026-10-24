@@ -61,6 +61,13 @@ function solve(A,mi,pi,full){
 
 // ---------- headless smoke test (needs: npm i jsdom, installed outside the project tree) ----------
 
+// Minimal stand-in for WebAudio: every node is a permissive proxy; counts oscillator/noise starts and panners.
+function makeFakeAC(){
+ const st={starts:0,panners:0};
+ const mk=()=>{const s={};return new Proxy(function(){},{get:(t,k)=>{if(typeof k==='symbol')return undefined;if(k==='connect')return x=>x;if(k==='start')return()=>{st.starts++;};if(k==='getChannelData')return()=>new Float32Array(8);if(!(k in s))s[k]=mk();return s[k];},set:(t,k,v)=>{s[k]=v;return true;},apply:()=>mk()});};
+ function FakeAC(){this.state='running';this.currentTime=0;this.sampleRate=8000;this.destination=mk();this.listener=mk();FakeAC.last=this;}
+ Object.assign(FakeAC.prototype,{resume(){},createGain:mk,createOscillator:mk,createBiquadFilter:mk,createBufferSource:mk,createPanner(){st.panners++;return mk();},createBuffer(){return{getChannelData:()=>new Float32Array(8)};}});
+ FakeAC.st=st;return FakeAC;}
 function bootGame(JSDOM,PeerImpl){
  const html=read(),src=gameSrc(html),three=html.match(/<script>\/\* three\.js \(inlined\) \*\/([\s\S]*?)<\/script>/)[1];
  const dom=new JSDOM(html.replace(/<script[\s\S]*?<\/script>/g,''),{runScripts:'outside-only',pretendToBeVisual:true,url:'http://localhost/'});
@@ -71,6 +78,7 @@ function bootGame(JSDOM,PeerImpl){
  w.matchMedia=w.matchMedia||(()=>({matches:false,addEventListener(){},addListener(){}}));
  w.eval(three);
  w.THREE.WebGLRenderer=function(){return{capabilities:{getMaxAnisotropy:()=>1},shadowMap:{},setSize(){},setPixelRatio(){},render(){}};};
+ w.AudioContext=makeFakeAC();
  w.Peer=PeerImpl;w.__PP_TEST=true;
  try{w.eval(src);}catch(e){errs.push('LOAD '+e.stack);}
  return{w,errs,$:id=>w.document.getElementById(id),P:()=>w.__pp,room:()=>w.__pp.room};
@@ -104,6 +112,7 @@ async function smoke(){
  ok('sway peak equals spread(p) and grows with power',Math.abs(Math.abs(s(1,.35))-sp(1))<1e-9&&sp(.9)>sp(.4));
  $('solo').click();
  ok('solo room reaches lobby',await until(()=>room()&&room().phase==='lobby'));
+ ok('audio: context is created by the first click',!!P().audio);
  $('mode').value='3';$('startgame').click();
  ok('Start opens voting (tournament, 3 maps)',await until(()=>room().phase==='select'&&room().mode==='tournament'&&room().series===3));
  const maps=[0,8,0],want=[11,23,35];
@@ -136,6 +145,16 @@ async function smoke(){
    }
    P().me.str=(k===0&&m===0)?1:2;P().sink(false);
    if(k===0&&m===0)ok('hole-in-one banner appears',await until(()=>$('banner').textContent.includes('HOLE IN ONE'),4000));
+   if(k===0&&m===0){
+    const AcC=g.w.AudioContext,log=()=>g.w.__ppAudio||[];
+    await sleep(300);
+    ok('audio: stroke, sink and hole-in-one fanfare were played',['putt','sink','hio'].every(n=>log().includes(n)),log().join(','));
+    ok('audio: listener follows the camera',Math.abs(P().audio.listener.positionX.value-P().cam.position.x)<40,P().audio.listener.positionX.value+' vs '+P().cam.position.x);
+    const n0=log().length,pn0=AcC.st.panners;ok('audio: positioned sound uses a panner',P().sfx('bounce',{x:100,y:10,z:50},1)&&AcC.st.panners===pn0+1);
+    $('snd').click();const n1=log().length;ok('audio: Sound button mutes',P().muted&&$('snd').textContent==='Sound: Off'&&P().sfx('putt',null,1)===false&&log().length===n1,$('snd').textContent);
+    g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'m',bubbles:true}));
+    ok('audio: M key unmutes and sounds play again',!P().muted&&$('snd').textContent==='Sound: On'&&P().sfx('putt',null,1)===true);
+   }
    if(k<5){if(!ok(`map ${m+1} putt ${k+1}: all done -> next putt`,await until(()=>room().putt===k+1&&room().phase==='play',12000)))return finish();}
    else if(!ok(`map ${m+1}: results after putt 6`,await until(()=>room().phase==='results',12000)))return finish();
   }

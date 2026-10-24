@@ -80,7 +80,7 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <div id="netnotice" hidden></div>
 <div id="banner"></div><div id="warp"></div>
 <div id="game" hidden><div id="stage">
-<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Ball cam</button><button class="ghost" id="share">Invite</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
+<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Ball cam</button><button class="ghost" id="share">Invite</button><button class="ghost" id="snd">Sound: On</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
 <canvas id="cv" width="800" height="500"></canvas>
 <div id="ctl"><span id="hit">DRAG BACK → RELEASE</span><div id="pw"><i id="pwi"></i></div><span id="accuracy">Pull to set power</span></div><div id="guide">Short pull = precision · Long pull = power + spread · Esc = cancel · Right-drag / ← → = rotate · C = camera</div>
 <div id="inv"></div>
@@ -506,6 +506,7 @@ const CAM_SPRING={follow:35,orbit:25,hole:18,strategic:12,cinematic:8};
 const CAM_DAMP={follow:7,orbit:6,hole:5,strategic:4,cinematic:3};
 const CAM_MIN_DIST=15, CAM_MAX_DIST=300;
 const keys=new Set(),fp=new V();let freeOn=false,fyaw=0,fpit=-.5,fdrag=null;
+let AC=null,aMaster=null,aNoise=null,aMuted=false,aPrev=null;const aOthers={};
 let puttTransition=null; // {start,end,startTime,duration,camStart,camEnd,lookStart,lookEnd}
 function resize(){const w=Math.floor(cv.parentNode.clientWidth)||800;if(w!==lw){lw=w;renderer.setSize(w,Math.round(w*.625),false);cam.aspect=1.6;cam.updateProjectionMatrix();}}
 function dispOf(p){
@@ -551,6 +552,7 @@ function draw(now,dt){
   for(const {m,h} of movingMeshes){const r=movingRect(h);m.position.x=r[0]+r[2]/2;m.position.z=r[1]+r[3]/2;}
   for(const {v,particles} of vortices){const a=particles.mesh.geometry.attributes.position;for(let i=0;i<particles.count;i++){const f=(i/particles.count+t*.27)%1,r=8+f*v[2]*.6,ang=i*2.399+t*5*Math.sign(v[3]);a.setXYZ(i,v[0]+Math.cos(ang)*r,f*150,v[1]+Math.sin(ang)*r);}a.needsUpdate=true;}
   const bp=new V(me.x+o[0],me.z+R,me.y+o[1]);
+  audioTick(bp,o);
   dots.forEach(d=>d.visible=false);cone.visible=false;
   if(me.mode==='play'&&!me.moving&&charging&&ch>.015){
     swT=t;const a=shotAngle(ch,t),L=50+ch*250;
@@ -770,12 +772,83 @@ addEventListener('keydown',e=>{if(e.target.matches('input,textarea')||!me)return
 let high=true;$('quality').onclick=()=>{high=!high;renderer.setPixelRatio(high?Math.min(devicePixelRatio||1,2):1);renderer.shadowMap.enabled=high;lw=0;$('quality').textContent='Quality: '+(high?'High':'Low');};
 $('share').onclick=async()=>{if(!code){toast('Join a room from the lobby to invite friends.');return;}const url=new URL(location.href);url.hash='room='+code;try{await navigator.clipboard.writeText(location.protocol==='file:'?'Putt Pals room: '+code:url.href);toast('Invite copied. Keep the host tab open.');}catch(e){toast('Share room code: '+code);}};
 $('vw').onclick=()=>{if(freeOn){toast('Free roam: WASD fly, Q/E down/up, Shift fast, drag to look');return;}camMode=(camMode+1)%MK.length;camVel.set(0,0,0);camLookVel.set(0,0,0);$('vw').textContent='View: '+VN[camMode];toast(VN[camMode]);};
-addEventListener('keydown',e=>{if(e.target&&e.target.matches&&e.target.matches('input,textarea'))return;keys.add(e.key.toLowerCase());if(freeOn&&(e.key===' '||e.key.startsWith('Arrow')))e.preventDefault();});
+addEventListener('keydown',e=>{if(e.target&&e.target.matches&&e.target.matches('input,textarea'))return;keys.add(e.key.toLowerCase());if(freeOn&&(e.key===' '||e.key.startsWith('Arrow')))e.preventDefault();if(e.key==='m'||e.key==='M')$('snd').click();});
 addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());
 cv.addEventListener('pointerdown',e=>{if(!freeOn||(e.button!==0&&e.button!==2))return;cv.setPointerCapture(e.pointerId);fdrag={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:fyaw,pit:fpit};});
 cv.addEventListener('pointermove',e=>{if(!fdrag||fdrag.id!==e.pointerId)return;fyaw=fdrag.yaw+(e.clientX-fdrag.x)*.006;fpit=Math.max(-1.5,Math.min(1.5,fdrag.pit-(e.clientY-fdrag.y)*.006));});
 cv.addEventListener('pointerup',()=>{fdrag=null;});cv.addEventListener('pointercancel',()=>{fdrag=null;});
 cv.addEventListener('wheel',e=>{if(!freeOn)return;const k=-e.deltaY*.5,cpi=Math.cos(fpit);fp.x+=Math.cos(fyaw)*cpi*k;fp.z+=Math.sin(fyaw)*cpi*k;fp.y=Math.max(10,Math.min(900,fp.y+Math.sin(fpit)*k));},{passive:true});
+// ---------- audio: WebAudio synthesis, no files; sounds are positioned in 3D around the camera (listener) ----------
+function audioOn(){
+  if(AC)return AC;
+  const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
+  try{AC=new C();aMaster=AC.createGain();aMaster.gain.value=aMuted?0:.7;aMaster.connect(AC.destination);
+    const n=Math.floor(AC.sampleRate*.5),b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;aNoise=b;}catch(e){AC=null;}
+  return AC;
+}
+function unlockAudio(){const c=audioOn();if(c&&c.state==='suspended'&&c.resume)c.resume();}
+['pointerdown','keydown','click','touchstart'].forEach(ev=>addEventListener(ev,unlockAudio,{capture:true,passive:true}));
+try{aMuted=localStorage.getItem('pp_mute')==='1';}catch(e){}
+$('snd').textContent='Sound: '+(aMuted?'Off':'On');
+$('snd').onclick=()=>{aMuted=!aMuted;$('snd').textContent='Sound: '+(aMuted?'Off':'On');try{localStorage.setItem('pp_mute',aMuted?'1':'0');}catch(e){}if(aMaster)aMaster.gain.value=aMuted?0:.7;if(!aMuted){unlockAudio();sfx('event',null,.5);}};
+function tone(c,out,type,f0,f1,t0,dur,vol){
+  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t0);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t0+dur);
+  g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(vol,t0+.006);g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g);g.connect(out);o.start(t0);o.stop(t0+dur+.03);
+}
+function puff(c,out,type,f0,f1,t0,dur,vol){
+  const n=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();n.buffer=aNoise;f.type=type;f.frequency.setValueAtTime(f0,t0);f.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t0+dur);
+  g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+dur);n.connect(f);f.connect(g);g.connect(out);n.start(t0);n.stop(t0+dur+.03);
+}
+const SFX={
+  putt:(c,t,o)=>{tone(c,o,'sine',210,70,t,.09,.9);puff(c,o,'highpass',2500,2500,t,.04,.45);},
+  bounce:(c,t,o)=>{tone(c,o,'triangle',560+Math.random()*120,300,t,.07,.6);puff(c,o,'bandpass',1500,1500,t,.025,.3);},
+  sink:(c,t,o)=>{tone(c,o,'sine',1100,330,t,.18,.7);tone(c,o,'sine',160,60,t+.12,.25,.8);[659,784,988].forEach((f,i)=>tone(c,o,'sine',f,f,t+.28+i*.12,.35,.3));},
+  sinkover:(c,t,o)=>{tone(c,o,'triangle',262,131,t,.6,.5);tone(c,o,'triangle',196,98,t+.15,.6,.5);},
+  hio:(c,t,o)=>{[523,659,784,1047,1319].forEach((f,i)=>tone(c,o,'triangle',f,f,t+i*.09,.5,.4));puff(c,o,'highpass',6000,6000,t+.3,.5,.12);},
+  power:(c,t,o)=>{tone(c,o,'sine',523,1046,t,.25,.4);tone(c,o,'sine',784,1568,t+.1,.25,.35);},
+  event:(c,t,o)=>{tone(c,o,'sine',660,880,t,.15,.35);},
+  splash:(c,t,o)=>{puff(c,o,'lowpass',3000,300,t,.5,1);tone(c,o,'sine',300,100,t,.2,.3);},
+  teleport:(c,t,o)=>{tone(c,o,'sine',300,1500,t,.3,.4);tone(c,o,'sine',306,1520,t,.3,.3);},
+  boing:(c,t,o)=>{tone(c,o,'sine',180,700,t,.22,.6);tone(c,o,'square',180,700,t,.15,.08);}
+};
+function sfx(name,pos,v=1){
+  const c=AC,fn=SFX[name];if(!c||!fn||aMuted||c.state==='closed')return false;
+  try{
+    const g=c.createGain();g.gain.value=v;
+    if(pos&&c.createPanner){const p=c.createPanner();p.panningModel='equalpower';p.distanceModel='inverse';p.refDistance=250;p.rolloffFactor=.6;p.maxDistance=4000;
+      if(p.positionX){p.positionX.value=pos.x;p.positionY.value=pos.y;p.positionZ.value=pos.z;}else if(p.setPosition)p.setPosition(pos.x,pos.y,pos.z);
+      g.connect(p);p.connect(aMaster);}else g.connect(aMaster);
+    fn(c,c.currentTime,g);
+    if(window.__PP_TEST)(window.__ppAudio=window.__ppAudio||[]).push(name);
+    return true;
+  }catch(e){return false;}
+}
+new MutationObserver(()=>{const el=$('banner'),k=el.className;if(!/\bshow\b/.test(k))return;sfx(/\bhio\b/.test(k)?'hio':/\bpower\b/.test(k)?'power':'event',null,.9);}).observe($('banner'),{attributes:true,attributeFilter:['class']});
+function audioTick(bp,o){
+  if(!AC||!me){aPrev=null;return;}
+  const L=AC.listener;
+  if(L){const p=cam.position,d=new THREE.Vector3();cam.getWorldDirection(d);
+    if(L.positionX){L.positionX.value=p.x;L.positionY.value=p.y;L.positionZ.value=p.z;L.forwardX.value=d.x;L.forwardY.value=d.y;L.forwardZ.value=d.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0;}
+    else if(L.setPosition){L.setPosition(p.x,p.y,p.z);L.setOrientation(d.x,d.y,d.z,0,1,0);}}
+  const pr=aPrev,cur={r:activeRound,str:me.str,mode:me.mode,mv:me.moving,x:me.x,y:me.y,vx:me.vx,vy:me.vy,vz:me.vz||0};aPrev=cur;
+  if(pr&&pr.r===cur.r){
+    const jump=Math.hypot(cur.x-pr.x,cur.y-pr.y),sp=Math.hypot(cur.vx,cur.vy),psp=Math.hypot(pr.vx,pr.vy);
+    if(cur.str>pr.str)sfx('putt',bp,Math.min(1,.4+sp/820*.6));
+    else if(pr.mv&&!cur.mv&&jump>70&&cur.mode==='play')sfx('splash',bp,1);
+    else if(pr.mv&&cur.mv&&jump>70)sfx('teleport',bp,.8);
+    else if(cur.mv&&cur.vz-pr.vz>180)sfx('boing',bp,.8);
+    else if(pr.mv&&cur.mv&&psp>40&&sp>20&&(cur.vx*pr.vx+cur.vy*pr.vy)/(sp*psp)<.75)sfx('bounce',bp,Math.min(1,.3+sp/500));
+    if(cur.mode==='sunk'&&pr.mode!=='sunk')sfx(me.over?'sinkover':'sink',bp,1);
+  }
+  if(R_)for(const p of R_.peers()){
+    if(p.isMe)continue;const q=p.presence;
+    if(!q||q.n===undefined||q.h!==me.h||q.round!==cur.r){delete aOthers[p.peer];continue;}
+    const pos=new V(q.x+o[0],q.z+R,q.y+o[1]),pv=aOthers[p.peer];
+    if(pv){if(q.str>pv.str)sfx('putt',pos,.8);if(q.done&&!pv.done&&q.s&&q.s[0]!==undefined)sfx(q.s[0]>=MAXS?'sinkover':'sink',pos,.9);}
+    aOthers[p.peer]={str:q.str,done:q.done};
+  }
+}
 async function begin(multi){
   if(multi){try{const ice=JSON.parse($('ice').value||'[]');if(!Array.isArray(ice))throw Error();peerOptions=ice.length?{config:{iceServers:ice}}:{};}catch(e){alert('ICE servers must be a JSON array.');return;}}
   me=fresh($('nm').value.trim().slice(0,14)||'Player',Math.floor(Math.random()*8));me.mode='lobby';
@@ -793,6 +866,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>
