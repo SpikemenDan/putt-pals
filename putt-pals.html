@@ -236,19 +236,20 @@ function surf(hl,x,y){
   return m;
 }
 // Ball-bottom height supported by the circular lip; no distance-based capture.
-const CUP=17,DEPTH=36;
+const CUP=17,CUP_MIN=8,DEPTH=36;
+const cupOf=h=>{const c=+h.cup;return c>0?Math.max(CUP_MIN,Math.min(CUP,c)):CUP;}; // per-putt or per-map cup radius, 8..17, default 17
 function contact(h,x,y){
- const base=surf(h,x,y),top=surf(h,...h.hole),d=Math.hypot(x-h.hole[0],y-h.hole[1]);
- if(d>=CUP||Math.abs(base-top)>1)return base;
- const inset=CUP-d;
+ const C=cupOf(h),base=surf(h,x,y),top=surf(h,...h.hole),d=Math.hypot(x-h.hole[0],y-h.hole[1]);
+ if(d>=C||Math.abs(base-top)>1)return base;
+ const inset=C-d;
  return inset<R ? top+Math.sqrt(Math.max(0,R*R-inset*inset))-R : top-DEPTH;
 }
 function cupCollision(h){
- const top=surf(h,...h.hole),dx=me.x-h.hole[0],dy=me.y-h.hole[1],d=Math.hypot(dx,dy),center=me.z+R;
- if(me.arm.mag&&d>CUP&&d<90&&Math.abs(me.z-top)<5){me.vx-=dx/d*300*DT;me.vy-=dy/d*300*DT;}
- if(center<top&&d<CUP+R){
-  const limit=CUP-R;
-  if(d>limit){const nx=dx/d,ny=dy/d;me.x=h.hole[0]+nx*limit;me.y=h.hole[1]+ny*limit;const vn=me.vx*nx+me.vy*ny;if(vn>0){me.vx-=1.15*vn*nx;me.vy-=1.15*vn*ny;}} // reduced lip rebound (was 1.35)
+ const C=cupOf(h),lip=(CUP-C)/(CUP-CUP_MIN),sc=C/CUP,top=surf(h,...h.hole),dx=me.x-h.hole[0],dy=me.y-h.hole[1],d=Math.hypot(dx,dy),center=me.z+R;
+ if(me.arm.mag&&d>C&&d<90*sc&&Math.abs(me.z-top)<5){const gp=300*sc*sc;me.vx-=dx/d*gp*DT;me.vy-=dy/d*gp*DT;} // gravity pull: shorter reach and weaker for smaller cups
+ if(center<top&&d<C+R){
+  const limit=C-R;
+  if(d>limit){const nx=dx/d,ny=dy/d;me.x=h.hole[0]+nx*limit;me.y=h.hole[1]+ny*limit;const vn=me.vx*nx+me.vy*ny;if(vn>0){const e=1.15+.6*lip;me.vx-=e*vn*nx;me.vy-=e*vn*ny;}} // lip rebound 1.15 at radius 17 (was 1.35), up to 1.75 at radius 8: fast balls lip out
   // Score only after the whole ball physically drops below the putting surface.
   if(me.z+2*R<top-1.5){sink(false);return;} // adjusted sink threshold (was top-2)
  }
@@ -325,7 +326,7 @@ function step(){
     }
   }
   const slope=Math.abs(surf(hl,me.x+.2,me.y)-surf(hl,me.x-.2,me.y))+Math.abs(surf(hl,me.x,me.y+.2)-surf(hl,me.x,me.y-.2));
-  if(gnd&&slope<.015&&Math.hypot(me.x-hl.hole[0],me.y-hl.hole[1])>CUP&&Math.hypot(me.vx,me.vy)<6&&Math.abs(me.vz)<5)stop();
+  if(gnd&&slope<.015&&Math.hypot(me.x-hl.hole[0],me.y-hl.hole[1])>cupOf(hl)&&Math.hypot(me.vx,me.vy)<6&&Math.abs(me.vz)<5)stop();
 }
 function environmentAwake(h){return h.fan.some(f=>inside(f,me.x,me.y)&&me.z<80)||h.tornado.some(v=>Math.hypot(me.x-v[0],me.y-v[1])<v[2]&&me.z<130)||h.movers.some(v=>{const r=movingRect(v);return me.z<surf(h,v[0],v[1])+WT&&inside([r[0]-R,r[1]-R,r[2]+2*R,r[3]+2*R],me.x,me.y);});}
 function hazardTime(){return R_?Math.max(0,(R_.now()-R_.room().startAt)/1000):0;}
@@ -433,8 +434,8 @@ function cutCup(mesh,h,offset){
  sh.vertexShader='varying vec3 cupWorld;\n'+sh.vertexShader;
  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncupWorld=(modelMatrix*vec4(position,1.)).xyz;');
  sh.fragmentShader='varying vec3 cupWorld;uniform vec2 cupCenter;\n'+sh.fragmentShader;
- sh.fragmentShader=sh.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(distance(cupWorld.xz,cupCenter)<17.)discard;');};
- m.customProgramCacheKey=()=> 'cup-cut-v4';
+ sh.fragmentShader=sh.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(distance(cupWorld.xz,cupCenter)<'+cupOf(h).toFixed(1)+')discard;');};
+ m.customProgramCacheKey=()=> 'cup-cut-v5-'+cupOf(h);
 }
 
 function buildAll(index){
@@ -470,12 +471,12 @@ function buildAll(index){
     }
     g.traverse(m=>cutCup(m,hl,o));
     const hy=surf(hl,hl.hole[0],hl.hole[1]);
-    const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(CUP,CUP,DEPTH,64,1,true),new THREE.MeshStandardMaterial({color:0x283c35,roughness:.85,side:THREE.BackSide}));sleeve.position.set(hl.hole[0],hy-DEPTH/2,hl.hole[1]);g.add(sleeve);
-    const hm=new THREE.Mesh(new THREE.CircleGeometry(CUP,64),new THREE.MeshBasicMaterial({color:0}));hm.rotation.x=-Math.PI/2;hm.position.set(hl.hole[0],hy-DEPTH,hl.hole[1]);g.add(hm);
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(CUP+.7,.65,8,64),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.3}));rim.rotation.x=Math.PI/2;rim.position.set(hl.hole[0],hy+.2,hl.hole[1]);g.add(rim);
+    const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(cupOf(hl),cupOf(hl),DEPTH,64,1,true),new THREE.MeshStandardMaterial({color:0x283c35,roughness:.85,side:THREE.BackSide}));sleeve.position.set(hl.hole[0],hy-DEPTH/2,hl.hole[1]);g.add(sleeve);
+    const hm=new THREE.Mesh(new THREE.CircleGeometry(cupOf(hl),64),new THREE.MeshBasicMaterial({color:0}));hm.rotation.x=-Math.PI/2;hm.position.set(hl.hole[0],hy-DEPTH,hl.hole[1]);g.add(hm);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(cupOf(hl)+.7,.65,8,64),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.3}));rim.rotation.x=Math.PI/2;rim.position.set(hl.hole[0],hy+.2,hl.hole[1]);g.add(rim);
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,60,8),new THREE.MeshStandardMaterial({color:0xffffff,metalness:.5,roughness:.3}));pole.position.set(hl.hole[0],hy+30,hl.hole[1]);pole.castShadow=true;g.add(pole);
     const fm=new THREE.Mesh(new THREE.PlaneGeometry(26,16,12,6),new THREE.MeshBasicMaterial({color:0xff4fb8,side:THREE.DoubleSide}));fm.position.set(hl.hole[0]+13,hy+52,hl.hole[1]);g.add(fm);flags.push(fm);
-    (HOLES[i].putts||[]).forEach((pt,k)=>{if(k===PI_)return;const y=surf(hl,pt.hole[0],pt.hole[1]),d=new THREE.Mesh(new THREE.CircleGeometry(CUP,40),new THREE.MeshBasicMaterial({color:0x101418,transparent:true,opacity:.8}));d.rotation.x=-Math.PI/2;d.position.set(pt.hole[0],y+.5,pt.hole[1]);g.add(d);const l=label('CUP '+(k+1));l.position.set(pt.hole[0],y+34,pt.hole[1]);g.add(l);const t=label('TEE '+(k+1));t.position.set(pt.tee[0],surf(hl,pt.tee[0],pt.tee[1])+22,pt.tee[1]);g.add(t);});
+    (HOLES[i].putts||[]).forEach((pt,k)=>{if(k===PI_)return;const y=surf(hl,pt.hole[0],pt.hole[1]),d=new THREE.Mesh(new THREE.CircleGeometry(cupOf({cup:pt.cup||HOLES[i].cup}),40),new THREE.MeshBasicMaterial({color:0x101418,transparent:true,opacity:.8}));d.rotation.x=-Math.PI/2;d.position.set(pt.hole[0],y+.5,pt.hole[1]);g.add(d);const l=label('CUP '+(k+1));l.position.set(pt.hole[0],y+34,pt.hole[1]);g.add(l);const t=label('TEE '+(k+1));t.position.set(pt.tee[0],surf(hl,pt.tee[0],pt.tee[1])+22,pt.tee[1]);g.add(t);});
     qM[i]=hl.q.map(q=>{const m=box(24,24,24,powerBlockMaterial(),q[0],surf(hl,...q)+18,q[1],true);g.add(m);return m;});
     // Deterministic landscape outside the playable rails.
     for(let j=0;j<10;j++){
