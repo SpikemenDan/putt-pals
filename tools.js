@@ -25,7 +25,14 @@ const SPECS={
  'Dune Serpent':['Six sandy chambers. Sand drags the ball, so bank shots need real power.',[
   {t:[30,170],c:[198,30],w:[[0,90,110,14]],sand:[[150,70,50,60]]},{t:[30,30],c:[198,170],w:[[100,0,14,106]],sand:[[150,100,40,40]]},
   {t:[30,100],c:[198,100],w:[[70,30,16,50],[130,120,16,50]],sand:[[100,0,30,198]]},{t:[30,170],c:[198,170],w:[[104,80,18,118]],sand:[[155,115,40,45]]},
-  {t:[30,30],c:[198,170],w:[[0,86,120,14]],sand:[[155,105,45,60]]},{t:[30,170],c:[198,30],w:[[104,0,18,100]],sand:[[45,100,45,55]]}]]
+  {t:[30,30],c:[198,170],w:[[0,86,120,14]],sand:[[155,105,45,60]]},{t:[30,170],c:[198,30],w:[[104,0,18,100]],sand:[[45,100,45,55]]}]],
+ 'Frost Hollow':['Six frozen chambers. Ice keeps the ball sliding, so the walls are your brakes.',[
+  {t:[30,170],c:[198,30],w:[[96,40,16,158]],ice:[[0,100,96,98]]},
+  {t:[30,30],c:[198,170],w:[[0,86,150,14]],ice:[[150,0,78,120]],cup:15},
+  {t:[30,100],c:[198,100],w:[[98,30,32,138]],ice:[[60,0,108,198]],cup:12},
+  {t:[30,170],c:[198,170],w:[[104,60,18,138]],ice:[[0,100,100,98]]},
+  {t:[30,30],c:[198,170],w:[[0,86,120,14],[150,100,14,98]],ice:[[120,0,108,40]],cup:11},
+  {t:[30,170],c:[198,30],w:[[104,0,18,120],[150,110,14,88]],ice:[[0,100,104,98]]}]]
 };
 function arenaData(P){const W=PERIM.map(r=>r.slice()),o={sand:[],ice:[],slime:[],pit:[],pd:[],tp:[],fan:[],tornado:[]},putts=[];
  P.forEach((d,k)=>{const[ox,oy]=CELLS[k],mv=r=>[ox+r[0],oy+r[1],r[2],r[3]];
@@ -40,7 +47,9 @@ function arenaLine(name){const[desc,P]=SPECS[name],D=arenaData(P),j=JSON.stringi
  const putts=D.putts.map(p=>`{tee:${j(p.tee)},hole:${j(p.hole)},par:2${p.cup?',cup:'+p.cup:''}}`).join(',');
  return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}par:12,putts:[${putts}]}),\n`;}
 function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"'.*?\\n");
- if(!re.test(h))throw Error('map not found: '+name);h=h.replace(re,()=>arenaLine(name));fs.writeFileSync(FILE,h);
+ if(re.test(h))h=h.replace(re,()=>arenaLine(name));
+ else{const g=h.indexOf('<script id="game">'),i=h.indexOf('\n];',h.indexOf('const R=',g));if(g<0||i<0)throw Error('HOLES end not found');h=h.slice(0,i)+',\n'+arenaLine(name).slice(0,-1)+h.slice(i);} // new map: append at the end of HOLES
+ fs.writeFileSync(FILE,h);
  return[...h.matchAll(/^course\('([^']+)'/gm)].map(m=>m[1]).indexOf(name);}
 
 // ---------- headless physics ----------
