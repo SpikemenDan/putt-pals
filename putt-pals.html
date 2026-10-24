@@ -768,5 +768,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>
