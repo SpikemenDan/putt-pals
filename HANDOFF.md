@@ -7,6 +7,12 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 2. Before starting a phase: set it to `[WORKING]` in this file, show the file, and **wait for the user's confirmation**. When finished: set it to `[DONE]`, save the code files, and **ask whether to continue** to the next phase.
 3. **Credit/token safeguard:** when near limits, stop, write the exact state here (`[WORKING]` + what is saved + the next command), and output all saved files before running out.
 4. Never claim something works unless it was run. Mark untested work as untested. Patch the HTML only with exact-match scripts that assert one match per anchor, and syntax-check after every patch (section K).
+5. At the end of every phase, send ONE short commit message in the chat for the most recent phase only. Format it exactly like this, with the two labels in front:
+   ```
+   Summary: <one line in Title Case, imperative, no type prefix, e.g. "Add 4-Player Smoke Test Over a Fake Network">
+   Description: <2-4 short sentences: what changed, how it was verified, what is still untested>
+   ```
+   Do NOT store commit messages in this file.
 
 ## B. CURRENT STATE (read first)
 - **P1, P2, P3, P3b `[DONE]`. Next: P4 (waiting for the user's confirmation).** `node tools.js smoke` passes 59/59 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
