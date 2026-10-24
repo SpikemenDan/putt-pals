@@ -15,7 +15,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
    Do NOT store commit messages in this file.
 
 ## B. CURRENT STATE (read first)
-- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. P5 `[DONE]`. P6 `[DONE]`. P7 `[DONE]`. P8 `[DONE]`. P9 `[DONE]`. P10 `[DONE]`. P11 `[DONE]`. P12 `[DONE]`. P13 `[DONE]`. Next: P14 (waiting for the user's confirmation). Phase order: essentials P7 to P12 (camera, spectator, audio, UI, transition, your playtest), then level design P13 to P19 (six maps, ranking), then graphics P20 to P22, then final QA P23.** `node tools.js smoke` passes 87/87 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
+- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. P5 `[DONE]`. P6 `[DONE]`. P7 `[DONE]`. P8 `[DONE]`. P9 `[DONE]`. P10 `[DONE]`. P11 `[DONE]`. P12 `[DONE]`. P13 `[DONE]`. P14 `[DONE]`. Next: P15 (waiting for the user's confirmation). Phase order: essentials P7 to P12 (camera, spectator, audio, UI, transition, your playtest), then level design P13 to P19 (six maps, ranking), then graphics P20 to P22, then final QA P23.** `node tools.js smoke` passes 87/87 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
 - Project tree is now exactly three files: `putt-pals.html` (game, three.js + PeerJS inlined, 755 KB, works offline), `tools.js` (solver + arena generator + syntax check), `HANDOFF.md`.
 - The user's version of the HTML had unlogged changes that are now the baseline: lower ground friction (turf k 0.85, sand 3.2, platforms 0.9, plus a velocity-dependent term), sink threshold `top-1.5`. Maps 0 and 8 were re-solved under it in P2: all 12 putts pass (section O).
 - The game has never been opened in a browser by this AI; the user can run the checklist in section I.
@@ -40,7 +40,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 | P12 | `[DONE]` | **Checkpoint: your playtest of the essentials** in a browser (checklist in section I plus camera, spectator, audio, transition); the AI fixes whatever you report before level design starts | You confirm the essentials work |
 | | | **GROUP 2: LEVEL DESIGN (starter ladder of 6 maps)** | |
 | P13 | `[DONE]` | Map 1 BEGINNER — Switchback Garden: re-tune, 6 putts verified | Solver all green |
-| P14 | `[TODO]` | Map 2 EASY — Dune Serpent (sand) | Solver all green |
+| P14 | `[DONE]` | Map 2 EASY — Dune Serpent (sand) | Solver all green |
 | P15 | `[TODO]` | Map 3 MEDIUM — Frost Hollow (ice + walls), new | Solver all green |
 | P16 | `[TODO]` | Map 4 MEDIUM-HARD — Slime Springs (slime, jump pads, teleporters), new | Solver all green |
 | P17 | `[TODO]` | Map 5 HARD — Cyclone Ring (fans + tornadoes) | Solver all green |
@@ -173,6 +173,7 @@ Report anything off and the next AI fixes it before adding features.
 | this session | Workflow changed to phased tracker; HTML audit found unlogged friction/sink/lib changes |
 | reorder 2 | Phases regrouped at the user's request: essentials P7 to P12 (new P12 = your playtest checkpoint), level design P13 to P19, graphics P20 to P22, final QA P23; no code changed |
 | reorder 1 | Ranking and voting-grid restriction moved after the six maps (they need finished maps); no code changed |
+| P14 | DONE: Dune Serpent tuned as the Easy map (the user okayed making maps easier where the ladder needs it). `solve 8 --full` hole-in-one shots out of 10,800: before 194, 96, 786, 247, 181, 199 (total 1703, min 96); after 660, 519, 786, 402, 433, 808 (total 3608, min 402; target was min >= 300 and total clearly below the Beginner map's 4984). Changes in `SPECS`: putt 1 wall `[0,90,130,14]` -> `[0,90,110,14]`, sand `[140,60,60,80]` -> `[150,70,50,60]`; putt 2 wall `[100,70,14,128]` -> `[100,0,14,106]` (reaches the top wall, a bank shot is needed), sand `[130,100,80,70]` -> `[150,100,40,40]`; putt 4 wall `[104,60,18,138]` -> `[104,80,18,118]`, sand `[150,110,50,60]` -> `[155,115,40,45]`; putt 5 wall `[0,86,140,14]` -> `[0,86,120,14]`, sand `[150,100,60,80]` -> `[155,105,45,60]`; putt 6 wall `[104,0,18,120]` -> `[104,0,18,100]`, sand `[0,100,90,98]` -> `[45,100,45,55]` (the tee no longer starts in sand); putt 3 unchanged. Fast solve passes all 6 putts, smoke 87/87, smoke-multi 40/40 |
 | P13 | DONE: Switchback Garden tuned as the Beginner map. Measured with `solve 0 --full` (hole-in-one shots out of 10,800 tried; floor for this map set at 600 per putt): before 456, 935, 663, 988, 308, 907 (min 308); the two narrow putts were widened in `SPECS`: putt 1 wall `[104,0,18,128]` -> `[104,0,18,108]` (612 hits), putt 5 pond `[80,50,70,98]` -> `[90,66,60,66]` (879 hits). After: 612, 935, 663, 988, 879, 907 (min 612, total 4984 vs 4257). Layout regenerated with `tools.js arena 'Switchback Garden'`; it also writes an empty `sand:[]` (no runtime effect). Fast solve passes all 6 putts, smoke 87/87, smoke-multi 40/40. The same count is the metric for P19 ranking |
 | P12 | DONE: the user played the essentials in a browser and reported that the game works and looks good; no fixes requested |
 | P11 | DONE: the white warp flash is gone (the `#warp` element and CSS remain but nothing triggers them). New `puttTransition={startTime,duration:1500,from,to,arc,cp0,cl0}`: from putt 2 on, the ball arcs from the old cup to the new tee (smootherstep, arc height 70 + 0.18 x distance, max 200) while the camera follows from behind, pulls back and rises mid-flight, then settles; the camera eases in from its previous pose over the first 30 % (a first version snapped by 127 units, caught by the new test) and hands off to the normal camera without a jump. Input is blocked while it runs, a soft `warp` whoosh plays, reduced-motion makes it 1 ms. Test hooks `__pp.trans`, `__pp.ball`. `smoke` +5 checks (87/87): starts without the flash, ball arcs, ends in under 2.2 s, no camera step over 60 units per 40 ms sample, playable afterwards; smoke-multi 40/40. NOT proven: how it looks (speed, pull-back distance, whether 1.5 s feels right) |
@@ -193,5 +194,6 @@ Robust = also works at +-0.4 deg and +-2.5% power. Angle 0 = +x, increasing towa
 | Map | P1 | P2 | P3 | P4 | P5 | P6 |
 |---|---|---|---|---|---|---|
 | 0 Switchback Garden (after P13) | 31/.95 | 25.5/.75 | 49.5/.45 | 27.5/.45 | 40/.5 | 13/.85 |
-| 8 Dune Serpent | 42/.75 | 312.5/.75 | 0/.40 | 70.5/.95 | 58/.80 | 23.5/1.0 |
+| 8 Dune Serpent (after P14) | 42/.75 | 312.5/.75 | 0/.40 | 70.5/.95 | 58/.80 | 23.5/1.0 |
+Dune Serpent after P14 (fast solve, putts 1 to 6): 42/.7, 15.5/.8, 0/.4, 68.5/.9, 58/.7, 24.5/.8.
 Difficulty notes for P19: Dune Serpent putt 3 is a straight corridor shot (solved in 0.1 s, very wide solution set), while Dune Serpent putt 2 needed 87 s to find a robust shot (narrow). Solve time in fast mode is a rough hint of narrowness; the `--full` hit count is the real metric.
