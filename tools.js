@@ -32,7 +32,14 @@ const SPECS={
   {t:[30,100],c:[198,100],w:[[98,30,32,138]],ice:[[60,0,108,198]],cup:12},
   {t:[30,170],c:[198,170],w:[[104,60,18,138]],ice:[[0,100,100,98]]},
   {t:[30,30],c:[198,170],w:[[0,86,120,14],[150,100,14,98]],ice:[[120,0,108,40]],cup:11},
-  {t:[30,170],c:[198,30],w:[[104,0,18,120],[150,110,14,88]],ice:[[0,100,104,98]]}]]
+  {t:[30,170],c:[198,30],w:[[104,0,18,120],[150,110,14,88]],ice:[[0,100,104,98]]}]],
+ 'Slime Springs':['Six sticky chambers. Slime swallows speed, jump pads fling the ball over walls and teleporters skip the gaps.',[
+  {t:[30,170],c:[180,30],w:[[107,0,14,198],[172,66,56,14]],tp:[[70,110,160,60,0]],slime:[[122,100,106,98]],cup:8},
+  {t:[30,100],c:[200,100],w:[[152,0,18,150]],pd:[[132,100]],slime:[[24,60,100,80]]},
+  {t:[30,100],c:[205,100],w:[[80,40,16,118]],slime:[[140,0,30,198]]},
+  {t:[30,30],c:[198,170],w:[[107,0,14,150]],tp:[[60,90,160,60,1]],slime:[[130,100,98,98]],cup:14},
+  {t:[30,170],c:[198,40],w:[[100,60,14,138],[150,60,34,12]],tp:[[50,100,170,150,2]],cup:9},
+  {t:[30,30],c:[198,170],w:[[100,0,18,120],[150,110,78,14]],tp:[[60,100,130,150,2]],pd:[[170,150]],slime:[[120,60,40,40]],cup:12}]]
 };
 function arenaData(P){const W=PERIM.map(r=>r.slice()),o={sand:[],ice:[],slime:[],pit:[],pd:[],tp:[],fan:[],tornado:[]},putts=[];
  P.forEach((d,k)=>{const[ox,oy]=CELLS[k],mv=r=>[ox+r[0],oy+r[1],r[2],r[3]];
@@ -48,7 +55,7 @@ function arenaLine(name){const[desc,P]=SPECS[name],D=arenaData(P),j=JSON.stringi
  return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}par:12,putts:[${putts}]}),\n`;}
 function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"'.*?\\n");
  if(re.test(h))h=h.replace(re,()=>arenaLine(name));
- else{const g=h.indexOf('<script id="game">'),i=h.indexOf('\n];',h.indexOf('const R=',g));if(g<0||i<0)throw Error('HOLES end not found');h=h.slice(0,i)+',\n'+arenaLine(name).slice(0,-1)+h.slice(i);} // new map: append at the end of HOLES
+ else{const g=h.indexOf('<script id="game">'),i=h.indexOf('\n];',h.indexOf('const R=',g));if(g<0||i<0)throw Error('HOLES end not found');const pre=h.slice(0,i);h=pre+(pre.trimEnd().endsWith(',')?'':',')+'\n'+arenaLine(name).slice(0,-1)+h.slice(i);} // new map: append at the end of HOLES
  fs.writeFileSync(FILE,h);
  return[...h.matchAll(/^course\('([^']+)'/gm)].map(m=>m[1]).indexOf(name);}
 
@@ -259,7 +266,7 @@ async function smokeMulti(){
  return finish();
 }
 const[,,cmd,...args]=process.argv;
-if(cmd==='check'){new vm.Script(gameSrc(read()));console.log('SYNTAX_OK',(read().length/1024|0)+' KB');}
+if(cmd==='check'){new vm.Script(gameSrc(read()));const A=load(),bad=Array.from({length:A.HOLES.length},(_,i)=>i).filter(i=>!(i in A.HOLES)||!A.HOLES[i]);if(bad.length){console.log('FAIL: empty slot(s) in HOLES at index',bad.join(','),'(double comma?)');process.exit(1);}console.log('SYNTAX_OK',(read().length/1024|0)+' KB,',A.HOLES.length,'maps, no empty slots');}
 else if(cmd==='list'){const A=load();A.HOLES.forEach((h,i)=>console.log(i,h.name,A.NP(i)>1?'6 putts':'1 putt'));}
 else if(cmd==='arena'){const names=args.length?[args.join(' ')]:Object.keys(SPECS);for(const n of names)console.log(n,'-> map index',applyArena(n));}
 else if(cmd==='solve'){const full=args.includes('--full'),nums=args.filter(a=>a!=='--full').map(Number),A=load(),mi=nums[0]??0;
