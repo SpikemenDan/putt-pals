@@ -65,6 +65,25 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 @media (prefers-reduced-motion:reduce){#banner{transition:opacity .01s;transform:translate(-50%,0)}}
 @media (max-width:640px){#sb{width:170px;top:62px}#banner b{font-size:22px;letter-spacing:3px}}
 #warp{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0,#7fe3ff 38%,#0b161e 100%)}#warp.go{animation:warp 1s ease-out}@keyframes warp{0%{opacity:1}100%{opacity:0}}@media (prefers-reduced-motion:reduce){#warp.go{animation-duration:.01s}}
+
+/* P10: HUD function and phone layout */
+#info.warn{background:#c8372d!important}
+#sb .row span{min-width:48px}
+#sb .row b{min-width:0}
+#roomlabel{font-size:18px;font-weight:700;letter-spacing:1px;color:#ffca91}
+@media (max-width:640px){
+#app{padding:8px}
+.card{padding:18px;margin:12px auto;border-radius:18px}h1{font-size:28px}
+#bar,#ctl,#inv,#toast,#sb{position:static}
+#bar{display:block;margin-bottom:6px}#info{display:block;font-size:12px;letter-spacing:1px;padding:7px 10px;margin-bottom:6px}
+#bar>span:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 6px}#bar button{padding:6px 9px;font-size:12px;margin:2px}
+#ctl{margin:8px 0;padding:8px 10px}#hit{padding:8px 12px}#accuracy{min-width:0;flex:1 1 100%}
+#toast{transform:none;text-align:center;min-height:24px;margin:4px 0}
+#inv{margin:4px 0}
+#sb{width:auto;max-height:none;margin:8px 0 0}
+#banner{max-width:92vw;padding:12px 20px}#banner b{font-size:22px;letter-spacing:3px}
+#mapgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+}
 </style></head><body><div id="app">
 <div id="lobby" class="card">
 <h1>⛳ Putt Pals <span style="display:block;font-size:12px;letter-spacing:4px;color:#e6b283;margin:12px 0">PARTY CIRCUIT · 20 MAPS</span></h1>
@@ -697,7 +716,7 @@ function syncRoom(){
  if(!R_.connected()){$('netnotice').textContent='Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.';cancel();return;}
  $('waiting').hidden=r.phase!=='lobby'&&!(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt);
  $('mapselect').hidden=r.phase!=='select';$('startgame').hidden=!host||r.phase!=='lobby';$('modewrap').hidden=!host;
- $('roomlabel').textContent=code?'Room '+code+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';
+ {const np=R_.peers().filter(p=>p.presence.n).length;$('roomlabel').textContent=code?'Room '+code.toUpperCase()+' · '+np+' player'+(np===1?'':'s')+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';$('lobbyinvite').hidden=!code;}
  if(r.phase==='lobby'||r.phase==='select'){$('game').hidden=true;$('end').hidden=true;me.mode='lobby';cancel();}
  if(r.phase==='lobby'){
   const el=$('roster');el.textContent='';for(const p of R_.peers()){if(!p.presence.n)continue;el.appendChild(row(p.presence.c,p.presence.n+(p.isMe?' (you)':''),'Joined','',false));}
@@ -741,8 +760,9 @@ function tick(){
  if(!me||$('game').hidden)return;const h=H(),m=HOLES[me.h],left=Math.max(0,Math.ceil((limitOf(me.h,PI_)-(performance.now()-me.t0))/1000));
  $('info').textContent=m.name+(m.putts?' · PUTT '+(PI_+1)+'/'+m.putts.length:'')+' · PAR '+h.par+' · '+(me.mode==='spectator'?'SPECTATING':'STROKES '+me.str+' · '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'));
  const list=R_?R_.peers().filter(p=>p.presence.n&&p.presence.round===activeRound):[];for(const p of list){const q=p.presence,k=activeRound+':'+p.peer;if(q.done&&q.s[0]===1&&!hio[k]){hio[k]=1;announce(q.n,'HOLE IN ONE','hio');}}
- list.sort((a,b)=>(a.presence.s[0]??99)-(b.presence.s[0]??99));
- const sb=$('sb');sb.textContent='';sb.appendChild(row(0,'ROUND SCORECARD','','',true));for(const p of list){const q=p.presence;sb.appendChild(row(q.c,q.n+(p.isMe?' (you)':''),q.mode==='spectator'?'Spectator':q.done?'Finished':'Playing',String((+q.tot||0)+(q.s[0]??q.str))));}
+ const tt=q=>(+q.tot||0)+(q.s[0]??q.str);list.sort((a,b)=>tt(a.presence)-tt(b.presence)||String(a.presence.n).localeCompare(String(b.presence.n)));
+  $('info').classList.toggle('warn',me.mode==='play'&&left<=10);
+ const sb=$('sb');sb.textContent='';sb.appendChild(row(0,'SCOREBOARD','Putt','Total',true));for(const p of list){const q=p.presence,t=tt(q),rk=1+list.filter(o=>tt(o.presence)<t).length;sb.appendChild(row(q.c,rk+'. '+q.n+(p.isMe?' (you)':''),q.mode==='spectator'?'Watching':q.done?'✔ '+q.s[0]:String(q.str),String(t)));}
  $('conn').textContent=code?'Room '+code+' · '+list.length+' players':'Solo practice';
 }
 function buildMapCards(){for(let i=0;i<HOLES.length;i++){const h=HOLES[i],b=document.createElement('button');b.className='mapcard';b.dataset.map=i;const rects=(arr,color)=>arr.map(r=>'<rect x="'+r[0]+'" y="'+r[1]+'" width="'+r[2]+'" height="'+r[3]+'" fill="'+color+'"/>').join('');b.innerHTML='<svg viewBox="0 0 800 500" aria-hidden="true">'+rects(h.tiles,'#528864')+rects(h.pl,'#a9c78c')+rects(h.rp,'#b8a56e')+rects(h.w,'#d3b58e')+rects(h.pit,'#246e93')+h.tp.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="16" fill="#c681ff"/><circle cx="'+t[2]+'" cy="'+t[3]+'" r="16" fill="#c681ff"/>').join('')+h.tornado.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="'+t[2]+'" fill="#d5f8ff" opacity=".2"/>').join('')+'<circle cx="'+h.tee[0]+'" cy="'+h.tee[1]+'" r="12" fill="white"/><circle cx="'+h.hole[0]+'" cy="'+h.hole[1]+'" r="15" fill="#15242a"/></svg><strong>'+String(i+1).padStart(2,'0')+' · '+h.name+'</strong><small>'+h.desc+'</small><small>Par '+h.par+'</small>';b.onclick=()=>R_?.vote(i);$('mapgrid').appendChild(b);}}
@@ -857,6 +877,7 @@ async function begin(multi){
   $('go').disabled=$('solo').disabled=true;
   try{R_=multi?await peerRoom(code):soloRoom();pub(true);$('lobby').hidden=true;syncRoom();}catch(e){alert('Could not connect. Check internet / TURN settings and retry.');}finally{$('go').disabled=$('solo').disabled=false;}
 }
+{const rcIn=$('rc'),sync=()=>{$('go').disabled=!rcIn.value.trim();};rcIn.addEventListener('input',sync);sync();}
 $('go').onclick=()=>begin(true);$('solo').onclick=()=>begin(false);
 $('startgame').onclick=()=>{if(R_?.isHost()){const v=+$('mode').value;R_.setRoom({phase:'select',votes:{},deadline:0,mode:v>1?'tournament':'standard',series:v,mapNo:0,totals:{},last:null});}};
 $('playmap').onclick=()=>{if(R_?.isHost())R_.setRoom({phase:'play',round:R_.room().round+1,startAt:R_.now()+2500,roster:R_.peers().filter(p=>p.presence.n).map(p=>p.peer)});};
@@ -864,7 +885,7 @@ $('again').onclick=()=>{if(!R_?.isHost())return;const r=R_.room();if(r.mode==='t
 document.querySelectorAll('.leave').forEach(b=>b.onclick=()=>{R_?.close();location.reload();});
 buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
-$('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;
+$('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
 if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();

@@ -113,6 +113,10 @@ async function smoke(){
  $('solo').click();
  ok('solo room reaches lobby',await until(()=>room()&&room().phase==='lobby'));
  ok('audio: context is created by the first click',!!P().audio);
+ ok('lobby: Join room is enabled with the prefilled room code',!$('go').disabled);
+ ok('lobby: solo shows "Solo practice" and hides the invite button',$('roomlabel').textContent==='Solo practice'&&$('lobbyinvite').hidden,$('roomlabel').textContent);
+ {const rc=$('rc');rc.value='';rc.dispatchEvent(new g.w.Event('input'));const d0=$('go').disabled;rc.value='abcd';rc.dispatchEvent(new g.w.Event('input'));
+  ok('lobby: Join room needs a room code',d0&&!$('go').disabled);}
  $('mode').value='3';$('startgame').click();
  ok('Start opens voting (tournament, 3 maps)',await until(()=>room().phase==='select'&&room().mode==='tournament'&&room().series===3));
  const maps=[0,8,0],want=[11,23,35];
@@ -128,6 +132,15 @@ async function smoke(){
     g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'c',bubbles:true}));ok('camera: C key switches view',vw.textContent==='View: Hole view',vw.textContent);
     await sleep(350);g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'C',bubbles:true}));g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'c',bubbles:true}));await sleep(350);
     ok('camera: back on Ball cam after 3 presses total',vw.textContent==='View: Ball cam',vw.textContent);
+   }
+   if(k===0&&m===0){
+    const sbT=$('sb').textContent,rows=$('sb').children.length;
+    ok('scoreboard: header, one ranked row, Putt and Total columns',/SCOREBOARD/.test(sbT)&&/Total/.test(sbT)&&rows===2&&/^1\. /.test($('sb').children[1].textContent),sbT);
+    const lim=(()=>{const mm=/(\d+):(\d\d)$/.exec($('info').textContent);return mm?(+mm[1]*60+ +mm[2]):0;})(),saved=P().me.t0;
+    P().me.t0=performance.now()-(lim-5)*1000;await sleep(400);
+    ok('timer: HUD pill turns red in the last 10 s',$('info').classList.contains('warn'),lim+' '+$('info').textContent);
+    P().me.t0=saved;await sleep(400);
+    ok('timer: warning clears when time is restored',!$('info').classList.contains('warn'),$('info').textContent);
    }
    if(k===0&&m===0){
     const me0=P().me,old=me0.mode,key=(t,k2)=>g.w.document.body.dispatchEvent(new g.w.KeyboardEvent(t,{key:k2,bubbles:true}));
