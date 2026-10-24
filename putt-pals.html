@@ -526,7 +526,7 @@ const CAM_DAMP={follow:7,orbit:6,hole:5,strategic:4,cinematic:3};
 const CAM_MIN_DIST=15, CAM_MAX_DIST=300;
 const keys=new Set(),fp=new V();let freeOn=false,fyaw=0,fpit=-.5,fdrag=null;
 let AC=null,aMaster=null,aNoise=null,aMuted=false,aPrev=null;const aOthers={};
-let puttTransition=null; // {start,end,startTime,duration,camStart,camEnd,lookStart,lookEnd}
+let puttTransition=null; // {startTime,duration,from,to,arc}
 function resize(){const w=Math.floor(cv.parentNode.clientWidth)||800;if(w!==lw){lw=w;renderer.setSize(w,Math.round(w*.625),false);cam.aspect=1.6;cam.updateProjectionMatrix();}}
 function dispOf(p){
   const tx=+p.presence.x||0,ty=+p.presence.y||0,tz=+p.presence.z||0;
@@ -584,19 +584,18 @@ function draw(now,dt){
   const hole=H();const holePos=new V(hole.hole[0]+o[0],surf(hole,...hole.hole),hole.hole[1]+o[1]);
   const sc=bp;
 
-  // Putt transition camera fly-through
+  // Putt transition: the ball arcs from the last cup to the next tee while the camera follows, pulls back and settles
   if(puttTransition){
-    const elapsed=(performance.now()-puttTransition.startTime)/puttTransition.duration;
-    if(elapsed<1){
-      const e=elapsed*elapsed*(3-2*elapsed); // smoothstep
-      cp.lerpVectors(puttTransition.camStart,puttTransition.camEnd,e);
-      cl.lerpVectors(puttTransition.lookStart,puttTransition.lookEnd,e);
-      cam.position.copy(cp);cam.lookAt(cl);
-      sky.position.copy(cp);
-      sun.target.position.copy(sc);sun.position.set(sc.x+250,sc.y+700,sc.z+350);
-      renderer.render(scene,cam);
-      return;
-    }else{puttTransition=null;}
+    const T=puttTransition,k=Math.min(1,(performance.now()-T.startTime)/T.duration),e=k*k*k*(k*(k*6-15)+10),sn=Math.sin(Math.PI*e);
+    const pos=new V().lerpVectors(T.from,T.to,e);pos.y+=T.arc*sn;myBall.position.copy(pos);
+    const d=new V(T.to.x-T.from.x,0,T.to.z-T.from.z);if(d.length()<1)d.set(1,0,0);d.normalize();
+    cp.set(pos.x-d.x*(130+90*sn),pos.y+80+90*sn,pos.z-d.z*(130+90*sn));cl.copy(pos);
+    {const q=Math.min(1,k/.3),w=q*q*(3-2*q);if(w<1){cp.lerpVectors(T.cp0,cp,w);cl.lerpVectors(T.cl0,cl,w);}} // ease in from wherever the camera was
+    cam.position.copy(cp);cam.lookAt(cl);sky.position.copy(cp);
+    sun.target.position.copy(pos);sun.position.set(pos.x+250,pos.y+700,pos.z+350);
+    renderer.render(scene,cam);
+    if(k>=1){puttTransition=null;camInit=true;camVel.set(0,0,0);camLookVel.set(0,0,0);}
+    return;
   }
 
   // Camera mode logic
@@ -739,17 +738,12 @@ function syncRoom(){
  if(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt){$('game').hidden=true;$('end').hidden=true;$('waitstatus').textContent=HOLES[r.map].name+(NP(r.map)>1?' · putt '+((r.putt|0)+1)+'/'+NP(r.map):'')+' starts in '+Math.ceil((r.startAt-R_.now())/1000)+'…';}
  if(r.phase==='play'&&R_.now()>=r.startAt&&activeRound!==r.round){
   activeRound=r.round;const n=me.n,c=me.c,carry=r.putt>0&&me.mode!=='lobby'?(me.tot||0)+(me.s[0]??MAXS):0;me=fresh(n,c);me.tot=carry;PI_=Math.max(0,r.putt|0);me.h=r.map;if(NP(r.map)>1)announce('PUTT '+(PI_+1)+' / '+NP(r.map),HOLES[r.map].name.toUpperCase(),'event');seen={};acc=0;buildAll(r.map);camInit=false;startHole();me.t0=performance.now()-Math.max(0,R_.now()-r.startAt);if(!r.roster.includes(R_.id()))me.mode='spectator';$('waiting').hidden=true;$('game').hidden=false;$('end').hidden=true;renderInv();if(r.putt>0){
-      const w=$('warp');w.classList.remove('go');void w.offsetWidth;w.classList.add('go');
-      // Camera fly-through from old tee to new tee
-      const oldHole=H(r.map);const newHole=H(r.map); // H() uses PI_ which is already updated
-      const oldTee=oldHole.putts?oldHole.putts[r.putt-1].tee:oldHole.tee;
-      const newTee=newHole.putts?newHole.putts[r.putt].tee:newHole.tee;
-      const o=OFF(r.map);
-      const camStart=new V(oldTee[0]+o[0],surf(oldHole,...oldTee)+80,oldTee[1]+o[1]);
-      const camEnd=new V(newTee[0]+o[0],surf(newHole,...newTee)+80,newTee[1]+o[1]);
-      const lookStart=new V(oldTee[0]+o[0],surf(oldHole,...oldTee),oldTee[1]+o[1]);
-      const lookEnd=new V(newTee[0]+o[0],surf(newHole,...newTee),newTee[1]+o[1]);
-      puttTransition={start:oldTee,end:newTee,startTime:performance.now(),duration:1200,camStart,camEnd,lookStart,lookEnd};
+      const oldHole=H(r.map),newHole=oldHole,o=OFF(r.map);
+      const oh=oldHole.putts?oldHole.putts[r.putt-1].hole:oldHole.hole,nt=newHole.putts?newHole.putts[r.putt].tee:newHole.tee;
+      const from=new V(oh[0]+o[0],surf(oldHole,...oh)+R,oh[1]+o[1]),to=new V(nt[0]+o[0],surf(newHole,...nt)+R,nt[1]+o[1]);
+      const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+      sfx('warp',null,.6);
+      puttTransition={startTime:performance.now(),duration:reduce?1:1500,from,to,arc:Math.min(200,70+from.distanceTo(to)*.18),cp0:cp.clone(),cl0:cl.clone()};
     }pub(true);
  }
  if(r.phase==='play'&&host&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&(players.every(p=>p.presence.round===r.round&&p.presence.done)||R_.now()>r.startAt+limitOf(r.map,r.putt)+4000))nextPutt(r);}
@@ -772,7 +766,7 @@ function cancel(){pull=null;orbit=null;charging=false;ch=0;}
 const ray=new THREE.Raycaster();
 function planePoint(e){const r=cv.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),cam);return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-(me.z+R)),new THREE.Vector3());}
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('pointerdown',e=>{if(!me||me.mode!=='play'||me.moving||pull||!R_?.connected())return;cv.setPointerCapture(e.pointerId);if(e.button===2){orbit={x:e.clientX,y:e.clientY,az:camAz,el:camEl};return;}if(e.button!==0)return;const p=planePoint(e);if(!p)return;pull={id:e.pointerId,x:e.clientX,y:e.clientY,p};charging=true;ch=0;});
+cv.addEventListener('pointerdown',e=>{if(!me||me.mode!=='play'||me.moving||pull||puttTransition||!R_?.connected())return;cv.setPointerCapture(e.pointerId);if(e.button===2){orbit={x:e.clientX,y:e.clientY,az:camAz,el:camEl};return;}if(e.button!==0)return;const p=planePoint(e);if(!p)return;pull={id:e.pointerId,x:e.clientX,y:e.clientY,p};charging=true;ch=0;});
 cv.addEventListener('pointermove',e=>{if(orbit!==null){
   const mode=MK[camMode];
   if(['follow','orbit','strategic'].includes(mode)){
@@ -830,6 +824,7 @@ const SFX={
   event:(c,t,o)=>{tone(c,o,'sine',660,880,t,.15,.35);},
   splash:(c,t,o)=>{puff(c,o,'lowpass',3000,300,t,.5,1);tone(c,o,'sine',300,100,t,.2,.3);},
   teleport:(c,t,o)=>{tone(c,o,'sine',300,1500,t,.3,.4);tone(c,o,'sine',306,1520,t,.3,.3);},
+  warp:(c,t,o)=>{tone(c,o,'sine',200,900,t,.6,.4);tone(c,o,'sine',203,910,t,.6,.3);puff(c,o,'bandpass',800,2500,t,.6,.2);},
   boing:(c,t,o)=>{tone(c,o,'sine',180,700,t,.22,.6);tone(c,o,'square',180,700,t,.15,.08);}
 };
 function sfx(name,pos,v=1){
@@ -887,6 +882,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>

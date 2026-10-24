@@ -124,6 +124,20 @@ async function smoke(){
   g.w.document.querySelector('#mapgrid [data-map="'+maps[m]+'"]').click();
   if(!ok(`map ${m+1}: vote locks the map and play starts`,await until(()=>room().phase==='play'&&room().map===maps[m]&&room().putt===0,8000)))return finish();
   for(let k=0;k<6;k++){
+   if(k===1&&m===0){
+    const started=await until(()=>P().trans,9000);
+    ok('transition: starts at the next putt (no flash overlay)',started&&!$('warp').classList.contains('go'));
+    if(started){
+     const pts=[],ys=[],t0=Date.now();let prev=null,maxStep=0,sawMid=false;
+     while(P().trans&&Date.now()-t0<4000){const c=P().cam.position.clone(),b=P().ball.position;ys.push(b.y);if(prev)maxStep=Math.max(maxStep,c.distanceTo(prev));prev=c;await sleep(40);}
+     const dur=Date.now()-t0;
+     ok('transition: ball arcs above the floor mid-flight',Math.max(...ys)>ys[ys.length-1]+25,Math.max(...ys)+' vs '+ys[ys.length-1]);
+     ok('transition: ends within about 1.5 s',dur<2200,String(dur));
+     for(let i=0;i<8;i++){const c=P().cam.position.clone();if(prev)maxStep=Math.max(maxStep,c.distanceTo(prev));prev=c;await sleep(40);}
+     ok('transition: camera never jumps (largest step per 40 ms sample is small), including the hand-off to the normal camera',maxStep<60,maxStep.toFixed(1));
+     ok('transition: game is playable afterwards',P().me.mode==='play'&&!P().trans);
+    }
+   }
    if(!ok(`map ${m+1} putt ${k+1}: ready`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&P().now()>=r.startAt;},12000)))return finish();
    if(k===0&&m===0){
     const vw=$('vw'),seq=[];ok('camera: starts as Ball cam',vw.textContent==='View: Ball cam',vw.textContent);
