@@ -505,6 +505,7 @@ const VN=['Ball cam','Hole view','World view'],MK=['follow','hole','strategic'];
 const CAM_SPRING={follow:35,orbit:25,hole:18,strategic:12,cinematic:8};
 const CAM_DAMP={follow:7,orbit:6,hole:5,strategic:4,cinematic:3};
 const CAM_MIN_DIST=15, CAM_MAX_DIST=300;
+const keys=new Set(),fp=new V();let freeOn=false,fyaw=0,fpit=-.5,fdrag=null;
 let puttTransition=null; // {start,end,startTime,duration,camStart,camEnd,lookStart,lookEnd}
 function resize(){const w=Math.floor(cv.parentNode.clientWidth)||800;if(w!==lw){lw=w;renderer.setSize(w,Math.round(w*.625),false);cam.aspect=1.6;cam.updateProjectionMatrix();}}
 function dispOf(p){
@@ -579,9 +580,18 @@ function draw(now,dt){
 
   // Camera mode logic
   let want=new V(),look=new V();
-  const mode=MK[camMode];
-
-  if(mode==='follow'){
+  const free=!!me&&(me.mode==='wait'||me.mode==='spectator');
+  const mode=free?'free':MK[camMode];
+  if(free&&!freeOn){freeOn=true;fp.copy(cp);const d0=new V().subVectors(cl,cp).normalize();fyaw=Math.atan2(d0.z,d0.x);fpit=Math.asin(Math.max(-1,Math.min(1,d0.y)));fdrag=null;toast('Free roam: WASD fly, Q/E down/up, Shift fast, drag to look');$('vw').textContent='View: Free roam';}
+  if(!free&&freeOn){freeOn=false;fdrag=null;$('vw').textContent='View: '+VN[camMode];}
+  if(mode==='free'){
+    const spd=(keys.has('shift')?600:240)*dt,cy=Math.cos(fyaw),sy=Math.sin(fyaw),cpi=Math.cos(fpit),spi=Math.sin(fpit);
+    const f=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0),r=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),u=(keys.has('e')||keys.has(' ')?1:0)-(keys.has('q')?1:0);
+    fp.x+=(cy*cpi*f-sy*r)*spd;fp.z+=(sy*cpi*f+cy*r)*spd;fp.y+=(spi*f+u)*spd;
+    fp.x=Math.max(-300,Math.min(1100,fp.x));fp.z=Math.max(-300,Math.min(800,fp.z));fp.y=Math.max(10,Math.min(900,fp.y));
+    want.copy(fp);look.set(fp.x+cy*cpi,fp.y+spi,fp.z+sy*cpi);
+    cp.copy(want);cl.copy(look);camVel.set(0,0,0);camLookVel.set(0,0,0);camInit=true;
+  }else if(mode==='follow'){
     // Follow: behind ball, orbits with right-drag, zoomable
     const dx=Math.cos(camAz),dz=Math.sin(camAz);
     want.set(bp.x-dx*camDist*Math.cos(camEl),bp.y+camDist*Math.sin(camEl)+10,bp.z-dz*camDist*Math.cos(camEl));
@@ -759,7 +769,13 @@ addEventListener('keydown',e=>{if(e.target.matches('input,textarea')||!me)return
   else{if(e.key==='ArrowLeft')aa-=.06;if(e.key==='ArrowRight')aa+=.06;}}});
 let high=true;$('quality').onclick=()=>{high=!high;renderer.setPixelRatio(high?Math.min(devicePixelRatio||1,2):1);renderer.shadowMap.enabled=high;lw=0;$('quality').textContent='Quality: '+(high?'High':'Low');};
 $('share').onclick=async()=>{if(!code){toast('Join a room from the lobby to invite friends.');return;}const url=new URL(location.href);url.hash='room='+code;try{await navigator.clipboard.writeText(location.protocol==='file:'?'Putt Pals room: '+code:url.href);toast('Invite copied. Keep the host tab open.');}catch(e){toast('Share room code: '+code);}};
-$('vw').onclick=()=>{camMode=(camMode+1)%MK.length;camVel.set(0,0,0);camLookVel.set(0,0,0);$('vw').textContent='View: '+VN[camMode];toast(VN[camMode]);};
+$('vw').onclick=()=>{if(freeOn){toast('Free roam: WASD fly, Q/E down/up, Shift fast, drag to look');return;}camMode=(camMode+1)%MK.length;camVel.set(0,0,0);camLookVel.set(0,0,0);$('vw').textContent='View: '+VN[camMode];toast(VN[camMode]);};
+addEventListener('keydown',e=>{if(e.target&&e.target.matches&&e.target.matches('input,textarea'))return;keys.add(e.key.toLowerCase());if(freeOn&&(e.key===' '||e.key.startsWith('Arrow')))e.preventDefault();});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());
+cv.addEventListener('pointerdown',e=>{if(!freeOn||(e.button!==0&&e.button!==2))return;cv.setPointerCapture(e.pointerId);fdrag={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:fyaw,pit:fpit};});
+cv.addEventListener('pointermove',e=>{if(!fdrag||fdrag.id!==e.pointerId)return;fyaw=fdrag.yaw+(e.clientX-fdrag.x)*.006;fpit=Math.max(-1.5,Math.min(1.5,fdrag.pit-(e.clientY-fdrag.y)*.006));});
+cv.addEventListener('pointerup',()=>{fdrag=null;});cv.addEventListener('pointercancel',()=>{fdrag=null;});
+cv.addEventListener('wheel',e=>{if(!freeOn)return;const k=-e.deltaY*.5,cpi=Math.cos(fpit);fp.x+=Math.cos(fyaw)*cpi*k;fp.z+=Math.sin(fyaw)*cpi*k;fp.y=Math.max(10,Math.min(900,fp.y+Math.sin(fpit)*k));},{passive:true});
 async function begin(multi){
   if(multi){try{const ice=JSON.parse($('ice').value||'[]');if(!Array.isArray(ice))throw Error();peerOptions=ice.length?{config:{iceServers:ice}}:{};}catch(e){alert('ICE servers must be a JSON array.');return;}}
   me=fresh($('nm').value.trim().slice(0,14)||'Player',Math.floor(Math.random()*8));me.mode='lobby';
@@ -777,6 +793,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>

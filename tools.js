@@ -120,6 +120,20 @@ async function smoke(){
     await sleep(350);g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'C',bubbles:true}));g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'c',bubbles:true}));await sleep(350);
     ok('camera: back on Ball cam after 3 presses total',vw.textContent==='View: Ball cam',vw.textContent);
    }
+   if(k===0&&m===0){
+    const me0=P().me,old=me0.mode,key=(t,k2)=>g.w.document.body.dispatchEvent(new g.w.KeyboardEvent(t,{key:k2,bubbles:true}));
+    ok('spectator: not free-roaming while playing',!P().free);
+    me0.mode='spectator';await sleep(300);
+    ok('spectator: free roam turns on and the button says so',P().free&&$('vw').textContent==='View: Free roam',$('vw').textContent);
+    const p0=P().cam.position.clone();key('keydown','w');await sleep(400);key('keyup','w');const p1=P().cam.position.clone();
+    ok('spectator: W moves the camera',p0.distanceTo(p1)>20,String(p0.distanceTo(p1)));
+    key('keydown','e');await sleep(300);key('keyup','e');ok('spectator: E raises the camera',P().cam.position.y>p1.y+10,P().cam.position.y+' vs '+p1.y);
+    const p2=P().cam.position.clone();key('keydown','Shift');key('keydown','a');await sleep(300);key('keyup','a');key('keyup','Shift');
+    ok('spectator: A strafes (Shift is fast)',P().cam.position.distanceTo(p2)>40,String(P().cam.position.distanceTo(p2)));
+    $('vw').click();ok('spectator: View button does not leave free roam',P().free);
+    me0.mode=old;await sleep(300);
+    ok('spectator: leaving spectator mode restores the normal camera',!P().free&&/^View: (Ball cam|Hole view|World view)$/.test($('vw').textContent),$('vw').textContent);
+   }
    P().me.str=(k===0&&m===0)?1:2;P().sink(false);
    if(k===0&&m===0)ok('hole-in-one banner appears',await until(()=>$('banner').textContent.includes('HOLE IN ONE'),4000));
    if(k<5){if(!ok(`map ${m+1} putt ${k+1}: all done -> next putt`,await until(()=>room().putt===k+1&&room().phase==='play',12000)))return finish();}
