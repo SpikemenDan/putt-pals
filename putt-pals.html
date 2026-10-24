@@ -80,9 +80,9 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <div id="netnotice" hidden></div>
 <div id="banner"></div><div id="warp"></div>
 <div id="game" hidden><div id="stage">
-<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Hole view</button><button class="ghost" id="share">Invite</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
+<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Ball cam</button><button class="ghost" id="share">Invite</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
 <canvas id="cv" width="800" height="500"></canvas>
-<div id="ctl"><span id="hit">DRAG BACK → RELEASE</span><div id="pw"><i id="pwi"></i></div><span id="accuracy">Pull to set power</span></div><div id="guide">Short pull = precision · Long pull = power + spread · Esc = cancel · Right-drag / ← → = rotate</div>
+<div id="ctl"><span id="hit">DRAG BACK → RELEASE</span><div id="pw"><i id="pwi"></i></div><span id="accuracy">Pull to set power</span></div><div id="guide">Short pull = precision · Long pull = power + spread · Esc = cancel · Right-drag / ← → = rotate · C = camera</div>
 <div id="inv"></div>
 <div id="toast"></div>
 <div id="sb"></div></div>
@@ -501,7 +501,7 @@ const dots=[];for(let i=0;i<12;i++){const d=new THREE.Mesh(new THREE.SphereGeome
 let lw=0,others={};
 // Camera state
 let camMode=0, camAz=0, camEl=Math.PI/6, camDist=72, camTarget=new V(), camVel=new V(), camLookVel=new V();
-const VN=['Follow','Orbit','Hole','Strategic','Cinematic'];
+const VN=['Ball cam','Hole view','World view'],MK=['follow','hole','strategic'];
 const CAM_SPRING={follow:35,orbit:25,hole:18,strategic:12,cinematic:8};
 const CAM_DAMP={follow:7,orbit:6,hole:5,strategic:4,cinematic:3};
 const CAM_MIN_DIST=15, CAM_MAX_DIST=300;
@@ -579,7 +579,7 @@ function draw(now,dt){
 
   // Camera mode logic
   let want=new V(),look=new V();
-  const mode=VN[camMode].toLowerCase();
+  const mode=MK[camMode];
 
   if(mode==='follow'){
     // Follow: behind ball, orbits with right-drag, zoomable
@@ -595,13 +595,13 @@ function draw(now,dt){
     // Hole: locked to hole, auto-zooms to show ball→cup line
     const toBall=new V().subVectors(bp,holePos);
     const dist=toBall.length();
-    const zoom=Math.max(80,Math.min(250,dist*1.2));
-    want.copy(holePos).add(new V(0,zoom,0));
-    look.copy(holePos);
+    const hd=new V(toBall.x,0,toBall.z);if(hd.length()<1)hd.set(0,0,1);hd.normalize();
+    const back=Math.max(70,Math.min(300,dist*.7+50)),up=Math.max(60,Math.min(220,dist*.5+50));
+    want.copy(holePos).addScaledVector(hd,back);want.y+=up;
+    look.lerpVectors(holePos,bp,.3);
   }else if(mode==='strategic'){
     // Strategic: top-down with tilt, shows full chamber
-    const dx=Math.cos(camAz),dz=Math.sin(camAz);
-    want.set(cx-dx*camDist*Math.cos(camEl),camDist*Math.sin(camEl)+100,cz-dz*camDist*Math.cos(camEl));
+    want.set(cx,640,cz+340);
     look.set(cx,0,cz);
   }else{ // cinematic
     // Cinematic: auto-framing, follows ball with dramatic angles
@@ -615,7 +615,7 @@ function draw(now,dt){
   }
 
   // Camera collision avoidance (raycast from desired pos to target)
-  if(['follow','orbit','strategic'].includes(mode)){
+  if(mode==='follow'){
     const rayDir=new V().subVectors(look,want).normalize();
     const rayLen=want.distanceTo(look);
     const raycaster=new THREE.Raycaster(want.clone(),rayDir,0,rayLen);
@@ -742,7 +742,7 @@ function planePoint(e){const r=cv.getBoundingClientRect();ray.setFromCamera(new 
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('pointerdown',e=>{if(!me||me.mode!=='play'||me.moving||pull||!R_?.connected())return;cv.setPointerCapture(e.pointerId);if(e.button===2){orbit={x:e.clientX,y:e.clientY,az:camAz,el:camEl};return;}if(e.button!==0)return;const p=planePoint(e);if(!p)return;pull={id:e.pointerId,x:e.clientX,y:e.clientY,p};charging=true;ch=0;});
 cv.addEventListener('pointermove',e=>{if(orbit!==null){
-  const mode=VN[camMode].toLowerCase();
+  const mode=MK[camMode];
   if(['follow','orbit','strategic'].includes(mode)){
     camAz=orbit.az-(e.clientX-orbit.x)*0.006;
     camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,orbit.el-(e.clientY-orbit.y)*0.006));
@@ -752,14 +752,14 @@ if(!pull||pull.id!==e.pointerId)return;const p=planePoint(e);if(!p)return;const 
 cv.addEventListener('pointerup',e=>{if(R_?.connected()&&pull&&pull.id===e.pointerId&&ch>.025&&me.mode==='play'&&!me.moving)launch(shotAngle(ch,swT),ch);cancel();});
 cv.addEventListener('pointercancel',cancel);cv.addEventListener('lostpointercapture',cancel);addEventListener('blur',cancel);
 // Mouse wheel for camera zoom
-cv.addEventListener('wheel',e=>{e.preventDefault();if(!me)return;const mode=VN[camMode].toLowerCase();if(['follow','orbit','strategic'].includes(mode)){camDist=Math.max(CAM_MIN_DIST,Math.min(CAM_MAX_DIST,camDist+e.deltaY*0.15));}},{passive:false});
-addEventListener('keydown',e=>{if(e.target.matches('input,textarea')||!me)return;if(e.key==='Escape')cancel();else if(e.key>='1'&&e.key<='3')useItem(+e.key-1);else if(!charging&&me.mode==='play'&&!me.moving){
-  const mode=VN[camMode].toLowerCase();
+cv.addEventListener('wheel',e=>{e.preventDefault();if(!me)return;const mode=MK[camMode];if(['follow','orbit','strategic'].includes(mode)){camDist=Math.max(CAM_MIN_DIST,Math.min(CAM_MAX_DIST,camDist+e.deltaY*0.15));}},{passive:false});
+addEventListener('keydown',e=>{if(e.target.matches('input,textarea')||!me)return;if(e.key==='c'||e.key==='C')$('vw').click();else if(e.key==='Escape')cancel();else if(e.key>='1'&&e.key<='3')useItem(+e.key-1);else if(!charging&&me.mode==='play'&&!me.moving){
+  const mode=MK[camMode];
   if(['follow','orbit'].includes(mode)){if(e.key==='ArrowLeft')camAz-=0.06;if(e.key==='ArrowRight')camAz+=0.06;if(e.key==='ArrowUp')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl+0.06));if(e.key==='ArrowDown')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl-0.06));}
   else{if(e.key==='ArrowLeft')aa-=.06;if(e.key==='ArrowRight')aa+=.06;}}});
 let high=true;$('quality').onclick=()=>{high=!high;renderer.setPixelRatio(high?Math.min(devicePixelRatio||1,2):1);renderer.shadowMap.enabled=high;lw=0;$('quality').textContent='Quality: '+(high?'High':'Low');};
 $('share').onclick=async()=>{if(!code){toast('Join a room from the lobby to invite friends.');return;}const url=new URL(location.href);url.hash='room='+code;try{await navigator.clipboard.writeText(location.protocol==='file:'?'Putt Pals room: '+code:url.href);toast('Invite copied. Keep the host tab open.');}catch(e){toast('Share room code: '+code);}};
-$('vw').onclick=()=>{camMode=(camMode+1)%5;$('vw').textContent='View: '+VN[camMode];};
+$('vw').onclick=()=>{camMode=(camMode+1)%MK.length;camVel.set(0,0,0);camLookVel.set(0,0,0);$('vw').textContent='View: '+VN[camMode];toast(VN[camMode]);};
 async function begin(multi){
   if(multi){try{const ice=JSON.parse($('ice').value||'[]');if(!Array.isArray(ice))throw Error();peerOptions=ice.length?{config:{iceServers:ice}}:{};}catch(e){alert('ICE servers must be a JSON array.');return;}}
   me=fresh($('nm').value.trim().slice(0,14)||'Player',Math.floor(Math.random()*8));me.mode='lobby';

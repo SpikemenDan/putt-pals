@@ -112,6 +112,14 @@ async function smoke(){
   if(!ok(`map ${m+1}: vote locks the map and play starts`,await until(()=>room().phase==='play'&&room().map===maps[m]&&room().putt===0,8000)))return finish();
   for(let k=0;k<6;k++){
    if(!ok(`map ${m+1} putt ${k+1}: ready`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&P().now()>=r.startAt;},12000)))return finish();
+   if(k===0&&m===0){
+    const vw=$('vw'),seq=[];ok('camera: starts as Ball cam',vw.textContent==='View: Ball cam',vw.textContent);
+    for(let i=0;i<3;i++){vw.click();seq.push(vw.textContent);await sleep(350);}
+    ok('camera: button cycles Hole view, World view, Ball cam',seq.join('|')==='View: Hole view|View: World view|View: Ball cam',seq.join('|'));
+    g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'c',bubbles:true}));ok('camera: C key switches view',vw.textContent==='View: Hole view',vw.textContent);
+    await sleep(350);g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'C',bubbles:true}));g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:'c',bubbles:true}));await sleep(350);
+    ok('camera: back on Ball cam after 3 presses total',vw.textContent==='View: Ball cam',vw.textContent);
+   }
    P().me.str=(k===0&&m===0)?1:2;P().sink(false);
    if(k===0&&m===0)ok('hole-in-one banner appears',await until(()=>$('banner').textContent.includes('HOLE IN ONE'),4000));
    if(k<5){if(!ok(`map ${m+1} putt ${k+1}: all done -> next putt`,await until(()=>room().putt===k+1&&room().phase==='play',12000)))return finish();}

@@ -15,7 +15,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
    Do NOT store commit messages in this file.
 
 ## B. CURRENT STATE (read first)
-- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. P5 `[DONE]`. P6 `[DONE]`. Next: P7 (waiting for the user's confirmation). Phase order: essentials P7 to P12 (camera, spectator, audio, UI, transition, your playtest), then level design P13 to P19 (six maps, ranking), then graphics P20 to P22, then final QA P23.** `node tools.js smoke` passes 59/59 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
+- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. P5 `[DONE]`. P6 `[DONE]`. P7 `[DONE]`. Next: P8 (waiting for the user's confirmation). Phase order: essentials P7 to P12 (camera, spectator, audio, UI, transition, your playtest), then level design P13 to P19 (six maps, ranking), then graphics P20 to P22, then final QA P23.** `node tools.js smoke` passes 63/63 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
 - Project tree is now exactly three files: `putt-pals.html` (game, three.js + PeerJS inlined, 755 KB, works offline), `tools.js` (solver + arena generator + syntax check), `HANDOFF.md`.
 - The user's version of the HTML had unlogged changes that are now the baseline: lower ground friction (turf k 0.85, sand 3.2, platforms 0.9, plus a velocity-dependent term), sink threshold `top-1.5`. Maps 0 and 8 were re-solved under it in P2: all 12 putts pass (section O).
 - The game has never been opened in a browser by this AI; the user can run the checklist in section I.
@@ -32,7 +32,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 | P5 | `[DONE]` | Cup tuning: per-map cup radius (smaller on harder maps), lip-out and gravity pull | `cup` field per map; solver honors it |
 | P6 | `[DONE]` | Jump pads, teleporters, fans, tornadoes usable inside chambers; solver models them (time-frozen) | One test chamber per mechanic verified |
 | | | **GROUP 1: ESSENTIALS (gameplay, controls, sound, UI function)** | |
-| P7 | `[TODO]` | Camera: ball cam, hole view, world view, eased switching | Toggle works (jsdom: no errors; look and feel is for your playtest) |
+| P7 | `[DONE]` | Camera: ball cam, hole view, world view, eased switching | Toggle works (jsdom: no errors; look and feel is for your playtest) |
 | P8 | `[TODO]` | Free-roam spectator mode | Finished players can fly |
 | P9 | `[TODO]` | Spatial audio via WebAudio synthesis (no audio files) | Putt, bounce, sink, banner sounds |
 | P10 | `[TODO]` | HUD, lobby and room-code UI: function, layout, live scoreboard final pass (frosted-glass look is polished in the graphics group) | UI works on desktop and phone width |
@@ -158,7 +158,8 @@ Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) hor
 2. Drag back: arrow is hidden at rest, appears only while dragging, sways left-right as a smooth sine, and releasing as it crosses center shoots perfectly straight.
 3. Switchback Garden: the other five cups show as dark discs with CUP/TEE labels; holing out plays a bright warp flash and the new tee/cup are correct. After putt 6 the results show the winner; tournament shows standings and "Next map vote".
 4. Let a putt run out the clock (2:00 at par 2; the HUD pill counts down as m:ss): penalty toast, 8 strokes, game advances. (Tip: temporarily lower `LIMIT_BASE` in the HTML to test faster.)
-5. Two tabs (host and guest, same room code): the guest's vote counts, countdown shows on both, scores sync, guest cannot start or change anything.
+5. Press C or the View button: Ball cam, Hole view, World view cycle with a smooth move; check that Hole view shows both ball and cup and that World view shows the whole arena.
+6. Two tabs (host and guest, same room code): the guest's vote counts, countdown shows on both, scores sync, guest cannot start or change anything.
 Report anything off and the next AI fixes it before adding features.
 
 ## M. PROGRESS LOG
@@ -168,6 +169,7 @@ Report anything off and the next AI fixes it before adding features.
 | this session | Workflow changed to phased tracker; HTML audit found unlogged friction/sink/lib changes |
 | reorder 2 | Phases regrouped at the user's request: essentials P7 to P12 (new P12 = your playtest checkpoint), level design P13 to P19, graphics P20 to P22, final QA P23; no code changed |
 | reorder 1 | Ranking and voting-grid restriction moved after the six maps (they need finished maps); no code changed |
+| P7 | DONE: camera reduced to three views, `VN=['Ball cam','Hole view','World view']` with `MK=['follow','hole','strategic']` (the old Orbit and Cinematic modes are unreachable now). Ball cam = follow cam (right-drag/wheel/arrows rotate and zoom, wall collision avoidance). Hole view = raised, from the ball side of the cup, looking between cup and ball (the old straight-down view had a degenerate lookAt). World view = fixed overview of the whole 800x500 arena. Switching: `View:` button or the C key, velocities zeroed and the existing spring-damper eases the move. `tools.js smoke` gained 4 camera checks (63/63) and smoke-multi still passes (40/40). Look and feel is untested in a real browser |
 | P6 | DONE: arena generator supports `pd`, `tp`, `fan`, `tornado` (plus `ice`, `slime`, `cup`); `tools.js mechanics` 8/8 (one test chamber per mechanic, robust shot found and fails without the mechanic); HTML unchanged since P5; surfaces and cups tests re-run and pass; arena regeneration is byte-identical for Dune Serpent; solve and smoke tests not re-run because the HTML is byte-identical to the P5 build that passed them |
 | P5 | DONE: per-putt/per-map `cup` radius via `cupOf` (8..17, default 17) used by physics, solver, shader cut-out, cup meshes and ghost cups; pull and lip-out scale with the radius and are unchanged at 17; `tools.js cups` 8/8 (hits 222/164/98/40); maps 0 and 8 solutions unchanged; a temp copy with `cup:10` on putt 1 forced a different shot (57.5/.65), so the solver honors it; smoke and smoke-multi still pass |
 | P4 | DONE: `ice` and `slime` tile arrays (sim friction, rendering, `arena` SPECS keys `ice`/`slime`), `limitOf` dynamic timer (120 s x par/2, 300 s cap) with m:ss HUD; `tools.js surfaces` 8/8; solve maps 0 and 8 unchanged; smoke 59/59 and smoke-multi 40/40 still pass |
