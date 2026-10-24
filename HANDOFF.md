@@ -15,7 +15,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
    Do NOT store commit messages in this file.
 
 ## B. CURRENT STATE (read first)
-- **P1, P2, P3, P3b `[DONE]`. Next: P4 (waiting for the user's confirmation).** `node tools.js smoke` passes 59/59 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
+- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. Next: P5 (waiting for the user's confirmation).** `node tools.js smoke` passes 59/59 (solo) and `node tools.js smoke-multi` passes 40/40 (4 players).
 - Project tree is now exactly three files: `putt-pals.html` (game, three.js + PeerJS inlined, 755 KB, works offline), `tools.js` (solver + arena generator + syntax check), `HANDOFF.md`.
 - The user's version of the HTML had unlogged changes that are now the baseline: lower ground friction (turf k 0.85, sand 3.2, platforms 0.9, plus a velocity-dependent term), sink threshold `top-1.5`. Maps 0 and 8 were re-solved under it in P2: all 12 putts pass (section O).
 - The game has never been opened in a browser by this AI; the user can run the checklist in section I.
@@ -28,7 +28,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 | P2 | `[DONE]` | Re-baseline physics: re-solve maps 0 and 8 under the user's friction; fix any failing putts | Every putt reports a robust hole-in-one (met; no layout changes were needed) |
 | P3 | `[DONE]` | Headless smoke test (`tools.js smoke`, jsdom + stubbed WebGL/Peer): lobby -> vote -> 6 putts -> results -> tournament; plus user browser checklist | No runtime errors in the flow; user checklist handed over |
 | P3b | `[DONE]` | Multiplayer smoke test: 3-4 simulated players (host + guests) over a fake in-memory PeerJS; votes, putt sync, totals, a player dropping out | `tools.js smoke` covers 2+ players |
-| P4 | `[TODO]` | Surfaces + timers: ice and slime tiles, dynamic putt timer of 2+ minutes (base 120 s, scaled by par), 8-stroke penalty kept | Surfaces affect friction in sim and solver; timer shown in HUD |
+| P4 | `[DONE]` | Surfaces + timers: ice and slime tiles, dynamic putt timer of 2+ minutes (base 120 s, scaled by par), 8-stroke penalty kept | Surfaces affect friction in sim and solver; timer shown in HUD |
 | P5 | `[TODO]` | Cup tuning: per-map cup radius (smaller on harder maps), lip-out and gravity pull | `cup` field per map; solver honors it |
 | P6 | `[TODO]` | Jump pads, teleporters, fans, tornadoes usable inside chambers; solver models them (time-frozen) | One test chamber per mechanic verified |
 | P7 | `[TODO]` | Starter ladder: difficulty metric (`tools.js rank`), voting grid shows the 6 starter maps only | Ranking printed and strictly increasing |
@@ -66,17 +66,17 @@ Target tree: `putt-pals.html`, `tools.js`, `HANDOFF.md`.
 - UI/camera (frosted glass, live scoreboard, ball/hole/world cams, spectator, spatial audio) -> P17-P20.
 
 ## F. DECISIONS THE AI MADE (user can overrule at confirmation)
-1. **Timer:** the build uses 45 s per putt; your directive says 2+ minutes dynamic. P4 changes it to base 120 s scaled by par (re-solve unaffected; only the clock changes).
+1. **Timer (done in P4):** per-putt limit = 120 s x max(1, par/2), capped at 300 s (`limitOf(map,putt)`). Par 2 arena putts get 120 s, par 3 gets 180 s, par 4 or more gets 240 s (300 s cap). Never below 2 minutes. The host's advance fallback uses the same limit + 4 s. HUD shows m:ss.
 2. **Scope:** 20 maps -> 6 starter maps first. The other 14 are backlog after P22. Proposed ladder: Switchback Garden, Dune Serpent, Frost Hollow (new), Slime Springs (new), Cyclone Ring, Grand Finale. Names and themes are editable.
 3. **Shadows:** true ray tracing is not possible in this Three.js r128 raster setup; P15 uses soft shadow maps plus AO-style shading and specular highlights to look close.
 4. **Inlining the libraries** makes the HTML about 770 KB; patching still works because every patch uses exact anchors.
 5. Old solver results are discarded (see B).
 
 ## H. ARCHITECTURE REFERENCE (as implemented)
-Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) horizontal, z height; Three.js uses (x,z) horizontal, y up. Map data (from the code): `course(name,desc,tee,hole,tiles,extra)` with defaults `par:4,w:[],sand:[],q:[],pl:[],rp:[],pd:[],pit:[],fan:[],tp:[],tornado:[],movers:[]`. `tiles` = playable rectangles (everything else is void); `w` walls `[x,y,w,h]`; `sand`; `q` power-up blocks; `pl` platforms `[x,y,w,h,H]`; `rp` ramps `[x,y,w,h,dir,h0,h1]`; `pd` jump pads; `pit` water `[x,y,w,h]`; `fan` `[x,y,w,h,dx,dy,force]`; `tp` teleporter pairs `[ax,ay,bx,by,color]`; `tornado`, `movers`. Screen borders `B` are 16 px walls around the 800x500 canvas.
+Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) horizontal, z height; Three.js uses (x,z) horizontal, y up. Map data (from the code): `course(name,desc,tee,hole,tiles,extra)` with defaults `par:4,w:[],sand:[],ice:[],slime:[],q:[],pl:[],rp:[],pd:[],pit:[],fan:[],tp:[],tornado:[],movers:[]`. `tiles` = playable rectangles (everything else is void); `w` walls `[x,y,w,h]`; `sand`; `ice` and `slime` `[x,y,w,h]` (P4); `q` power-up blocks; `pl` platforms `[x,y,w,h,H]`; `rp` ramps `[x,y,w,h,dir,h0,h1]`; `pd` jump pads; `pit` water `[x,y,w,h]`; `fan` `[x,y,w,h,dx,dy,force]`; `tp` teleporter pairs `[ax,ay,bx,by,color]`; `tornado`, `movers`. Screen borders `B` are 16 px walls around the 800x500 canvas.
 
 ### 4.1 Constants
-`R=6` (ball radius), `DT=1/240`, `G=700`, `MAXS=8` (max strokes / penalty), `LIMIT=45000` (ms per putt), `VOTE_SECS=15`, `CUP=17`, `DEPTH=36`, `SWAY_W=2*PI/1.4`.
+`R=6` (ball radius), `DT=1/240`, `G=700`, `MAXS=8` (max strokes / penalty), `LIMIT_BASE=120000`, `LIMIT_MAX=300000` (ms; see `limitOf` for the per-putt limit), `VOTE_SECS=15`, `CUP=17`, `DEPTH=36`, `SWAY_W=2*PI/1.4`.
 
 ### 4.2 Room state (host-owned, replicated in snapshots)
 `newRoom()` = `{phase,map,round,startAt,roster,putt,votes,deadline,mode,series,mapNo,totals,last}`
@@ -125,10 +125,11 @@ Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) hor
 `node tools.js check` (parses the `<script id="game">` block). It proves only that the JS parses, not that it behaves.
 
 ## N. TOOLS (`tools.js`)
-- `node tools.js check` | `list` | `smoke` | `smoke-multi` | `solve <map> [putt] [--full]` | `arena ['Map Name']`.
+- `node tools.js check` | `list` | `surfaces` | `smoke` | `smoke-multi` | `solve <map> [putt] [--full]` | `arena ['Map Name']`.
 - `smoke-multi` boots 4 jsdom windows (host + 3 guests) joined through `makeNet()`, an in-memory stand-in for PeerJS (same API surface the game uses; messages JSON-cloned and delayed 2-3 ms). It asserts: joining and host election, 4-player lobby roster, guest cannot start, first guest vote starts the countdown on the host and is visible to all, voting waits for everyone, majority map locks, six putts where the game WAITS for the last player and then advances all clients together, HIO banner visible on guests, totals per player, sole winner, guest cannot leave results, host returns all to the lobby, and a player dropping out mid-putt (host notices, the rest advance).
 - `smoke` loads the real HTML in jsdom (WebGL, canvas and PeerJS are stubbed), plays a 3-map tournament in solo (maps 0, 8, 0) by calling the game's own `sink()` through a test hook (`window.__pp`, only active when `window.__PP_TEST` is set), and asserts: sway math, lobby -> start -> vote -> 6 putts -> results -> next vote -> champion -> lobby, cumulative totals (11/23/35), HIO banner, button labels, and zero runtime errors. Setup: `mkdir /tmp/jd && cd /tmp/jd && npm i jsdom`, then `NODE_PATH=/tmp/jd/node_modules node tools.js smoke` (about 90 s). Keep jsdom OUT of the project tree.
 - `solve` runs the game's real physics headlessly (extracted by text markers: `const R=`, `\n];`, `let PI_=0`, `const NP=`, `function fresh(`, `function inside(`, `function frame(`; if you move those, update `load()`). It searches angle 0..360 in 0.5 deg steps x power 0.30..1.00 in 0.05 steps with a centered release (no sway). A putt PASSES if a shot also works at +-0.4 deg and +-2.5% power. Fast mode (default) stops at the first robust shot (seconds); `--full` counts all hits (about 80 s per putt) and is the basis for the difficulty metric.
+- `surfaces` (P4) rolls a ball at 300 u/s over a flat test hole of turf, sand, ice and slime using the game's real `step()` and asserts ice > turf > sand > slime in distance, plus the timer limits (120 s at par 2, 240 s at par 4, never under 120 s, capped at 300 s). Current distances: turf 237, sand 75, ice 1700, slime 44 units. Friction constants live in `step()`: turf k .85, platform .9, ice .12 (Coulomb drag 4), slime 5.5 (drag 45), sand 3.2; precedence sand < platform < ice < slime.
 - Limits: time-based obstacles are frozen at phase 0 (`R_` is null); sway and items are not modeled; it proves possibility, not difficulty.
 - `arena` rewrites a map as six chambers from the `SPECS` table inside `tools.js` (chamber-local coords 228x198; keys `t,c,w,sand,pit`). It matches the map's single `course('Name'...` line, so keep each map on one line. Extend `SPECS` and `arenaLine()` when adding ice, slime, pads, teleporters, fans, tornadoes.
 - 1 CPU core in the build sandbox: run long jobs with `setsid nohup ... &` and poll.
@@ -141,12 +142,12 @@ Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) hor
 ---------------------------------------------------------------------
 ## I. TESTING: WHAT IS PROVEN AND WHAT THE USER MUST CHECK
 **Proven by `tools.js smoke` and `smoke-multi` (simulated network, not real WebRTC) (P3, 59/59 pass):** the room state machine in solo (lobby, mode select, voting, six-putt sequencing, host advance when all done, results, tournament standings, champion, reset), vote winner locking the map, score carry-over (`tot`), HIO banner text, deterministic sine sway math (zero at every crossing, peak equals spread, grows with power), and no runtime exceptions during all of it.
-**NOT proven (stubbed or not exercised):** anything visual (HUD overlay layout, frosted glass, ghost cup markers, warp flash, banners' look and timing), real WebGL rendering, real drag-to-shoot input, real WebRTC/PeerJS behavior (NAT, latency, packet loss, signaling), the putt timer and penalty path, a late joiner or spectator mid-map, tie votes, more than 4 players (code cap is 8 guest connections = 9 players, untested), mobile layout.
+**NOT proven (stubbed or not exercised):** anything visual (HUD overlay layout, frosted glass, ghost cup markers, warp flash, banners' look and timing), real WebGL rendering, real drag-to-shoot input, real WebRTC/PeerJS behavior (NAT, latency, packet loss, signaling), the putt timer and penalty path in a real browser (the limit math is tested by `tools.js surfaces`, the HUD m:ss text and the ice/slime look are not), no map uses ice or slime yet (P10, P11), a late joiner or spectator mid-map, tie votes, more than 4 players (code cap is 8 guest connections = 9 players, untested), mobile layout.
 **User hand-test checklist (open `putt-pals.html` in a browser):**
 1. Play solo: lobby shows mode select; Start -> voting grid; a map card shows vote count after clicking; countdown then play. The canvas fills the stage; HUD pill, buttons, scoreboard, power bar and toast are visible and do not overlap badly (also try a phone-width window).
 2. Drag back: arrow is hidden at rest, appears only while dragging, sways left-right as a smooth sine, and releasing as it crosses center shoots perfectly straight.
 3. Switchback Garden: the other five cups show as dark discs with CUP/TEE labels; holing out plays a bright warp flash and the new tee/cup are correct. After putt 6 the results show the winner; tournament shows standings and "Next map vote".
-4. Let a putt run out the clock (45 s): penalty toast, 8 strokes, game advances.
+4. Let a putt run out the clock (2:00 at par 2; the HUD pill counts down as m:ss): penalty toast, 8 strokes, game advances. (Tip: temporarily lower `LIMIT_BASE` in the HTML to test faster.)
 5. Two tabs (host and guest, same room code): the guest's vote counts, countdown shows on both, scores sync, guest cannot start or change anything.
 Report anything off and the next AI fixes it before adding features.
 
@@ -155,6 +156,7 @@ Report anything off and the next AI fixes it before adding features.
 |---|---|
 | earlier | Stages 1-5: sway, voting, 6-putt sequencing, putt timer, tournament, banners, frosted HUD, solver, two arena maps (verified under OLD physics), R=6, water splash |
 | this session | Workflow changed to phased tracker; HTML audit found unlogged friction/sink/lib changes |
+| P4 | DONE: `ice` and `slime` tile arrays (sim friction, rendering, `arena` SPECS keys `ice`/`slime`), `limitOf` dynamic timer (120 s x par/2, 300 s cap) with m:ss HUD; `tools.js surfaces` 8/8; solve maps 0 and 8 unchanged; smoke 59/59 and smoke-multi 40/40 still pass |
 | P3b | DONE: `tools.js smoke-multi` (4 simulated players, fake in-memory PeerJS); 40/40 pass incl. a mid-putt disconnect |
 | P2 | DONE: maps 0 and 8 re-solved under the user's physics; 12/12 putts verified, no layout changes |
 | P3 | DONE: `tools.js smoke` (jsdom, stubbed WebGL/Peer, test hook `window.__pp`); 59/59 pass; user hand-test checklist in section I |

@@ -119,11 +119,11 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <script id="game">
 (()=>{
 if(!window.THREE){document.getElementById("app").textContent="The 3D engine failed to load. Please reload the page.";return;}
-const R=6,DT=1/240,MAXS=8,LIMIT=45000,VOTE_SECS=15,G=700,WT=28;
+const R=6,DT=1/240,MAXS=8,LIMIT_BASE=120000,LIMIT_MAX=300000,VOTE_SECS=15,G=700,WT=28;
 const B=[[0,0,800,16],[0,484,800,16],[0,0,16,500],[784,0,16,500]];
 // w walls, sand, q ? blocks, pl platforms [x,y,w,h,H], rp ramps [x,y,w,h,dir,h0,h1], pd jump pads, pit water [x,y,w,h], fan [x,y,w,h,dx,dy,force], tp teleporter pairs [ax,ay,bx,by,color]
 // COURSE DATA: tile rectangles define the playable footprint. Everything else is void.
-const course=(name,desc,tee,hole,tiles,extra={})=>Object.assign({name,desc,tee,hole,tiles,par:4,w:[],sand:[],q:[],pl:[],rp:[],pd:[],pit:[],fan:[],tp:[],tornado:[],movers:[]},extra);
+const course=(name,desc,tee,hole,tiles,extra={})=>Object.assign({name,desc,tee,hole,tiles,par:4,w:[],sand:[],ice:[],slime:[],q:[],pl:[],rp:[],pd:[],pit:[],fan:[],tp:[],tornado:[],movers:[]},extra);
 const HOLES=[
 course('Switchback Garden','Six chambers in one arena. Bank shots around walls and a pond; the camera warps to the next putt.',[80,80],[240,80],[[40,40,720,420]],{w:[[34,34,732,12],[34,454,732,12],[34,34,12,432],[754,34,12,432],[274,40,12,420],[514,40,12,420],[40,244,720,12],[150,46,18,128],[390,146,18,98],[626,86,28,118],[46,342,112,14],[630,256,18,100]],pit:[[366,306,70,98]],par:12,putts:[{tee:[80,80],hole:[240,80],par:2},{tee:[320,210],hole:[480,80],par:2},{tee:[560,146],hole:[720,146],par:2},{tee:[80,290],hole:[240,420],par:2},{tee:[320,356],hole:[480,356],par:2},{tee:[560,290],hole:[720,420],par:2}]}),
 course('Clover Crossing','Four leafy lobes joined through a windy hub.',[95,250],[700,250],[[40,175,720,150],[290,40,220,420]],{w:[[365,180,20,85],[435,235,20,85]],q:[[400,90],[400,410]],fan:[[280,185,240,130,0,-1,170]],par:3}),
@@ -277,6 +277,7 @@ function bounce(r){
   const vn=me.vx*nx+me.vy*ny;if(vn<0){me.vx-=1.82*vn*nx;me.vy-=1.82*vn*ny;}
 }
 function stop(){me.vx=me.vy=me.vz=0;me.moving=false;me.arm.mag=0;if(me.str>=MAXS){toast('Out of strokes. Moving on.');sink(true);}else{aim();pub(true);}}
+function limitOf(mi,pi){const m=HOLES[mi],p=m.putts&&m.putts[pi],par=(p&&p.par)||m.par||4;return Math.min(LIMIT_MAX,LIMIT_BASE*Math.max(1,par/2));} // ms per putt: 120 s at par 2, scaled by par, capped at 300 s
 function step(){
   const hl=H();let f=contact(hl,me.x,me.y);const air=me.z>f+.8||me.vz>5&&me.padT>0;
   if(air)me.vz-=G*DT;
@@ -285,6 +286,9 @@ function step(){
     let k=0.85; // turf friction (was 1.3) - smoother momentum
     for(const s of hl.sand)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3])k=3.2; // sand friction (was 5.0)
     for(const p of hl.pl)if(me.x>p[0]&&me.x<p[0]+p[2]&&me.y>p[1]&&me.y<p[1]+p[3])k=0.9; // platform friction (was 1.3)
+    let cd=30; // constant (Coulomb) drag
+    for(const s of hl.ice)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3]){k=0.12;cd=4;} // ice: very slippery
+    for(const s of hl.slime)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3]){k=5.5;cd=45;} // slime: very sticky
     // velocity-dependent friction for realistic rolling resistance
     const v=Math.hypot(me.vx,me.vy);
     const k_eff=k*(1+0.15*Math.min(1,v/200));
@@ -292,7 +296,7 @@ function step(){
     const gx=(contact(hl,me.x+.2,me.y)-contact(hl,me.x-.2,me.y))/.4,gy=(contact(hl,me.x,me.y+.2)-contact(hl,me.x,me.y-.2))/.4;
     if(Math.abs(gx)<20&&Math.abs(gy)<20){const den=1+0.6*(gx*gx+gy*gy);me.vx-=gx*G*DT/den;me.vy-=gy*G*DT/den;me.vz=gx*me.vx+gy*me.vy;} // snappier slope response (was 1+gx*gx+gy*gy)
     const s0=Math.hypot(me.vx,me.vy);
-    if(s0>0){const d=Math.min(s0,30*DT);me.vx-=me.vx/s0*d;me.vy-=me.vy/s0*d;}
+    if(s0>0){const d=Math.min(s0,cd*DT);me.vx-=me.vx/s0*d;me.vy-=me.vy/s0*d;}
 
   }
   for(const fa of hl.fan)if(me.x>fa[0]&&me.x<fa[0]+fa[2]&&me.y>fa[1]&&me.y<fa[1]+fa[3]&&me.z<80){
@@ -338,7 +342,7 @@ function frame(now){
       const hl=H();
       hl.q.forEach((q,i)=>{if(me.mode==='play'&&!me.got[i]&&Math.abs(me.z-surf(hl,...q))<20&&Math.hypot(me.x-q[0],me.y-q[1])<R+13){
         me.got[i]=1;if(me.inv.length<3){me.inv.push(ITEMS[Math.floor(Math.random()*ITEMS.length)]);toast('Got '+NAMES[me.inv[me.inv.length-1]]+'!');renderInv();}else toast('Inventory full. Power-up lost.');}});
-      if(me.mode==='play'&&now-me.t0>LIMIT){toast('Time’s up! Max-stroke penalty.');sink(true);}
+      if(me.mode==='play'&&now-me.t0>limitOf(me.h,PI_)){toast('Time’s up! Max-stroke penalty.');sink(true);}
     }else if(me.mode==='sunk'&&now>me.wait){me.mode='wait';pub(true);}
     applyFx();pub(false);draw(now,dt);
   }
@@ -386,6 +390,8 @@ const T={
  plat:ctex(256,(g,s)=>{g.fillStyle='#99b57d';g.fillRect(0,0,s,s);g.strokeStyle='#ff4fb8';g.lineWidth=8;g.strokeRect(4,4,s-8,s-8);g.lineWidth=3;g.strokeStyle='rgba(255,255,255,.7)';g.strokeRect(20,20,s-40,s-40);noise(g,s,2500,.15);},true),
  ramp:ctex(256,(g,s)=>{g.fillStyle='#b0bd87';g.fillRect(0,0,s,s);g.fillStyle='#d7cc95';for(let i=-2;i<6;i++){g.beginPath();g.moveTo(i*64,0);g.lineTo(i*64+32,0);g.lineTo(i*64+96,s);g.lineTo(i*64+64,s);g.fill();}noise(g,s,2000,.15);},true),
  sand:ctex(256,(g,s)=>{g.fillStyle='#f3e6a8';g.fillRect(0,0,s,s);noise(g,s,6000,.45);},true),
+ ice:ctex(256,(g,s)=>{g.fillStyle='#bfe8f7';g.fillRect(0,0,s,s);g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=2;for(let i=0;i<7;i++){g.beginPath();g.moveTo(i*40-20,0);g.lineTo(i*40+60,s);g.stroke();}noise(g,s,1500,.12);},true),
+ slime:ctex(256,(g,s)=>{g.fillStyle='#8fdc6a';g.fillRect(0,0,s,s);g.fillStyle='rgba(60,150,40,.45)';for(let i=0;i<14;i++){g.beginPath();g.arc((i*83)%s,(i*61)%s,10+(i%4)*5,0,7);g.fill();}noise(g,s,2500,.2);},true),
  ball:ctex(128,(g,s)=>{g.fillStyle='#fff';g.fillRect(0,0,s,s);g.fillStyle='rgba(0,0,0,.3)';for(let y=0;y<8;y++)for(let x=0;x<8;x++){g.beginPath();g.arc(x*16+8+(y%2)*8,y*16+8,5,0,7);g.fill();}},true)
 };
 function pm(t,rx,ry,o){const m=t.clone();m.needsUpdate=true;m.repeat.set(rx,ry);return new THREE.MeshStandardMaterial(Object.assign({map:m,bumpMap:m,bumpScale:.9,roughness:.55,metalness:.05},o||{}));}
@@ -438,6 +444,8 @@ function buildAll(index){
     const g=new THREE.Group(),o=OFF(i);g.position.set(o[0],0,o[1]);
     for(const tile of hl.tiles){g.add(box(tile[2],35,tile[3],pm(T.brick,3,1),tile[0]+tile[2]/2,-25,tile[1]+tile[3]/2));const fl=box(tile[2],10,tile[3],pm(T.turf,tile[2]/80,tile[3]/80,{roughness:.9}),tile[0]+tile[2]/2,-5,tile[1]+tile[3]/2);fl.receiveShadow=true;g.add(fl);}
     for(const s of hl.sand)g.add(box(s[2],1.5,s[3],pm(T.sand,s[2]/80,s[3]/80,{roughness:1}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
+    for(const s of hl.ice)g.add(box(s[2],1.5,s[3],pm(T.ice,s[2]/80,s[3]/80,{roughness:.08,metalness:.25}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
+    for(const s of hl.slime)g.add(box(s[2],1.5,s[3],pm(T.slime,s[2]/80,s[3]/80,{roughness:.35}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
     for(const r of hl.w)g.add(box(r[2],WT,r[3],pm(T.brick,Math.max(r[2],r[3])/90,1),r[0]+r[2]/2,WT/2,r[1]+r[3]/2,true));
     for(const p of hl.pl)g.add(box(p[2],p[4]+10,p[3],pm(T.plat,p[2]/90,p[3]/90,{roughness:.4}),p[0]+p[2]/2,p[4]/2-5,p[1]+p[3]/2,true));
     for(const r of hl.rp){const geo=new THREE.BufferGeometry(),verts=[],uv=[],N=48;const ax=r[4][1]==='x';for(let k=0;k<N;k++){const quad=[];for(const [t,v] of [[k/N,0],[(k+1)/N,0],[(k+1)/N,1],[k/N,1]]){const x=r[0]+(ax?t:v)*r[2],z=r[1]+(ax?v:t)*r[3];quad.push([x,rampHeight(r,x,z),z,t,v]);}for(const n of [0,2,1,0,3,2]){verts.push(...quad[n].slice(0,3));uv.push(...quad[n].slice(3));}}geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.computeVertexNormals();const m=new THREE.Mesh(geo,pm(T.ramp,2,2,{side:THREE.DoubleSide}));m.receiveShadow=m.castShadow=true;g.add(m);}
@@ -712,13 +720,13 @@ function syncRoom(){
       puttTransition={start:oldTee,end:newTee,startTime:performance.now(),duration:1200,camStart,camEnd,lookStart,lookEnd};
     }pub(true);
  }
- if(r.phase==='play'&&host&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&(players.every(p=>p.presence.round===r.round&&p.presence.done)||R_.now()>r.startAt+LIMIT+4000))nextPutt(r);}
+ if(r.phase==='play'&&host&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&(players.every(p=>p.presence.round===r.round&&p.presence.done)||R_.now()>r.startAt+limitOf(r.map,r.putt)+4000))nextPutt(r);}
  if(r.phase==='results'&&lastPhase!=='results'){if(activeRound!==r.round){activeRound=r.round;me.h=r.map;me.mode='spectator';buildAll(r.map);camInit=false;$('game').hidden=false;pub(true);}cancel();me.mode=me.mode==='spectator'?'spectator':'wait';fin();showResults(r);$('again').hidden=!host;if(!host)$('endt').textContent+=' Waiting for the host to return to the lobby.';}
  lastPhase=r.phase;lastMap=r.map;
 }
 function tick(){
- if(!me||$('game').hidden)return;const h=H(),m=HOLES[me.h],left=Math.max(0,Math.ceil((LIMIT-(performance.now()-me.t0))/1000));
- $('info').textContent=m.name+(m.putts?' · PUTT '+(PI_+1)+'/'+m.putts.length:'')+' · PAR '+h.par+' · '+(me.mode==='spectator'?'SPECTATING':'STROKES '+me.str+' · '+left+'s');
+ if(!me||$('game').hidden)return;const h=H(),m=HOLES[me.h],left=Math.max(0,Math.ceil((limitOf(me.h,PI_)-(performance.now()-me.t0))/1000));
+ $('info').textContent=m.name+(m.putts?' · PUTT '+(PI_+1)+'/'+m.putts.length:'')+' · PAR '+h.par+' · '+(me.mode==='spectator'?'SPECTATING':'STROKES '+me.str+' · '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'));
  const list=R_?R_.peers().filter(p=>p.presence.n&&p.presence.round===activeRound):[];for(const p of list){const q=p.presence,k=activeRound+':'+p.peer;if(q.done&&q.s[0]===1&&!hio[k]){hio[k]=1;announce(q.n,'HOLE IN ONE','hio');}}
  list.sort((a,b)=>(a.presence.s[0]??99)-(b.presence.s[0]??99));
  const sb=$('sb');sb.textContent='';sb.appendChild(row(0,'ROUND SCORECARD','','',true));for(const p of list){const q=p.presence;sb.appendChild(row(q.c,q.n+(p.isMe?' (you)':''),q.mode==='spectator'?'Spectator':q.done?'Finished':'Playing',String((+q.tot||0)+(q.s[0]??q.str))));}
