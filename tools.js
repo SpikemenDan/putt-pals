@@ -21,6 +21,8 @@ const MECH=[
 const LADDER=[[0,'Switchback Garden',[612,935,663,988,879,907]],[8,'Dune Serpent',[660,519,786,402,433,808]],[20,'Frost Hollow',[199,518,532,513,709,478]],[21,'Slime Springs',[673,131,230,340,520,523]],[5,'Cyclone Ring',[107,456,123,118,111,202]],[19,'Grand Finale',[110,93,149,126,164,191]]];
 // default par from a putt's hit count: >=600 -> 2, >=250 -> 3, else 4. Default timeout penalty (strokes added to par) from the map total: 3, or 4 on Hard maps (total < 1500). A chamber in SPECS may set `par` / `pen` to override.
 const parFromHits=h=>h>=600?2:h>=250?3:4,penFromTotal=t=>t<1500?4:3;
+// P26: per-map putt time limit in seconds (120 minimum, enforced by the game and by `check`); harder maps get more time
+const MAP_LIMIT={'Switchback Garden':120,'Dune Serpent':150,'Frost Hollow':150,'Slime Springs':180,'Cyclone Ring':210,'Grand Finale':240};
 const ladderOf=name=>LADDER.find(l=>l[1]===name);
 const SPECS={
  'Switchback Garden':['Six chambers in one arena. Bank shots around walls and a pond; the camera warps to the next putt.',[
@@ -72,7 +74,7 @@ function arenaData(P){const W=PERIM.map(r=>r.slice()),o={sand:[],ice:[],slime:[]
 function arenaLine(name){const[desc,P]=SPECS[name],D=arenaData(P),j=JSON.stringify,f=k=>D[k].length?k+':'+j(D[k])+',':'';
  const L=ladderOf(name),tot=L?L[2].reduce((a,b)=>a+b,0):0,pp=D.putts.map((p,k)=>({par:p.par??(L?parFromHits(L[2][k]):2),pen:p.pen??(L?penFromTotal(tot):3)})),
   putts=D.putts.map((p,k)=>`{tee:${j(p.tee)},hole:${j(p.hole)},par:${pp[k].par},pen:${pp[k].pen}${p.cup?',cup:'+p.cup:''}}`).join(',');
- return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}par:${pp.reduce((a,x)=>a+x.par,0)},putts:[${putts}]}),\n`;}
+ return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}${MAP_LIMIT[name]?'limit:'+MAP_LIMIT[name]+',':''}par:${pp.reduce((a,x)=>a+x.par,0)},putts:[${putts}]}),\n`;}
 function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"'.*?\\n");
  if(re.test(h))h=h.replace(re,()=>arenaLine(name));
  else{const g=h.indexOf('<script id="game">'),i=h.indexOf('\n];',h.indexOf('const R=',g));if(g<0||i<0)throw Error('HOLES end not found');const pre=h.slice(0,i);h=pre+(pre.trimEnd().endsWith(',')?'':',')+'\n'+arenaLine(name).slice(0,-1)+h.slice(i);} // new map: append at the end of HOLES
@@ -82,9 +84,9 @@ function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.rep
 // ---------- headless physics ----------
 function load(){const src=gameSrc(read());
  const cut=(a,b,incl)=>{const i=src.indexOf(a),j=src.indexOf(b,i);if(i<0||j<0)throw Error('marker not found: '+a+' / '+b);return src.slice(i,j+(incl?b.length:0));};
- const code=['const $=()=>({}),toast=()=>{},pub=()=>{},aim=()=>{};let R_=null,me,aa=0;',cut('const R=','\n];',true),
+ const code=['const $=()=>({}),toast=()=>{},pub=()=>{},aim=()=>{},openCard=()=>{};let R_=null,me,aa=0;',cut('const R=','\n];',true),
   cut('let PI_=0','const NP=','')+'const NP=i=>HOLES[i].putts?HOLES[i].putts.length:1;',cut('function fresh(','\n'),cut('function inside(','function frame(')].join('\n')
-  +'\n;this.api={HOLES,fresh,H,step,surf,limitOf,cupOf,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
+  +'\n;this.api={HOLES,fresh,H,step,surf,limitOf,validLimit,parOf,penOf,timeoutScore,cupOf,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
  const ctx={performance,Math,console};vm.createContext(ctx);vm.runInContext(code,ctx);return ctx.api;}
 function solve(A,mi,pi,full){
  const trial=(ang,pw)=>{A.setPI(pi);const m=A.fresh('s',0);A.setMe(m);m.h=mi;const h=A.H();m.x=h.tee[0];m.y=h.tee[1];m.z=A.surf(h,...h.tee);m.str=1;m.prev=[m.x,m.y,m.z];
@@ -175,18 +177,32 @@ async function smoke(){
     }
    }
    if(!ok(`map ${m+1} putt ${k+1}: ready`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&P().now()>=r.startAt;},12000)))return finish();
+   if(m===1&&k===1){ // P26: timeout score on a different putt (Dune Serpent putt 2: par 3 + pen 3 = 6) and the per-map limit
+    const me=P().me,restore=()=>{me.mode='play';me.over=false;me.str=0;me.s=[];me.moving=false;me.wait=0;P().pub(true);},exp=P().parOf(me.h,k)+P().penOf(me.h,k);
+    me.str=1;P().sink(true);ok('P26: Dune Serpent putt 2 timeout scores par + penalty ('+exp+')',exp===6&&me.s[0]===exp&&me.over,String(me.s[0]));
+    {const D=P().cardData(),c=D.rows[0].cells[k];ok('P27: a timeout shows on the card as 6* and counts under T/O',c&&c.v===6&&c.to&&D.rows[0].to===1&&[...$('cardbody').querySelectorAll('tbody td')].some(td=>td.textContent==='6*'),JSON.stringify(c));}
+    restore();P().closeCard();
+    ok('P26: this putt uses the Dune Serpent limit of 150 s',P().limitOf(me.h,k)===150000);
+    const lim=(()=>{const mm=/(\d+):(\d\d)$/.exec($('info').textContent);return mm?(+mm[1]*60+ +mm[2]):0;})();ok('P26: HUD countdown starts at or just under 2:30',lim>=140&&lim<=150,$('info').textContent);
+   }
    { // P25: every putt has a par and a timeout penalty, and the HUD shows the par of the CURRENT putt
     const me=P().me,pt=P().holes[me.h].putts[k],hud=$('info').textContent;
     ok(`P25: map ${m+1} putt ${k+1} has an integer par (2..6) and penalty (1..6)`,Number.isInteger(pt.par)&&pt.par>=2&&pt.par<=6&&Number.isInteger(pt.pen)&&pt.pen>=1&&pt.pen<=6,JSON.stringify([pt.par,pt.pen]));
     ok(`P25: map ${m+1} putt ${k+1}: HUD shows PAR ${pt.par}`,hud.includes(' PAR '+pt.par+' '),hud);
     ok(`P25: map ${m+1} putt ${k+1}: penOf matches the data`,P().penOf(me.h,k)===pt.pen);
    }
+   { // P27: state at the start of a putt
+    const D=P().cardData(),rw=D&&D.rows[0],prev=room().card&&Object.values(room().card)[0];
+    ok(`P27: map ${m+1} putt ${k+1}: the card closed itself when the putt started`,!P().cardOpen&&$('cardov').hidden);
+    ok(`P27: map ${m+1} putt ${k+1}: ${k} earlier hole(s) are on the card and the total matches the carried total`,rw&&rw.cells.slice(0,k).every(x=>x&&!x.live)&&rw.cells.slice(k).every(x=>!x||x.live)&&rw.total===P().me.tot&&(k===0?!prev:(prev&&prev.s.length===k)),JSON.stringify(rw&&[rw.cells.length,rw.total,P().me.tot,prev&&prev.s]));
+   }
    if(k===0&&m===0){ // P24: no stroke cap
     const me=P().me,restore=()=>{me.mode='play';me.over=false;me.str=0;me.s=[];me.moving=false;me.wait=0;P().pub(true);};
     me.str=12;P().stop();ok('P24: after 12 strokes the player keeps playing (no stroke cap)',me.mode==='play'&&!me.over);
     P().oob();ok('P24: a splash after 12 strokes does not end the putt',me.mode==='play'&&!me.over);
     me.str=12;P().sink(true);ok('P24: a timeout after 12 strokes scores 12, never less than the strokes taken',me.s[0]===12&&me.over,String(me.s[0]));
-    restore();me.str=3;P().sink(true);ok('P24: a timeout after 3 strokes scores the placeholder 8',me.s[0]===8&&me.over,String(me.s[0]));
+    restore();me.str=3;P().sink(true);ok('P26: a timeout after 3 strokes scores par + penalty (2+3=5)',me.s[0]===5&&me.over,String(me.s[0]));
+    restore();me.str=0;P().sink(true);ok('P26: a timeout with no stroke taken scores par + penalty (5)',me.s[0]===5&&me.over,String(me.s[0]));
     restore();ok('P24: state restored for the rest of the run',me.mode==='play'&&me.str===0);
    }
    if(k===0&&m===0){
@@ -220,7 +236,23 @@ async function smoke(){
     me0.mode=old;await sleep(300);
     ok('spectator: leaving spectator mode restores the normal camera',!P().free&&/^View: (Ball cam|Hole view|World view)$/.test($('vw').textContent),$('vw').textContent);
    }
-   P().me.str=(k===0&&m===0)?1:2;P().sink(false);
+   {
+    const sv=(k===0&&m===0)?1:2;P().me.str=sv;P().sink(false);
+    const D=P().cardData(),rw=D&&D.rows[0],cell=rw&&rw.cells[k];
+    ok(`P27: map ${m+1} putt ${k+1}: the card opens by itself when the putt is sunk`,P().cardOpen&&!$('cardov').hidden);
+    ok(`P27: map ${m+1} putt ${k+1}: hole ${k+1} shows ${sv} (finished, not live)`,D.rows.length===1&&cell&&cell.v===sv&&!cell.live,JSON.stringify(cell));
+    if(k===0&&m===0){
+     const T=$('cardbody').querySelector('table'),hd=[...T.querySelectorAll('thead tr:first-child th')].map(x=>x.textContent).join('|'),parRow=[...T.querySelectorAll('thead tr.par td')].map(x=>x.textContent),exp=[...Array(6).keys()].map(i=>String(P().parOf(P().me.h,i)));
+     ok('P27: header lists Player, holes 1 to 6, Total, +/-, HIO, T/O',hd==='Player|1|2|3|4|5|6|Total|+/-|HIO|T/O',hd);
+     ok('P27: PAR row shows each putt par and the map par',parRow.slice(1,7).join(',')===exp.join(',')&&+parRow[7]===exp.reduce((a,b)=>a+ +b,0),parRow.join(','));
+     const tr=T.querySelectorAll('tbody tr');ok('P27: one player row, ranked 1 and marked as the leader',tr.length===1&&/^1\. /.test(tr[0].querySelector('td.nm').textContent)&&tr[0].className==='lead',tr[0]&&tr[0].textContent);
+     ok('P27: a hole in one is marked, counted in HIO, and +/- is vs par',tr[0].querySelector('td.hio')&&tr[0].querySelectorAll('td')[10-1].textContent==='1'&&tr[0].querySelectorAll('td')[8].textContent===(rw.diff===0?'E':(rw.diff>0?'+':'')+rw.diff),tr[0].textContent);
+     const key=kk=>g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:kk,bubbles:true}));
+     key('k');ok('P27: K closes the card',!P().cardOpen&&$('cardov').hidden);key('K');ok('P27: K opens it again',P().cardOpen&&!$('cardov').hidden);
+     key('Escape');ok('P27: Esc closes the card',!P().cardOpen);$('cardbtn').click();ok('P27: the Card button opens it',P().cardOpen);$('cardx').click();ok('P27: the close button closes it',!P().cardOpen);
+     $('cardbtn').click();ok('P27: reopened (it stays until the next putt starts)',P().cardOpen);
+    }
+   }
    if(k===0&&m===0)ok('hole-in-one banner appears',await until(()=>$('banner').textContent.includes('HOLE IN ONE'),4000));
    if(k===0&&m===0){
     const AcC=g.w.AudioContext,log=()=>g.w.__ppAudio||[];
@@ -236,6 +268,12 @@ async function smoke(){
    else if(!ok(`map ${m+1}: results after putt 6`,await until(()=>room().phase==='results',12000)))return finish();
   }
   await sleep(200);const t=$('endt').textContent,last=m===2;
+  { // P27: the results screen shows the finished card
+   const T=$('endcard').querySelector('table'),tr=T?T.querySelectorAll('tbody tr'):[],cells=tr[0]?[...tr[0].querySelectorAll('td')].map(x=>x.textContent):[],perMap=want[m]-(m?want[m-1]:0),expS=[...Array(6).keys()].map(k=>(k===0&&m===0)?1:2),parSum=[...Array(6).keys()].reduce((a,k)=>a+P().parOf(room().map,k),0);
+   ok(`P27: map ${m+1}: results show the card with one row and six scores ${expS.join(',')}`,tr.length===1&&cells.length===11&&cells.slice(1,7).join(',')===expS.join(','),cells.join('|'));
+   ok(`P27: map ${m+1}: card total is ${perMap} and +/- is vs par`,cells[7]===String(perMap)&&cells[8]===(perMap-parSum===0?'E':(perMap-parSum>0?'+':'')+(perMap-parSum)),cells.join('|'));
+   ok(`P27: map ${m+1}: the in-game card is closed on the results screen, and the room card has all 6 putts`,!P().cardOpen&&Object.values(room().card)[0].s.length===6);
+  }
   ok(`map ${m+1}: cumulative total = ${want[m]}`,Object.values(room().totals)[0]?.t===want[m],JSON.stringify(room().totals));
   ok(`map ${m+1}: results text has winner${last?' and OVERALL CHAMPION':' and standings'}`,t.includes('Map winner')&&(last?t.includes('OVERALL CHAMPION'):t.includes('Standings after map '+(m+1)+'/3')),t);
   ok(`map ${m+1}: button label`,$('again').textContent===(last?'Back to lobby':'Next map vote'),$('again').textContent);
@@ -272,10 +310,15 @@ async function smokeMulti(){
  const str=(i,k)=>i===0?1:1+((i+k)%3),tot=[0,0,0,0];
  for(let k=0;k<6;k++){
   if(!ok(`putt ${k+1}: all 4 clients ready`,await until(()=>G.every(x=>{const r=x.room(),me=x.P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&x.P().now()>=r.startAt;}),12000)))return finish();
-  for(let i=0;i<N-1;i++){G[i].P().me.str=str(i,k);G[i].P().sink(false);tot[i]+=str(i,k);}
+  if(k>0)ok(`P27: putt ${k+1}: card closed on every client; all 4 clients hold ${k} recorded hole(s) per player`,G.every(x=>x.$('cardov').hidden&&Object.keys(x.room().card).length===4&&Object.values(x.room().card).every(c=>c.s.length===k)),JSON.stringify(G.map(x=>x.$('cardov').hidden)));
+  const exp=Math.max(str(2,k),G[0].P().parOf(G[0].room().map,k)+G[0].P().penOf(G[0].room().map,k));
+  for(let i=0;i<N-1;i++){G[i].P().me.str=str(i,k);if(i===2&&k===2){G[i].P().sink(true);tot[i]+=exp;}else{G[i].P().sink(false);tot[i]+=str(i,k);}}
   await sleep(900);
+  if(k===1){const rs=G[0].P().cardData().rows;ok('P27: the live card is sorted by total strokes (lowest first)',rs.length===4&&rs.every((r,i)=>i===0||rs[i-1].total<=r.total),JSON.stringify(rs.map(r=>[r.name,r.total])));}
+  if(k===2){const pr=G.map(x=>x.P().R.peers().find(p=>p.presence.n==='P3')?.presence);ok(`P26: every client sees P3's timeout as par + penalty (${exp})`,pr.every(q=>q&&q.s[0]===exp&&q.over===true&&q.done),JSON.stringify(pr.map(q=>q&&[q.s[0],q.over,q.done])));}
   ok(`putt ${k+1}: game waits for the last player`,G.every(x=>x.room().putt===k&&x.room().phase==='play'));
   G[N-1].P().me.str=str(N-1,k);G[N-1].P().sink(false);tot[N-1]+=str(N-1,k);
+  ok(`P27: putt ${k+1}: sinking opens the card on that player's screen`,!G[2].$('cardov').hidden&&!G[0].$('cardov').hidden);
   if(k===0)ok('guests see the host\'s hole-in-one banner',await until(()=>G[2].$('banner').textContent.includes('HOLE IN ONE'),4000));
   if(k<5){if(!ok(`putt ${k+1}: everyone advances together`,await until(()=>G.every(x=>x.room().putt===k+1&&x.room().phase==='play'),12000)))return finish();}
   else if(!ok('after putt 6 all clients reach results',await until(()=>G.every(x=>x.room().phase==='results'),12000)))return finish();
@@ -283,6 +326,15 @@ async function smokeMulti(){
  await sleep(300);const T=Object.values(G[0].room().totals);
  ok('map totals match each player\'s strokes',[0,1,2,3].every(i=>T.find(t=>t.n==='P'+(i+1))?.t===tot[i]),JSON.stringify(T)+' vs '+tot);
  ok('lowest score (P1) is the sole map winner',G[0].room().last.win.length===1&&G[0].room().last.names[G[0].room().last.win[0]]==='P1');
+ {
+  const want=[0,1,2,3].map(i=>({n:'P'+(i+1),t:tot[i]})).sort((a,b)=>a.t-b.t||a.n.localeCompare(b.n)).map(x=>x.n),L=G[0].room().last;
+  const order=x=>[...x.$('endcard').querySelectorAll('tbody td.nm')].map(td=>td.textContent.replace(/^\d+\. /,'').replace(' (you)',''));
+  ok('P27: results card lists 4 players, leader on top, same order on every client ('+want.join(' ')+')',G.every(x=>order(x).join(' ')===want.join(' ')),G.map(x=>order(x).join(' ')).join(' / '));
+  ok('P27: card totals equal the map totals on every client',G.every(x=>x.P().cardData().rows.every(r=>L.sc[r.id]===r.total)),JSON.stringify(G[0].P().cardData().rows.map(r=>[r.name,r.total,L.sc[r.id]])));
+  const tr=[...G[1].$('endcard').querySelectorAll('tbody tr')].find(t=>t.querySelector('td.nm').textContent.includes('P3')),cs=tr?[...tr.querySelectorAll('td')].map(x=>x.textContent):[];
+  ok('P27: the timed-out putt shows as '+G[0].P().parOf(8,2)+'+'+G[0].P().penOf(8,2)+' with a star, and T/O is 1',cs[3]===(G[0].P().parOf(8,2)+G[0].P().penOf(8,2))+'*'&&cs[10]==='1',cs.join('|'));
+  ok('P27: results card shows P1 hole-in-ones (6) in the HIO column',(()=>{const t=[...G[2].$('endcard').querySelectorAll('tbody tr')].find(t=>t.querySelector('td.nm').textContent.includes('P1'));return t&&t.querySelectorAll('td')[9].textContent==='6';})());
+ }
  ok('guest results text names the winner',G[2].$('endt').textContent.includes('Map winner: P1'),G[2].$('endt').textContent);
  G[1].$('again').click();await sleep(300);
  ok('a guest cannot leave results',G.every(x=>x.room().phase==='results'));
@@ -298,16 +350,18 @@ async function smokeMulti(){
  ok('host notices the disconnect (3 players left)',await until(()=>G[0].P().R.peers().filter(p=>p.presence.n).length===3,4000));
  for(let i=0;i<3;i++){G[i].P().me.str=2;G[i].P().sink(false);}
  ok('remaining players advance without the dropped player',await until(()=>[0,1,2].every(i=>G[i].room().putt===1&&G[i].room().phase==='play'),12000));
+ {const c=G[0].room().card[gone];ok('P27: the dropped player\'s putt is recorded as blank, and no row is shown for them',c&&c.s.length===1&&c.s[0]===null&&G[0].P().cardData().rows.length===3,JSON.stringify(c));}
  return finish();
 }
 const[,,cmd,...args]=process.argv;
 if(cmd==='check'){new vm.Script(gameSrc(read()));const A=load(),bad=Array.from({length:A.HOLES.length},(_,i)=>i).filter(i=>!(i in A.HOLES)||!A.HOLES[i]);if(bad.length){console.log('FAIL: empty slot(s) in HOLES at index',bad.join(','),'(double comma?)');process.exit(1);}const sm=read().match(/const STARTERS=\[([\d,\s]*)\]/),stI=sm?sm[1].split(',').map(Number):[],miss=[];
  for(const i of stI){const h=A.HOLES[i];if(!h||!h.putts||h.putts.length!==6){miss.push((h?h.name:'map '+i)+': not six putts');continue;}
   h.putts.forEach((p,k)=>{const okInt=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi;if(!okInt(p.par,2,6))miss.push(h.name+' putt '+(k+1)+': missing or invalid par ('+p.par+')');if(!okInt(p.pen,1,6))miss.push(h.name+' putt '+(k+1)+': missing or invalid pen ('+p.pen+')');});
+  if(!(Number.isFinite(h.limit)&&h.limit>=120&&h.limit<=600))miss.push(h.name+': missing or invalid time limit ('+h.limit+' s; must be 120 to 600)');
   if(h.putts.every(p=>Number.isInteger(p.par))&&h.par!==h.putts.reduce((a,p)=>a+p.par,0))miss.push(h.name+': map par '+h.par+' is not the sum of its putt pars');}
  if(!stI.length)miss.push('STARTERS not found');
  if(miss.length){console.log('FAIL: par/pen data\n  '+miss.join('\n  '));process.exit(1);}
- console.log('SYNTAX_OK',(read().length/1024|0)+' KB,',A.HOLES.length,'maps, no empty slots, par and pen on all '+stI.length*6+' starter putts');}
+ console.log('SYNTAX_OK',(read().length/1024|0)+' KB,',A.HOLES.length,'maps, no empty slots, par, pen and time limit on all '+stI.length*6+' starter putts');}
 else if(cmd==='list'){const A=load();A.HOLES.forEach((h,i)=>console.log(i,h.name,A.NP(i)>1?'6 putts':'1 putt'));}
 else if(cmd==='arena'){const names=args.length?[args.join(' ')]:Object.keys(SPECS);for(const n of names)console.log(n,'-> map index',applyArena(n));}
 else if(cmd==='solve'){const full=args.includes('--full'),nums=args.filter(a=>a!=='--full').map(Number),A=load(),mi=nums[0]??0;
@@ -322,6 +376,18 @@ else if(cmd==='surfaces'){ // P4: ice/slime/sand friction + timer scaling, using
  const d={turf:roll(null),sand:roll('sand'),ice:roll('ice'),slime:roll('slime')};console.log('roll distance from 300 u/s:',JSON.stringify(Object.fromEntries(Object.entries(d).map(([k,v])=>[k,+v.toFixed(1)]))));
  ok('ice rolls farther than turf',d.ice>d.turf*2);ok('turf rolls farther than sand',d.turf>d.sand);ok('slime stops shorter than sand',d.slime<d.sand);ok('every roll stops (finite)',Object.values(d).every(v=>v>0&&v<3800));
  const L=(i,p)=>A.limitOf(i,p);ok('par-2 putt gets 120 s',L(0,0)===120000);ok('limit never below 120 s',A.HOLES.every((h,i)=>[...Array(A.NP(i)).keys()].every(p=>L(i,p)>=120000)));ok('par-4 single-putt map gets 240 s',L(A.HOLES.findIndex(h=>!h.putts&&h.par===4),0)===240000);ok('limit capped at 300 s',A.HOLES.every((h,i)=>[...Array(A.NP(i)).keys()].every(p=>L(i,p)<=300000)));
+ const fake=ex=>{const h=Object.assign({},A.HOLES[0],ex);A.HOLES.push(h);return A.HOLES.length-1;},free=()=>A.HOLES.pop();
+ const LIM={0:120,8:150,20:150,21:180,5:210,19:240};ok('P26: every starter map uses its declared limit for all six putts',Object.entries(LIM).every(([i,sec])=>[0,1,2,3,4,5].every(p=>L(+i,p)===sec*1000)));
+ ok('P26: starter limits are at least 120 s',Object.keys(LIM).every(i=>A.HOLES[i].limit>=120));
+ let mi=fake({limit:90,putts:A.HOLES[0].putts});ok('P26: a map limit of 90 s is rejected (default used, never 90 s)',L(mi,0)>=120000&&L(mi,0)!==90000&&!A.validLimit(90));free();
+ mi=fake({limit:119.9,putts:A.HOLES[0].putts});ok('P26: 119.9 s is rejected, 120 s accepted',!A.validLimit(119.9)&&A.validLimit(120)&&L(mi,0)>=120000);free();
+ mi=fake({limit:150,putts:A.HOLES[0].putts});ok('P26: a valid custom map limit (150 s) is honored',L(mi,0)===150000);free();
+ mi=fake({limit:700,putts:A.HOLES[0].putts});ok('P26: a limit over 600 s is rejected',L(mi,0)<=300000&&!A.validLimit(700));free();
+ mi=fake({limit:150,putts:A.HOLES[0].putts.map((p,k)=>k===1?Object.assign({},p,{limit:200}):k===2?Object.assign({},p,{limit:60}):p)});ok('P26: a putt limit overrides the map limit; an invalid putt limit falls back to the map limit',L(mi,1)===200000&&L(mi,2)===150000&&L(mi,0)===150000);free();
+ ok('P26: non-numeric limits are rejected',!A.validLimit('200')&&!A.validLimit(NaN)&&!A.validLimit(undefined)&&!A.validLimit(Infinity));
+ const so=(s,i,p)=>A.timeoutScore(s,i,p);ok('P26: timeout score = par + penalty (Switchback Garden putt 1: 2+3=5)',so(0,0,0)===5&&so(3,0,0)===5);
+ ok('P26: timeout score never below strokes taken (12 strokes -> 12)',so(12,0,0)===12);
+ ok('P26: timeout score uses the putt\'s own par and penalty (Cyclone Ring putt 1: 4+4=8, Dune Serpent putt 2: 3+3=6)',so(0,5,0)===8&&so(0,8,1)===6);
  console.log(bad?bad+' FAILED':'ALL SURFACE/TIMER CHECKS PASS');process.exit(bad?1:0);}
 else if(cmd==='cups'){ // P5: cup radius, clamp, and difficulty monotonicity on a flat test hole using the game's real step()
  const A=load();let bad=0;const ok=(n,c)=>{console.log((c?'PASS ':'FAIL ')+n);if(!c)bad++;};
