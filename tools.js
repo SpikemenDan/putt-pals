@@ -383,6 +383,38 @@ async function smoke(){
   ok('P30: back on Ball cam',$('vw').textContent==='View: Ball cam');
   P().R.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});
  }
+ { // P31: walls between the camera and the ball fade out, then come back; the ball and everything else stay opaque
+  await until(()=>room().phase==='lobby',4000);
+  $('mode').value='practice';$('startgame').click();
+  await until(()=>room().phase==='select'&&room().mode==='practice',4000);
+  g.w.document.querySelector('#mapgrid [data-map="0"]').click();
+  ok('P31: a live putt for the wall-fade test',await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===0&&me.mode==='play'&&me.h===0&&P().now()>=r.startAt&&P().active===r.round;},8000));
+  await sleep(300);
+  const W=P().wallFade,U=P().updateWallFade,FM=P().FADE_MIN,V=P().cam.position.constructor,hm=P().holes[0];
+  ok('P31: every wall and platform of the map is registered ('+(hm.w.length+hm.pl.length)+')',W.length===hm.w.length+hm.pl.length&&W.length>=8,String(W.length));
+  ok('P31: their materials can fade (transparent) and start opaque',W.every(w=>w.m.material.transparent===true));
+  const e=W[0],gp=e.m.geometry.parameters,c=e.m.getWorldPosition(new V()),alongX=gp.width>=gp.depth,half=(alongX?gp.depth:gp.width)/2,dv=alongX?new V(0,0,1):new V(1,0,0);
+  const from=c.clone().addScaledVector(dv,-(half+120)),to=c.clone().addScaledVector(dv,half+120);from.y=26;to.y=6; // absolute heights: the line crosses the wall (0..28) at y 16
+  U(1,from,null);
+  ok('P31: with no target (free roam) every wall is fully opaque and writes depth',W.every(w=>w.a===1&&w.m.material.opacity===1&&w.m.material.depthWrite===true));
+  U(0.016,from,to);
+  ok('P31: a wall on the camera-to-ball line starts fading smoothly (not instantly)',e.a<1&&e.a>FM+0.05,String(e.a));
+  for(let i=0;i<80;i++)U(0.016,from,to);
+  ok('P31: it reaches the minimum opacity and stops writing depth',Math.abs(e.m.material.opacity-FM)<1e-6&&e.m.material.depthWrite===false,String(e.m.material.opacity));
+  const far=W.find(w=>w.m.getWorldPosition(new V()).distanceTo(c)>450);
+  ok('P31: a wall far from that line stays opaque',!far||far.a===1,far&&String(far.a));
+  ok('P31: the ball is not part of the fade (opaque, visible)',P().ball.visible&&P().ball.material.opacity===1);
+  const hi=c.clone().add(new V(0,300,-300)),hi2=c.clone().add(new V(0,300,300));
+  for(let i=0;i<80;i++)U(0.016,hi,hi2);
+  ok('P31: when the line is clear (high above) the wall comes back to full opacity and depth writing',e.a===1&&e.m.material.opacity===1&&e.m.material.depthWrite===true&&W.every(w=>w.a===1));
+  for(let i=0;i<80;i++)U(0.016,c.clone(),c.clone().add(new V(200,6,200)));
+  ok('P31: a wall the camera is inside fades even when no sightline crosses it',e.a<=FM+1e-6,String(e.a));
+  U(1,from,null);
+  ok('P31: back to opaque for the rest of the run',W.every(w=>w.a===1));
+  await sleep(500);
+  ok('P31: the live frame loop keeps every wall opacity between the minimum and 1',W.every(w=>w.m.material.opacity>=FM-1e-6&&w.m.material.opacity<=1));
+  P().R.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});
+ }
  return finish();
  function finish(){ok('no runtime errors',!errs.length,errs.slice(0,3).join(' | '));console.log(fails?`SMOKE FAILED (${fails})`:'SMOKE PASSED');process.exit(fails?1:0);}
 }

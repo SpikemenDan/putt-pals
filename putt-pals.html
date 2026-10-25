@@ -539,7 +539,30 @@ function label(t){const c=document.createElement('canvas');c.width=256;c.height=
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));s.scale.set(70,17.5,1);s.renderOrder=5;return s;}
 function box(w,h,d,m,x,y,z,sh){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);if(sh){o.castShadow=true;o.receiveShadow=true;}return o;}
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(14000,14000),new THREE.MeshStandardMaterial({color:0xd9c8f4,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.set(1500,-90,650);ground.receiveShadow=true;scene.add(ground);
-const qM=[],fans=[],flags=[],vortices=[],movingMeshes=[];let courseGroup=null;
+const qM=[],fans=[],flags=[],vortices=[],movingMeshes=[],wallFade=[];let courseGroup=null;
+  // P31: walls and platforms between the camera and your ball fade out (and the one the camera sits inside). Static boxes only; the ball, aim guide and everything else stay opaque.
+  const FADE_MIN=.16,fadeRay=new THREE.Raycaster(),fadeBlock=new Set();
+  function updateWallFade(dt,from,to){
+    if(!wallFade.length)return;
+    fadeBlock.clear();
+    if(to){
+      const dir=new V().subVectors(to,from),len=dir.length();
+      if(len>2){
+        dir.multiplyScalar(1/len);
+        const rt=new V().crossVectors(dir,new V(0,1,0));if(rt.lengthSq()<1e-6)rt.set(1,0,0);rt.normalize();
+        const up=new V().crossVectors(rt,dir).normalize(),meshes=wallFade.map(w=>w.m),tg=new V(),d=new V();
+        for(const [a,b] of [[0,0],[1,0],[-1,0],[0,1]]){ // centre, left, right, above (never below, so the platform you stand on is not hit)
+          tg.copy(to).addScaledVector(rt,a*R*1.5).addScaledVector(up,b*R*1.5);
+          d.subVectors(tg,from);const l=d.length();if(l<2)continue;d.multiplyScalar(1/l);
+          fadeRay.set(from,d);fadeRay.near=0;fadeRay.far=Math.max(0,l-1);
+          for(const h of fadeRay.intersectObjects(meshes,false))fadeBlock.add(h.object);
+        }
+      }
+      for(const w of wallFade){if(!w.box){w.m.updateWorldMatrix(true,false);w.box=new THREE.Box3().setFromObject(w.m).expandByScalar(3);}if(w.box.containsPoint(from))fadeBlock.add(w.m);}
+    }
+    const k=Math.min(1,dt*10);
+    for(const w of wallFade){const tgt=fadeBlock.has(w.m)?FADE_MIN:1;w.a+=(tgt-w.a)*k;if(Math.abs(w.a-tgt)<.01)w.a=tgt;const m=w.m.material;m.opacity=w.a;m.depthWrite=w.a>.98;}
+  }
 // Surface cutouts are evaluated in world space, including raised platforms.
 function cutCup(mesh,h,offset){
  if(!mesh.isMesh||!mesh.material.isMeshStandardMaterial)return;
@@ -554,15 +577,15 @@ function cutCup(mesh,h,offset){
 
 function buildAll(index){
   if(courseGroup){scene.remove(courseGroup);const mats=new Set(),tex=new Set();courseGroup.traverse(o=>{o.geometry?.dispose();if(o.material&&!o.material.userData.shared){mats.add(o.material);if(o.material.map)tex.add(o.material.map);}});mats.forEach(m=>m.dispose());tex.forEach(t=>t.dispose());}
-  qM.length=fans.length=flags.length=vortices.length=movingMeshes.length=0;
+  qM.length=fans.length=flags.length=vortices.length=movingMeshes.length=wallFade.length=0;
   [index].forEach(i=>{const hl=H(i);
     const g=new THREE.Group(),o=OFF(i);g.position.set(o[0],0,o[1]);
     for(const tile of hl.tiles){g.add(box(tile[2],35,tile[3],pm(T.brick,3,1),tile[0]+tile[2]/2,-25,tile[1]+tile[3]/2));const fl=box(tile[2],10,tile[3],pm(T.turf,tile[2]/80,tile[3]/80,{roughness:.9}),tile[0]+tile[2]/2,-5,tile[1]+tile[3]/2);fl.receiveShadow=true;g.add(fl);}
     for(const s of hl.sand)g.add(box(s[2],1.5,s[3],pm(T.sand,s[2]/80,s[3]/80,{roughness:1}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
     for(const s of hl.ice)g.add(box(s[2],1.5,s[3],pm(T.ice,s[2]/80,s[3]/80,{roughness:.08,metalness:.25}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
     for(const s of hl.slime)g.add(box(s[2],1.5,s[3],pm(T.slime,s[2]/80,s[3]/80,{roughness:.35}),s[0]+s[2]/2,.8,s[1]+s[3]/2));
-    for(const r of hl.w)g.add(box(r[2],WT,r[3],pm(T.brick,Math.max(r[2],r[3])/90,1),r[0]+r[2]/2,WT/2,r[1]+r[3]/2,true));
-    for(const p of hl.pl)g.add(box(p[2],p[4]+10,p[3],pm(T.plat,p[2]/90,p[3]/90,{roughness:.4}),p[0]+p[2]/2,p[4]/2-5,p[1]+p[3]/2,true));
+    for(const r of hl.w){const wm=box(r[2],WT,r[3],pm(T.brick,Math.max(r[2],r[3])/90,1,{transparent:true}),r[0]+r[2]/2,WT/2,r[1]+r[3]/2,true);wm.userData.fade=true;g.add(wm);}
+    for(const p of hl.pl){const pmesh=box(p[2],p[4]+10,p[3],pm(T.plat,p[2]/90,p[3]/90,{roughness:.4,transparent:true}),p[0]+p[2]/2,p[4]/2-5,p[1]+p[3]/2,true);pmesh.userData.fade=true;g.add(pmesh);}
     for(const r of hl.rp){const geo=new THREE.BufferGeometry(),verts=[],uv=[],N=48;const ax=r[4][1]==='x';for(let k=0;k<N;k++){const quad=[];for(const [t,v] of [[k/N,0],[(k+1)/N,0],[(k+1)/N,1],[k/N,1]]){const x=r[0]+(ax?t:v)*r[2],z=r[1]+(ax?v:t)*r[3];quad.push([x,rampHeight(r,x,z),z,t,v]);}for(const n of [0,2,1,0,3,2]){verts.push(...quad[n].slice(0,3));uv.push(...quad[n].slice(3));}}geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.computeVertexNormals();const m=new THREE.Mesh(geo,pm(T.ramp,2,2,{side:THREE.DoubleSide}));m.receiveShadow=m.castShadow=true;g.add(m);}
     for(const p of hl.pit){const w=new THREE.Mesh(new THREE.PlaneGeometry(p[2],p[3]),waterM);w.rotation.x=-Math.PI/2;w.position.set(p[0]+p[2]/2,1.2,p[1]+p[3]/2);g.add(w);}
     for(const p of hl.pd){const c=new THREE.Mesh(new THREE.CircleGeometry(18,32),padM);c.rotation.x=-Math.PI/2;c.position.set(p[0],1.6,p[1]);g.add(c);
@@ -583,7 +606,7 @@ function buildAll(index){
       const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:7,map:SOFT,transparent:true,opacity:.7,depthWrite:false,blending:THREE.AdditiveBlending}));pts.frustumCulled=false;g.add(pts);
       fans.push({bl,pos,geo,fa,N,ph:Array.from({length:N},()=>Math.random())});
     }
-    g.traverse(m=>cutCup(m,hl,o));
+    g.traverse(m=>cutCup(m,hl,o));g.updateMatrixWorld(true);g.traverse(m=>{if(m.userData.fade)wallFade.push({m,a:1,box:null});});
     const hy=surf(hl,hl.hole[0],hl.hole[1]);
     const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(cupOf(hl),cupOf(hl),DEPTH,64,1,true),new THREE.MeshStandardMaterial({color:0x283c35,roughness:.85,side:THREE.BackSide}));sleeve.position.set(hl.hole[0],hy-DEPTH/2,hl.hole[1]);g.add(sleeve);
     const hm=new THREE.Mesh(new THREE.CircleGeometry(cupOf(hl),64),new THREE.MeshBasicMaterial({color:0}));hm.rotation.x=-Math.PI/2;hm.position.set(hl.hole[0],hy-DEPTH,hl.hole[1]);g.add(hm);
@@ -710,6 +733,7 @@ function draw(now,dt){
     {const q=Math.min(1,k/.3),w=q*q*(3-2*q);if(w<1){cp.lerpVectors(T.cp0,cp,w);cl.lerpVectors(T.cl0,cl,w);}} // ease in from wherever the camera was
     cam.position.copy(cp);cam.lookAt(cl);sky.position.copy(cp);
     sun.target.position.copy(pos);sun.position.set(pos.x+250,pos.y+700,pos.z+350);
+    updateWallFade(dt,cam.position,null);
     renderer.render(scene,cam);
     if(k>=1){puttTransition=null;camInit=true;camVel.set(0,0,0);camLookVel.set(0,0,0);}
     return;
@@ -794,6 +818,7 @@ function draw(now,dt){
   cam.position.copy(cp);cam.lookAt(cl);
   sky.position.copy(cp);
   sun.target.position.copy(sc);sun.position.set(sc.x+250,sc.y+700,sc.z+350);
+  updateWallFade(dt,cam.position,free||!myBall.visible?null:bp);
   renderer.render(scene,cam);
 }
 function row(c,name,a,b,hd){
@@ -1009,6 +1034,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get active(){return activeRound},get camAz(){return camAz},get camEl(){return camEl},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get active(){return activeRound},get camAz(){return camAz},updateWallFade,wallFade,get FADE_MIN(){return FADE_MIN},get camEl(){return camEl},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>
