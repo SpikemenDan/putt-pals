@@ -1,0 +1,344 @@
+{
+  "mode": "fast: first robust shot, not exhaustive difficulty counts",
+  "htmlSha256": "e5b5a6746bcc409902978a0ef469b5bff63fff4359157d6a62dd4713db8b4e75",
+  "toolsSha256": "5531b117fde01f4e3234c9c3e11084d7197eb6a07adb58e621ec020ba275d4fd",
+  "power": 900,
+  "robustness": {
+    "angleRadians": [
+      -0.007,
+      0,
+      0.007
+    ],
+    "additivePower": [
+      -0.025,
+      0,
+      0.025
+    ]
+  },
+  "results": [
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 0,
+      "best": {
+        "deg": 31,
+        "power": 0.8
+      }
+    },
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 1,
+      "best": {
+        "deg": 25,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 2,
+      "best": {
+        "deg": 14,
+        "power": 1
+      }
+    },
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 3,
+      "best": {
+        "deg": 13,
+        "power": 1
+      }
+    },
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 4,
+      "best": {
+        "deg": 40.5,
+        "power": 0.4
+      }
+    },
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "putt": 5,
+      "best": {
+        "deg": 13,
+        "power": 0.7
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 0,
+      "best": {
+        "deg": 22.5,
+        "power": 1
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 1,
+      "best": {
+        "deg": 16,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 2,
+      "best": {
+        "deg": 0,
+        "power": 0.35
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 3,
+      "best": {
+        "deg": 41,
+        "power": 0.9
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 4,
+      "best": {
+        "deg": 14,
+        "power": 0.9
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "putt": 5,
+      "best": {
+        "deg": 24,
+        "power": 1
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 0,
+      "best": {
+        "deg": 19,
+        "power": 0.75
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 1,
+      "best": {
+        "deg": 44.5,
+        "power": 0.45
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 2,
+      "best": {
+        "deg": 14,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 3,
+      "best": {
+        "deg": 30.5,
+        "power": 0.9
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 4,
+      "best": {
+        "deg": 15.5,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "putt": 5,
+      "best": {
+        "deg": 35,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 0,
+      "best": {
+        "deg": 15.5,
+        "power": 1
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 1,
+      "best": {
+        "deg": 0,
+        "power": 0.7
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 2,
+      "best": {
+        "deg": 21.5,
+        "power": 0.95
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 3,
+      "best": {
+        "deg": 50.5,
+        "power": 0.75
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 4,
+      "best": {
+        "deg": 18,
+        "power": 1
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "putt": 5,
+      "best": {
+        "deg": 22,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 0,
+      "best": {
+        "deg": 31,
+        "power": 1
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 1,
+      "best": {
+        "deg": 10,
+        "power": 1
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 2,
+      "best": {
+        "deg": 60,
+        "power": 0.65
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 3,
+      "best": {
+        "deg": 31.5,
+        "power": 0.7
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 4,
+      "best": {
+        "deg": 17,
+        "power": 0.8
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "putt": 5,
+      "best": {
+        "deg": 49.5,
+        "power": 0.45
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 0,
+      "best": {
+        "deg": 31.5,
+        "power": 0.85
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 1,
+      "best": {
+        "deg": 34.5,
+        "power": 0.9
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 2,
+      "best": {
+        "deg": 66.5,
+        "power": 1
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 3,
+      "best": {
+        "deg": 50.5,
+        "power": 0.8
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 4,
+      "best": {
+        "deg": 150,
+        "power": 0.95
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "putt": 5,
+      "best": {
+        "deg": 22.5,
+        "power": 0.65
+      }
+    }
+  ]
+}

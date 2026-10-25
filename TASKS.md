@@ -1,13 +1,13 @@
 # Modernization task ledger
 
-Planning only. All tasks start unassigned; a coordinator assigns ownership after implementation is authorized. Parallel work is intended, but shared files must have one owner.
+Implementation authorized for an initial task on 2026-10-25. B2 is assigned below; other tasks remain unassigned. Parallel work is intended, but shared files must have one owner.
 
 Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED. DONE requires the stated verification and integration review. Record a concrete reason and dependency for BLOCKED; do not use it for ordinary unfinished work.
 
 | ID | Status | Owner | Depends on | Scope / owned files | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | B1 | TODO | — | Implementation authorization | Baseline inventory and browser references; tests/fixtures | Behavior inventory, exact library versions/licenses, screenshots and observed limitations |
-| B2 | TODO | — | Implementation authorization | Legacy solver correction; tools.js only | Uses gameplay shot power; representative shot parity; corrected starter results recorded |
+| B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | TODO | — | Implementation authorization | Integration owner: manifests, lockfile, dev/build/test configs | npm ci, runnable legacy baseline, documented scripts; smoke results recorded |
 | C1 | TODO | — | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md | Approved simulation, session, transport, snapshot and event contracts; matching mocks |
 | S1 | TODO | — | C1 | src/simulation | Headless imported simulation matches fixtures; deterministic time input; no browser dependencies |
@@ -41,7 +41,18 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 
 ## Assignment entries
 
-None. No implementation tasks have been claimed.
+### B2 — 2026-10-25
+
+- Owner: Codex / root (implementation and integration review).
+- Branch/worktree: existing main working directory; exclusive ownership, no concurrent workers.
+- Owned files: tools.js; TASKS.md, PROJECT_STATUS.md and AGENTS.md for task status and authorization updates; tests/solver-baseline.cjs and tests/fixtures/solver-baseline.json for regression checks and measured results.
+- Scope: reuse the real game launch function in the headless solver, verify shot initialization and run the fast solver across all starter putts. Exhaustive difficulty counts remain M0 follow-up work.
+- Historical per-phase confirmation is satisfied for this bounded task by the user's instruction to get started; no feature-roadmap phases are being advanced.
+- Changes: extracted the real launch() into the existing headless API and delegated all solver trials to it; added tests/solver-baseline.cjs and source-hashed measurements in tests/fixtures/solver-baseline.json.
+- Verification: node --check tools.js; node --check tests/solver-baseline.cjs; node tools.js check; node tools.js surfaces (19 checks); node tools.js cups (7 checks); node tools.js mechanics (8 checks); node tests/solver-baseline.cjs (nine initialization combinations, solver delegation, 36/36 robust starter putts). All passed.
+- Integration review: inspected the scoped diff and verified existing headless consumers still pass. No HTML, physics constants, layouts or library versions changed. An initial duplicate accumulator declaration failed the checks and was removed before the passing runs.
+- Not tested: real browser, jsdom smoke and real multiplayer. Full difficulty counts remain stale and are not certified by these fast results. The temporary VM harness will be replaced by imports in M1.
+- Next dependencies: B1 and B3 remain unassigned; C1 awaits both.
 
 Use this template when work begins:
 

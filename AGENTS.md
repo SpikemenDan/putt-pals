@@ -10,7 +10,7 @@
 
 ## Scope and authority
 
-The current user requested a modernization plan and coordination files, and explicitly intends multiple agents to work concurrently. Implementation has not yet been requested. Do not interpret the existence of tasks as permission to execute the entire migration.
+The user requested a modernization plan and coordination files, explicitly intends multiple agents to work concurrently, and authorized starting an initial task on 2026-10-25. B2 is assigned in TASKS.md. Do not interpret the existence of other tasks as permission to execute the entire migration.
 
 The confirmed target is private friend rooms in desktop browsers with a normal hosted build. Single-file/offline distribution and native packaging are outside this migration.
 

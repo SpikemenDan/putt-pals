@@ -85,12 +85,12 @@ function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.rep
 function load(){const src=gameSrc(read());
  const cut=(a,b,incl)=>{const i=src.indexOf(a),j=src.indexOf(b,i);if(i<0||j<0)throw Error('marker not found: '+a+' / '+b);return src.slice(i,j+(incl?b.length:0));};
  const code=['const $=()=>({}),toast=()=>{},pub=()=>{},aim=()=>{},openCard=()=>{};let R_=null,me,aa=0;',cut('const R=','\n];',true),
-  cut('let PI_=0','const NP=','')+'const NP=i=>HOLES[i].putts?HOLES[i].putts.length:1;',cut('function fresh(','\n'),cut('function inside(','function frame(')].join('\n')
-  +'\n;this.api={HOLES,fresh,H,step,surf,limitOf,validLimit,parOf,penOf,timeoutScore,cupOf,CUP,CUP_MIN,POWER,R,K_TURF,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
+  cut('let PI_=0','const NP=','')+'const NP=i=>HOLES[i].putts?HOLES[i].putts.length:1;',cut('function fresh(','\n'),cut('function launch(','function inside('),cut('function inside(','function frame(')].join('\n')
+  +'\n;this.api={HOLES,fresh,H,launch,step,surf,limitOf,validLimit,parOf,penOf,timeoutScore,cupOf,CUP,CUP_MIN,POWER,R,K_TURF,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
  const ctx={performance,Math,console};vm.createContext(ctx);vm.runInContext(code,ctx);return ctx.api;}
 function solve(A,mi,pi,full){
- const trial=(ang,pw)=>{A.setPI(pi);const m=A.fresh('s',0);A.setMe(m);m.h=mi;const h=A.H();m.x=h.tee[0];m.y=h.tee[1];m.z=A.surf(h,...h.tee);m.str=1;m.prev=[m.x,m.y,m.z];
-  m.vx=Math.cos(ang)*pw*820;m.vy=Math.sin(ang)*pw*820;m.moving=true;m.mt=0;for(let i=0;i<4800&&m.moving&&m.mode!=='sunk';i++)A.step();return m.mode==='sunk'&&!m.over&&m.str===1;};
+ const trial=(ang,pw)=>{A.setPI(pi);const m=A.fresh('s',0);A.setMe(m);m.h=mi;const h=A.H();m.x=h.tee[0];m.y=h.tee[1];m.z=A.surf(h,...h.tee);
+  A.launch(ang,pw);for(let i=0;i<4800&&m.moving&&m.mode!=='sunk';i++)A.step();return m.mode==='sunk'&&!m.over&&m.str===1;};
  const robust=(a,p)=>{for(const da of[-.007,0,.007])for(const dp of[-.025,0,.025])if(!trial(a+da,Math.min(1,p+dp)))return false;return true;};
  let hits=0,best=null;
  for(let d=0;d<720&&(full||!best);d++){const a=d*Math.PI/360;for(let p=.3;p<=1.001;p+=.05)if(trial(a,p)){hits++;if(!best&&robust(a,p)){best={deg:+(a*180/Math.PI).toFixed(1),power:+p.toFixed(2)};if(!full)break;}}}
