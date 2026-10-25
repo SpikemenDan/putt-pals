@@ -1,6 +1,8 @@
 # PUTT PALS v4 (PARTY CIRCUIT) — HANDOFF & LIVE PHASE TRACKER
 
-Single source of truth. Any AI can continue from this file plus the uploaded project files.
+Single source of truth. Any AI can continue from this file plus the three project files. Read A and B first, then the next phase in C.
+
+Contents: A workflow rules | B current state | C phase checklist | F decisions | H architecture reference | J editing safely | K syntax check | N tools | L environment | I testing | M progress log | O verified solutions | playtest checklist | spec v2 triage | spec v2 (verbatim requirements).
 
 ## A. WORKFLOW RULES (mandatory, from the user)
 1. **Phases of at most 10 minutes each**, executed strictly top to bottom.
@@ -15,16 +17,18 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
    Do NOT store commit messages in this file.
 
 ## B. CURRENT STATE (read first)
-- **P1, P2, P3, P3b `[DONE]`. P4 `[DONE]`. P5 `[DONE]`. P6 `[DONE]`. P7 `[DONE]`. P8 `[DONE]`. P9 `[DONE]`. P10 `[DONE]`. P11 `[DONE]`. P12 `[DONE]`. P13 `[DONE]`. P14 `[DONE]`. P15 `[DONE]`. P16 `[DONE]`. P17 `[DONE]`. P18 `[DONE]`. P19 `[DONE]`. P20, P21, P22 `[BUILT, NOT SEEN]` (code in and all automated checks green, but nobody has looked at it in a browser). P23 `[DONE]` (automated QA plus the playtest checklist at the bottom of this file). ALL 23 PHASES ARE COMPLETE except the user's visual playtest. Next: the user opens `putt-pals.html` in a browser, runs the checklist, and reports what to fix; tweak the values named in the P20 to P22 log rows.
-- Project tree is now exactly three files: `putt-pals.html` (game, three.js + PeerJS inlined, 755 KB, works offline), `tools.js` (solver + arena generator + syntax check), `HANDOFF.md`.
-- The user's version of the HTML had unlogged changes that are now the baseline: lower ground friction (turf k 0.85, sand 3.2, platforms 0.9, plus a velocity-dependent term), sink threshold `top-1.5`. Maps 0 and 8 were re-solved under it in P2: all 12 putts pass (section O).
-- The game has never been opened in a browser by this AI; the user can run the checklist in section I.
-- Scope notes: see section F (timer, 6-map scope, shadows).
+- **Done:** P1 to P23. P20 to P22 (look, lighting, effects) were tested by the user in a browser and work. P23 was automated QA.
+- **Working:** P24 (waiting for the user's confirmation to start, rule 2). **To do:** P25 to P61 (the Overhaul spec v2 at the bottom of this file).
+- **Art decision (made by the user):** style B, the JoJo look, **replaces** the pastel look. Do the art phases P49 to P51 and P53 to P57 in that style. Until P49 the game still shows the pastel look from P20 to P22.
+- **Files:** exactly three: `putt-pals.html` (game, three.js r128 and PeerJS inlined, 775 KB, works offline), `tools.js` (solver, arena generator, tests), `HANDOFF.md`.
+- **Last green run (end of P23):** `node tools.js check` 22 maps no empty slot; `rank` OK; `smoke` 87/87; `smoke-multi` 41/41; fast `solve` robust on every putt of the six starter maps (indexes 0, 8, 20, 21, 5, 19).
+- **Starter ladder (hardest last):** Switchback Garden (0, total 4,984 hole-in-one hits), Dune Serpent (8, 3,608), Frost Hollow (20, 2,949), Slime Springs (21, 2,417), Cyclone Ring (5, 1,117), Grand Finale (19, 833). The other 14 maps stay in `HOLES` as backlog.
+- **Never seen by this AI:** a real browser. Everything visual is judged by the user.
 
-## C. PHASE CHECKLIST (status: `[TODO]` `[WORKING]` `[DONE]`)
+## C. PHASE CHECKLIST (status: `[TODO]` `[WORKING]` `[DONE]` `[BUILT, NOT SEEN]` `[BLOCKED]`)
 | # | Status | Phase (<=10 min) | Exit criterion |
 |---|---|---|---|
-| P1 | `[DONE]` | **File consolidation & baseline audit** (details in D) | 3 files only: `putt-pals.html` (libs inlined), `tools.js` (solver + arena generator + fast mode), `HANDOFF.md`. Syntax OK. `node tools.js solve 0 0` runs |
+| P1 | `[DONE]` | **File consolidation & baseline audit** (done; see the P1 log row) | 3 files only: `putt-pals.html` (libs inlined), `tools.js` (solver + arena generator + fast mode), `HANDOFF.md`. Syntax OK. `node tools.js solve 0 0` runs |
 | P2 | `[DONE]` | Re-baseline physics: re-solve maps 0 and 8 under the user's friction; fix any failing putts | Every putt reports a robust hole-in-one (met; no layout changes were needed) |
 | P3 | `[DONE]` | Headless smoke test (`tools.js smoke`, jsdom + stubbed WebGL/Peer): lobby -> vote -> 6 putts -> results -> tournament; plus user browser checklist | No runtime errors in the flow; user checklist handed over |
 | P3b | `[DONE]` | Multiplayer smoke test: 3-4 simulated players (host + guests) over a fake in-memory PeerJS; votes, putt sync, totals, a player dropping out | `tools.js smoke` covers 2+ players |
@@ -37,7 +41,7 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 | P9 | `[DONE]` | Spatial audio via WebAudio synthesis (no audio files) | Putt, bounce, sink, banner sounds |
 | P10 | `[DONE]` | HUD, lobby and room-code UI: function, layout, live scoreboard final pass (frosted-glass look is polished in the graphics group) | UI works on desktop and phone width |
 | P11 | `[DONE]` | Putt-to-putt transition: ball/camera travel animation replacing the flash | Smooth warp |
-| P12 | `[DONE]` | **Checkpoint: your playtest of the essentials** in a browser (checklist in section I plus camera, spectator, audio, transition); the AI fixes whatever you report before level design starts | You confirm the essentials work |
+| P12 | `[DONE]` | **Checkpoint: your playtest of the essentials** in a browser (the playtest checklist near the end of this file plus camera, spectator, audio, transition); the AI fixes whatever you report before level design starts | You confirm the essentials work |
 | | | **GROUP 2: LEVEL DESIGN (starter ladder of 6 maps)** | |
 | P13 | `[DONE]` | Map 1 BEGINNER — Switchback Garden: re-tune, 6 putts verified | Solver all green |
 | P14 | `[DONE]` | Map 2 EASY — Dune Serpent (sand) | Solver all green |
@@ -47,35 +51,58 @@ Single source of truth. Any AI can continue from this file plus the uploaded pro
 | P18 | `[DONE]` | Map 6 EXPERT — Grand Finale (combined mechanics, smallest cups) | Solver all green |
 | P19 | `[DONE]` | Starter ladder: difficulty metric (`tools.js rank`) over the six finished maps, voting grid shows the 6 starter maps only; re-tune a map if the ranking is not strictly increasing | Ranking printed and strictly increasing; smoke tests pass |
 | | | **GROUP 3: GRAPHICS (last, so art never blocks gameplay)** | |
-| P20 | `[WORKING]` | Art A: soft pastel cartoon palette, bright sun, dreamlike 3D void environment; frosted-glass HUD look | Visible in browser (user confirms) |
-| P21 | `[BUILT, NOT SEEN]` | Art B: soft shadows, ambient-occlusion look, specular highlights | Shadows on ball/obstacles |
-| P22 | `[BUILT, NOT SEEN]` | VFX: ball trail, cup-sink confetti, wind-stream / tornado / pickup shaders | Effects present |
+| P20 | `[DONE]` | Art A: soft pastel cartoon palette, bright sun, dreamlike 3D void environment; frosted-glass HUD look | Visible in browser (user confirms) |
+| P21 | `[DONE]` | Art B: soft shadows, ambient-occlusion look, specular highlights | Shadows on ball/obstacles |
+| P22 | `[DONE]` | VFX: ball trail, cup-sink confetti, wind-stream / tornado / pickup shaders | Effects present |
 | P23 | `[DONE]` | Final QA: full solver run, smoke test, user playtest checklist, final handoff | All checks green |
+| P24 | `[WORKING]` | Rules A: remove the 8-stroke cap (`MAXS`); unlimited strokes inside the putt timer; fix every place that used `MAXS` as a default score | No cap in sim, UI and scoring; smoke tests updated and pass |
+| P25 | `[TODO]` | Rules B: per-putt par and timeout penalty data (`par`, `pen` per chamber in `SPECS`, defaults from putt difficulty); show par in the HUD | Every putt has a par and a penalty; HUD shows par; `check` fails on a missing par |
+| P26 | `[TODO]` | Rules C: per-map time limit (customizable, enforced minimum 120 s); on expiry assign `putt par + penalty` to unfinished players; advance only when all are sunk or timed out | Timeout score correct in a smoke test (single and multi); limit below 120 s rejected |
+| P27 | `[TODO]` | Scorecard leaderboard UI: paper mini-golf card, holes 1 to 6, per-hole scores, totals, leader on top, stats (strokes, holes-in-one, timeouts); shown after each putt and from an in-game button | Renders for 1 to 4 players, sorted live; smoke test checks order |
+| P28 | `[TODO]` | Practice mode A: mode selector on the lobby, solo room, pick any map from the vote grid | Practice starts any chosen map without voting; smoke test |
+| P29 | `[TODO]` | Practice mode B: replay a single putt of any map (pick map and putt, restart/next/previous controls, no scoring or timer pressure) | Single putt loops; leaving returns to the lobby; smoke test |
+| P30 | `[TODO]` | Camera: invert the drag-rotate/pan direction so it feels natural (audit current sign first) | Dragging right turns the view the natural way; test via `__pp.cam`; you confirm the feel |
+| P31 | `[TODO]` | Wall transparency: raycast camera to ball each frame and fade walls in the way (alpha, per-wall material), restore when clear | Walls between camera and ball fade; ball, aim guide stay visible; smoke test for no errors |
+| P32 | `[TODO]` | Physics constants: smaller ball radius `R`, slightly smaller cups, slightly lower turf friction (`k`), stronger power; keep sim, solver and render in sync | Constants changed in one place; `check`, `smoke` pass; solver runs |
+| P33 | `[TODO]` | Re-solve and re-tune all six starter maps after P32 (fast solve, then `--full` counts, `rank`) | Robust shot on every putt; ladder still strictly increasing; per-putt min >= 60 hits |
+| P34 | `[TODO]` | Corner bouncers A: triangular wedge element (`wg`) in the sim, the solver and the renderer | One test chamber verified: a clean-angle hit is redirected; solver models it |
+| P35 | `[TODO]` | Corner bouncers B: place wedges on tight turns in the six starter maps, then re-solve them | Wedges present on turns; all putts still robust; ladder intact |
+| P36 | `[TODO]` | Fans rework: smaller bounding box, compact nozzle model, strong directional impulse along the axis (sim + solver + render) | Fan chamber verified in the solver; smoke passes |
+| P37 | `[TODO]` | Vortex rework: stronger suction with pull that varies with distance to the center (sim + solver + render) | Vortex chamber verified in the solver; smoke passes |
+| P38 | `[TODO]` | Re-solve and re-tune the maps that use fans and vortexes (Cyclone Ring, Grand Finale, others if affected) and run `rank` | Robust shot on every putt; ladder intact |
+| P39 | `[TODO]` | Floating islands: each putt is its own island in the sky (rock undersides, visible gaps, void between), spacing and camera framing | Six separate islands rendered; transitions still work; smoke passes; you confirm the look |
+| P40 | `[TODO]` | Boundary walls: add `tools.js walls` to list open edges per chamber; add protective walls except at declared hazard edges (ramps, jump gaps, shortcuts) | Only declared edges stay open; all putts still robust |
+| P41 | `[TODO]` | 3D topology A: curved elevation ramps (new primitive in sim, solver and render) | Test chamber verified; solver models it |
+| P42 | `[TODO]` | 3D topology B: multi-tier platforms and vertical drops with landing floors | Test chamber verified; solver models it |
+| P43 | `[TODO]` | 3D topology C: enclosed transport tubes (entry, path, exit, ball carried through) | Test chamber verified; solver models it |
+| P44 | `[TODO]` | Hole-in-one difficulty bands by map rating (Easy map: medium HIO, Medium: hard, Hard: very hard); define the metric from `--full` counts and tune putts to the bands; every putt must still reach par | Per-map band table in this file; `rank` checks the bands |
+| P45 | `[TODO]` | Power-up framework: spawn table with higher odds on weather maps, per-power-up effect hooks, multiplayer sync through presence | Spawns follow the table; hooks exist; smoke-multi passes |
+| P46 | `[TODO]` | Power-ups: Lightning / Shockwave (radial push on opponent balls) and Wind Burst (vector push on nearby balls) | Both push opponents in a multi smoke test |
+| P47 | `[TODO]` | Power-up: Tornado (localized vortex hazard dropped on the course, reuses the P37 vortex) | Placed tornado affects balls; expires; smoke test |
+| P48 | `[TODO]` | Power-ups: Ice Trap (current putt floor frictionless for a time) and Slime Trap (walls lose bounciness) | Both apply and expire; tested in sim |
+| P49 | `[TODO]` | Art: **JoJo look replaces the pastel look (user chose B after a preview)**: bold black outlines (inverted-hull) on every mesh, saturated flat palette, hard cel shadows (toon material); remove or restyle the P20 to P22 pastel values (fog, hemisphere, sun, void floor, pastel textures, soft sky, `dreamBits`, soft contact blob, pastel frosted HUD/menu CSS). Starting palette from the approved preview: deep violet sky `#3a1d7a` with yellow action rays, mint turf `#19d3a2`, pink walls `#ff4fa3`, yellow caption `#ffd23f`, 3 px black outlines | Outlines on all mesh types, no pastel leftovers; check, smoke, smoke-multi pass; you confirm the look |
+| P50 | `[TODO]` | Art: halftone dots on turf, crosshatch on walls and rock, comic caption-box HUD (yellow panel, black border) and menus; same style on ramps, tubes, obstacles, fans, vortexes, balls | Every texture and UI panel uses the style; you confirm the look |
+| P51 | `[TODO]` | Sky world: animated volumetric/particle clouds around the floating islands, drawn as comic clouds (white with black outline, halftone shading) to match B | Clouds animate smoothly; frame rate acceptable on a phone; you confirm the look |
+| P52 | `[TODO]` | Audio cues for the new mechanics (wedge bounce, shockwave, wind burst, tornado, ice and slime traps, scorecard, timeout); the spec intro lists audio but gives no details, so use the existing synthesis style | New cues play through `SFX`; smoke test sees them |
+| P53 | `[TODO]` | Weather A: Storm/Rain map (proposed: Cyclone Ring): rain shader, lightning flashes, boosted Lightning and Tornado spawn odds from the P45 table, in the JoJo style | Rain and lightning visible on that map only; spawn odds raised; smoke passes; you confirm the look |
+| P54 | `[TODO]` | Weather B: Snow map (proposed: Frost Hollow): atmospheric snowfall, frosty terrain shader, boosted Wind and Ice spawn odds, in the JoJo style | Snow visible on that map only; spawn odds raised; smoke passes; you confirm the look |
+| P55 | `[TODO]` | Distinct saturated color palette and thematic assets for each of the six maps (all in the B style) | Each map reads as its own place; you confirm the look |
+| P56 | `[TODO]` | Sky extras: distant birds and dynamic sun flare lighting | Birds fly, flare responds to the camera angle; cheap enough for phones |
+| P57 | `[TODO]` | Main menu: video-game layout (not a web page), grand title graphic in the B style (original lettering, no copied logo), continuously rotating 3D panorama of the maps behind it, **Solo** and **Friends** buttons in the bottom-left | Menu replaces the current start screen; Solo and Friends start the right flows; smoke tests updated; you confirm the look |
+| P58 | `[TODO]` | Loading screen: map panorama background and rotating fun facts/tips at the bottom | Shown while a round loads; tips rotate; no errors in smoke |
+| P59 | `[TODO]` | Menu audio: crisp synthesized sounds for button hover, click and menu transitions (same `SFX` style) | Every menu button and transition has a sound; mute still works; smoke sees them |
+| P60 | `[TODO]` | In-game feedback: turn-ready audio cue when the ball has stopped and a stroke is allowed again, and a glowing ring beneath the player's own ball | Cue plays once per stop; ring follows only the player's ball; smoke test |
+| P61 | `[TODO]` | Final QA v2: `check`, `rank`, `smoke`, `smoke-multi`, fast solve on all six maps, playtest checklist v2, final handoff | All checks green; checklist handed to the user |
 
-## D. PHASE P1 DETAIL (the active phase)
-1. Review the uploaded HTML diff against the last known version and record every change here (started in B).
-2. Inline `three_min.js` and `peerjs_min.js` into the HTML as `<script>` blocks; tag the game script `<script id="game">` so tools find it without picking the longest script. Result: `putt-pals.html` (about 770 KB, works offline, fixes the filename mismatch).
-3. Merge `solver.js` + `make_arena.py` into one `tools.js` (port the arena generator to JS, drop Python). Commands: `solve <map> [putt]`, `arena <map name>` (spec table inside), `check` (syntax). Add **fast mode** (stop at the first robust hit; seconds instead of ~80 s per putt).
-4. Fold the needed reference text (sections H to L) into this file; delete the v3 HTML, the v4 addendum, the original architecture doc, and the old tool files.
-5. Verify: syntax check passes; `node tools.js solve 0 0` runs and reports under the current physics.
-Target tree: `putt-pals.html`, `tools.js`, `HANDOFF.md`.
-**Result (done):** tree matches the target; `node tools.js check` -> SYNTAX_OK; `node tools.js list` lists 20 maps; `node tools.js solve 0 0` passes; `node tools.js arena 'Dune Serpent'` regenerates the existing map line byte-for-byte (idempotent). Old v3 HTML, addendum, architecture doc, Python script and split solver were removed.
-
-## E. MASTER REQUIREMENTS (user) mapped to phases
-- Files minimized -> P1. Room codes, 15 s voting, Standard (6 putts), Tournament 3/6/9 with champion -> built; verified in P3.
-- 6 starter maps ranked beginner to expert, six visible putts per arena (ghost cups, tee labels), smaller cups = harder, rigorous hole-in-one paths -> P5, P13-P19.
-- Ball R=6 (done), lower friction (user did part; P2/P4), 2+ minute dynamic timers with 8-stroke penalty -> P4, ponds z<14 (done), sand (done), ice/slime -> P4, fans/tornadoes/jump pads/teleporters -> P6.
-- Deterministic sine aim sway, zero at crossings (done; check in P3).
-- Art direction (pastel cartoon, bright sun, dreamy void, shadows, specular, particles, confetti) -> P20-P22.
-- UI/camera (frosted glass, live scoreboard, ball/hole/world cams, spectator, spatial audio) -> P7-P11.
-
-## F. DECISIONS THE AI MADE (user can overrule at confirmation)
-1. **Timer (done in P4):** per-putt limit = 120 s x max(1, par/2), capped at 300 s (`limitOf(map,putt)`). Par 2 arena putts get 120 s, par 3 gets 180 s, par 4 or more gets 240 s (300 s cap). Never below 2 minutes. The host's advance fallback uses the same limit + 4 s. HUD shows m:ss.
-2. **Scope:** 20 maps -> 6 starter maps first. The other 14 are backlog after P23. Proposed ladder: Switchback Garden, Dune Serpent, Frost Hollow (new), Slime Springs (new), Cyclone Ring, Grand Finale. Names and themes are editable.
-3. **Shadows:** true ray tracing is not possible in this Three.js r128 raster setup; P21 uses soft shadow maps plus AO-style shading and specular highlights to look close.
-4. **Inlining the libraries** makes the HTML about 770 KB; patching still works because every patch uses exact anchors.
-5. Old solver results are discarded (see B).
-6. **Phase order (changed twice at the user's request):** essentials first (P7 to P12), then level design (P13 to P19), then graphics (P20 to P22), then final QA (P23). The difficulty ranking sits after the six maps because it needs finished maps. When P15 and P16 add Frost Hollow and Slime Springs, the AI will append them to the end of `HOLES` (indices 20 and 21) so no existing index changes (confirmed by the user at P15: Frost Hollow is index 20; Slime Springs is 21). Until P19 the voting grid still lists all maps. Judgment calls the user can move: audio sits in the essentials; the frosted-glass look of the HUD sits in the graphics group while its function and layout sit in P10.
+## F. DECISIONS (the user can overrule at confirmation)
+1. **Art (user, after the preview):** JoJo-style B replaces pastel: black outlines, halftone and crosshatch, saturated palettes, comic caption UI. Title and logos must be original lettering.
+2. **Timer (P4):** per-putt limit = 120 s x max(1, par/2), capped at 300 s (`limitOf(map,putt)`), never under 2 minutes; the host's advance fallback adds 4 s. Spec v2 asks for a per-map customizable limit with a 120 s minimum (P26).
+3. **Scope:** six starter maps first; the 14 older maps are backlog.
+4. **Shadows:** true ray tracing is not possible in this r128 raster setup; P21 used soft shadow maps, a sky environment map for specular and a contact blob. Real screen-space AO was not done.
+5. **Libraries are inlined** (about 775 KB); every patch uses exact anchors.
+6. **Old solver results** from before P2 are discarded; use section O.
+7. **Phase order** (changed at the user's request): essentials P7 to P12, levels P13 to P19, graphics P20 to P22, QA P23, then the second spec P24 to P61.
+8. **Requirements already met by P1 to P23:** room codes, 15 s voting, Standard (6 putts) and Tournament 3/6/9, ball R=6, ice, slime, sand, fans, tornadoes, jump pads, teleporters, cup sizes per map, deterministic sine aim sway, three cameras, spectator, spatial audio, frosted HUD, putt-to-putt transition.
 
 ## H. ARCHITECTURE REFERENCE (as implemented)
 Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) horizontal, z height; Three.js uses (x,z) horizontal, y up. Map data (from the code): `course(name,desc,tee,hole,tiles,extra)` with defaults `par:4,w:[],sand:[],ice:[],slime:[],q:[],pl:[],rp:[],pd:[],pit:[],fan:[],tp:[],tornado:[],movers:[]`. `tiles` = playable rectangles (everything else is void); `w` walls `[x,y,w,h]`; `sand`; `ice` and `slime` `[x,y,w,h]` (P4); `q` power-up blocks; `pl` platforms `[x,y,w,h,H]`; `rp` ramps `[x,y,w,h,dir,h0,h1]`; `pd` jump pads; `pit` water `[x,y,w,h]`; `fan` `[x,y,w,h,dx,dy,force]`; `tp` teleporter pairs `[ax,ay,bx,by,color]`; `tornado`, `movers`. Screen borders `B` are 16 px walls around the 800x500 canvas.
@@ -130,6 +157,7 @@ Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) hor
 `node tools.js check` (parses the `<script id="game">` block). It proves only that the JS parses, not that it behaves.
 
 ## N. TOOLS (`tools.js`)
+- `rank` (P19) prints the six starter maps (indexes 0, 8, 20, 21, 5, 19) with total and per-putt hole-in-one counts from the recorded `--full` runs held in the `LADDER` array inside `tools.js`, and fails (`RANK FAILED`) if the order is not strictly harder, a map name or `STARTERS` slot does not match, or a putt is under 60 hits. Update `LADDER` whenever a map is re-tuned.
 - `check` parses the game script and fails if `HOLES` has an empty slot (double comma). `node tools.js check` | `list` | `surfaces` | `cups` | `mechanics` | `mechanics` | `smoke` | `smoke-multi` | `solve <map> [putt] [--full]` | `arena ['Map Name']`.
 - `smoke-multi` boots 4 jsdom windows (host + 3 guests) joined through `makeNet()`, an in-memory stand-in for PeerJS (same API surface the game uses; messages JSON-cloned and delayed 2-3 ms). It asserts: joining and host election, 4-player lobby roster, guest cannot start, first guest vote starts the countdown on the host and is visible to all, voting waits for everyone, majority map locks, six putts where the game WAITS for the last player and then advances all clients together, HIO banner visible on guests, totals per player, sole winner, guest cannot leave results, host returns all to the lobby, and a player dropping out mid-putt (host notices, the rest advance).
 - `smoke` loads the real HTML in jsdom (WebGL, canvas and PeerJS are stubbed), plays a 3-map tournament in solo (maps 0, 8, 0) by calling the game's own `sink()` through a test hook (`window.__pp`, only active when `window.__PP_TEST` is set), and asserts: sway math, lobby -> start -> vote -> 6 putts -> results -> next vote -> champion -> lobby, cumulative totals (11/23/35), HIO banner, button labels, and zero runtime errors. Setup: `mkdir /tmp/jd && cd /tmp/jd && npm i jsdom`, then `NODE_PATH=/tmp/jd/node_modules node tools.js smoke` (about 90 s). Keep jsdom OUT of the project tree.
@@ -144,27 +172,18 @@ Everything is inside one IIFE in `putt-pals.html`. Positions: sim uses (x,y) hor
 - `arena` rewrites a map as six chambers from the `SPECS` table inside `tools.js`; if the name is not found in `HOLES` it APPENDS a new map line at the end of the array (P15; running it again replaces that line, so it is idempotent) (chamber-local coords 228x198; keys `t,c,w,sand,pit`). It matches the map's single `course('Name'...` line, so keep each map on one line. Extend `SPECS` and `arenaLine()` when adding ice, slime, pads, teleporters, fans, tornadoes.
 - 1 CPU core in the build sandbox: run long jobs with `setsid nohup ... &` and poll.
 
-## L. ENVIRONMENT NOTES FROM THE PREVIOUS SESSIONS
-- No browser was available to the AI; the game could not be run there. Libraries are now inlined, so the HTML needs no network except PeerJS's signaling server for multiplayer.
-- 1 CPU core. Long jobs: `setsid nohup`.
-- Outputs lived in `/mnt/user-data/outputs`.
+## L. ENVIRONMENT NOTES
+- No browser is available to the AI; the game has never been run in a real browser by it. Libraries are inlined, so the HTML needs no network except PeerJS's signaling server for multiplayer.
+- 1 CPU core. Run long jobs with `setsid nohup ... > log &` and poll with `sleep`. Do not run two solver jobs at once (they slow each other down).
+- Time guide: `solve <map>` (fast) takes seconds to a few minutes; `solve <map> --full` takes about 15 minutes per map with fans and tornadoes; `smoke` plus `smoke-multi` take about 4 minutes together.
+- Tests need jsdom: `mkdir -p /tmp/jd && cd /tmp/jd && npm i jsdom`, then run `NODE_PATH=/tmp/jd/node_modules node tools.js smoke` (and `smoke-multi`). Expect 87/87 and 41/41 PASS lines at the end of P23.
+- Work on copies in a scratch folder (`/home/claude/pp`); deliver the three files to `/mnt/user-data/outputs`. Uploaded files are read-only.
+- Safe patching: exact-match scripts that assert one match per anchor and write only if every anchor matched; a failed assert means NOTHING was written, so re-measure after fixing it. Kill background jobs by PID, never with `pkill -f` (it kills its own shell).
 
----------------------------------------------------------------------
 ## I. TESTING: WHAT IS PROVEN AND WHAT THE USER MUST CHECK
-**Proven by `tools.js smoke` and `smoke-multi` (simulated network, not real WebRTC) (P3, 59/59 pass):** the room state machine in solo (lobby, mode select, voting, six-putt sequencing, host advance when all done, results, tournament standings, champion, reset), vote winner locking the map, score carry-over (`tot`), HIO banner text, deterministic sine sway math (zero at every crossing, peak equals spread, grows with power), and no runtime exceptions during all of it.
-**NOT proven (stubbed or not exercised):** anything visual (HUD overlay layout, frosted glass, ghost cup markers, warp flash, banners' look and timing), real WebGL rendering, real drag-to-shoot input, real WebRTC/PeerJS behavior (NAT, latency, packet loss, signaling), the putt timer and penalty path in a real browser (the limit math is tested by `tools.js surfaces`, the HUD m:ss text and the ice/slime look are not), no map uses ice or slime yet (P15, P16), no map sets a smaller cup or uses a pad, teleporter, fan or tornado inside a chamber yet, how those look inside a chamber is unchecked (P13 to P18; the cup look at radius 8 to 14 and whether it feels fair is for you to judge in a browser), a late joiner or spectator mid-map, tie votes, more than 4 players (code cap is 8 guest connections = 9 players, untested), mobile layout.
-**User hand-test checklist (open `putt-pals.html` in a browser):**
-1. Play solo: lobby shows mode select; Start -> voting grid; a map card shows vote count after clicking; countdown then play. The canvas fills the stage; HUD pill, buttons, scoreboard, power bar and toast are visible and do not overlap badly (also try a phone-width window).
-2. Drag back: arrow is hidden at rest, appears only while dragging, sways left-right as a smooth sine, and releasing as it crosses center shoots perfectly straight.
-3. Switchback Garden: the other five cups show as dark discs with CUP/TEE labels; holing out plays a bright warp flash and the new tee/cup are correct. After putt 6 the results show the winner; tournament shows standings and "Next map vote".
-4. Let a putt run out the clock (2:00 at par 2; the HUD pill counts down as m:ss): penalty toast, 8 strokes, game advances. (Tip: temporarily lower `LIMIT_BASE` in the HTML to test faster.)
-5. Press C or the View button: Ball cam, Hole view, World view cycle with a smooth move; check that Hole view shows both ball and cup and that World view shows the whole arena.
-6. Sound (click the page first): putt thump, bounce ticks off walls, plink and chime in the cup, fanfare on a hole in one, splash in water. Pan and distance should follow where the ball is relative to the camera; the Sound button and M mute everything.
-7. Phone width (about 390 px, or a narrow window): the bar, power meter, scoreboard stack around the course instead of covering it; the lobby, map cards and buttons are usable; the last 10 s turn the top pill red; in a room the lobby shows the code, player count and invite.
-8. Sink a putt early (or join a room mid-map as a spectator): WASD/QE fly, Shift is faster, drag looks around, the next putt returns to the normal camera.
-9. Holing out on putts 1 to 5: no white flash; the ball arcs to the next tee while the camera follows and settles behind it, input is locked for about 1.5 s, then play starts smoothly.
-10. Two tabs (host and guest, same room code): the guest's vote counts, countdown shows on both, scores sync, guest cannot start or change anything.
-Report anything off and the next AI fixes it before adding features.
+**Proven (headless, `tools.js smoke` and `smoke-multi`, simulated network, not real WebRTC):** the room state machine (lobby, mode, voting, six putts, advance, results, tournament, reset), 4 simulated players with a mid-putt disconnect, camera modes, free roam, audio triggers, putt transition, the six-card voting grid, and that the frame loop (trail, confetti, contact blobs) throws no errors.
+**Never proven by tests:** real WebGL rendering, real drag input, real WebRTC (NAT, latency), performance on phones, anything that depends on how it looks or feels. P20 to P22 were checked by the user in a browser (works, no complaints).
+**For the user:** the playtest checklist near the end of this file; report anything off and the next AI fixes it before adding features.
 
 ## M. PROGRESS LOG
 | Date/Session | Event |
@@ -174,16 +193,16 @@ Report anything off and the next AI fixes it before adding features.
 | reorder 2 | Phases regrouped at the user's request: essentials P7 to P12 (new P12 = your playtest checkpoint), level design P13 to P19, graphics P20 to P22, final QA P23; no code changed |
 | reorder 1 | Ranking and voting-grid restriction moved after the six maps (they need finished maps); no code changed |
 | P23 | DONE: final QA on the finished build. `check` 22 maps no empty slots; `rank` OK (strictly harder each step); `smoke` 87/87; `smoke-multi` 41/41; fast solver `solve <map>` ALL PUTTS VERIFIED (robust shot on every putt) on all six starter maps: 0 Switchback Garden, 8 Dune Serpent, 20 Frost Hollow, 21 Slime Springs, 5 Cyclone Ring, 19 Grand Finale. Not re-run: the `--full` hole-in-one counts (about 90 minutes in total), so `rank` still uses the counts recorded in P8 to P18; the playtest checklist below is for the user. |
-| P22 | BUILT, NOT SEEN: VFX. (1) Ball trail: `trail` Points with a custom shader, 26 points that fade along the path, tinted by the ball color, shown only while the ball moves in play mode, reset on teleports (jump over 90 units). (2) Cup-sink confetti: `burstConfetti` spawns 90 square pastel particles at the ball when `me.mode` changes to `'sunk'`, with gravity, light drag and a fade over about 2.4 s. (3) Fan wind streams now use a soft round sprite (`SOFT` texture, size 7) instead of hard squares. The tornado particles and the pickup aura shaders already existed from earlier phases and were left as they are. Tunables: `TRN`, trail shader size 30 and alpha .6, `CN` 90, confetti speeds in `burstConfetti`. Verified: `smoke` exercises the trail, the sink burst and the frame loop with no runtime errors. Not verified: how any of it looks, the particle sizes at real camera distances, and performance on phones. |
-| P21 | BUILT, NOT SEEN: lighting. (1) Shadow map switched from `PCFSoftShadowMap` to `PCFShadowMap` with `sun.shadow.radius=3.4`, which gives softer edges in r128; the pink hemisphere ground light tints the shadowed areas. (2) Specular: a sky environment map built with `PMREMGenerator` from the sky shader (`ENV`, wrapped in try/catch so a failure only means no reflections), applied to the ball (intensity 1.1), fan rings, flag pole and coin rings. (3) Ambient-occlusion look: a soft dark-violet contact shadow under every ball (`mkBlob`/`setBlob`, scales and fades with ball height above the floor `surf`). Real screen-space AO and wall-base darkening were NOT done (r128 setup without post-processing); this is the closest cheap approximation. Verified: `smoke` and `smoke-multi` pass. Not verified: the environment map in a real WebGL context (the test renderer is a stub, so that path only ran its fallback), whether shadows look soft enough or too blurry, and that the blob sits correctly on ramps and platforms. |
-| P20 | BUILT, AWAITING USER'S VISUAL CONFIRMATION (not marked DONE): pastel cartoon palette, bright sun, dreamy void, frosted glass. All edits are in `putt-pals.html` only, exact-match patched; a copy of the pre-P20 file is not in outputs, so to undo, revert the values below. Scene: fog `0xf0d8ee` (1800 to 7000); hemisphere light `0xe2f0ff`/`0xf2c9e8` at .9; sun `0xfff0cc` at 1.5; tone-mapping exposure 1.15; void floor `0xd9c8f4`; bump scale .9 to .5. Textures (all pastel): turf `#8fdca4` with softer stripes and noise .16, brick `#ecc3aa`, platform `#cbeec6` (pink border kept), ramp `#e4f0bc`/`#f6eeb8`, sand `#fcefc4`, ice `#d8f3ff`, slime `#b8f0a2`. Sky shader rewritten: peach-pink horizon rising to periwinkle and lilac, a pastel gradient below the horizon instead of black, a soft sun glow and a bright disc in the sun direction `(.35,.65,.5)`. New `dreamBits`: 30 floating pastel spheres and rings in a ring 1,500 to 3,300 units out from `(1500,650)`, bobbing and turning slowly via `bobDreams(t)` called next to `U.t.value=now/1000`; no shadows cast. CSS: menus use a lavender gradient background with frosted violet cards (`backdrop-filter` blur 16) and map cards in translucent white; the in-game HUD (`#info`, top-right buttons, `#ctl`, `#sb`) is frosted violet glass `rgba(124,96,196,.36)` with blur 18, a bright border, an inner highlight and a light text shadow; the warp flash uses lavender. Deliberately kept light text on mid-dark violet glass instead of white glass so labels stay readable over the bright sky. Verified: `check` 22 maps no empty slots, `smoke` 87/87, `smoke-multi` 41/41 (no runtime errors from the new scene code). NOT verified, needs the user's eyes: how it actually looks (colors may be too washed out or too sweet), whether the floating shapes sit well relative to the arena (the ring center `(1500,650)` is an estimate), whether the frosted glass and blur are smooth on phones, and text contrast over the new sky. |
-| P19 | DONE: starter ladder. Added `node tools.js rank`, which prints the six maps with total and per-putt range from the recorded `--full` counts and fails if the order is not strictly harder, a map name or `STARTERS` slot does not match, or any putt is under 60 hits. Added `const STARTERS=[0,8,20,21,5,19]` to the game (Switchback Garden, Dune Serpent, Frost Hollow, Slime Springs, Cyclone Ring, Grand Finale); `buildMapCards` now builds only those six cards, numbered 01 to 06 in ladder order (before: map index + 1, all 22), and vote validation accepts only `STARTERS` indexes. The other 14 maps stay in `HOLES` (backlog; `validRoom` and `validPresence` still accept any index). Ranking printed: 4,984 > 3,608 > 2,949 > 2,417 > 1,117 > 833, strictly increasing difficulty, so no map needed re-tuning; per-putt ranges 612..988, 402..808, 199..709, 131..673, 107..456, 93..191. Added a `smoke-multi` assertion that the grid has exactly 6 cards. Verified: `rank` OK, `check` 22 maps no empty slots, `smoke` 87/87, `smoke-multi` 41/41 (40 plus the new grid check). Not verified: the six cards look and read well in a real browser at phone width; `rank` uses recorded counts, not a fresh solve. |
-| P18 | DONE: Grand Finale (index 19, was a single-putt legacy map) converted to the six-chamber arena, the Expert map, mixing mechanics in every chamber. Final `SPECS` (chamber-local): putt 1 wall `[104,60,14,138]`, ice `[20,120,84,78]`, fan `[118,0,110,60,0,1,100]`, `cup:10`; putt 2 wall `[152,0,18,150]`, jump pad `[132,100]`, slime `[24,60,100,80]`, tornado `[190,170,40,240]`, `cup:10`; putt 3 wall `[0,86,130,14]`, fan `[130,100,98,98,-1,0,130]`, tornado `[170,40,45,-240]`, `cup:9`; putt 4 wall `[107,0,14,150]`, teleporter `[60,90,160,60,1]`, slime `[130,100,98,98]`, tornado `[60,150,40,240]`, `cup:8`; putt 5 walls `[100,60,14,138]`,`[150,60,34,12]`,`[150,0,12,30]`, ice `[0,100,100,98]`, fan `[118,100,110,98,0,-1,130]`, tornado `[190,120,35,-220]`, `cup:8`; putt 6 walls `[100,0,18,120]`,`[150,110,78,14]`, teleporter `[60,100,130,150,2]`, jump pad `[170,150]`, slime `[120,60,40,40]`, tornado `[190,50,35,280]`, `cup:8`. Hits (`--full`, out of 10,800): 110, 93, 149, 126, 164, 191 = 833 (below Cyclone Ring's 1,117; min 93). History: the first draft passed the fast solver but totalled 3,128 (putt 1 teleporter chamber alone was 2,057); teleporter chambers stayed easy (690 to 925 hits even at cup 8), and moving the guard wall or narrowing the cup pocket made putt 1 easier, not harder; putt 3 at cup 8 had 104 hits but NO robust shot (cup 9 fixed it); the layout that finally worked replaced putt 1 with an ice + fan chamber. Lessons: teleporter chambers are too forgiving for Expert; a fan that pushes toward the cup widens a chamber; `pkill -f` matches its own command line and kills the shell, so kill by PID; an edit script with a non-unique anchor aborts before writing, so a run after it measures the OLD layout. Verified: fast and `--full` solves robust on all six putts, `check` 22 maps no empty slots, `smoke` PASSED, `smoke-multi` PASSED (no failing lines; pass counts not recorded this time). Not verified: how the combined mechanics look and feel in a browser. Putts 2 to 4 were measured in an earlier run on identical chamber specs, putts 1, 5 and 6 on the final build. |
-| P17 | DONE: Cyclone Ring (index 5, was a single-putt legacy map) converted to the six-chamber arena with fans and tornadoes, the Hard map. Final `SPECS` (chamber-local): putt 1 wall `[104,60,14,138]`, fan `[118,0,110,60,0,1,100]`, `cup:14`; putt 2 wall `[80,0,14,70]`, tornado `[140,90,60,-240]`, `cup:9`; putt 3 wall `[0,86,150,14]`, fan `[150,100,78,98,-1,0,110]`, `cup:11`; putt 4 wall `[100,70,14,128]`, tornado `[165,100,55,200]`, `cup:11`; putt 5 wall `[110,0,14,130]`, fan `[124,130,104,68,0,-1,110]`, tornado `[56,160,40,-240]`, `cup:10`; putt 6 walls `[100,0,18,110]`,`[150,110,78,14]`, fan `[118,110,32,88,0,-1,200]`, tornado `[180,60,50,260]`, `cup:8`. Hits (`--full`, out of 10,800): 107, 456, 123, 118, 111, 202 = 1,117 (below Slime Springs' 2,417; min 107). History: first layout had NO robust shot on putts 3 and 5 (fans at 220 and 260 were too strong; 110 fixed both); putt 1 first read 49, then 60, and became 107 with fan 100 and cup 14. Putt 6 is the slowest to solve (about 140 s fast) and putts 1 to 6 solutions need power .55 to 1. Lessons: fan force above about 150 across the only route kills every robust shot; the `--full` solve takes about 2.5 min per putt with fans and tornadoes (about 15 min per map). Putt 2 (456) is the widest and putt 6 (202) is the only putt using both mechanics with the smallest cup. Verified: fast solve of all six putts robust, `check` 22 maps no empty slots, `smoke` PASSED, `smoke-multi` PASSED. Not verified: how fans and tornadoes look and feel in a browser; the tornado paths were not checked against the 0.4 x radius rule by hand. |
-| P16 | DONE: Slime Springs added as map index 21 (slime, jump pads, teleporters), the Medium-Hard map. Final `SPECS` (chamber-local): putt 1 walls `[107,0,14,198]`,`[172,66,56,14]`, teleporter `[70,110,160,60]`, slime `[122,100,106,98]`, `cup:8`; putt 2 wall `[152,0,18,150]` (gap underneath), pad `[132,100]`, slime `[24,60,100,80]`, default cup; putt 3 wall `[80,40,16,118]`, slime `[140,0,30,198]`, default cup; putt 4 wall `[107,0,14,150]`, teleporter `[60,90,160,60]`, slime `[130,100,98,98]`, `cup:14`; putt 5 walls `[100,60,14,138]`,`[150,60,34,12]`, teleporter `[50,100,170,150]`, `cup:9`; putt 6 walls `[100,0,18,120]`,`[150,110,78,14]`, teleporter `[60,100,130,150]`, pad `[170,150]`, slime `[120,60,40,40]`, `cup:12`. Hits (`--full`, out of 10,800): 673, 131, 230, 340, 520, 523 = 2,417 (clearly below Frost Hollow's 2,949; putt 2 at 131 is under the ~200 per-putt target and is the narrowest). History: first layout 2,966, 30, 105, 340, 1,578, 523 (5,542); putts 2 and 5 first had NO solution. Lessons: (1) a jump pad launches at vz 400 and the ball keeps its horizontal speed, so at the solver's minimum power 0.3 it flies about 280 units and leaves the chamber; pads only work on slow balls, so put slime before the pad; (2) a longer slime strip makes the power window more forgiving (it compresses exit speeds); (3) teleporter chambers are easy (2,966 hits at cup 17), so use small cups and a guard wall near the exit; (4) smaller cups cut hits roughly 0.6x per step down. BUG FOUND AND FIXED: appending a second new map made `,,` (an empty slot in `HOLES`), so the map list index was 22 while `arena` printed 21. `arena` now adds a comma only when one is missing, and `tools.js check` fails if `HOLES` has an empty slot (it prints the map count). Verified: clean fast solve of all six putts, `smoke` 87/87, `smoke-multi` 40/40, `check` 22 maps no empty slots. Not verified: how slime, pads and teleporters look and feel in a browser. |
-| P15 | DONE: Frost Hollow added as map index 20 (ice + walls), the Medium map. Six chambers in `SPECS`; `arena` now appends new maps. Measured with `solve 20 --full` (hits out of 10,800): first layout 199, 611, 1603, 513, 1959, 478 (total 5,363, too easy: putt 3 was a straight corridor, putt 5 had a large ice area around the cup). Second pass 199, 518 (cup 15), 919 (cup 14), 513, 1,044 (cup 13), 478. Final: putt 2 `cup:15`; putt 3 wall `[98,30,32,138]`, `cup:12`; putt 5 ice `[120,0,108,40]`, `cup:11`. Final hits 199, 518, 532, 513, 709, 478 (total 2,949, min 199; target was min about 200 and total 2,500 to 3,000, and clearly below Dune Serpent's 3,608). Lessons: ice that covers the cup area makes balls keep passing it and inflates hits, so keep ice on the approach and turf at the cup; smaller cups cut hits roughly 0.7x per 2 units. All six putts pass the fast solver (robust). `smoke` 87/87, `smoke-multi` 40/40 (the voting grid now shows 21 maps). Not verified: how the ice looks and feels in a browser. |
-| P14 | DONE: Dune Serpent tuned as the Easy map (the user okayed making maps easier where the ladder needs it). `solve 8 --full` hole-in-one shots out of 10,800: before 194, 96, 786, 247, 181, 199 (total 1703, min 96); after 660, 519, 786, 402, 433, 808 (total 3608, min 402; target was min >= 300 and total clearly below the Beginner map's 4984). Changes in `SPECS`: putt 1 wall `[0,90,130,14]` -> `[0,90,110,14]`, sand `[140,60,60,80]` -> `[150,70,50,60]`; putt 2 wall `[100,70,14,128]` -> `[100,0,14,106]` (reaches the top wall, a bank shot is needed), sand `[130,100,80,70]` -> `[150,100,40,40]`; putt 4 wall `[104,60,18,138]` -> `[104,80,18,118]`, sand `[150,110,50,60]` -> `[155,115,40,45]`; putt 5 wall `[0,86,140,14]` -> `[0,86,120,14]`, sand `[150,100,60,80]` -> `[155,105,45,60]`; putt 6 wall `[104,0,18,120]` -> `[104,0,18,100]`, sand `[0,100,90,98]` -> `[45,100,45,55]` (the tee no longer starts in sand); putt 3 unchanged. Fast solve passes all 6 putts, smoke 87/87, smoke-multi 40/40 |
-| P13 | DONE: Switchback Garden tuned as the Beginner map. Measured with `solve 0 --full` (hole-in-one shots out of 10,800 tried; floor for this map set at 600 per putt): before 456, 935, 663, 988, 308, 907 (min 308); the two narrow putts were widened in `SPECS`: putt 1 wall `[104,0,18,128]` -> `[104,0,18,108]` (612 hits), putt 5 pond `[80,50,70,98]` -> `[90,66,60,66]` (879 hits). After: 612, 935, 663, 988, 879, 907 (min 612, total 4984 vs 4257). Layout regenerated with `tools.js arena 'Switchback Garden'`; it also writes an empty `sand:[]` (no runtime effect). Fast solve passes all 6 putts, smoke 87/87, smoke-multi 40/40. The same count is the metric for P19 ranking |
+| P22 | DONE (user tested, works). `trail` (26 fading additive points, shader, tinted by ball color, reset on teleports), `burstConfetti` (90 particles when `me.mode` becomes `'sunk'`), fan wind streams use the soft `SOFT` sprite. Tornado particles and pickup auras already existed. Tunables: `TRN`, trail size 30 and alpha .6, `CN`, confetti speeds. |
+| P21 | DONE (user tested, works). Shadow map is `PCFShadowMap` with `sun.shadow.radius=3.4`; `ENV` = sky environment map from `PMREMGenerator` inside try/catch (on failure there are simply no reflections) used by the ball, fan rings, pole and coin rings; `mkBlob`/`setBlob` draw a soft contact shadow under every ball. No real screen-space AO or wall-base darkening (r128 without post-processing). |
+| P20 | DONE (user tested, works). PASTEL LOOK, TO BE REPLACED in P49: fog `0xf0d8ee` (1800 to 7000); hemisphere `0xe2f0ff`/`0xf2c9e8` at .9; sun `0xfff0cc` at 1.5; exposure 1.15; void floor `0xd9c8f4`; bump .5; pastel turf, brick, platform, ramp, sand, ice and slime textures in `ctex(...)` calls; sky fragment shader (peach to lilac, sun glow and disc, direction `(.35,.65,.5)`); `dreamBits` (30 floating pastel shapes) with `bobDreams(t)` next to `U.t.value=now/1000`; CSS: lavender menus with frosted cards, frosted violet HUD (`#info`, `#ctl`, `#sb`, top buttons). |
+| P19 | DONE: starter ladder. `node tools.js rank` prints the six maps with totals and per-putt ranges from the recorded `--full` counts and fails if the order is not strictly harder, a name or `STARTERS` slot mismatches, or a putt is under 60 hits. `const STARTERS=[0,8,20,21,5,19]` limits the voting grid (cards numbered 01 to 06) and vote validation; the other 14 maps stay in `HOLES`. `smoke-multi` asserts exactly 6 cards. `rank` uses recorded counts, not a fresh solve. |
+| P18 | DONE: Grand Finale converted (index 19, Expert, mixed mechanics, cups 8 to 10). Hits 110, 93, 149, 126, 164, 191 (total 833). The first draft totalled 3,128. Lessons: teleporter chambers are too forgiving for Expert (690 to 925 hits even at cup 8), so putt 1 became ice plus fan; a fan that pushes toward the cup widens a chamber; moving a guard wall or narrowing a cup pocket made putt 1 easier; putt 3 at cup 8 had no robust shot (cup 9 works). Process lessons: `pkill -f` matches its own command line and kills the shell (kill by PID); an edit script with a non-unique anchor aborts before writing, so the next run measures the OLD layout. |
+| P17 | DONE: Cyclone Ring converted to the six-chamber arena (index 5, Hard, fans and tornadoes). Hits 107, 456, 123, 118, 111, 202 (total 1,117). Lessons: fan force above about 150 across the only route leaves no robust shot (first draft failed on putts 3 and 5 at 220 and 260; 110 fixed both); `--full` takes about 2.5 min per putt with fans and tornadoes. The tornado outer-ring rule (more than 0.4 x radius) was not hand-checked. |
+| P16 | DONE: Slime Springs added as map index 21 (slime, jump pads, teleporters), Medium-Hard. Hits 673, 131, 230, 340, 520, 523 (total 2,417; putt 2 at 131 is the narrowest). Lessons: a jump pad launches at vz 400 and keeps its horizontal speed, so at the solver's minimum power the ball leaves the chamber; pads only work on a slow ball, so put slime before the pad; longer slime strips widen the power window; teleporter chambers are easy, so use small cups and a guard wall; each cup step down cuts hits about 0.6x. BUG FIXED: appending a second new map made `,,` (an empty slot in `HOLES`, so the index was 22 not 21); `arena` now adds a comma only when missing and `check` fails on an empty slot. |
+| P15 | DONE: Frost Hollow added as map index 20 (ice and walls), Medium. Hits 199, 518, 532, 513, 709, 478 (total 2,949; the first layout was 5,363, too easy). Lesson: ice around the cup inflates hits because the ball keeps passing it; keep ice on the approach and turf at the cup. Cup -2 units cuts hits about 0.7x. `arena` now appends new maps. |
+| P14 | DONE: Dune Serpent tuned as Easy (the user allowed easier maps where the ladder needs it). Hits 660, 519, 786, 402, 433, 808 (total 3,608, min 402; before: 1,703, min 96). Walls shortened and sand patches shrunk in putts 1, 2, 4, 5 and 6; the putt 6 tee no longer starts in sand. |
+| P13 | DONE: Switchback Garden tuned as Beginner. `solve 0 --full` hits 612, 935, 663, 988, 879, 907 (min 612, total 4,984; floor was 600). Putt 1 wall and putt 5 pond were widened in `SPECS`. `arena` also writes an empty `sand:[]` (no effect). |
 | P12 | DONE: the user played the essentials in a browser and reported that the game works and looks good; no fixes requested |
 | P11 | DONE: the white warp flash is gone (the `#warp` element and CSS remain but nothing triggers them). New `puttTransition={startTime,duration:1500,from,to,arc,cp0,cl0}`: from putt 2 on, the ball arcs from the old cup to the new tee (smootherstep, arc height 70 + 0.18 x distance, max 200) while the camera follows from behind, pulls back and rises mid-flight, then settles; the camera eases in from its previous pose over the first 30 % (a first version snapped by 127 units, caught by the new test) and hands off to the normal camera without a jump. Input is blocked while it runs, a soft `warp` whoosh plays, reduced-motion makes it 1 ms. Test hooks `__pp.trans`, `__pp.ball`. `smoke` +5 checks (87/87): starts without the flash, ball arcs, ends in under 2.2 s, no camera step over 60 units per 40 ms sample, playable afterwards; smoke-multi 40/40. NOT proven: how it looks (speed, pull-back distance, whether 1.5 s feels right) |
 | P10 | DONE: (1) phone layout: under 640 px the HUD bar, power bar, toast, inventory and scoreboard stop floating over the small canvas and stack around it (CSS block `P10` at the end of the stylesheet), smaller buttons and cards, banner capped to 92vw, narrower map cards. (2) Live scoreboard: header `SCOREBOARD | Putt | Total`, ranked by running total (this-putt strokes included, so it updates live), ties share a rank, `Putt` shows strokes or a check mark plus the result, spectators show `Watching`. (3) Timer pill turns red in the last 10 s. (4) Lobby: room label shows the code in capitals, player count and host or waiting, `Copy invite` is hidden in solo, `Join room` is disabled while the room code box is empty. `smoke` +6 checks (82/82; one catches the Join button being disabled at load, a bug found and fixed during P10), smoke-multi 40/40. NOT proven: any actual layout (jsdom has no layout engine; phone and desktop appearance, overlap, readability are for you), the frosted-glass polish is still P20 |
@@ -195,7 +214,7 @@ Report anything off and the next AI fixes it before adding features.
 | P4 | DONE: `ice` and `slime` tile arrays (sim friction, rendering, `arena` SPECS keys `ice`/`slime`), `limitOf` dynamic timer (120 s x par/2, 300 s cap) with m:ss HUD; `tools.js surfaces` 8/8; solve maps 0 and 8 unchanged; smoke 59/59 and smoke-multi 40/40 still pass |
 | P3b | DONE: `tools.js smoke-multi` (4 simulated players, fake in-memory PeerJS); 40/40 pass incl. a mid-putt disconnect |
 | P2 | DONE: maps 0 and 8 re-solved under the user's physics; 12/12 putts verified, no layout changes |
-| P3 | DONE: `tools.js smoke` (jsdom, stubbed WebGL/Peer, test hook `window.__pp`); 59/59 pass; user hand-test checklist in section I |
+| P3 | DONE: `tools.js smoke` (jsdom, stubbed WebGL/Peer, test hook `window.__pp`); 59/59 pass; user hand-test checklist (now the playtest checklist near the end) |
 | P1 | DONE: 3-file tree, libs inlined, `tools.js` with fast solver, idempotent arena generator, handoff folded |
 
 ## O. VERIFIED SOLUTIONS (current physics, `node tools.js solve <map>`, fast mode = first robust shot found)
@@ -221,7 +240,7 @@ Difficulty ladder so far (`solve <map> --full`, hole-in-one shots out of 10,800 
 | 19 Grand Finale | 110, 93, 149, 126, 164, 191 | 833 |
 Difficulty notes for P19: Dune Serpent putt 3 is a straight corridor shot (solved in 0.1 s, very wide solution set), while Dune Serpent putt 2 needed 87 s to find a robust shot (narrow). Solve time in fast mode is a rough hint of narrowness; the `--full` hit count is the real metric.
 
-## Playtest checklist for the user (P23)
+## Playtest checklist for the user (valid for the pastel build; re-run after P49)
 Open `putt-pals.html` in a desktop browser first, then on a phone. Report anything that fails and I will fix it.
 1. Menu: lavender background, frosted cards, six map cards numbered 01 to 06 (Switchback Garden to Grand Finale). Text readable?
 2. Start a solo round on map 01. Sky, floating pastel shapes, colors: pleasant or too washed out? Do the floating shapes sit outside the course and not clip it?
@@ -234,3 +253,120 @@ Open `putt-pals.html` in a desktop browser first, then on a phone. Report anythi
 9. Play maps 04 to 06 (Slime Springs, Cyclone Ring, Grand Finale): every putt feels possible but hard; no putt feels impossible or trivial.
 10. Frame rate: smooth on your phone? If not, say so and I will reduce the blur, the shadow map size (2048) and the floating shapes (30).
 11. Multiplayer (2+ devices): join, vote, play a round; other players' balls show a contact shadow and no trail.
+
+## Spec v2 triage (done against the P23 build)
+Facts found by keyword search of the game script (not a full read; re-check at the start of each phase):
+- Stroke cap: `MAXS=8` exists and is also the default score for unfinished players (`q.s[0]??MAXS`).
+- Timer: `LIMIT_BASE=120000` (120 s) and `LIMIT_MAX=300000` already exist from P4, so the 120 s minimum is partly there; what is missing is a per-map customizable limit and the timeout score rule.
+- Par: only a map-level default `par:4` in `course(...)`; no per-putt par, no penalty value.
+- Practice: only a "Solo practice" label for a room without a code; no mode selector, no map or putt picker.
+- Camera: drag-orbit exists in the follow camera; its direction has not been audited. No wall fading or camera-to-ball raycast.
+- Sizes and feel: ball `R=6`, turf friction `k=0.85`, sand 3.2; no separate power constant found by the search.
+- No triangular wedge/bouncer element. Fans, tornadoes, ice, slime, jump pads and teleporters exist (P6, P17, P18).
+- Existing power-ups are `rev`, `zany`, `mag`, `steady` (pickups); none of the five in the spec exist yet.
+- Layout: each putt is a chamber group placed with `OFF(i)` inside one arena; no sky islands, tubes or curved ramps. Ramps (`rp`), platforms (`pl`) and pits (`pit`) exist.
+- Art: no outline, toon, halftone or hatching code; P20 added a soft pastel look instead.
+- Results: the room has `totals` and `last` (scores per player) but no scorecard table.
+Spec section to phase map: 1 -> P24 to P27; 2 -> P28, P29; 3 -> P30, P31; 4 -> P32 to P38; 5 -> P39 to P44; 6 -> P45 to P48; 7 -> P49 to P51 (toon and halftone, sky clouds), P53 to P56 (weather themes, palettes, birds and sun flare); 8 -> P57 to P60 (menu, loading screen, menu sounds, turn cue and ball ring); audio for new mechanics -> P52; QA -> P61.
+Art decision made: style B (JoJo) replaces pastel. Nothing blocks P24 onward.
+Ordering notes: P33, P35, P38 and P44 re-solve maps and can take a long time (fast solve a few minutes per map, `--full` about 15 minutes per map); keep the ladder strictly increasing with `rank` after each.
+
+## Overhaul spec v2 (added by the user, pasted verbatim below)
+STATUS: complete (the user re-sent it with the end of section 7 and a new section 8), triaged into P24 to P61 (see the triage section above); nothing from it is built yet.
+DECIDED: after a side-by-side preview the user chose the JoJo look (B) to replace the pastel look built in P20 to P22.
+NEXT STEP: P24 is `[WORKING]`; start it when the user confirms (rule 2).
+
+--- BEGIN SPEC ---
+# System & Development Task: Putt Pals Game Overhaul
+
+You are an expert 3D web game developer specializing in Three.js/WebGL, custom physics solvers, shader programming, audio managers, and UI/UX design. 
+
+Please refactor and upgrade the core mechanics, level design, UI/UX, audio cues, visual styling, and power-up systems for "Putt Pals" based on the specification breakdown below. Ensure code modularity and maintain readability.
+
+---
+
+## 1. Core Mechanics, Rules, Scoring & Leaderboard
+* **Stroke Limit Removal, Time Limits & Timeout Penalty:**
+  * Remove the 8-stroke cap completely. Players can take unlimited strokes within a per-level countdown timer.
+  * Time limit must be customizable per level with a strictly enforced minimum of 2 minutes (120 seconds).
+  * **Timeout Penalty:** If a player fails to sink the ball before the timer expires, assign them a custom default score calculated for that specific putt (e.g., `Putt Par + Penalty Strokes`).
+  * Transition to the next hole/putt only when all players sink their ball or time runs out for remaining players.
+* **Course Structure:**
+  * Each level consists of exactly 6 distinct holes/putts.
+* **Mini-Golf Scorecard Leaderboard:**
+  * Implement an authentic physical mini-golf scorecard leaderboard UI displayed post-hole or accessible in-game.
+  * Sort players dynamically with the current leader/winner at the top.
+  * Display usernames, individual hole scores, cumulative totals, and relevant stats in clean tabular order.
+
+## 2. Practice Mode & Mode Selection
+* **Practice Mode Integration:**
+  * Add a dedicated "Practice Mode" option in the UI.
+  * Allow players to freely select any specific Map OR isolate and replay a single specific hole/putt within any map for targeted practice.
+
+## 3. Camera Controls & Occlusion Shader
+* **Camera Inversion Fix:**
+  * Invert the camera rotation/pan controls so panning and aiming feel intuitive and natural (fix the current inverted behavior).
+* **Wall Transparency (Occlusion Handling):**
+  * Implement camera-wall raycasting or custom shader transparency. When the camera positioning passes behind or inside a wall geometry, render that wall segment dynamically transparent/alpha-faded so the player's view, aim guide, and ball remain unobstructed.
+
+## 4. Physics Engine & Interactivity Fine-Tuning
+* **Ball & Hole Sizing:**
+  * Reduce the radius of the golf ball and scale down the target hole diameter slightly to increase precision difficulty.
+* **Surface & Wall Mechanics:**
+  * Increase floor friction/slipperiness slightly as baseline physics (fast, smooth rolling without feeling uncontrollable like pure ice).
+  * Strengthen aiming power and magnitude vectors.
+* **Corner Bouncers:**
+  * Place triangular corner wedges/reflectors on tight turn boundaries to help vector redirection when hit at clean angles.
+* **Environmental Entities:**
+  * **Fans:** Reduce fan bounding size, make visual nozzles compact, and apply a strong, highly directional impulse force vector along their axis.
+  * **Vortexes:** Overhaul vortex mechanics to exert stronger, dynamic gravitational suction with variable pull forces based on distance to the center.
+
+## 5. Course Architecture, Geometry & Par Difficulty
+* **Island Structure & Separation:**
+  * Ensure each of the 6 putts is rendered as its own distinct floating island platform high in the sky, completely separated from adjacent putts.
+* **Boundary Walls:**
+  * Place protective side walls along most section boundaries to keep balls from constantly falling off, EXCEPT at designated hazardous ramps, jump gaps, or shortcut edges.
+* **3D Geometry & Verticality:**
+  * Introduce complex 3D topology: curved elevation ramps, multi-tiered platforms, vertical drops, and enclosed transport tubes.
+* **Difficulty Scaling & Hole-in-One Targets:**
+  * Every hole must be mathematically playable to achieve Par based on map rating.
+  * Design hole geometry such that Hole-in-One paths are scaled higher in difficulty relative to the map rating:
+    * *Easy Map:* Medium difficulty Hole-in-One path.
+    * *Medium Map:* Hard difficulty Hole-in-One path.
+    * *Hard Map:* Very Hard difficulty Hole-in-One path.
+
+## 6. Power-Up System Expansion
+* Implement the following interactive power-up abilities (available across all maps, with higher spawn probabilities on thematic weather maps):
+  1. **Lightning / Shockwave:** Creates a radial force pulse that pushes opponent balls away.
+  2. **Wind Burst:** Triggered vector push to blow surrounding balls.
+  3. **Tornado:** Localized vortex hazard.
+  4. **Ice Trap:** Temporarily renders the current putt floor frictionless.
+  5. **Slime Trap:** Applies a slime modifier to walls, removing bounciness.
+
+## 7. Visual Art Style, Textures & Skybox Environments
+* **Unified Art Style & Custom Shading:**
+  * Apply a high-contrast, stylized 3D anime/cartoon aesthetic inspired by *JoJo's Bizarre Adventure* (bold black outlines, vibrant ink crosshatching/action shading, dynamic color palettes).
+  * **Texture Mapping:** Ensure ALL textures across all 3D meshes (turf, side walls, ramps, tubes, obstacles, fans, vortexes, balls, and UI elements) feature this cartoon toon-shader/halftone texture style so the entire world feels visually cohesive.
+* **Environment & Sky World:**
+  * Set all courses floating high in the sky featuring animated volumetric/particle clouds, distant birds, and dynamic sun flare lighting.
+* **Dynamic Weather Themes:**
+  * **Storm / Rain Map:** Dynamic rain shaders, lightning visuals, higher probability for Lightning/Tornado power-up spawns.
+  * **Snow Map:** Atmospheric snowfall, frosty terrain shaders, higher probability for Wind/Ice power-up spawns.
+  * Assign distinct color palettes and custom thematic assets to each map.
+
+## 8. AAA Video Game UI, Audio & Player Feedback
+* **Main Menu & Panorama:**
+  * Replace browser-style UI with a polished video game main menu.
+  * Feature a grand, stylized title graphic matching the *JoJo* aesthetic.
+  * Background features a continuous 3D rotating panorama showcasing various maps.
+* **Loading Screen & Fun Facts:**
+  * Design an immersive loading screen featuring a map panorama background and rotating fun facts/tips at the bottom.
+* **Menu Navigation:**
+  * Place distinct **"Solo"** and **"Friends"** action buttons cleanly in the bottom-left corner of the main menu.
+  * Add crisp, satisfying audio sound effects for all button hovers, clicks, and menu transitions.
+* **In-Game Turn Cues & Audio:**
+  * **Turn-Ready Audio Cue:** Play a distinct audio sound effect when the player's ball comes to a complete enough stop and they are legally cleared to take their next stroke.
+  * **Active Ball Indicator:** Render a glowing, stylized indicator circle directly beneath the player's controlled ball to easily distinguish it from others.
+
+---
+--- END SPEC (complete; the user re-sent it with the missing end of section 7 and a new section 8) ---
