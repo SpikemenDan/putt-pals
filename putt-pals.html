@@ -637,6 +637,7 @@ const VN=['Ball cam','Hole view','World view'],MK=['follow','hole','strategic'];
 const CAM_SPRING={follow:35,orbit:25,hole:18,strategic:12,cinematic:8};
 const CAM_DAMP={follow:7,orbit:6,hole:5,strategic:4,cinematic:3};
 const CAM_MIN_DIST=15, CAM_MAX_DIST=300;
+const CAM_INV=1; // P30: orbit input sign. +1 = look-style (drag right or press Right = view turns right, drag or press Up = view looks up), same as free roam. The pre-P30 build behaved as -1 on both drag axes.
 const keys=new Set(),fp=new V();let freeOn=false,fyaw=0,fpit=-.5,fdrag=null;
 let AC=null,aMaster=null,aNoise=null,aMuted=false,aPrev=null;const aOthers={};
 let puttTransition=null; // {startTime,duration,from,to,arc}
@@ -893,8 +894,8 @@ cv.addEventListener('pointerdown',e=>{if(!me||me.mode!=='play'||me.moving||pull|
 cv.addEventListener('pointermove',e=>{if(orbit!==null){
   const mode=MK[camMode];
   if(['follow','orbit','strategic'].includes(mode)){
-    camAz=orbit.az-(e.clientX-orbit.x)*0.006;
-    camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,orbit.el-(e.clientY-orbit.y)*0.006));
+    camAz=orbit.az+CAM_INV*(e.clientX-orbit.x)*0.006;
+    camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,orbit.el+CAM_INV*(e.clientY-orbit.y)*0.006));
   }else{aa+=(e.clientX-orbit.x)*0.006;}
   return;}
 if(!pull||pull.id!==e.pointerId)return;const p=planePoint(e);if(!p)return;const dx=pull.p.x-p.x,dz=pull.p.z-p.z;if(Math.hypot(dx,dz)>.1)aa=Math.atan2(dz,dx);ch=Math.min(1,Math.hypot(e.clientX-pull.x,e.clientY-pull.y)/Math.min(260,cv.clientWidth*.36));});
@@ -904,7 +905,7 @@ cv.addEventListener('pointercancel',cancel);cv.addEventListener('lostpointercapt
 cv.addEventListener('wheel',e=>{e.preventDefault();if(!me)return;const mode=MK[camMode];if(['follow','orbit','strategic'].includes(mode)){camDist=Math.max(CAM_MIN_DIST,Math.min(CAM_MAX_DIST,camDist+e.deltaY*0.15));}},{passive:false});
 addEventListener('keydown',e=>{if(e.target.matches('input,textarea')||!me)return;if(e.key==='c'||e.key==='C')$('vw').click();else if(e.key==='Escape'){closeCard();cancel();}else if(e.key==='k'||e.key==='K')toggleCard();else if(e.key>='1'&&e.key<='3')useItem(+e.key-1);else if(!charging&&me.mode==='play'&&!me.moving){
   const mode=MK[camMode];
-  if(['follow','orbit'].includes(mode)){if(e.key==='ArrowLeft')camAz-=0.06;if(e.key==='ArrowRight')camAz+=0.06;if(e.key==='ArrowUp')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl+0.06));if(e.key==='ArrowDown')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl-0.06));}
+  if(['follow','orbit'].includes(mode)){if(e.key==='ArrowLeft')camAz-=0.06;if(e.key==='ArrowRight')camAz+=0.06;if(e.key==='ArrowUp')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl-CAM_INV*0.06));if(e.key==='ArrowDown')camEl=Math.max(0.05,Math.min(Math.PI/2-0.05,camEl+CAM_INV*0.06));}
   else{if(e.key==='ArrowLeft')aa-=.06;if(e.key==='ArrowRight')aa+=.06;}}});
 let high=true;$('quality').onclick=()=>{high=!high;renderer.setPixelRatio(high?Math.min(devicePixelRatio||1,2):1);renderer.shadowMap.enabled=high;lw=0;$('quality').textContent='Quality: '+(high?'High':'Low');};
 $('share').onclick=async()=>{if(!code){toast('Join a room from the lobby to invite friends.');return;}const url=new URL(location.href);url.hash='room='+code;try{await navigator.clipboard.writeText(location.protocol==='file:'?'Putt Pals room: '+code:url.href);toast('Invite copied. Keep the host tab open.');}catch(e){toast('Share room code: '+code);}};
@@ -1008,6 +1009,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get active(){return activeRound},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get active(){return activeRound},get camAz(){return camAz},get camEl(){return camEl},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>

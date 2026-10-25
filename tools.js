@@ -350,6 +350,39 @@ async function smoke(){
   ok('P29: Exit returns everyone to the lobby with a clean room',await until(()=>room().phase==='lobby'&&room().mode==='standard'&&$('game').hidden,6000));
   ok('P29: the practice buttons hide again in the lobby',$('pracbar').hidden);
  }
+ { // P30: camera drag direction (look-style: drag right turns the view right, drag up looks up), same as the arrow keys and free roam
+  $('mode').value='practice';$('startgame').click();
+  await until(()=>room().phase==='select'&&room().mode==='practice',4000);
+  g.w.document.querySelector('#mapgrid [data-map="0"]').click();
+  ok('P30: a live putt for the camera test',await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===0&&me.mode==='play'&&me.h===0&&P().now()>=r.startAt&&P().active===r.round;},8000));
+  const cvEl=$('cv'),ev=(t,x,y,b)=>cvEl.dispatchEvent(new g.w.MouseEvent(t,{clientX:x,clientY:y,button:b,bubbles:true}));
+  if(!cvEl.setPointerCapture)cvEl.setPointerCapture=()=>{};
+  const kk=n=>g.w.document.body.dispatchEvent(new g.w.KeyboardEvent('keydown',{key:n,bubbles:true}));
+  await sleep(200);
+  let az=P().camAz,el=P().camEl;
+  ev('pointerdown',400,300,2);ev('pointermove',500,300,2);
+  ok('P30: right-drag 100 px to the right turns the view right (camAz +0.6)',Math.abs(P().camAz-(az+0.6))<0.02&&Math.abs(P().camEl-el)<1e-9,P().camAz+' vs '+(az+0.6));
+  ev('pointermove',500,250,2);
+  ok('P30: dragging 50 px up looks up (the camera drops, camEl -0.3)',Math.abs(P().camEl-(el-0.3))<0.02,P().camEl+' vs '+(el-0.3));
+  ev('pointermove',300,380,2);
+  ok('P30: dragging left and down turns the view left and looks down',P().camAz<az-0.5&&P().camEl>el+0.4,P().camAz+' '+P().camEl);
+  ev('pointerup',300,380,2);
+  az=P().camAz;el=P().camEl;ev('pointermove',700,100,2);
+  ok('P30: moving after the button is released changes nothing',P().camAz===az&&P().camEl===el);
+  kk('ArrowRight');
+  ok('P30: the Right arrow turns the view the same way as dragging right',Math.abs(P().camAz-(az+0.06))<1e-9,P().camAz+' vs '+(az+0.06));
+  kk('ArrowUp');
+  ok('P30: the Up arrow looks up the same way as dragging up',Math.abs(P().camEl-(el-0.06))<1e-9,P().camEl+' vs '+(el-0.06));
+  kk('ArrowDown');kk('ArrowLeft');
+  ok('P30: Down and Left undo them',Math.abs(P().camEl-el)<1e-9&&Math.abs(P().camAz-az)<1e-9);
+  $('vw').click();$('vw').click();
+  ok('P30: World view is selected for the second drag',$('vw').textContent==='View: World view',$('vw').textContent);
+  az=P().camAz;ev('pointerdown',400,300,2);ev('pointermove',450,300,2);ev('pointerup',450,300,2);
+  ok('P30: World view uses the same direction (drag right turns right)',Math.abs(P().camAz-(az+0.3))<0.02,P().camAz+' vs '+(az+0.3));
+  $('vw').click();
+  ok('P30: back on Ball cam',$('vw').textContent==='View: Ball cam');
+  P().R.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});
+ }
  return finish();
  function finish(){ok('no runtime errors',!errs.length,errs.slice(0,3).join(' | '));console.log(fails?`SMOKE FAILED (${fails})`:'SMOKE PASSED');process.exit(fails?1:0);}
 }
