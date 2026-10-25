@@ -18,7 +18,7 @@ const MECH=[
  {t:[30,100],c:[200,100],w:[[150,0,14,198]],slime:[[40,60,50,80]],pd:[[110,100]]},
  {t:[30,170],c:[198,170],w:[[100,60,14,138]],tornado:[[160,60,60,-250]]}];
 // P25: recorded `solve <map> --full` hole-in-one counts (lower = harder). Basis of `rank` AND of the default par / timeout penalty.
-const LADDER=[[0,'Switchback Garden',[612,935,663,988,879,907]],[8,'Dune Serpent',[660,519,786,402,433,808]],[20,'Frost Hollow',[199,518,532,513,709,478]],[21,'Slime Springs',[673,131,230,340,520,523]],[5,'Cyclone Ring',[107,456,123,118,111,202]],[19,'Grand Finale',[110,93,149,126,164,191]]];
+const LADDER=[[0,'Switchback Garden',[686,1014,644,1068,811,990]],[8,'Dune Serpent',[693,633,776,485,492,869]],[20,'Frost Hollow',[232,647,716,579,954,524]],[21,'Slime Springs',[997,148,277,361,690,642]],[5,'Cyclone Ring',[170,588,181,217,168,349]],[19,'Grand Finale',[155,104,238,138,252,293]]];
 // default par from a putt's hit count: >=600 -> 2, >=250 -> 3, else 4. Default timeout penalty (strokes added to par) from the map total: 3, or 4 on Hard maps (total < 1500). A chamber in SPECS may set `par` / `pen` to override.
 const parFromHits=h=>h>=600?2:h>=250?3:4,penFromTotal=t=>t<1500?4:3;
 // P26: per-map putt time limit in seconds (120 minimum, enforced by the game and by `check`); harder maps get more time
