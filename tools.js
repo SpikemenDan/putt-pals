@@ -280,6 +280,31 @@ async function smoke(){
   $('again').click();
   ok(last?'tournament ends back in lobby, totals reset':`map ${m+1}: next vote opens`,await until(()=>last?(room().phase==='lobby'&&!Object.keys(room().totals).length&&room().mode==='standard'):(room().phase==='select'&&!Object.keys(room().votes).length&&room().mapNo===m+1)));
  }
+ { // P28: Practice mode (solo room): no voting, any starter map, normal play, then pick another map
+  const po=$('mode').querySelector('option[value="practice"]');
+  ok('P28: the lobby mode list offers Practice and it is enabled in a solo room',!!po&&!po.disabled);
+  $('mode').value='practice';$('startgame').click();
+  ok('P28: Practice start opens the map grid in practice mode (1 map)',await until(()=>room().phase==='select'&&room().mode==='practice'&&room().series===1));
+  await until(()=>/Practice/.test($('mapstatus').textContent),2000);
+  ok('P28: the status says practice and does not mention voting',/Practice/.test($('mapstatus').textContent)&&!/Voting|Vote for/.test($('mapstatus').textContent),$('mapstatus').textContent);
+  const cards=[...g.w.document.querySelectorAll('#mapgrid .mapcard')];
+  ok('P28: all six starter cards are enabled',cards.length===6&&cards.every(c=>!c.disabled),String(cards.length));
+  const pm=19;g.w.document.querySelector('#mapgrid [data-map="'+pm+'"]').click();
+  ok('P28: one click starts the chosen map (Grand Finale) with no voting countdown',await until(()=>room().phase==='play'&&room().map===pm&&room().putt===0&&!room().deadline,8000)&&room().mode==='practice');
+  for(let k=0;k<6;k++){
+   if(!ok(`P28: practice putt ${k+1} is playable`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===pm&&P().now()>=r.startAt;},12000)))return finish();
+   P().me.str=2;P().sink(false);
+   if(k<5){if(!ok(`P28: practice putt ${k+1} done -> next putt`,await until(()=>room().putt===k+1&&room().phase==='play',12000)))return finish();}
+   else if(!ok('P28: practice results after putt 6',await until(()=>room().phase==='results',12000)))return finish();
+  }
+  await sleep(200);const pt=$('endt').textContent;
+  ok('P28: results say the practice round finished and name no map winner',pt.includes('Practice round finished')&&!pt.includes('Map winner')&&!pt.includes('OVERALL'),pt);
+  ok('P28: results button reads "Pick another map"',$('again').textContent==='Pick another map',$('again').textContent);
+  $('again').click();
+  ok('P28: Pick another map reopens the grid, still practice, clean totals',await until(()=>room().phase==='select'&&room().mode==='practice'&&!Object.keys(room().totals).length&&room().mapNo===0&&!Object.keys(room().votes).length));
+  g.w.document.querySelector('#mapgrid [data-map="0"]').click();
+  ok('P28: a second practice map (Switchback Garden) starts the same way',await until(()=>room().phase==='play'&&room().map===0&&room().putt===0,8000));
+ }
  return finish();
  function finish(){ok('no runtime errors',!errs.length,errs.slice(0,3).join(' | '));console.log(fails?`SMOKE FAILED (${fails})`:'SMOKE PASSED');process.exit(fails?1:0);}
 }
@@ -295,6 +320,7 @@ async function smokeMulti(){
  ok('first player is host, the other three are guests',G[0].P().R.isHost()&&G.slice(1).every(x=>!x.P().R.isHost()));
  ok('all 4 clients see 4 named players in the lobby',await until(()=>G.every(x=>x.room().phase==='lobby'&&x.P().R.peers().filter(p=>p.presence.n).length===N),6000));
  G[2].$('startgame').click();await sleep(400);
+ {const po=G[0].$('mode').querySelector('option[value="practice"]');ok('P28: Practice is disabled in a room with several players',po.disabled);G[0].$('mode').value='practice';G[0].$('startgame').click();await sleep(400);ok('P28: the host cannot start Practice with 4 players',G.every(x=>x.room().phase==='lobby'&&x.room().mode==='standard'));}
  ok('a guest cannot start the game',G.every(x=>x.room().phase==='lobby'));
  G[0].$('mode').value='1';G[0].$('startgame').click();
  ok('host Start opens voting on every client',await until(()=>G.every(x=>x.room().phase==='select'),4000));

@@ -121,7 +121,7 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <p class="small">Drag backward anywhere on the course, then release to putt. Longer pulls add power and widen a sine sway; release as the arrow crosses center for a perfectly straight shot. Escape cancels. Keys 1–3 use power-ups. Right-drag rotates the ball camera.</p>
 <details><summary>Online connection settings</summary><p>Optional ICE server JSON for your own TURN relay. Use temporary credentials; these settings stay in this tab.</p><textarea id="ice" placeholder='[{"urls":"turn:your-server:3478","username":"temporary-user","credential":"temporary-password"}]'></textarea></details>
 </div>
-<div id="waiting" class="card" hidden><h1>Room lobby</h1><p id="roomlabel"></p><div id="roster"></div><label id="modewrap">Game mode<select id="mode"><option value="1">Standard · 1 map</option><option value="3">Tournament · 3 maps</option><option value="6">Tournament · 6 maps</option><option value="9">Tournament · 9 maps</option></select></label><p id="waitstatus" class="status"></p><button id="startgame">Start Game</button><button id="lobbyinvite" class="ghost">Copy invite</button><button class="leave ghost">Leave room</button></div>
+<div id="waiting" class="card" hidden><h1>Room lobby</h1><p id="roomlabel"></p><div id="roster"></div><label id="modewrap">Game mode<select id="mode"><option value="1">Standard · 1 map</option><option value="3">Tournament · 3 maps</option><option value="6">Tournament · 6 maps</option><option value="9">Tournament · 9 maps</option><option value="practice">Practice · pick any map (solo)</option></select></label><p id="waitstatus" class="status"></p><button id="startgame">Start Game</button><button id="lobbyinvite" class="ghost">Copy invite</button><button class="leave ghost">Leave room</button></div>
 <div id="mapselect" class="card" hidden><div id="menubar"><h1>Choose your course</h1><button class="leave ghost">Leave room</button></div><p id="mapstatus" class="status"></p><button id="playmap" hidden>Play selected map</button><div id="mapgrid"></div></div>
 <div id="netnotice" hidden></div>
 <div id="cardov" hidden><div id="cardwrap"><button id="cardx" aria-label="Close scorecard">×</button><div id="cardbody"></div></div></div><div id="banner"></div><div id="warp"></div>
@@ -219,14 +219,15 @@ function finishMap(r){
 function showResults(r){
  const L=r.last;if(!L)return;
  const lines=Object.keys(L.sc).sort((a,b)=>L.sc[a]-L.sc[b]).map(k=>L.names[k]+' '+L.sc[k]),win=L.win.map(k=>L.names[k]).join(' & ');
- let t=HOLES[L.map].name+': '+lines.join(' · ')+'. Map winner: '+win+'.';
- announce(win,'MAP WINNER · '+HOLES[L.map].name.toUpperCase(),'event');
+ const prac=r.mode==='practice';
+ let t=HOLES[L.map].name+': '+lines.join(' · ')+(prac?'. Practice round finished.':'. Map winner: '+win+'.');
+ announce(prac?'PRACTICE DONE':win,(prac?'':'MAP WINNER · ')+HOLES[L.map].name.toUpperCase(),'event');
  const tour=r.mode==='tournament',more=tour&&r.mapNo<r.series;
  if(tour){const T=Object.values(r.totals||{}).sort((a,b)=>a.t-b.t);t+=' Standings after map '+r.mapNo+'/'+r.series+': '+T.map(x=>x.n+' '+x.t).join(' · ')+'.';
   if(!more&&T.length){const ch=T.filter(x=>x.t===T[0].t).map(x=>x.n).join(' & ');t+=' OVERALL CHAMPION: '+ch+'!';announce(ch,'TOURNAMENT CHAMPION','hio');}}
  if(me.mode!=='spectator')$('endt').textContent=t;
  closeCard();renderCard($('endcard'),r);
- $('again').textContent=more?'Next map vote':'Back to lobby';
+ $('again').textContent=prac?'Pick another map':more?'Next map vote':'Back to lobby';
 }
 // ---------- P27: paper scorecard (host records finished putts in room.card; live putt comes from presence) ----------
 function recordCard(r){ // new room.card: {peerId:{n,s:[score per finished putt],o:[1 = timed out]}}, one entry appended per roster player
@@ -827,7 +828,7 @@ function syncRoom(){
  if(!R_.connected()){$('netnotice').textContent='Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.';cancel();return;}
  $('waiting').hidden=r.phase!=='lobby'&&!(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt);
  $('mapselect').hidden=r.phase!=='select';$('startgame').hidden=!host||r.phase!=='lobby';$('modewrap').hidden=!host;
- {const np=R_.peers().filter(p=>p.presence.n).length;$('roomlabel').textContent=code?'Room '+code.toUpperCase()+' · '+np+' player'+(np===1?'':'s')+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';$('lobbyinvite').hidden=!code;}
+ {const np=R_.peers().filter(p=>p.presence.n).length;{const po=$('mode').querySelector('option[value="practice"]');po.disabled=np>1;if(np>1&&$('mode').value==='practice')$('mode').value='1';}$('roomlabel').textContent=code?'Room '+code.toUpperCase()+' · '+np+' player'+(np===1?'':'s')+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';$('lobbyinvite').hidden=!code;}
  if(r.phase==='lobby'||r.phase==='select'){$('game').hidden=true;$('end').hidden=true;me.mode='lobby';cancel();closeCard();}
  if(r.phase==='lobby'){
   const el=$('roster');el.textContent='';for(const p of R_.peers()){if(!p.presence.n)continue;el.appendChild(row(p.presence.c,p.presence.n+(p.isMe?' (you)':''),'Joined','',false));}
@@ -837,11 +838,11 @@ function syncRoom(){
   const ids=R_.peers().filter(p=>p.presence.n).map(p=>p.peer),vs=Object.entries(r.votes||{}).filter(([k,v])=>ids.includes(k)&&Number.isInteger(v)&&STARTERS.includes(v)),tally={};
   vs.forEach(([k,v])=>tally[v]=(tally[v]||0)+1);
   const left=r.deadline?Math.max(0,Math.ceil((r.deadline-R_.now())/1000)):VOTE_SECS;
-  $('mapstatus').textContent=(r.mode==='tournament'?'Map '+((r.mapNo|0)+1)+'/'+r.series+' · ':'')+(vs.length?'Voting ends in '+left+'s · '+vs.length+'/'+ids.length+' voted':'Vote for a map. The first vote starts a '+VOTE_SECS+'s countdown.');
+  $('mapstatus').textContent=r.mode==='practice'?'Practice · pick any map to start. No voting, no opponents.':(r.mode==='tournament'?'Map '+((r.mapNo|0)+1)+'/'+r.series+' · ':'')+(vs.length?'Voting ends in '+left+'s · '+vs.length+'/'+ids.length+' voted':'Vote for a map. The first vote starts a '+VOTE_SECS+'s countdown.');
   $('playmap').hidden=true;
   for(const b of $('mapgrid').children){const m=+b.dataset.map;b.disabled=false;b.dataset.v=tally[m]||0;b.classList.toggle('selected',(r.votes||{})[R_.id()]===m||(R_.id()==='solo'&&(r.votes||{}).solo===m));}
   if(host&&vs.length){
-   if(vs.length>=ids.length||(r.deadline&&R_.now()>=r.deadline)){
+   if(r.mode==='practice'||vs.length>=ids.length||(r.deadline&&R_.now()>=r.deadline)){
     const top=Math.max(...Object.values(tally)),tied=Object.keys(tally).filter(k=>tally[k]===top).map(Number).sort((a,b)=>a-b);
     R_.setRoom({phase:'play',map:tied[(r.round*7+vs.length)%tied.length],putt:0,round:r.round+1,startAt:R_.now()+2500,roster:ids,votes:{},deadline:0,card:{}});
    }else if(!r.deadline)R_.setRoom({deadline:R_.now()+VOTE_SECS*1000});
@@ -987,9 +988,9 @@ async function begin(multi){
 }
 {const rcIn=$('rc'),sync=()=>{$('go').disabled=!rcIn.value.trim();};rcIn.addEventListener('input',sync);sync();}
 $('go').onclick=()=>begin(true);$('solo').onclick=()=>begin(false);
-$('startgame').onclick=()=>{if(R_?.isHost()){const v=+$('mode').value;R_.setRoom({phase:'select',votes:{},deadline:0,mode:v>1?'tournament':'standard',series:v,mapNo:0,totals:{},last:null,card:{}});}};
+$('startgame').onclick=()=>{if(R_?.isHost()){const pr=$('mode').value==='practice';if(pr&&R_.peers().filter(p=>p.presence.n).length>1)return;const v=pr?1:+$('mode').value;R_.setRoom({phase:'select',votes:{},deadline:0,mode:pr?'practice':v>1?'tournament':'standard',series:v,mapNo:0,totals:{},last:null,card:{}});}};
 $('playmap').onclick=()=>{if(R_?.isHost())R_.setRoom({phase:'play',round:R_.room().round+1,startAt:R_.now()+2500,roster:R_.peers().filter(p=>p.presence.n).map(p=>p.peer),card:{}});};
-$('again').onclick=()=>{if(!R_?.isHost())return;const r=R_.room();if(r.mode==='tournament'&&r.mapNo<r.series)R_.setRoom({phase:'select',votes:{},deadline:0});else R_.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});};$('lobbyinvite').onclick=()=>$('share').onclick();
+$('again').onclick=()=>{if(!R_?.isHost())return;const r=R_.room();if(r.mode==='practice')R_.setRoom({phase:'select',votes:{},deadline:0,mapNo:0,totals:{},last:null,card:{}});else if(r.mode==='tournament'&&r.mapNo<r.series)R_.setRoom({phase:'select',votes:{},deadline:0});else R_.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});};$('lobbyinvite').onclick=()=>$('share').onclick();
 document.querySelectorAll('.leave').forEach(b=>b.onclick=()=>{R_?.close();location.reload();});
 $('cardbtn').onclick=toggleCard;$('cardx').onclick=closeCard;
 buildMapCards();
