@@ -17,6 +17,11 @@ const MECH=[
  {t:[30,60],c:[200,140],w:[[107,0,14,198]],tp:[[70,90,160,90,0]]},
  {t:[30,100],c:[200,100],w:[[150,0,14,198]],slime:[[40,60,50,80]],pd:[[110,100]]},
  {t:[30,170],c:[198,170],w:[[100,60,14,138]],tornado:[[160,60,60,-250]]}];
+// P25: recorded `solve <map> --full` hole-in-one counts (lower = harder). Basis of `rank` AND of the default par / timeout penalty.
+const LADDER=[[0,'Switchback Garden',[612,935,663,988,879,907]],[8,'Dune Serpent',[660,519,786,402,433,808]],[20,'Frost Hollow',[199,518,532,513,709,478]],[21,'Slime Springs',[673,131,230,340,520,523]],[5,'Cyclone Ring',[107,456,123,118,111,202]],[19,'Grand Finale',[110,93,149,126,164,191]]];
+// default par from a putt's hit count: >=600 -> 2, >=250 -> 3, else 4. Default timeout penalty (strokes added to par) from the map total: 3, or 4 on Hard maps (total < 1500). A chamber in SPECS may set `par` / `pen` to override.
+const parFromHits=h=>h>=600?2:h>=250?3:4,penFromTotal=t=>t<1500?4:3;
+const ladderOf=name=>LADDER.find(l=>l[1]===name);
 const SPECS={
  'Switchback Garden':['Six chambers in one arena. Bank shots around walls and a pond; the camera warps to the next putt.',[
   {t:[34,34],c:[194,34],w:[[104,0,18,108]]},{t:[34,164],c:[194,34],w:[[104,100,18,98]]},
@@ -62,11 +67,12 @@ function arenaData(P){const W=PERIM.map(r=>r.slice()),o={sand:[],ice:[],slime:[]
   o.tp.push(...(d.tp||[]).map(r=>[ox+r[0],oy+r[1],ox+r[2],oy+r[3],r[4]||0]));            // teleporter pair [ax,ay,bx,by,color]
   o.fan.push(...(d.fan||[]).map(r=>[ox+r[0],oy+r[1],r[2],r[3],r[4],r[5],r[6]]));         // fan [x,y,w,h,dx,dy,force]
   o.tornado.push(...(d.tornado||[]).map(r=>[ox+r[0],oy+r[1],r[2],r[3]]));                // tornado [x,y,radius,strength(+/- = spin)]
-  putts.push({tee:[ox+d.t[0],oy+d.t[1]],hole:[ox+d.c[0],oy+d.c[1]],cup:d.cup});});
+  putts.push({tee:[ox+d.t[0],oy+d.t[1]],hole:[ox+d.c[0],oy+d.c[1]],cup:d.cup,par:d.par,pen:d.pen});});
  return{w:W,...o,putts};}
 function arenaLine(name){const[desc,P]=SPECS[name],D=arenaData(P),j=JSON.stringify,f=k=>D[k].length?k+':'+j(D[k])+',':'';
- const putts=D.putts.map(p=>`{tee:${j(p.tee)},hole:${j(p.hole)},par:2${p.cup?',cup:'+p.cup:''}}`).join(',');
- return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}par:12,putts:[${putts}]}),\n`;}
+ const L=ladderOf(name),tot=L?L[2].reduce((a,b)=>a+b,0):0,pp=D.putts.map((p,k)=>({par:p.par??(L?parFromHits(L[2][k]):2),pen:p.pen??(L?penFromTotal(tot):3)})),
+  putts=D.putts.map((p,k)=>`{tee:${j(p.tee)},hole:${j(p.hole)},par:${pp[k].par},pen:${pp[k].pen}${p.cup?',cup:'+p.cup:''}}`).join(',');
+ return `course('${name}','${desc}',[80,80],[240,80],[[40,40,720,420]],{w:${j(D.w)},sand:${j(D.sand)},${f('ice')}${f('slime')}pit:${j(D.pit)},${f('pd')}${f('tp')}${f('fan')}${f('tornado')}par:${pp.reduce((a,x)=>a+x.par,0)},putts:[${putts}]}),\n`;}
 function applyArena(name){let h=read();const re=new RegExp("course\\('"+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"'.*?\\n");
  if(re.test(h))h=h.replace(re,()=>arenaLine(name));
  else{const g=h.indexOf('<script id="game">'),i=h.indexOf('\n];',h.indexOf('const R=',g));if(g<0||i<0)throw Error('HOLES end not found');const pre=h.slice(0,i);h=pre+(pre.trimEnd().endsWith(',')?'':',')+'\n'+arenaLine(name).slice(0,-1)+h.slice(i);} // new map: append at the end of HOLES
@@ -169,6 +175,12 @@ async function smoke(){
     }
    }
    if(!ok(`map ${m+1} putt ${k+1}: ready`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&P().now()>=r.startAt;},12000)))return finish();
+   { // P25: every putt has a par and a timeout penalty, and the HUD shows the par of the CURRENT putt
+    const me=P().me,pt=P().holes[me.h].putts[k],hud=$('info').textContent;
+    ok(`P25: map ${m+1} putt ${k+1} has an integer par (2..6) and penalty (1..6)`,Number.isInteger(pt.par)&&pt.par>=2&&pt.par<=6&&Number.isInteger(pt.pen)&&pt.pen>=1&&pt.pen<=6,JSON.stringify([pt.par,pt.pen]));
+    ok(`P25: map ${m+1} putt ${k+1}: HUD shows PAR ${pt.par}`,hud.includes(' PAR '+pt.par+' '),hud);
+    ok(`P25: map ${m+1} putt ${k+1}: penOf matches the data`,P().penOf(me.h,k)===pt.pen);
+   }
    if(k===0&&m===0){ // P24: no stroke cap
     const me=P().me,restore=()=>{me.mode='play';me.over=false;me.str=0;me.s=[];me.moving=false;me.wait=0;P().pub(true);};
     me.str=12;P().stop();ok('P24: after 12 strokes the player keeps playing (no stroke cap)',me.mode==='play'&&!me.over);
@@ -289,7 +301,13 @@ async function smokeMulti(){
  return finish();
 }
 const[,,cmd,...args]=process.argv;
-if(cmd==='check'){new vm.Script(gameSrc(read()));const A=load(),bad=Array.from({length:A.HOLES.length},(_,i)=>i).filter(i=>!(i in A.HOLES)||!A.HOLES[i]);if(bad.length){console.log('FAIL: empty slot(s) in HOLES at index',bad.join(','),'(double comma?)');process.exit(1);}console.log('SYNTAX_OK',(read().length/1024|0)+' KB,',A.HOLES.length,'maps, no empty slots');}
+if(cmd==='check'){new vm.Script(gameSrc(read()));const A=load(),bad=Array.from({length:A.HOLES.length},(_,i)=>i).filter(i=>!(i in A.HOLES)||!A.HOLES[i]);if(bad.length){console.log('FAIL: empty slot(s) in HOLES at index',bad.join(','),'(double comma?)');process.exit(1);}const sm=read().match(/const STARTERS=\[([\d,\s]*)\]/),stI=sm?sm[1].split(',').map(Number):[],miss=[];
+ for(const i of stI){const h=A.HOLES[i];if(!h||!h.putts||h.putts.length!==6){miss.push((h?h.name:'map '+i)+': not six putts');continue;}
+  h.putts.forEach((p,k)=>{const okInt=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi;if(!okInt(p.par,2,6))miss.push(h.name+' putt '+(k+1)+': missing or invalid par ('+p.par+')');if(!okInt(p.pen,1,6))miss.push(h.name+' putt '+(k+1)+': missing or invalid pen ('+p.pen+')');});
+  if(h.putts.every(p=>Number.isInteger(p.par))&&h.par!==h.putts.reduce((a,p)=>a+p.par,0))miss.push(h.name+': map par '+h.par+' is not the sum of its putt pars');}
+ if(!stI.length)miss.push('STARTERS not found');
+ if(miss.length){console.log('FAIL: par/pen data\n  '+miss.join('\n  '));process.exit(1);}
+ console.log('SYNTAX_OK',(read().length/1024|0)+' KB,',A.HOLES.length,'maps, no empty slots, par and pen on all '+stI.length*6+' starter putts');}
 else if(cmd==='list'){const A=load();A.HOLES.forEach((h,i)=>console.log(i,h.name,A.NP(i)>1?'6 putts':'1 putt'));}
 else if(cmd==='arena'){const names=args.length?[args.join(' ')]:Object.keys(SPECS);for(const n of names)console.log(n,'-> map index',applyArena(n));}
 else if(cmd==='solve'){const full=args.includes('--full'),nums=args.filter(a=>a!=='--full').map(Number),A=load(),mi=nums[0]??0;
@@ -329,7 +347,6 @@ else if(cmd==='mechanics'){ // P6: one test chamber per mechanic (fan, teleporte
   if(r.best){const bare=mk({[keyOf[pi]]:[]});ok(n+' chamber: the same shot FAILS with the '+n+' removed',!shot(bare,pi,r.best.deg,r.best.power));}});
  console.log(bad?bad+' FAILED':'ALL MECHANIC CHECKS PASS');process.exit(bad?1:0);}
 else if(cmd==='rank'){ // P19: starter ladder. Totals are the recorded `solve <map> --full` hole-in-one counts (lower = harder).
- const LADDER=[[0,'Switchback Garden',[612,935,663,988,879,907]],[8,'Dune Serpent',[660,519,786,402,433,808]],[20,'Frost Hollow',[199,518,532,513,709,478]],[21,'Slime Springs',[673,131,230,340,520,523]],[5,'Cyclone Ring',[107,456,123,118,111,202]],[19,'Grand Finale',[110,93,149,126,164,191]]];
  const A=load(),src=read(),m=src.match(/const STARTERS=\[([\d,\s]*)\]/),st=m?m[1].split(',').map(Number):[];let bad=0;
  let prev=Infinity;LADDER.forEach(([i,n,p],k)=>{const tot=p.reduce((a,b)=>a+b,0),nm=A.HOLES[i]&&A.HOLES[i].name,fine=nm===n&&st[k]===i&&tot<prev&&Math.min(...p)>=60;if(!fine)bad++;
   console.log((k+1)+'. map '+i+' '+n+' | total '+tot+' | putts '+Math.min(...p)+'..'+Math.max(...p)+(fine?'':'   <-- PROBLEM ('+(nm!==n?'name mismatch':st[k]!==i?'not in STARTERS slot':tot>=prev?'not harder than the map before':'a putt under 60 hits')+')'));prev=tot;});
