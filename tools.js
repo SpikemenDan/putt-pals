@@ -305,6 +305,51 @@ async function smoke(){
   g.w.document.querySelector('#mapgrid [data-map="0"]').click();
   ok('P28: a second practice map (Switchback Garden) starts the same way',await until(()=>room().phase==='play'&&room().map===0&&room().putt===0,8000));
  }
+ { // P29: Practice putt replay (solo): pick a map, then a putt; restart, previous, next, no timer, no scoring, loops after a sink
+  P().R.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});
+  ok('P29: back in the lobby before the putt-practice test',await until(()=>room().phase==='lobby'&&!$('game').hidden===false,6000));
+  const po=$('mode').querySelector('option[value="puttprac"]');
+  ok('P29: the lobby mode list offers "replay one putt" and it is enabled in a solo room',!!po&&!po.disabled);
+  $('mode').value='puttprac';$('startgame').click();
+  ok('P29: Start opens the map grid in putt-practice mode',await until(()=>room().phase==='select'&&room().mode==='puttprac'));
+  await until(()=>/replay|putt/i.test($('mapstatus').textContent),2000);
+  ok('P29: the status asks for a map and then a putt',/putt to replay/.test($('mapstatus').textContent),$('mapstatus').textContent);
+  ok('P29: the putt picker is hidden until a map is chosen',$('puttpick').hidden);
+  g.w.document.querySelector('#mapgrid [data-map="20"]').click();
+  await sleep(500);
+  ok('P29: choosing a map does not start play (still select)',room().phase==='select');
+  const pb=[...$('puttpick').querySelectorAll('button')];
+  ok('P29: the putt picker shows 6 buttons with the par of each Frost Hollow putt',!$('puttpick').hidden&&pb.length===6&&pb.every((b,k)=>b.textContent==='Putt '+(k+1)+' · Par '+P().parOf(20,k)),pb.map(b=>b.textContent).join(','));
+  pb[2].click();
+  ok('P29: clicking putt 3 starts Frost Hollow putt 3 at once (no countdown card)',await until(()=>room().phase==='play'&&room().map===20&&room().putt===2&&room().mode==='puttprac',6000));
+  const ready=async(k,m)=>await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===m&&P().now()>=r.startAt&&P().active===r.round;},8000);
+  ok('P29: putt 3 is playable',await ready(2,20));
+  ok('P29: the HUD says PRACTICE and shows no countdown; the score carries nothing',/PRACTICE/.test($('info').textContent)&&!/\d:\d\d$/.test($('info').textContent)&&P().me.tot===0&&/PUTT 3\/6/.test($('info').textContent),$('info').textContent+' tot='+P().me.tot);
+  ok('P29: the practice buttons are visible',!$('pracbar').hidden);
+  P().me.t0-=20*60*1000;await sleep(400);
+  ok('P29: no timer pressure: 20 minutes on the clock and the putt is still live',P().me.mode==='play'&&!P().me.over&&!P().me.s.length);
+  let r0=room().round;$('pnext').click();
+  ok('P29: Next putt goes to putt 4 and rebuilds the round',await until(()=>room().putt===3&&room().round===r0+1,4000)&&await ready(3,20));
+  r0=room().round;$('prestart').click();
+  ok('P29: Restart replays the same putt (new round, same putt)',await until(()=>room().putt===3&&room().round===r0+1,4000)&&await ready(3,20)&&P().me.str===0);
+  for(let i=0;i<3;i++){$('pprev').click();await sleep(250);}
+  ok('P29: Previous putt three times goes 4 -> 3 -> 2 -> 1',await until(()=>room().putt===0,4000)&&await ready(0,20));
+  $('pprev').click();
+  ok('P29: Previous on putt 1 wraps to putt 6',await until(()=>room().putt===5,4000)&&await ready(5,20));
+  P().me.str=2;P().sink(false);
+  ok('P29: a sink shows no scorecard and records nothing on the room',!P().cardOpen&&$('cardov').hidden&&!Object.keys(room().card||{}).length&&!Object.keys(room().totals||{}).length);
+  r0=room().round;
+  ok('P29: the putt loops by itself after a sink (same putt, new round, ball back at the tee)',await until(()=>room().round===r0+1&&room().putt===5,7000)&&await ready(5,20)&&P().me.str===0&&!P().me.s.length);
+  $('pmaps').click();
+  ok('P29: Maps returns to the grid, still putt practice, picker hidden',await until(()=>room().phase==='select'&&room().mode==='puttprac'&&!Object.keys(room().votes||{}).length,4000)&&(await until(()=>$('puttpick').hidden,2000)));
+  g.w.document.querySelector('#mapgrid [data-map="0"]').click();
+  await until(()=>!$('puttpick').hidden&&$('puttpick').dataset.map==='0',3000);
+  $('puttpick').querySelectorAll('button')[5].click();
+  ok('P29: another map and putt (Switchback Garden putt 6) starts',await until(()=>room().phase==='play'&&room().map===0&&room().putt===5,6000)&&await ready(5,0));
+  $('pexit').click();
+  ok('P29: Exit returns everyone to the lobby with a clean room',await until(()=>room().phase==='lobby'&&room().mode==='standard'&&$('game').hidden,6000));
+  ok('P29: the practice buttons hide again in the lobby',$('pracbar').hidden);
+ }
  return finish();
  function finish(){ok('no runtime errors',!errs.length,errs.slice(0,3).join(' | '));console.log(fails?`SMOKE FAILED (${fails})`:'SMOKE PASSED');process.exit(fails?1:0);}
 }
@@ -320,7 +365,8 @@ async function smokeMulti(){
  ok('first player is host, the other three are guests',G[0].P().R.isHost()&&G.slice(1).every(x=>!x.P().R.isHost()));
  ok('all 4 clients see 4 named players in the lobby',await until(()=>G.every(x=>x.room().phase==='lobby'&&x.P().R.peers().filter(p=>p.presence.n).length===N),6000));
  G[2].$('startgame').click();await sleep(400);
- {const po=G[0].$('mode').querySelector('option[value="practice"]');ok('P28: Practice is disabled in a room with several players',po.disabled);G[0].$('mode').value='practice';G[0].$('startgame').click();await sleep(400);ok('P28: the host cannot start Practice with 4 players',G.every(x=>x.room().phase==='lobby'&&x.room().mode==='standard'));}
+ {const po=G[0].$('mode').querySelector('option[value="practice"]');ok('P28: Practice is disabled in a room with several players',po.disabled);G[0].$('mode').value='practice';G[0].$('startgame').click();await sleep(400);ok('P28: the host cannot start Practice with 4 players',G.every(x=>x.room().phase==='lobby'&&x.room().mode==='standard'));
+  ok('P29: putt practice is disabled with several players',G[0].$('mode').querySelector('option[value="puttprac"]').disabled);G[0].$('mode').value='puttprac';G[0].$('startgame').click();await sleep(400);ok('P29: the host cannot start putt practice with 4 players',G.every(x=>x.room().phase==='lobby'&&x.room().mode==='standard'));}
  ok('a guest cannot start the game',G.every(x=>x.room().phase==='lobby'));
  G[0].$('mode').value='1';G[0].$('startgame').click();
  ok('host Start opens voting on every client',await until(()=>G.every(x=>x.room().phase==='select'),4000));

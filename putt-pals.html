@@ -111,6 +111,7 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 #end.card{max-width:min(94vw,720px)}
 #endcard .paper{margin:14px 0 10px}
 @media (max-width:640px){.paper{padding:10px 8px 8px}.paper th,.paper td{padding:3px 4px;font-size:12px}.paper tbody td:not(.nm){font-size:14px}.paper .ptitle{flex-direction:column;gap:2px}}
+#puttpick{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}#puttpick[hidden]{display:none}#pracbar[hidden]{display:none} /* P29 */
 </style></head><body><div id="app">
 <div id="lobby" class="card">
 <h1>⛳ Putt Pals <span style="display:block;font-size:12px;letter-spacing:4px;color:#e6b283;margin:12px 0">PARTY CIRCUIT · 20 MAPS</span></h1>
@@ -121,12 +122,12 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <p class="small">Drag backward anywhere on the course, then release to putt. Longer pulls add power and widen a sine sway; release as the arrow crosses center for a perfectly straight shot. Escape cancels. Keys 1–3 use power-ups. Right-drag rotates the ball camera.</p>
 <details><summary>Online connection settings</summary><p>Optional ICE server JSON for your own TURN relay. Use temporary credentials; these settings stay in this tab.</p><textarea id="ice" placeholder='[{"urls":"turn:your-server:3478","username":"temporary-user","credential":"temporary-password"}]'></textarea></details>
 </div>
-<div id="waiting" class="card" hidden><h1>Room lobby</h1><p id="roomlabel"></p><div id="roster"></div><label id="modewrap">Game mode<select id="mode"><option value="1">Standard · 1 map</option><option value="3">Tournament · 3 maps</option><option value="6">Tournament · 6 maps</option><option value="9">Tournament · 9 maps</option><option value="practice">Practice · pick any map (solo)</option></select></label><p id="waitstatus" class="status"></p><button id="startgame">Start Game</button><button id="lobbyinvite" class="ghost">Copy invite</button><button class="leave ghost">Leave room</button></div>
-<div id="mapselect" class="card" hidden><div id="menubar"><h1>Choose your course</h1><button class="leave ghost">Leave room</button></div><p id="mapstatus" class="status"></p><button id="playmap" hidden>Play selected map</button><div id="mapgrid"></div></div>
+<div id="waiting" class="card" hidden><h1>Room lobby</h1><p id="roomlabel"></p><div id="roster"></div><label id="modewrap">Game mode<select id="mode"><option value="1">Standard · 1 map</option><option value="3">Tournament · 3 maps</option><option value="6">Tournament · 6 maps</option><option value="9">Tournament · 9 maps</option><option value="practice">Practice · pick any map (solo)</option><option value="puttprac">Practice · replay one putt (solo)</option></select></label><p id="waitstatus" class="status"></p><button id="startgame">Start Game</button><button id="lobbyinvite" class="ghost">Copy invite</button><button class="leave ghost">Leave room</button></div>
+<div id="mapselect" class="card" hidden><div id="menubar"><h1>Choose your course</h1><button class="leave ghost">Leave room</button></div><p id="mapstatus" class="status"></p><div id="puttpick" hidden></div><button id="playmap" hidden>Play selected map</button><div id="mapgrid"></div></div>
 <div id="netnotice" hidden></div>
 <div id="cardov" hidden><div id="cardwrap"><button id="cardx" aria-label="Close scorecard">×</button><div id="cardbody"></div></div></div><div id="banner"></div><div id="warp"></div>
 <div id="game" hidden><div id="stage">
-<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Ball cam</button><button class="ghost" id="cardbtn">Card</button><button class="ghost" id="share">Invite</button><button class="ghost" id="snd">Sound: On</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
+<div id="bar"><span id="info"></span><span><button class="ghost" id="vw">View: Ball cam</button><button class="ghost" id="cardbtn">Card</button><span id="pracbar" hidden><button class="ghost" id="pprev">‹ Prev putt</button><button class="ghost" id="prestart">Restart</button><button class="ghost" id="pnext">Next putt ›</button><button class="ghost" id="pmaps">Maps</button><button class="ghost" id="pexit">Exit</button></span><button class="ghost" id="share">Invite</button><button class="ghost" id="snd">Sound: On</button><button class="ghost" id="quality">Quality: High</button> <span id="conn"></span></span></div>
 <canvas id="cv" width="800" height="500"></canvas>
 <div id="ctl"><span id="hit">DRAG BACK → RELEASE</span><div id="pw"><i id="pwi"></i></div><span id="accuracy">Pull to set power</span></div><div id="guide">Short pull = precision · Long pull = power + spread · Esc = cancel · Right-drag / ← → = rotate · C = camera</div>
 <div id="inv"></div>
@@ -281,6 +282,9 @@ function renderCard(el,r){ // all text via textContent (peer names are untrusted
 function openCard(){if(!R_)return;cardOpen=true;$('cardov').hidden=false;renderCard($('cardbody'));}
 function closeCard(){cardOpen=false;$('cardov').hidden=true;}
 function toggleCard(){if(cardOpen)closeCard();else openCard();}
+let loopAt=0;
+function pracGo(p){if(!R_?.isHost())return;const r=R_.room();R_.setRoom({round:r.round+1,startAt:R_.now(),card:{},...p});} // P29: (re)start a putt-practice putt now
+function pracStep(d){const r=R_.room(),n=NP(r.map);pracGo({putt:((r.putt|0)+d+n)%n});}
 function nextPutt(r){if(r.putt+1<NP(r.map))R_.setRoom({putt:r.putt+1,round:r.round+1,startAt:R_.now()+2500,card:recordCard(r)});else finishMap(r);}
 let R_=null,code='',seen={},disp={},lastPub=0,fxn=0,toastT=0,me,view=1,aa=0,ca=0,ch=0,chDir=1,charging=false,dragX=null;
 function fresh(n,c){return{n,c,h:0,s:[],x:0,y:0,z:0,vx:0,vy:0,vz:0,moving:false,str:0,prev:null,inv:[],got:{},arm:{mag:0,steady:0},pend:{rev:0,zany:0},t0:0,mode:'play',wait:0,fx:null,padT:0,tpT:0,mt:0,syncUntil:0};}
@@ -363,7 +367,7 @@ function sink(over){
   if(!over){me.x=hl.hole[0];me.y=hl.hole[1];me.z=surf(hl,me.x,me.y)-DEPTH+R;}
   me.s=[over?timeoutScore(me.str,me.h,PI_):me.str];me.mode='sunk';me.over=!!over;
   toast(over?'Time’s up! You score '+me.s[0]+' (par + penalty).':(me.str===1?'Hole in one!':'Hole in '+me.str+'!'));
-  me.wait=performance.now()+1200;me.arm.mag=0;pub(true);openCard();
+  me.wait=performance.now()+1200;me.arm.mag=0;pub(true);if(!(R_&&R_.room().mode==='puttprac'))openCard();
 }
 function oob(){
   const hl=H(),p=me.prev||[hl.tee[0],hl.tee[1],0];
@@ -449,7 +453,7 @@ function frame(now){
       const hl=H();
       hl.q.forEach((q,i)=>{if(me.mode==='play'&&!me.got[i]&&Math.abs(me.z-surf(hl,...q))<20&&Math.hypot(me.x-q[0],me.y-q[1])<R+13){
         me.got[i]=1;if(me.inv.length<3){me.inv.push(ITEMS[Math.floor(Math.random()*ITEMS.length)]);toast('Got '+NAMES[me.inv[me.inv.length-1]]+'!');renderInv();}else toast('Inventory full. Power-up lost.');}});
-      if(me.mode==='play'&&now-me.t0>limitOf(me.h,PI_)){sink(true);}
+      if(me.mode==='play'&&!(R_&&R_.room().mode==='puttprac')&&now-me.t0>limitOf(me.h,PI_)){sink(true);}
     }else if(me.mode==='sunk'&&now>me.wait){me.mode='wait';pub(true);}
     applyFx();pub(false);draw(now,dt);
   }
@@ -828,8 +832,8 @@ function syncRoom(){
  if(!R_.connected()){$('netnotice').textContent='Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.';cancel();return;}
  $('waiting').hidden=r.phase!=='lobby'&&!(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt);
  $('mapselect').hidden=r.phase!=='select';$('startgame').hidden=!host||r.phase!=='lobby';$('modewrap').hidden=!host;
- {const np=R_.peers().filter(p=>p.presence.n).length;{const po=$('mode').querySelector('option[value="practice"]');po.disabled=np>1;if(np>1&&$('mode').value==='practice')$('mode').value='1';}$('roomlabel').textContent=code?'Room '+code.toUpperCase()+' · '+np+' player'+(np===1?'':'s')+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';$('lobbyinvite').hidden=!code;}
- if(r.phase==='lobby'||r.phase==='select'){$('game').hidden=true;$('end').hidden=true;me.mode='lobby';cancel();closeCard();}
+ {const np=R_.peers().filter(p=>p.presence.n).length;{for(const o of $('mode').querySelectorAll('option[value="practice"],option[value="puttprac"]'))o.disabled=np>1;if(np>1&&/practice|puttprac/.test($('mode').value))$('mode').value='1';}$('roomlabel').textContent=code?'Room '+code.toUpperCase()+' · '+np+' player'+(np===1?'':'s')+' · '+(host?'You are the host':'Waiting for host'):'Solo practice';$('lobbyinvite').hidden=!code;}
+ if(r.phase==='lobby'||r.phase==='select'){$('pracbar').hidden=true;$('game').hidden=true;$('end').hidden=true;me.mode='lobby';cancel();closeCard();}
  if(r.phase==='lobby'){
   const el=$('roster');el.textContent='';for(const p of R_.peers()){if(!p.presence.n)continue;el.appendChild(row(p.presence.c,p.presence.n+(p.isMe?' (you)':''),'Joined','',false));}
   $('waitstatus').textContent=host?'Pick a game mode, then start to open map voting.':'The host will pick the mode and start map voting.';
@@ -838,10 +842,13 @@ function syncRoom(){
   const ids=R_.peers().filter(p=>p.presence.n).map(p=>p.peer),vs=Object.entries(r.votes||{}).filter(([k,v])=>ids.includes(k)&&Number.isInteger(v)&&STARTERS.includes(v)),tally={};
   vs.forEach(([k,v])=>tally[v]=(tally[v]||0)+1);
   const left=r.deadline?Math.max(0,Math.ceil((r.deadline-R_.now())/1000)):VOTE_SECS;
-  $('mapstatus').textContent=r.mode==='practice'?'Practice · pick any map to start. No voting, no opponents.':(r.mode==='tournament'?'Map '+((r.mapNo|0)+1)+'/'+r.series+' · ':'')+(vs.length?'Voting ends in '+left+'s · '+vs.length+'/'+ids.length+' voted':'Vote for a map. The first vote starts a '+VOTE_SECS+'s countdown.');
+  $('mapstatus').textContent=r.mode==='puttprac'?'Practice · pick a map, then the putt to replay. No scoring, no timer.':r.mode==='practice'?'Practice · pick any map to start. No voting, no opponents.':(r.mode==='tournament'?'Map '+((r.mapNo|0)+1)+'/'+r.series+' · ':'')+(vs.length?'Voting ends in '+left+'s · '+vs.length+'/'+ids.length+' voted':'Vote for a map. The first vote starts a '+VOTE_SECS+'s countdown.');
   $('playmap').hidden=true;
+  {const pp=$('puttpick'),sel=(r.votes||{})[R_.id()],show=r.mode==='puttprac'&&Number.isInteger(sel)&&STARTERS.includes(sel);pp.hidden=!show;
+   if(show&&pp.dataset.map!==String(sel)){pp.dataset.map=String(sel);pp.textContent='';for(let k=0;k<NP(sel);k++){const b=document.createElement('button');b.dataset.putt=k;b.textContent='Putt '+(k+1)+' · Par '+parOf(sel,k);b.onclick=()=>pracGo({phase:'play',map:sel,putt:k,votes:{},deadline:0,roster:R_.peers().filter(p=>p.presence.n).map(p=>p.peer)});pp.appendChild(b);}}
+   if(!show)pp.dataset.map='';}
   for(const b of $('mapgrid').children){const m=+b.dataset.map;b.disabled=false;b.dataset.v=tally[m]||0;b.classList.toggle('selected',(r.votes||{})[R_.id()]===m||(R_.id()==='solo'&&(r.votes||{}).solo===m));}
-  if(host&&vs.length){
+  if(host&&vs.length&&r.mode!=='puttprac'){
    if(r.mode==='practice'||vs.length>=ids.length||(r.deadline&&R_.now()>=r.deadline)){
     const top=Math.max(...Object.values(tally)),tied=Object.keys(tally).filter(k=>tally[k]===top).map(Number).sort((a,b)=>a-b);
     R_.setRoom({phase:'play',map:tied[(r.round*7+vs.length)%tied.length],putt:0,round:r.round+1,startAt:R_.now()+2500,roster:ids,votes:{},deadline:0,card:{}});
@@ -850,7 +857,7 @@ function syncRoom(){
  }
  if(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt){$('game').hidden=true;$('end').hidden=true;$('waitstatus').textContent=HOLES[r.map].name+(NP(r.map)>1?' · putt '+((r.putt|0)+1)+'/'+NP(r.map):'')+' starts in '+Math.ceil((r.startAt-R_.now())/1000)+'…';}
  if(r.phase==='play'&&R_.now()>=r.startAt&&activeRound!==r.round){
-  activeRound=r.round;closeCard();const n=me.n,c=me.c,carry=r.putt>0&&me.mode!=='lobby'?(me.tot||0)+(me.s[0]??timeoutScore(me.str,me.h,PI_)):0;me=fresh(n,c);me.tot=carry;PI_=Math.max(0,r.putt|0);me.h=r.map;if(NP(r.map)>1)announce('PUTT '+(PI_+1)+' / '+NP(r.map),HOLES[r.map].name.toUpperCase(),'event');seen={};acc=0;buildAll(r.map);camInit=false;startHole();me.t0=performance.now()-Math.max(0,R_.now()-r.startAt);if(!r.roster.includes(R_.id()))me.mode='spectator';$('waiting').hidden=true;$('game').hidden=false;$('end').hidden=true;renderInv();if(r.putt>0){
+  activeRound=r.round;closeCard();const n=me.n,c=me.c,carry=r.putt>0&&me.mode!=='lobby'&&r.mode!=='puttprac'?(me.tot||0)+(me.s[0]??timeoutScore(me.str,me.h,PI_)):0;me=fresh(n,c);me.tot=carry;PI_=Math.max(0,r.putt|0);me.h=r.map;if(NP(r.map)>1)announce('PUTT '+(PI_+1)+' / '+NP(r.map),HOLES[r.map].name.toUpperCase(),'event');seen={};acc=0;buildAll(r.map);camInit=false;startHole();me.t0=performance.now()-Math.max(0,R_.now()-r.startAt);if(!r.roster.includes(R_.id()))me.mode='spectator';$('waiting').hidden=true;$('game').hidden=false;$('end').hidden=true;renderInv();loopAt=0;if(r.putt>0&&r.mode!=='puttprac'){
       const oldHole=H(r.map),newHole=oldHole,o=OFF(r.map);
       const oh=oldHole.putts?oldHole.putts[r.putt-1].hole:oldHole.hole,nt=newHole.putts?newHole.putts[r.putt].tee:newHole.tee;
       const from=new V(oh[0]+o[0],surf(oldHole,...oh)+R,oh[1]+o[1]),to=new V(nt[0]+o[0],surf(newHole,...nt)+R,nt[1]+o[1]);
@@ -859,13 +866,15 @@ function syncRoom(){
       puttTransition={startTime:performance.now(),duration:reduce?1:1500,from,to,arc:Math.min(200,70+from.distanceTo(to)*.18),cp0:cp.clone(),cl0:cl.clone()};
     }pub(true);
  }
- if(r.phase==='play'&&host&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&(players.every(p=>p.presence.round===r.round&&p.presence.done)||R_.now()>r.startAt+limitOf(r.map,r.putt)+4000))nextPutt(r);}
+ if(r.phase==='play'&&host&&r.mode==='puttprac'&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&players.every(p=>p.presence.round===r.round&&p.presence.done)){if(!loopAt)loopAt=R_.now()+2200;else if(R_.now()>=loopAt){loopAt=0;pracGo({});}}else loopAt=0;}
+ else if(r.phase==='play'&&host&&R_.now()>r.startAt+1500){const players=R_.peers().filter(p=>r.roster.includes(p.peer));if(players.length&&(players.every(p=>p.presence.round===r.round&&p.presence.done)||R_.now()>r.startAt+limitOf(r.map,r.putt)+4000))nextPutt(r);}
  if(r.phase==='results'&&lastPhase!=='results'){if(activeRound!==r.round){activeRound=r.round;me.h=r.map;me.mode='spectator';buildAll(r.map);camInit=false;$('game').hidden=false;pub(true);}cancel();me.mode=me.mode==='spectator'?'spectator':'wait';fin();showResults(r);$('again').hidden=!host;if(!host)$('endt').textContent+=' Waiting for the host to return to the lobby.';}
  lastPhase=r.phase;lastMap=r.map;
 }
 function tick(){
  if(!me||$('game').hidden)return;const h=H(),m=HOLES[me.h],left=Math.max(0,Math.ceil((limitOf(me.h,PI_)-(performance.now()-me.t0))/1000));
- $('info').textContent=m.name+(m.putts?' · PUTT '+(PI_+1)+'/'+m.putts.length:'')+' · PAR '+h.par+' · '+(me.mode==='spectator'?'SPECTATING':'STROKES '+me.str+' · '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'));
+ $('info').textContent=m.name+(m.putts?' · PUTT '+(PI_+1)+'/'+m.putts.length:'')+' · PAR '+h.par+' · '+(me.mode==='spectator'?'SPECTATING':'STROKES '+me.str+(R_&&R_.room().mode==='puttprac'?' · PRACTICE':' · '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')));
+ $('pracbar').hidden=!(R_&&R_.isHost()&&R_.room().mode==='puttprac'&&R_.room().phase==='play');
  const list=R_?R_.peers().filter(p=>p.presence.n&&p.presence.round===activeRound):[];for(const p of list){const q=p.presence,k=activeRound+':'+p.peer;if(q.done&&q.s[0]===1&&!hio[k]){hio[k]=1;announce(q.n,'HOLE IN ONE','hio');}}
  const tt=q=>(+q.tot||0)+(q.s[0]??q.str);list.sort((a,b)=>tt(a.presence)-tt(b.presence)||String(a.presence.n).localeCompare(String(b.presence.n)));
   $('info').classList.toggle('warn',me.mode==='play'&&left<=10);
@@ -988,15 +997,17 @@ async function begin(multi){
 }
 {const rcIn=$('rc'),sync=()=>{$('go').disabled=!rcIn.value.trim();};rcIn.addEventListener('input',sync);sync();}
 $('go').onclick=()=>begin(true);$('solo').onclick=()=>begin(false);
-$('startgame').onclick=()=>{if(R_?.isHost()){const pr=$('mode').value==='practice';if(pr&&R_.peers().filter(p=>p.presence.n).length>1)return;const v=pr?1:+$('mode').value;R_.setRoom({phase:'select',votes:{},deadline:0,mode:pr?'practice':v>1?'tournament':'standard',series:v,mapNo:0,totals:{},last:null,card:{}});}};
+$('startgame').onclick=()=>{if(R_?.isHost()){const mv=$('mode').value,pr=mv==='practice'||mv==='puttprac';if(pr&&R_.peers().filter(p=>p.presence.n).length>1)return;const v=pr?1:+mv;R_.setRoom({phase:'select',votes:{},deadline:0,mode:pr?mv:v>1?'tournament':'standard',series:v,mapNo:0,totals:{},last:null,card:{}});}};
 $('playmap').onclick=()=>{if(R_?.isHost())R_.setRoom({phase:'play',round:R_.room().round+1,startAt:R_.now()+2500,roster:R_.peers().filter(p=>p.presence.n).map(p=>p.peer),card:{}});};
 $('again').onclick=()=>{if(!R_?.isHost())return;const r=R_.room();if(r.mode==='practice')R_.setRoom({phase:'select',votes:{},deadline:0,mapNo:0,totals:{},last:null,card:{}});else if(r.mode==='tournament'&&r.mapNo<r.series)R_.setRoom({phase:'select',votes:{},deadline:0});else R_.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});};$('lobbyinvite').onclick=()=>$('share').onclick();
 document.querySelectorAll('.leave').forEach(b=>b.onclick=()=>{R_?.close();location.reload();});
+$('pprev').onclick=()=>{if(R_?.isHost()&&R_.room().mode==='puttprac')pracStep(-1);};$('pnext').onclick=()=>{if(R_?.isHost()&&R_.room().mode==='puttprac')pracStep(1);};$('prestart').onclick=()=>{if(R_?.isHost()&&R_.room().mode==='puttprac')pracGo({});};
+$('pmaps').onclick=()=>{if(R_?.isHost()&&R_.room().mode==='puttprac')R_.setRoom({phase:'select',votes:{},deadline:0,card:{}});};$('pexit').onclick=()=>{if(R_?.isHost()&&R_.room().mode==='puttprac')R_.setRoom({phase:'lobby',votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null,card:{}});};
 $('cardbtn').onclick=toggleCard;$('cardx').onclick=closeCard;
 buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get active(){return activeRound},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,cardData,renderCard,openCard,closeCard,get cardOpen(){return cardOpen},penOf,parOf,limitOf,validLimit,timeoutScore,get holes(){return HOLES},now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>
