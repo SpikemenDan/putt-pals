@@ -138,7 +138,9 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <script id="game">
 (()=>{
 if(!window.THREE){document.getElementById("app").textContent="The 3D engine failed to load. Please reload the page.";return;}
-const R=6,DT=1/240,MAXS=8,LIMIT_BASE=120000,LIMIT_MAX=300000,VOTE_SECS=15,G=700,WT=28;
+const R=6,DT=1/240,TIMEOUT_SCORE=8,MAX_SCORE=999,LIMIT_BASE=120000,LIMIT_MAX=300000,VOTE_SECS=15,G=700,WT=28;
+// P24: no stroke cap. Placeholder timeout score until P26 (putt par + penalty); never below the strokes already taken.
+const timeoutScore=str=>Math.max(str,TIMEOUT_SCORE);
 const B=[[0,0,800,16],[0,484,800,16],[0,0,16,500],[784,0,16,500]];
 // w walls, sand, q ? blocks, pl platforms [x,y,w,h,H], rp ramps [x,y,w,h,dir,h0,h1], pd jump pads, pit water [x,y,w,h], fan [x,y,w,h,dx,dy,force], tp teleporter pairs [ax,ay,bx,by,color]
 // COURSE DATA: tile rectangles define the playable footprint. Everything else is void.
@@ -182,7 +184,7 @@ function announce(t,sub,kind){bq.push({t,sub,kind});if(!bBusy)nextBanner();}
 function nextBanner(){const b=bq.shift();if(!b){bBusy=false;return;}bBusy=true;const el=$('banner');el.className='show '+(b.kind||'');el.textContent='';const x=document.createElement('b'),y=document.createElement('i');x.textContent=b.t;y.textContent=b.sub||'';el.append(x,y);setTimeout(()=>{el.className='';setTimeout(nextBanner,350);},b.kind==='hio'?2800:1900);}
 function finishMap(r){
  const sc={},names={};
- for(const p of R_.peers()){const q=p.presence;if(!r.roster.includes(p.peer)||!q.n)continue;sc[p.peer]=(+q.tot||0)+(q.s[0]??MAXS);names[p.peer]=q.n;}
+ for(const p of R_.peers()){const q=p.presence;if(!r.roster.includes(p.peer)||!q.n)continue;sc[p.peer]=(+q.tot||0)+(q.s[0]??TIMEOUT_SCORE);names[p.peer]=q.n;}
  const ks=Object.keys(sc),best=Math.min(...Object.values(sc)),totals={...(r.totals||{})};
  for(const k of ks){const o=totals[k]||{n:names[k],t:0,w:0};totals[k]={n:names[k],t:o.t+sc[k],w:o.w+(sc[k]===best?1:0)};}
  R_.setRoom({phase:'results',mapNo:(r.mapNo|0)+1,totals,last:{map:r.map,sc,names,win:ks.filter(k=>sc[k]===best)}});
@@ -207,7 +209,7 @@ function startRun(){if(R_?.isHost())R_.setRoom({phase:'select'});}
 function pub(force){
   if(!R_)return;const now=performance.now();
   if(!force&&now-lastPub<70)return;lastPub=now;
-  const o={n:me.n,c:me.c,h:me.h,x:Math.round(me.x),y:Math.round(me.y),z:Math.round(me.z),s:me.s.slice(),round:activeRound,done:['sunk','wait'].includes(me.mode),mode:me.mode,str:me.str,tot:me.tot||0,effect:effectOf(me)};
+  const o={n:me.n,c:me.c,h:me.h,x:Math.round(me.x),y:Math.round(me.y),z:Math.round(me.z),s:me.s.slice(),round:activeRound,done:['sunk','wait'].includes(me.mode),mode:me.mode,str:me.str,tot:me.tot||0,over:!!me.over,effect:effectOf(me)};
   if(me.fx)o.fx=me.fx;
   R_.presence(o).catch(()=>{});
 }
@@ -278,14 +280,13 @@ function cupCollision(h){
 function sink(over){
   const hl=H();me.moving=false;me.vx=me.vy=me.vz=0;
   if(!over){me.x=hl.hole[0];me.y=hl.hole[1];me.z=surf(hl,me.x,me.y)-DEPTH+R;}
-  me.s=[over?MAXS:me.str];me.mode='sunk';me.over=!!over;
+  me.s=[over?timeoutScore(me.str):me.str];me.mode='sunk';me.over=!!over;
   toast(over?'Pick up!':(me.str===1?'Hole in one!':'Hole in '+me.str+'!'));
   me.wait=performance.now()+1200;me.arm.mag=0;pub(true);
 }
 function oob(){
   const hl=H(),p=me.prev||[hl.tee[0],hl.tee[1],0];
   me.x=p[0];me.y=p[1];me.z=p[2];me.vx=me.vy=me.vz=0;me.moving=false;me.arm.mag=0;me.prev=null;
-  if(me.str>=MAXS){toast('Splash, and you’re out of strokes.');sink(true);return;}
   toast('Splash! Back to your last spot. That stroke still counts.');aim();pub(true);
 }
 function bounce(r){
@@ -298,7 +299,7 @@ function bounce(r){
   me.x+=nx*pen;me.y+=ny*pen;
   const vn=me.vx*nx+me.vy*ny;if(vn<0){me.vx-=1.82*vn*nx;me.vy-=1.82*vn*ny;}
 }
-function stop(){me.vx=me.vy=me.vz=0;me.moving=false;me.arm.mag=0;if(me.str>=MAXS){toast('Out of strokes. Moving on.');sink(true);}else{aim();pub(true);}}
+function stop(){me.vx=me.vy=me.vz=0;me.moving=false;me.arm.mag=0;aim();pub(true);}
 function limitOf(mi,pi){const m=HOLES[mi],p=m.putts&&m.putts[pi],par=(p&&p.par)||m.par||4;return Math.min(LIMIT_MAX,LIMIT_BASE*Math.max(1,par/2));} // ms per putt: 120 s at par 2, scaled by par, capped at 300 s
 function step(){
   const hl=H();let f=contact(hl,me.x,me.y);const air=me.z>f+.8||me.vz>5&&me.padT>0;
@@ -364,7 +365,7 @@ function frame(now){
       const hl=H();
       hl.q.forEach((q,i)=>{if(me.mode==='play'&&!me.got[i]&&Math.abs(me.z-surf(hl,...q))<20&&Math.hypot(me.x-q[0],me.y-q[1])<R+13){
         me.got[i]=1;if(me.inv.length<3){me.inv.push(ITEMS[Math.floor(Math.random()*ITEMS.length)]);toast('Got '+NAMES[me.inv[me.inv.length-1]]+'!');renderInv();}else toast('Inventory full. Power-up lost.');}});
-      if(me.mode==='play'&&now-me.t0>limitOf(me.h,PI_)){toast('Time’s up! Max-stroke penalty.');sink(true);}
+      if(me.mode==='play'&&now-me.t0>limitOf(me.h,PI_)){toast('Time’s up! Penalty score.');sink(true);}
     }else if(me.mode==='sunk'&&now>me.wait){me.mode='wait';pub(true);}
     applyFx();pub(false);draw(now,dt);
   }
@@ -718,7 +719,7 @@ function row(c,name,a,b,hd){
 let peerOptions={},activeRound=-1,lastPhase='',lastMap=-1;
 const STARTERS=[0,8,20,21,5,19]; // voting ladder, easiest to hardest: Switchback Garden, Dune Serpent, Frost Hollow, Slime Springs, Cyclone Ring, Grand Finale
 const newRoom=()=>({phase:'lobby',map:0,round:0,startAt:0,roster:[],putt:0,votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null});
-function validPresence(d){return d&&typeof d.n==='string'&&d.n.length<=14&&Number.isInteger(d.h)&&d.h>=0&&d.h<HOLES.length&&[d.x,d.y,d.z,d.c,d.str,d.round].every(Number.isFinite)&&Array.isArray(d.s)&&d.s.length<=1&&d.s.every(n=>Number.isFinite(n)&&n>=0&&n<=MAXS)&&(!d.fx||Number.isFinite(d.fx.id)&&['rev','zany'].includes(d.fx.t));}
+function validPresence(d){return d&&typeof d.n==='string'&&d.n.length<=14&&Number.isInteger(d.h)&&d.h>=0&&d.h<HOLES.length&&[d.x,d.y,d.z,d.c,d.str,d.round].every(Number.isFinite)&&Array.isArray(d.s)&&d.s.length<=1&&d.s.every(n=>Number.isFinite(n)&&n>=0&&n<=MAX_SCORE)&&(!d.fx||Number.isFinite(d.fx.id)&&['rev','zany'].includes(d.fx.t));}
 function validRoom(r){return r&&['lobby','select','play','results'].includes(r.phase)&&Number.isInteger(r.map)&&r.map>=0&&r.map<HOLES.length&&Number.isInteger(r.round)&&Number.isFinite(r.startAt)&&Array.isArray(r.roster)&&r.roster.every(p=>typeof p==='string');}
 function soloRoom(){let state=newRoom(),mine={};return{connected:()=>true,isHost:()=>true,id:()=> 'solo',now:()=>Date.now(),room:()=>state,peers:()=>[{peer:'solo',isMe:true,presence:mine}],presence:p=>{mine=p;return Promise.resolve();},setRoom:p=>{state={...state,...p};},vote:m=>{state={...state,votes:{...(state.votes||{}),solo:m}};},close:()=>{}};}
 function peerRoom(c){return new Promise((resolve,reject)=>{
@@ -765,7 +766,7 @@ function syncRoom(){
  }
  if(r.phase==='play'&&r.putt===0&&R_.now()<r.startAt){$('game').hidden=true;$('end').hidden=true;$('waitstatus').textContent=HOLES[r.map].name+(NP(r.map)>1?' · putt '+((r.putt|0)+1)+'/'+NP(r.map):'')+' starts in '+Math.ceil((r.startAt-R_.now())/1000)+'…';}
  if(r.phase==='play'&&R_.now()>=r.startAt&&activeRound!==r.round){
-  activeRound=r.round;const n=me.n,c=me.c,carry=r.putt>0&&me.mode!=='lobby'?(me.tot||0)+(me.s[0]??MAXS):0;me=fresh(n,c);me.tot=carry;PI_=Math.max(0,r.putt|0);me.h=r.map;if(NP(r.map)>1)announce('PUTT '+(PI_+1)+' / '+NP(r.map),HOLES[r.map].name.toUpperCase(),'event');seen={};acc=0;buildAll(r.map);camInit=false;startHole();me.t0=performance.now()-Math.max(0,R_.now()-r.startAt);if(!r.roster.includes(R_.id()))me.mode='spectator';$('waiting').hidden=true;$('game').hidden=false;$('end').hidden=true;renderInv();if(r.putt>0){
+  activeRound=r.round;const n=me.n,c=me.c,carry=r.putt>0&&me.mode!=='lobby'?(me.tot||0)+(me.s[0]??TIMEOUT_SCORE):0;me=fresh(n,c);me.tot=carry;PI_=Math.max(0,r.putt|0);me.h=r.map;if(NP(r.map)>1)announce('PUTT '+(PI_+1)+' / '+NP(r.map),HOLES[r.map].name.toUpperCase(),'event');seen={};acc=0;buildAll(r.map);camInit=false;startHole();me.t0=performance.now()-Math.max(0,R_.now()-r.startAt);if(!r.roster.includes(R_.id()))me.mode='spectator';$('waiting').hidden=true;$('game').hidden=false;$('end').hidden=true;renderInv();if(r.putt>0){
       const oldHole=H(r.map),newHole=oldHole,o=OFF(r.map);
       const oh=oldHole.putts?oldHole.putts[r.putt-1].hole:oldHole.hole,nt=newHole.putts?newHole.putts[r.putt].tee:newHole.tee;
       const from=new V(oh[0]+o[0],surf(oldHole,...oh)+R,oh[1]+o[1]),to=new V(nt[0]+o[0],surf(newHole,...nt)+R,nt[1]+o[1]);
@@ -888,7 +889,7 @@ function audioTick(bp,o){
     if(p.isMe)continue;const q=p.presence;
     if(!q||q.n===undefined||q.h!==me.h||q.round!==cur.r){delete aOthers[p.peer];continue;}
     const pos=new V(q.x+o[0],q.z+R,q.y+o[1]),pv=aOthers[p.peer];
-    if(pv){if(q.str>pv.str)sfx('putt',pos,.8);if(q.done&&!pv.done&&q.s&&q.s[0]!==undefined)sfx(q.s[0]>=MAXS?'sinkover':'sink',pos,.9);}
+    if(pv){if(q.str>pv.str)sfx('putt',pos,.8);if(q.done&&!pv.done&&q.s&&q.s[0]!==undefined)sfx(q.over?'sinkover':'sink',pos,.9);}
     aOthers[p.peer]={str:q.str,done:q.done};
   }
 }
@@ -910,6 +911,6 @@ buildMapCards();
 const al='abcdefghjkmnpqrstuvwxyz23456789';let rc='';for(let i=0;i<4;i++)rc+=al[Math.floor(Math.random()*al.length)];
 $('rc').value=new URLSearchParams(location.hash.slice(1)).get('room')?.replace(/[^a-z0-9]/g,'').slice(0,12)||rc;$('rc').dispatchEvent(new Event('input'));
 setInterval(()=>{syncRoom();tick();},100);requestAnimationFrame(frame);
-if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
+if(window.__PP_TEST)window.__pp={get me(){return me},get room(){return R_&&R_.room()},get R(){return R_},get cam(){return cam},get trans(){return !!puttTransition},get ball(){return myBall},sfx,get muted(){return aMuted},get audio(){return AC},get free(){return freeOn},sink,stop,oob,pub,sway,spread,now:()=>R_.now()}; // test hook, inert unless __PP_TEST is set
 })();
 </script></body></html>

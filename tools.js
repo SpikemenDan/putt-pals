@@ -169,6 +169,14 @@ async function smoke(){
     }
    }
    if(!ok(`map ${m+1} putt ${k+1}: ready`,await until(()=>{const r=room(),me=P().me;return r.phase==='play'&&r.putt===k&&me.mode==='play'&&me.h===r.map&&P().now()>=r.startAt;},12000)))return finish();
+   if(k===0&&m===0){ // P24: no stroke cap
+    const me=P().me,restore=()=>{me.mode='play';me.over=false;me.str=0;me.s=[];me.moving=false;me.wait=0;P().pub(true);};
+    me.str=12;P().stop();ok('P24: after 12 strokes the player keeps playing (no stroke cap)',me.mode==='play'&&!me.over);
+    P().oob();ok('P24: a splash after 12 strokes does not end the putt',me.mode==='play'&&!me.over);
+    me.str=12;P().sink(true);ok('P24: a timeout after 12 strokes scores 12, never less than the strokes taken',me.s[0]===12&&me.over,String(me.s[0]));
+    restore();me.str=3;P().sink(true);ok('P24: a timeout after 3 strokes scores the placeholder 8',me.s[0]===8&&me.over,String(me.s[0]));
+    restore();ok('P24: state restored for the rest of the run',me.mode==='play'&&me.str===0);
+   }
    if(k===0&&m===0){
     const vw=$('vw'),seq=[];ok('camera: starts as Ball cam',vw.textContent==='View: Ball cam',vw.textContent);
     for(let i=0;i<3;i++){vw.click();seq.push(vw.textContent);await sleep(350);}
