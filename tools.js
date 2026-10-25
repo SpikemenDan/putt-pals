@@ -240,6 +240,7 @@ async function smokeMulti(){
  ok('a guest cannot start the game',G.every(x=>x.room().phase==='lobby'));
  G[0].$('mode').value='1';G[0].$('startgame').click();
  ok('host Start opens voting on every client',await until(()=>G.every(x=>x.room().phase==='select'),4000));
+ ok('voting grid shows the 6 starter maps only',G.every(x=>x.w.document.querySelectorAll('#mapgrid .mapcard').length===6));
  const card=(i,m)=>G[i].w.document.querySelector('#mapgrid [data-map="'+m+'"]');
  card(1,8).click();
  ok('first guest vote starts the 15 s countdown on the host',await until(()=>G[0].room().deadline>0&&Object.keys(G[0].room().votes).length===1,3000));
@@ -319,6 +320,13 @@ else if(cmd==='mechanics'){ // P6: one test chamber per mechanic (fan, teleporte
   ok(n+' chamber: robust hole-in-one found'+(r.best?' ('+r.best.deg+' deg, power '+r.best.power+')':''),!!r.best);
   if(r.best){const bare=mk({[keyOf[pi]]:[]});ok(n+' chamber: the same shot FAILS with the '+n+' removed',!shot(bare,pi,r.best.deg,r.best.power));}});
  console.log(bad?bad+' FAILED':'ALL MECHANIC CHECKS PASS');process.exit(bad?1:0);}
+else if(cmd==='rank'){ // P19: starter ladder. Totals are the recorded `solve <map> --full` hole-in-one counts (lower = harder).
+ const LADDER=[[0,'Switchback Garden',[612,935,663,988,879,907]],[8,'Dune Serpent',[660,519,786,402,433,808]],[20,'Frost Hollow',[199,518,532,513,709,478]],[21,'Slime Springs',[673,131,230,340,520,523]],[5,'Cyclone Ring',[107,456,123,118,111,202]],[19,'Grand Finale',[110,93,149,126,164,191]]];
+ const A=load(),src=read(),m=src.match(/const STARTERS=\[([\d,\s]*)\]/),st=m?m[1].split(',').map(Number):[];let bad=0;
+ let prev=Infinity;LADDER.forEach(([i,n,p],k)=>{const tot=p.reduce((a,b)=>a+b,0),nm=A.HOLES[i]&&A.HOLES[i].name,fine=nm===n&&st[k]===i&&tot<prev&&Math.min(...p)>=60;if(!fine)bad++;
+  console.log((k+1)+'. map '+i+' '+n+' | total '+tot+' | putts '+Math.min(...p)+'..'+Math.max(...p)+(fine?'':'   <-- PROBLEM ('+(nm!==n?'name mismatch':st[k]!==i?'not in STARTERS slot':tot>=prev?'not harder than the map before':'a putt under 60 hits')+')'));prev=tot;});
+ if(st.length!==LADDER.length){bad++;console.log('STARTERS has '+st.length+' maps, expected '+LADDER.length);}
+ console.log(bad?'RANK FAILED':'RANK OK: strictly harder each step, STARTERS matches the ladder');}
 else if(cmd==='smoke')smoke();
 else if(cmd==='smoke-multi')smokeMulti();
 else console.log('usage: node tools.js check | list | smoke | smoke-multi | surfaces | cups | mechanics | solve <map> [putt] [--full] | arena [map name]');

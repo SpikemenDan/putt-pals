@@ -691,6 +691,7 @@ function row(c,name,a,b,hd){
 }
 // SESSION: host owns phase/map/round/roster. Clients can submit only their own presence.
 let peerOptions={},activeRound=-1,lastPhase='',lastMap=-1;
+const STARTERS=[0,8,20,21,5,19]; // voting ladder, easiest to hardest: Switchback Garden, Dune Serpent, Frost Hollow, Slime Springs, Cyclone Ring, Grand Finale
 const newRoom=()=>({phase:'lobby',map:0,round:0,startAt:0,roster:[],putt:0,votes:{},deadline:0,mode:'standard',series:1,mapNo:0,totals:{},last:null});
 function validPresence(d){return d&&typeof d.n==='string'&&d.n.length<=14&&Number.isInteger(d.h)&&d.h>=0&&d.h<HOLES.length&&[d.x,d.y,d.z,d.c,d.str,d.round].every(Number.isFinite)&&Array.isArray(d.s)&&d.s.length<=1&&d.s.every(n=>Number.isFinite(n)&&n>=0&&n<=MAXS)&&(!d.fx||Number.isFinite(d.fx.id)&&['rev','zany'].includes(d.fx.t));}
 function validRoom(r){return r&&['lobby','select','play','results'].includes(r.phase)&&Number.isInteger(r.map)&&r.map>=0&&r.map<HOLES.length&&Number.isInteger(r.round)&&Number.isFinite(r.startAt)&&Array.isArray(r.roster)&&r.roster.every(p=>typeof p==='string');}
@@ -724,7 +725,7 @@ function syncRoom(){
   $('waitstatus').textContent=host?'Pick a game mode, then start to open map voting.':'The host will pick the mode and start map voting.';
  }
  if(r.phase==='select'){
-  const ids=R_.peers().filter(p=>p.presence.n).map(p=>p.peer),vs=Object.entries(r.votes||{}).filter(([k,v])=>ids.includes(k)&&Number.isInteger(v)&&v>=0&&v<HOLES.length),tally={};
+  const ids=R_.peers().filter(p=>p.presence.n).map(p=>p.peer),vs=Object.entries(r.votes||{}).filter(([k,v])=>ids.includes(k)&&Number.isInteger(v)&&STARTERS.includes(v)),tally={};
   vs.forEach(([k,v])=>tally[v]=(tally[v]||0)+1);
   const left=r.deadline?Math.max(0,Math.ceil((r.deadline-R_.now())/1000)):VOTE_SECS;
   $('mapstatus').textContent=(r.mode==='tournament'?'Map '+((r.mapNo|0)+1)+'/'+r.series+' · ':'')+(vs.length?'Voting ends in '+left+'s · '+vs.length+'/'+ids.length+' voted':'Vote for a map. The first vote starts a '+VOTE_SECS+'s countdown.');
@@ -761,7 +762,7 @@ function tick(){
  const sb=$('sb');sb.textContent='';sb.appendChild(row(0,'SCOREBOARD','Putt','Total',true));for(const p of list){const q=p.presence,t=tt(q),rk=1+list.filter(o=>tt(o.presence)<t).length;sb.appendChild(row(q.c,rk+'. '+q.n+(p.isMe?' (you)':''),q.mode==='spectator'?'Watching':q.done?'✔ '+q.s[0]:String(q.str),String(t)));}
  $('conn').textContent=code?'Room '+code+' · '+list.length+' players':'Solo practice';
 }
-function buildMapCards(){for(let i=0;i<HOLES.length;i++){const h=HOLES[i],b=document.createElement('button');b.className='mapcard';b.dataset.map=i;const rects=(arr,color)=>arr.map(r=>'<rect x="'+r[0]+'" y="'+r[1]+'" width="'+r[2]+'" height="'+r[3]+'" fill="'+color+'"/>').join('');b.innerHTML='<svg viewBox="0 0 800 500" aria-hidden="true">'+rects(h.tiles,'#528864')+rects(h.pl,'#a9c78c')+rects(h.rp,'#b8a56e')+rects(h.w,'#d3b58e')+rects(h.pit,'#246e93')+h.tp.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="16" fill="#c681ff"/><circle cx="'+t[2]+'" cy="'+t[3]+'" r="16" fill="#c681ff"/>').join('')+h.tornado.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="'+t[2]+'" fill="#d5f8ff" opacity=".2"/>').join('')+'<circle cx="'+h.tee[0]+'" cy="'+h.tee[1]+'" r="12" fill="white"/><circle cx="'+h.hole[0]+'" cy="'+h.hole[1]+'" r="15" fill="#15242a"/></svg><strong>'+String(i+1).padStart(2,'0')+' · '+h.name+'</strong><small>'+h.desc+'</small><small>Par '+h.par+'</small>';b.onclick=()=>R_?.vote(i);$('mapgrid').appendChild(b);}}
+function buildMapCards(){for(const i of STARTERS){const h=HOLES[i],b=document.createElement('button');b.className='mapcard';b.dataset.map=i;const rects=(arr,color)=>arr.map(r=>'<rect x="'+r[0]+'" y="'+r[1]+'" width="'+r[2]+'" height="'+r[3]+'" fill="'+color+'"/>').join('');b.innerHTML='<svg viewBox="0 0 800 500" aria-hidden="true">'+rects(h.tiles,'#528864')+rects(h.pl,'#a9c78c')+rects(h.rp,'#b8a56e')+rects(h.w,'#d3b58e')+rects(h.pit,'#246e93')+h.tp.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="16" fill="#c681ff"/><circle cx="'+t[2]+'" cy="'+t[3]+'" r="16" fill="#c681ff"/>').join('')+h.tornado.map(t=>'<circle cx="'+t[0]+'" cy="'+t[1]+'" r="'+t[2]+'" fill="#d5f8ff" opacity=".2"/>').join('')+'<circle cx="'+h.tee[0]+'" cy="'+h.tee[1]+'" r="12" fill="white"/><circle cx="'+h.hole[0]+'" cy="'+h.hole[1]+'" r="15" fill="#15242a"/></svg><strong>'+String(STARTERS.indexOf(i)+1).padStart(2,'0')+' · '+h.name+'</strong><small>'+h.desc+'</small><small>Par '+h.par+'</small>';b.onclick=()=>R_?.vote(i);$('mapgrid').appendChild(b);}}
 // ---------- input ----------
 let pull=null,orbit=null;
 function cancel(){pull=null;orbit=null;charging=false;ch=0;}
