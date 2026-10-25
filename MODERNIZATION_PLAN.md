@@ -1,6 +1,6 @@
 # Putt Pals modernization plan
 
-Status: planned; implementation has not started.
+Status: implementation started with B2 (solver correction) and B3 (baseline tooling). See TASKS.md and PROJECT_STATUS.md for verified completion; the milestone gates below remain the migration plan.
 
 ## Confirmed scope
 

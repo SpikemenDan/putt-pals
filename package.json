@@ -1,0 +1,26 @@
+{
+  "name": "putt-pals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Putt Pals desktop browser mini-golf game",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --open /putt-pals.html",
+    "build": "vite build && node scripts/check-build.cjs",
+    "preview": "vite preview --host 127.0.0.1 --open /putt-pals.html",
+    "check": "node --check tools.js && node --check tests/solver-baseline.cjs && node tools.js check",
+    "test": "npm run check && npm run test:physics && npm run test:smoke && npm run test:multiplayer",
+    "test:physics": "node tools.js surfaces && node tools.js cups && node tools.js mechanics",
+    "test:smoke": "node tools.js smoke",
+    "test:multiplayer": "node tools.js smoke-multi",
+    "baseline:solver": "node tests/solver-baseline.cjs",
+    "solve": "node tools.js solve",
+    "rank": "node tools.js rank"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3",
+    "vite": "8.3.5"
+  }
+}

@@ -4,9 +4,10 @@ Status: current implementation described below; target modules are proposals.
 
 ## Current implementation
 
-- putt-pals.html: styles, screen markup, embedded Three.js r128 and PeerJS, and an application IIFE. Approximately 790 KB. No build system or dependency manifest.
+- putt-pals.html: styles, screen markup, embedded Three.js r128 and PeerJS, and an application IIFE. Approximately 790 KB. Runtime code has not yet been extracted.
 - tools.js: Node CLI for validation, map generation, physics solving, surface/cup/mechanic checks and jsdom/fake-network smoke tests.
 - HANDOFF.md: historical roadmap and logs. Several architectural details are stale; verify against code rather than copying its constants.
+- package.json / package-lock.json: pinned Vite 8.3.5 and jsdom 30.1.3 development dependencies, with npm commands for development, build, preview and existing checks. vite.config.mjs builds the legacy HTML to dist/putt-pals.html. scripts/check-build.cjs verifies preservation of all three embedded scripts. No TypeScript, React or new runtime dependencies have been introduced yet.
 
 The game has 22 maps and six starter courses with six putts each. Physics advances at 1/240 second, with a requestAnimationFrame accumulator. Simulation coordinates use x/y as the ground plane and z for height. Three.js uses y for height, so rendering swaps axes.
 

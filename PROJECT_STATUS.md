@@ -4,7 +4,7 @@ Last updated: 2026-10-25.
 
 ## Current objective
 
-Implementation of initial task B2 authorized on 2026-10-25. The headless solver now calls the game's real launch function rather than duplicating launch velocity with a stale constant. No dependencies have been installed, and the game HTML is unchanged.
+B2 completed and committed as 3bfaebd. B3 authorized as the next task on 2026-10-25: pinned npm dependencies, Vite development/build/preview, reproducible jsdom smoke tests and setup documentation. The game HTML remains unchanged.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-B2 is complete. Other tasks remain unassigned. B1 (browser baseline) and B3 (reproducible tooling) remain prerequisites for the shared contracts and extraction. Preserve the original HTML until parity gates pass.
+B2 and B3 are complete. B1 (browser baseline) remains unassigned and is required before C1 shared contracts and extraction. Preserve the original HTML until parity gates pass.
 
 ## B2 verification — 2026-10-25
 
@@ -47,7 +47,21 @@ B2 is complete. Other tasks remain unassigned. B1 (browser baseline) and B3 (rep
 - node tools.js mechanics: 8/8 checks passed with the corrected solver.
 - node tests/solver-baseline.cjs: launch initialization passed at nine angle/power combinations; solver delegation passed for the candidate and nine robustness trials; all 36 starter putts have robust shots at POWER=900.
 - Measured solutions: tests/fixtures/solver-baseline.json includes source hashes, robustness offsets and zero-based map/putt indices. Regenerate with node tests/solver-baseline.cjs; it deliberately overwrites the measured fixture. These are first-robust-shot results, not full difficulty counts.
-- Gameplay HTML and physics remain unchanged. Browser/jsdom/multiplayer checks were not run for B2. No dependencies installed and no commit made for B2.
+- Gameplay HTML and physics remained unchanged. Browser/jsdom/multiplayer checks were not run for B2. B2 installed no dependencies; it was subsequently committed as 3bfaebd at the user's request.
+
+## B3 verification — 2026-10-25
+
+- Installed exact Vite 8.3.5 and jsdom 30.1.3 development dependencies and recorded the dependency tree in package-lock.json. Node engine requirements match jsdom; verified on Node 26.10.0 and npm 11.19.1.
+- npm ci --cache /private/tmp/putt-pals-npm-cache --offline: passed, proving reinstall from the lockfile with the populated cache. Initial downloads required network approval. The temporary cache path is only a local verification detail; normal setup is npm ci.
+- npm run build: passed; outputs dist/putt-pals.html. The build check compares embedded library/game script content exactly and verifies key UI elements.
+- npm run check: passed, 22 maps and 36 starter putts. node --check scripts/check-build.cjs and node --check vite.config.mjs also passed.
+- npm run test:smoke: SMOKE PASSED, with no runtime errors.
+- npm run test:multiplayer: MULTI SMOKE PASSED, including four fake-network clients, voting, scoring, timeouts and disconnect handling.
+- npm run test:physics: all 19 surface/timer, seven cup and eight mechanic checks passed. The npm test component commands were run individually; the full aggregate was not repeated.
+- Vite createServer()/preview() HTTP checks: both returned the game successfully on temporary loopback ports; servers closed afterward. Sandbox loopback restrictions required approval for this verification.
+- Game HTML hash still matches the B2 fixture. No runtime dependency upgrade or behavior change. jsdom uses stubbed graphics/audio and a fake network; real browsers and real WebRTC remain B1/later acceptance work.
+- TypeScript, lint/format configuration, module extraction and CI are not added by B3. README.md documents the available commands and the temporary /putt-pals.html entry URL.
+- B3 changes are complete and approved by the user for commit. Temporary verification servers have been stopped.
 
 ## Update format for future owners
 
