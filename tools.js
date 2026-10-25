@@ -10,7 +10,7 @@ const gameSrc=h=>{const m=h.match(/<script id="game">([\s\S]*?)<\/script>/);if(!
 // ---------- arena generator (six walled chambers, 3x2) ----------
 const CELLS=[[46,46],[286,46],[526,46],[46,256],[286,256],[526,256]];
 const PERIM=[[34,34,732,12],[34,454,732,12],[34,34,12,432],[754,34,12,432],[274,40,12,420],[514,40,12,420],[40,244,720,12]];
-// chamber-local coords (228x198). keys: t tee, c cup position, cup cup radius 8..17 (optional), pd [x,y], tp [ax,ay,bx,by,color], fan [x,y,w,h,dx,dy,force], tornado [x,y,radius,+-strength], w walls, sand, ice, slime, pit [x,y,w,h]
+// chamber-local coords (228x198). keys: t tee, c cup position, cup cup radius 8..CUP (15) (optional), pd [x,y], tp [ax,ay,bx,by,color], fan [x,y,w,h,dx,dy,force], tornado [x,y,radius,+-strength], w walls, sand, ice, slime, pit [x,y,w,h]
 // P6 test chambers (not a playable map): 0 fan, 1 teleporter, 2 jump pad, 3 tornado
 const MECH=[
  {t:[30,170],c:[198,170],w:[[100,98,14,100]],fan:[[114,0,114,98,0,1,260]]},
@@ -86,7 +86,7 @@ function load(){const src=gameSrc(read());
  const cut=(a,b,incl)=>{const i=src.indexOf(a),j=src.indexOf(b,i);if(i<0||j<0)throw Error('marker not found: '+a+' / '+b);return src.slice(i,j+(incl?b.length:0));};
  const code=['const $=()=>({}),toast=()=>{},pub=()=>{},aim=()=>{},openCard=()=>{};let R_=null,me,aa=0;',cut('const R=','\n];',true),
   cut('let PI_=0','const NP=','')+'const NP=i=>HOLES[i].putts?HOLES[i].putts.length:1;',cut('function fresh(','\n'),cut('function inside(','function frame(')].join('\n')
-  +'\n;this.api={HOLES,fresh,H,step,surf,limitOf,validLimit,parOf,penOf,timeoutScore,cupOf,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
+  +'\n;this.api={HOLES,fresh,H,step,surf,limitOf,validLimit,parOf,penOf,timeoutScore,cupOf,CUP,CUP_MIN,POWER,R,K_TURF,setPI:v=>{PI_=v;_hc=null;},setMe:v=>{me=v},NP};';
  const ctx={performance,Math,console};vm.createContext(ctx);vm.runInContext(code,ctx);return ctx.api;}
 function solve(A,mi,pi,full){
  const trial=(ang,pw)=>{A.setPI(pi);const m=A.fresh('s',0);A.setMe(m);m.h=mi;const h=A.H();m.x=h.tee[0];m.y=h.tee[1];m.z=A.surf(h,...h.tee);m.str=1;m.prev=[m.x,m.y,m.z];
@@ -529,13 +529,13 @@ else if(cmd==='surfaces'){ // P4: ice/slime/sand friction + timer scaling, using
 else if(cmd==='cups'){ // P5: cup radius, clamp, and difficulty monotonicity on a flat test hole using the game's real step()
  const A=load();let bad=0;const ok=(n,c)=>{console.log((c?'PASS ':'FAIL ')+n);if(!c)bad++;};
  const base=A.HOLES[0],mk=cup=>{const h=Object.assign({},base,{tiles:[[0,0,4000,400]],w:[],pit:[],fan:[],tornado:[],movers:[],pl:[],rp:[],pd:[],tp:[],q:[],sand:[],ice:[],slime:[],tee:[100,200],hole:[400,200],putts:null});if(cup!==undefined)h.cup=cup;return h;};
- const shoot=(cup,deg,pw)=>{const h=mk(cup);A.HOLES.push(h);const mi=A.HOLES.length-1;A.setPI(0);const m=A.fresh('s',0);A.setMe(m);m.h=mi;m.x=100;m.y=200;m.z=A.surf(A.H(),100,200);m.str=1;m.prev=[100,200,m.z];const a=deg*Math.PI/180;m.vx=Math.cos(a)*pw*820;m.vy=Math.sin(a)*pw*820;m.moving=true;m.mt=0;
+ const shoot=(cup,deg,pw)=>{const h=mk(cup);A.HOLES.push(h);const mi=A.HOLES.length-1;A.setPI(0);const m=A.fresh('s',0);A.setMe(m);m.h=mi;m.x=100;m.y=200;m.z=A.surf(A.H(),100,200);m.str=1;m.prev=[100,200,m.z];const a=deg*Math.PI/180;m.vx=Math.cos(a)*pw*A.POWER;m.vy=Math.sin(a)*pw*A.POWER;m.moving=true;m.mt=0;
   for(let i=0;i<4800&&m.moving&&m.mode!=='sunk';i++)A.step();A.HOLES.pop();return m.mode==='sunk'&&!m.over;};
- ok('default radius is 17',A.cupOf({})===17&&A.cupOf(mk())===17);ok('radius 12 is kept',A.cupOf({cup:12})===12);ok('radius clamps to 8..17',A.cupOf({cup:3})===8&&A.cupOf({cup:99})===17&&A.cupOf({cup:'x'})===17);
- const radii=[17,14,11,8],hits={};
+ ok('default radius is CUP ('+A.CUP+')',A.cupOf({})===A.CUP&&A.cupOf(mk())===A.CUP);ok('radius 12 is kept',A.cupOf({cup:12})===12);ok('radius clamps to 8..CUP',A.cupOf({cup:3})===A.CUP_MIN&&A.cupOf({cup:99})===A.CUP&&A.cupOf({cup:'x'})===A.CUP);
+ const radii=[A.CUP,13,10.5,8],hits={};
  for(const r of radii){let n=0;for(let a=-4;a<=4.001;a+=.25)for(let p=.35;p<=1.001;p+=.05)if(shoot(r,a,p))n++;hits[r]=n;}
  console.log('hole-in-one shots out of 462 on a flat 300-unit putt, by cup radius:',JSON.stringify(hits));
- ok('smaller cups are never easier (17>=14>=11>=8)',hits[17]>=hits[14]&&hits[14]>=hits[11]&&hits[11]>=hits[8]);ok('radius 8 is strictly harder than 17',hits[8]<hits[17]);ok('radius 8 is still possible',hits[8]>0);ok('omitting cup equals radius 17',[0,.5,1.5].every(a=>shoot(undefined,a,.5)===shoot(17,a,.5)));
+ const C=A.CUP;ok('smaller cups are never easier (CUP>=13>=10.5>=8)',hits[C]>=hits[13]&&hits[13]>=hits[10.5]&&hits[10.5]>=hits[8]);ok('radius 8 is strictly harder than the default',hits[8]<hits[C]);ok('radius 8 is still possible',hits[8]>0);ok('omitting cup equals the default radius',[0,.5,1.5].every(a=>shoot(undefined,a,.5)===shoot(C,a,.5)));
  console.log(bad?bad+' FAILED':'ALL CUP CHECKS PASS');process.exit(bad?1:0);}
 else if(cmd==='mechanics'){ // P6: one test chamber per mechanic (fan, teleporter, jump pad, tornado) inside the six-chamber arena
  const A=load();let bad=0;const ok=(n,c)=>{console.log((c?'PASS ':'FAIL ')+n);if(!c)bad++;};
@@ -543,7 +543,7 @@ else if(cmd==='mechanics'){ // P6: one test chamber per mechanic (fan, teleporte
   mk=strip=>Object.assign({},A.HOLES[0],{tiles:[[40,40,720,420]],w:D.w,sand:D.sand,ice:D.ice,slime:D.slime,pit:D.pit,pd:D.pd,tp:D.tp,fan:D.fan,tornado:D.tornado,q:[],pl:[],rp:[],movers:[],par:8,
    putts:D.putts.map(p=>({tee:p.tee,hole:p.hole,par:2,cup:p.cup})),...(strip||{})});
  const shot=(map,pi,deg,pw)=>{A.HOLES.push(map);const mi=A.HOLES.length-1;A.setPI(pi);const m=A.fresh('s',0);A.setMe(m);m.h=mi;const h=A.H();m.x=h.tee[0];m.y=h.tee[1];m.z=A.surf(h,...h.tee);m.str=1;m.prev=[m.x,m.y,m.z];
-  const a=deg*Math.PI/180;m.vx=Math.cos(a)*pw*820;m.vy=Math.sin(a)*pw*820;m.moving=true;m.mt=0;for(let i=0;i<4800&&m.moving&&m.mode!=='sunk';i++)A.step();A.HOLES.pop();return m.mode==='sunk'&&!m.over&&m.str===1;};
+  const a=deg*Math.PI/180;m.vx=Math.cos(a)*pw*A.POWER;m.vy=Math.sin(a)*pw*A.POWER;m.moving=true;m.mt=0;for(let i=0;i<4800&&m.moving&&m.mode!=='sunk';i++)A.step();A.HOLES.pop();return m.mode==='sunk'&&!m.over&&m.str===1;};
  const full=mk(),keyOf=['fan','tp','pd','tornado'];
  names.forEach((n,pi)=>{A.HOLES.push(full);const mi=A.HOLES.length-1;const r=solve(A,mi,pi,false);A.HOLES.pop();
   ok(n+' chamber: robust hole-in-one found'+(r.best?' ('+r.best.deg+' deg, power '+r.best.power+')':''),!!r.best);

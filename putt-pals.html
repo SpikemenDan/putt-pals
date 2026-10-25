@@ -166,7 +166,8 @@ select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;borde
 <script id="game">
 (()=>{
 if(!window.THREE){document.getElementById("app").textContent="The 3D engine failed to load. Please reload the page.";return;}
-const R=6,DT=1/240,MAX_SCORE=999,LIMIT_BASE=120000,LIMIT_MAX=300000,LIMIT_MIN=120000,LIMIT_CAP=600000,VOTE_SECS=15,G=700,WT=28;
+// P32 tunables (single place): ball radius, default and minimum cup radius, turf friction, shot power
+const R=5,CUP=15,CUP_MIN=8,K_TURF=.75,POWER=900,DT=1/240,MAX_SCORE=999,LIMIT_BASE=120000,LIMIT_MAX=300000,LIMIT_MIN=120000,LIMIT_CAP=600000,VOTE_SECS=15,G=700,WT=28;
 // P24: no stroke cap. P26: a timeout scores the putt's par + penalty, never below the strokes already taken.
 const timeoutScore=(str,mi,pi)=>Math.max(str||0,parOf(mi,pi)+penOf(mi,pi));
 const B=[[0,0,800,16],[0,484,800,16],[0,0,16,500],[784,0,16,500]];
@@ -327,7 +328,7 @@ function sway(p,t){return spread(p)*Math.sin(t*SWAY_W);}
 function shotAngle(p,t){return aa+(me.pend.rev?Math.PI:0)+(me.arm.steady?0:sway(p,t));}
 function launch(ang,pw){
   let a=ang;
-  const v=pw*820*(me.pend.zany?1.6:1);
+  const v=pw*POWER*(me.pend.zany?1.6:1);
   me.prev=[me.x,me.y,me.z];me.str++;me.vx=Math.cos(a)*v;me.vy=Math.sin(a)*v;
   me.pend.rev=me.pend.zany=0;me.arm.steady=0;me.moving=true;me.mt=0;acc=0;pub(true);
 }
@@ -344,7 +345,7 @@ function surf(hl,x,y){
   return m;
 }
 // Ball-bottom height supported by the circular lip; no distance-based capture.
-const CUP=17,CUP_MIN=8,DEPTH=36;
+const DEPTH=36;
 const cupOf=h=>{const c=+h.cup;return c>0?Math.max(CUP_MIN,Math.min(CUP,c)):CUP;}; // per-putt or per-map cup radius, 8..17, default 17
 function contact(h,x,y){
  const C=cupOf(h),base=surf(h,x,y),top=surf(h,...h.hole),d=Math.hypot(x-h.hole[0],y-h.hole[1]);
@@ -357,7 +358,7 @@ function cupCollision(h){
  if(me.arm.mag&&d>C&&d<90*sc&&Math.abs(me.z-top)<5){const gp=300*sc*sc;me.vx-=dx/d*gp*DT;me.vy-=dy/d*gp*DT;} // gravity pull: shorter reach and weaker for smaller cups
  if(center<top&&d<C+R){
   const limit=C-R;
-  if(d>limit){const nx=dx/d,ny=dy/d;me.x=h.hole[0]+nx*limit;me.y=h.hole[1]+ny*limit;const vn=me.vx*nx+me.vy*ny;if(vn>0){const e=1.15+.6*lip;me.vx-=e*vn*nx;me.vy-=e*vn*ny;}} // lip rebound 1.15 at radius 17 (was 1.35), up to 1.75 at radius 8: fast balls lip out
+  if(d>limit){const nx=dx/d,ny=dy/d;me.x=h.hole[0]+nx*limit;me.y=h.hole[1]+ny*limit;const vn=me.vx*nx+me.vy*ny;if(vn>0){const e=1.15+.6*lip;me.vx-=e*vn*nx;me.vy-=e*vn*ny;}} // lip rebound 1.15 at the default radius (CUP), up to 1.75 at radius 8: fast balls lip out
   // Score only after the whole ball physically drops below the putting surface.
   if(me.z+2*R<top-1.5){sink(false);return;} // adjusted sink threshold (was top-2)
  }
@@ -394,9 +395,9 @@ function step(){
   if(air)me.vz-=G*DT;
   else{
     me.z=f;
-    let k=0.85; // turf friction (was 1.3) - smoother momentum
+    let k=K_TURF; // turf friction (P32: .85 -> .75)
     for(const s of hl.sand)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3])k=3.2; // sand friction (was 5.0)
-    for(const p of hl.pl)if(me.x>p[0]&&me.x<p[0]+p[2]&&me.y>p[1]&&me.y<p[1]+p[3])k=0.9; // platform friction (was 1.3)
+    for(const p of hl.pl)if(me.x>p[0]&&me.x<p[0]+p[2]&&me.y>p[1]&&me.y<p[1]+p[3])k=K_TURF+.05; // platform friction (keeps the old +.05 over turf)
     let cd=30; // constant (Coulomb) drag
     for(const s of hl.ice)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3]){k=0.12;cd=4;} // ice: very slippery
     for(const s of hl.slime)if(me.x>s[0]&&me.x<s[0]+s[2]&&me.y>s[1]&&me.y<s[1]+s[3]){k=5.5;cd=45;} // slime: very sticky
@@ -998,7 +999,7 @@ function audioTick(bp,o){
   const pr=aPrev,cur={r:activeRound,str:me.str,mode:me.mode,mv:me.moving,x:me.x,y:me.y,vx:me.vx,vy:me.vy,vz:me.vz||0};aPrev=cur;
   if(pr&&pr.r===cur.r){
     const jump=Math.hypot(cur.x-pr.x,cur.y-pr.y),sp=Math.hypot(cur.vx,cur.vy),psp=Math.hypot(pr.vx,pr.vy);
-    if(cur.str>pr.str)sfx('putt',bp,Math.min(1,.4+sp/820*.6));
+    if(cur.str>pr.str)sfx('putt',bp,Math.min(1,.4+sp/POWER*.6));
     else if(pr.mv&&!cur.mv&&jump>70&&cur.mode==='play')sfx('splash',bp,1);
     else if(pr.mv&&cur.mv&&jump>70)sfx('teleport',bp,.8);
     else if(cur.mv&&cur.vz-pr.vz>180)sfx('boing',bp,.8);
