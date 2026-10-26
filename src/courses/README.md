@@ -30,7 +30,7 @@ Solver parity includes the legacy floating-point power endpoint (`1.000000000000
 
 `parseCourseDocument(json)` validates version, IDs, indices, rules, geometry, starter presence and playable tee/cup positions at the boundary. Unsupported versions and duplicate/malformed IDs fail explicitly. `toSimulationCourses(document)` returns independent geometry/putt data using normalized rule names already supported by SimulationEngine. Explicit zero penalties are preserved. All 36 recorded starter shots have identical results through this adapter.
 
-The document format is available for future course-file/browser consumers; the current browser and existing CLI commands are not switched automatically by exporting. This adds no course editor, file writes or deployment.
+The document format is available for course-file and future browser consumers. CLI shots and solver searches use the normalized simulation adapter; the current browser is unchanged. Exporting does not adopt a file automatically. This adds no course editor, automatic file writes or deployment.
 
 ## Difficulty provenance
 
@@ -39,3 +39,11 @@ CLI `solve` JSON now includes `schemaVersion: 1` and a `provenance` record: pers
 `SOLVER_CONFIG` in tools/cli/solver.mjs defines the actual grid, trial duration, hazard time and robustness offsets used by the solver. Configuration provenance also hashes solver source so algorithm changes cannot silently reuse old evidence. This does not change the grid or gameplay physics.
 
 `assessDifficultyResult(saved, currentProvenance)` in tools/cli/provenance.mjs checks persisted result structure and compares every provenance field. `current` means the recorded fingerprints match; `complete` additionally requires full-grid mode. Neither checks data authenticity or replays a measurement. Missing/malformed provenance, changed geometry/rules, a different putt, simulation changes or changed search configuration invalidate the result. Fast-search hit counts remain partial. Historical rank still exits 2, and the B4 exhaustive sweep is not run or completed by adding provenance.
+
+## Loading course files
+
+Use `--courses <file.json>` before or after the command to supply a schema-version-1 document to `list`, `check`, `export`, `shot` or `solve`. For example: `node tools/cli/main.mjs shot 0 0 31 0.8 --courses courses.json`. Relative paths resolve from your working directory. Export a starting file with `node tools/cli/main.mjs export > courses.json`; this is an explicit shell write, not an automatic game-data update.
+
+All supplied documents are parsed and validated before use. Stored IDs and display-name edits survive listing/re-export; shots/solutions consume the loaded geometry/rules, and solver provenance hashes the loaded course. Default shots and solver commands also use `toSimulationCourses()` on the normalized document. Both default and file-backed modes remain headless.
+
+Missing/malformed files, unsupported schemas, duplicate/missing options, unsupported commands and incorrect argument counts exit 1 with a handled error. `validate` is the source/inventory audit, `rank` is the historical ladder audit, and `arena` uses named chamber specifications; they reject `--courses` rather than silently ignore it. No supplied file is modified.

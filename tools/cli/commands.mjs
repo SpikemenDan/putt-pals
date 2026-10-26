@@ -6,7 +6,7 @@ import { solveCourse } from './solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument, validateCourseDocument } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -14,7 +14,8 @@ export const MAX_TICKS = 240 * 120;
 const fail = message => ({ code: 1, lines: [`ERROR: ${message}`] });
 
 export function runList(raw) {
-  const catalog = buildCourseCatalog(raw);
+  const catalog = Array.isArray(raw) ? buildCourseCatalog(raw)
+    : { ...validateCourseDocument(raw), courses: raw?.courses };
   if (!catalog.valid) return { code: 1, lines: ['LIST FAILED', ...catalog.errors] };
   const lines = catalog.courses.map(
     c => `${String(c.index).padStart(2)}  ${c.id.padEnd(22)} ${c.starter ? 'starter' : '       '}  ${c.putts.length} putt${c.putts.length === 1 ? '' : 's'}`,
@@ -93,19 +94,23 @@ export function runArena(name) {
 }
 
 /** Geometry, playable positions and resolved-rule parity for all imported maps. */
-export function runCheck({ definitions, rules }) {
-  const result = validateCourseDefinitions(definitions, rules);
+export function runCheck({ definitions, rules, document }) {
+  const result = document ? validateCourseDocument(document) : validateCourseDefinitions(definitions, rules);
+  const count = document ? document.courses?.length : definitions?.length;
   return result.valid
-    ? { code: 0, lines: [`CHECK OK: ${definitions.length} courses; geometry, playable tee/cup positions and resolved rules agree`] }
+    ? { code: 0, lines: [`CHECK OK: ${count} courses; geometry, playable tee/cup positions and resolved rules agree`] }
     : { code: 1, lines: ['CHECK FAILED', ...result.errors.map(error => `  ${error}`)] };
 }
 
-export function runExport() {
-  return { code: 0, lines: [JSON.stringify(createCourseDocument(), null, 2)] };
+export function runExport(document = createCourseDocument()) {
+  const checked = validateCourseDocument(document);
+  if (!checked.valid) return { code: 1, lines: ['EXPORT FAILED', ...checked.errors] };
+  return { code: 0, lines: [JSON.stringify(document, null, 2)] };
 }
 
 export const USAGE = [
-  'Usage: node tools/cli/main.mjs <command>',
+  'Usage: node tools/cli/main.mjs <command> [--courses <file.json>]',
+  '  --courses is supported by list, check, export, shot and solve',
   '  list                          list all courses',
   '  export                        print versioned course JSON with persistent course/putt IDs',
   '  check                         validate imported geometry, playable positions and rules',

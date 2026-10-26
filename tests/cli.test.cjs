@@ -18,6 +18,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const { createCourseData, validateCourseGeometry, createCourseDocument, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
+  const courseAdapter = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const arenaDataModule = await import(pathToFileURL(path.join(root, 'src/courses/arena-specs.js')).href);
   let failed = 0;
   const run = (name, fn) => {
@@ -27,6 +28,56 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
 
   const provenanceTools = await import(pathToFileURL(path.join(root, 'tools/cli/provenance.mjs')).href);
   const { SOLVER_CONFIG } = await import(pathToFileURL(path.join(root, 'tools/cli/solver.mjs')).href);
+  const { parseCliArguments } = await import(pathToFileURL(path.join(root, 'tools/cli/arguments.mjs')).href);
+  run('course-file option parsing rejects ambiguous or ignored arguments', () => {
+    assert.deepEqual(parseCliArguments(['--courses', 'maps.json', 'solve', '0', '0', '--full']),
+      { command: 'solve', args: ['0', '0', '--full'], courseFile: 'maps.json' });
+    for (const args of [['list', '--courses'], ['list', '--courses', 'a', '--courses', 'b'],
+      ['validate', '--courses', 'a'], ['arena', '--courses', 'a'], ['rank', '--courses', 'a'],
+      ['shot', '0', '0', '1'], ['list', 'extra'], ['solve', '0', '0', '--wat']]) assert.throws(() => parseCliArguments(args));
+  });
+  run('file-backed commands preserve edited content and persisted IDs', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-course-file-'));
+    try {
+      const document = createCourseDocument();
+      document.courses[0].name = 'Edited display name';
+      document.courses[0].putts[0].hole = [320, 80];
+      const file = path.join(temp, 'courses with spaces.json');
+      fs.writeFileSync(file, JSON.stringify(document));
+      const invoke = (...args) => cli(...args, '--courses', file);
+      assert.equal(invoke('check').status, 0);
+      assert.match(invoke('list').stdout, /switchback-garden/);
+      assert.deepEqual(JSON.parse(invoke('export').stdout), document);
+      const reference = inventory.simulationReferences.shots[0].shot;
+      const shot = invoke('shot', '0', '0', String(reference.deg), String(reference.power));
+      assert.equal(shot.status, 0, shot.stdout + shot.stderr);
+      assert.match(shot.stdout, /Edited display name/);
+      const expected = commands.runShot(courseAdapter.toSimulationCourses(document), 0, 0, reference.deg, reference.power);
+      assert.equal(shot.stdout.trim(), expected.lines.join('\n'));
+      const original = createCourseDocument();
+      original.courses[0].name = 'Renamed solving course';
+      fs.writeFileSync(file, JSON.stringify(original));
+      const solved = invoke('solve', '0', '0');
+      assert.equal(solved.status, 0, solved.stdout + solved.stderr);
+      const record = JSON.parse(solved.stdout);
+      assert.equal(provenanceTools.assessDifficultyResult(record, provenanceTools.createDifficultyProvenance(original.courses[0], 0)).current, true);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  });
+  run('file loading fails cleanly for invalid JSON, future schemas and missing files', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-course-invalid-'));
+    try {
+      const file = path.join(temp, 'courses.json');
+      for (const contents of ['{', JSON.stringify({ schemaVersion: 999, courses: [] }),
+        JSON.stringify({ ...createCourseDocument(), courses: [] })]) {
+        fs.writeFileSync(file, contents);
+        const out = cli('check', '--courses', file);
+        assert.equal(out.status, 1);
+        assert.match(out.stdout, /^ERROR:/);
+        assert.equal(out.stderr, '', 'handled input errors should not dump a stack trace');
+      }
+      assert.equal(cli('list', '--courses', path.join(temp, 'missing.json')).status, 1);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  });
   run('difficulty fingerprints are deterministic and detect changed course, physics and configuration', () => {
     const { hashJson, createDifficultyProvenance, assessDifficultyResult } = provenanceTools;
     assert.equal(hashJson({ b: [2, 3], a: 1 }), hashJson({ a: 1, b: [2, 3] }));
