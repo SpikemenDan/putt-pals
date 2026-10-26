@@ -57,6 +57,15 @@ const assert = require('node:assert/strict');
     assert.equal(f.state().mapIndex, resolveVote({ host: 8, a: 5 }, undefined, { round: 0 }));
     assert.equal(f.state().roundStartTime, 47500);
   });
+  run('a departed first voter does not reset the original voting deadline', () => {
+    const f = make(['a', 'b']); f.send('START_VOTING');
+    f.send('CAST_VOTE', { mapIndex: 8 }, 'a'); f.clock.increment(5000);
+    f.send('LEAVE_ROOM', {}, 'a'); f.clock.increment(10000);
+    assert.equal(f.state().phase, 'select'); assert.equal(f.state().votingDeadline, 15000);
+    f.clock.increment(5000); f.send('CAST_VOTE', { mapIndex: 0 }); f.clock.increment(0);
+    assert.equal(f.state().phase, 'play'); assert.equal(f.state().mapIndex, 0);
+    assert.equal(f.state().roundStartTime, 22500);
+  });
   run('external callers cannot spoof XState internal timer events', () => {
     const f = make(['a']); f.send('START_VOTING'); f.send('CAST_VOTE', { mapIndex: 0 });
     assert.equal(f.send('xstate.after.votingRemaining.session.select.timing', {}, 'a'), false);

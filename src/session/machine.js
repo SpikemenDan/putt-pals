@@ -130,7 +130,7 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
           timing: {
             entry: 'deadline',
             always: [{ guard: 'practice', target: '#session.play', actions: 'votedMap' }, { guard: 'replay', target: 'choosingPutt' }, { guard: 'everyoneVoted', target: '#session.play', actions: 'votedMap' }],
-            after: { votingRemaining: [{ guard: 'hasVotes', target: '#session.play', actions: 'votedMap' }, { target: 'waiting', actions: 'clearVotes' }] },
+            after: { votingRemaining: [{ guard: 'hasVotes', target: '#session.play', actions: 'votedMap' }, { target: 'waiting' }] },
             on: { CAST_VOTE: { guard: 'vote', actions: 'vote' } },
           },
           choosingPutt: { on: { CAST_VOTE: { guard: 'vote', actions: 'vote' }, START_ROUND: { guard: 'choosePutt', target: '#session.play', actions: 'chosenPutt' } } },
