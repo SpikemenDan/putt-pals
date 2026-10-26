@@ -16,7 +16,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   const legacy = loadLegacy();
   const raw = legacyRawCourses(legacy);
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
-  const { createCourseData, validateCourseGeometry, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
+  const { createCourseData, validateCourseGeometry, createCourseDocument, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
   const arenaDataModule = await import(pathToFileURL(path.join(root, 'src/courses/arena-specs.js')).href);
   let failed = 0;
@@ -25,6 +25,36 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     catch (error) { failed++; console.log('FAIL:', name, '\n  ', error.message); }
   };
 
+  const provenanceTools = await import(pathToFileURL(path.join(root, 'tools/cli/provenance.mjs')).href);
+  const { SOLVER_CONFIG } = await import(pathToFileURL(path.join(root, 'tools/cli/solver.mjs')).href);
+  run('difficulty fingerprints are deterministic and detect changed course, physics and configuration', () => {
+    const { hashJson, createDifficultyProvenance, assessDifficultyResult } = provenanceTools;
+    assert.equal(hashJson({ b: [2, 3], a: 1 }), hashJson({ a: 1, b: [2, 3] }));
+    assert.throws(() => hashJson({ x: NaN }));
+    const course = createCourseDocument().courses[0];
+    const current = createDifficultyProvenance(course, 0, { full: true });
+    const saved = { schemaVersion: 1, hits: 811, best: { deg: 31, power: 0.8 }, provenance: current };
+    assert.deepEqual(assessDifficultyResult(saved, current), { current: true, complete: true, differences: [] });
+    assert.deepEqual(createDifficultyProvenance(course, 0, { full: true }), current);
+    const changedCourse = structuredClone(course); changedCourse.geometry.w[0][0] += 1;
+    for (const updated of [createDifficultyProvenance(changedCourse, 0, { full: true }),
+      createDifficultyProvenance(course, 0, { full: true, simulationHash: 'a'.repeat(64) }),
+      createDifficultyProvenance(course, 0, { full: true, configuration: { ...SOLVER_CONFIG, trialTicks: 2400 } }),
+      createDifficultyProvenance(course, 1, { full: true })]) {
+      assert.equal(assessDifficultyResult(saved, updated).current, false);
+      assert.equal(assessDifficultyResult(saved, updated).complete, false);
+    }
+  });
+  run('fast or malformed difficulty results cannot establish complete current counts', () => {
+    const { createDifficultyProvenance, assessDifficultyResult } = provenanceTools;
+    const current = createDifficultyProvenance(createCourseDocument().courses[0], 0);
+    const fast = { schemaVersion: 1, hits: 2, best: { deg: 31, power: 0.8 }, provenance: current };
+    assert.equal(assessDifficultyResult(fast, current).current, true);
+    assert.equal(assessDifficultyResult(fast, current).complete, false);
+    for (const changed of [null, { ...fast, hits: -1 }, { ...fast, hits: 1.5 },
+      { ...fast, best: { deg: 0, power: 2 } }, { ...fast, schemaVersion: 999 },
+      { ...fast, provenance: { ...current, courseSha256: 'bad' } }]) assert.equal(assessDifficultyResult(changed, current).current, false);
+  });
   run('check accepts all maps and rejects geometry/rule mismatches and unplayable positions', () => {
     assert.equal(commands.runCheck(data).code, 0);
     for (const mutate of [d => { d.definitions[0].putts[0].tee = [-100, -100]; },
@@ -192,7 +222,10 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
       const out = spawnSync(process.execPath, [path.join(temp, 'tools/cli/main.mjs'), 'solve', '0', '0'], { encoding: 'utf8', cwd: temp });
       assert.equal(out.status, 0, out.stderr);
-      assert.deepEqual(JSON.parse(out.stdout).best, inventory.simulationReferences.shots[0].shot);
+      const saved = JSON.parse(out.stdout);
+      assert.deepEqual(saved.best, inventory.simulationReferences.shots[0].shot);
+      const expected = provenanceTools.createDifficultyProvenance(createCourseDocument().courses[0], 0);
+      assert.deepEqual(provenanceTools.assessDifficultyResult(saved, expected), { current: true, complete: false, differences: [] });
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   });
   run('list shows 22 courses and 6 starters', () => {

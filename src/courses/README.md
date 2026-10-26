@@ -31,3 +31,11 @@ Solver parity includes the legacy floating-point power endpoint (`1.000000000000
 `parseCourseDocument(json)` validates version, IDs, indices, rules, geometry, starter presence and playable tee/cup positions at the boundary. Unsupported versions and duplicate/malformed IDs fail explicitly. `toSimulationCourses(document)` returns independent geometry/putt data using normalized rule names already supported by SimulationEngine. Explicit zero penalties are preserved. All 36 recorded starter shots have identical results through this adapter.
 
 The document format is available for future course-file/browser consumers; the current browser and existing CLI commands are not switched automatically by exporting. This adds no course editor, file writes or deployment.
+
+## Difficulty provenance
+
+CLI `solve` JSON now includes `schemaVersion: 1` and a `provenance` record: persisted course/putt IDs, a SHA-256 hash of the entire normalized course, a simulation/shared-source hash, a solver configuration/source hash, and `searchMode` (`fast` or `full`). Course hashing sorts object keys but preserves array order. Source hashes use relative paths and file contents, so identical checkouts in different directories agree. Shared-source hashing is conservative: even non-physics contract changes invalidate prior results.
+
+`SOLVER_CONFIG` in tools/cli/solver.mjs defines the actual grid, trial duration, hazard time and robustness offsets used by the solver. Configuration provenance also hashes solver source so algorithm changes cannot silently reuse old evidence. This does not change the grid or gameplay physics.
+
+`assessDifficultyResult(saved, currentProvenance)` in tools/cli/provenance.mjs checks persisted result structure and compares every provenance field. `current` means the recorded fingerprints match; `complete` additionally requires full-grid mode. Neither checks data authenticity or replays a measurement. Missing/malformed provenance, changed geometry/rules, a different putt, simulation changes or changed search configuration invalidate the result. Fast-search hit counts remain partial. Historical rank still exits 2, and the B4 exhaustive sweep is not run or completed by adding provenance.

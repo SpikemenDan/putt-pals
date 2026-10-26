@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { createCourseData } from '../../src/courses/index.js';
+import { createCourseData, createCourseDocument } from '../../src/courses/index.js';
 import fs from 'node:fs';
+import { createDifficultyProvenance } from './provenance.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runList, runValidate, runShot, runSolve, runArena, runCheck, runRank, runExport, USAGE } from './commands.mjs';
@@ -32,7 +33,15 @@ if (!['list', 'validate', 'shot', 'solve', 'arena', 'check', 'rank', 'export'].i
   } else if (command === 'arena') {
     finish(runArena(args.join(' ')));
   } else if (command === 'solve') {
-    finish(runSolve(data.definitions, ...args));
+    const output = runSolve(data.definitions, ...args);
+    if (output.result) {
+      const map = Number(args[0]);
+      const putt = Number(args[1]);
+      const course = createCourseDocument().courses[map];
+      const provenance = createDifficultyProvenance(course, putt, { full: args[2] === '--full' });
+      output.lines = [JSON.stringify({ schemaVersion: 1, map, putt, ...output.result, provenance })];
+    }
+    finish(output);
   } else if (command === 'shot') {
     finish(runShot(data.definitions, ...args));
   } else {
