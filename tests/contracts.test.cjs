@@ -39,6 +39,9 @@ async function run() {
   assert.equal(shared.calculateTimeoutScore(3, 2, 3), 5);
   assert.equal(shared.calculateTimeoutScore(12, 2, 3), 12);
   assert.equal(shared.calculateTimeoutScore(1, 4, 4), 8); // Cyclone Ring
+  assert.equal(shared.calculateTimeoutScore(1, 2, 0), 2); // a penalty of 0 is valid and must not fall back to the default
+  assert.equal(shared.calculateTimeoutScore(5, 2, 0), 5);
+  assert.equal(shared.calculateTimeoutScore(0, undefined, undefined), 5); // missing par/penalty use defaults (2 + 3)
 
   assert.equal(shared.formatScoreEntry(1, false, 2, 3), '1');
   assert.equal(shared.formatScoreEntry(5, true, 2, 3), '2+3*');
@@ -149,6 +152,16 @@ async function run() {
   const tieVotes = { p1: 20, p2: 8 };
   // Tie-breaker picks smaller index (8 < 20)
   assert.equal(shared.resolveVote(tieVotes), 8);
+
+  // Legacy-compatible tie-break: tied maps ascending, winner = tied[(round * 7 + validVotes) % tied.length].
+  const tie58 = { a: 8, b: 5 }; // tied [5, 8], validVotes = 2
+  assert.equal(shared.resolveVote(tie58, undefined, { round: 0 }), 5); // (0 + 2) % 2 = 0
+  assert.equal(shared.resolveVote(tie58, undefined, { round: 1 }), 8); // (7 + 2) % 2 = 1
+  assert.equal(shared.resolveVote(tie58), 5); // 5 < 8 numerically, not by STARTER array order
+  assert.equal(shared.resolveVote({ a: 5, b: 8, c: 99, d: 'x' }, undefined, { round: 0 }), 5); // invalid votes ignored: tied [5, 8], validVotes = 2, (0 + 2) % 2 = 0
+  assert.equal(shared.resolveVote({ a: 5, b: 8, c: 8 }, undefined, { round: 3 }), 8); // clear winner ignores rotation
+  assert.equal(shared.resolveVote({ a: 5, b: 8 }, undefined, { connectedIds: ['a'] }), 5); // only connected voters count
+  assert.equal(shared.resolveVote({}), shared.STARTER_COURSE_INDICES[0]); // no votes: first eligible map
 
   assert.equal(shared.canExecuteCommand('lobby', shared.SessionCommands.START_VOTING, true), true);
   assert.equal(shared.canExecuteCommand('lobby', shared.SessionCommands.START_VOTING, false), false); // guest blocked

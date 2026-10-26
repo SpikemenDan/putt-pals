@@ -103,7 +103,7 @@ The contracts below are implemented in `src/shared/` and verified by `tests/cont
 - `SessionPhases`: `lobby`, `select`, `play`, `results`.
 - `GameModes`: `standard`, `tournament_3`, `tournament_6`, `tournament_9`, `practice`, `putt_practice`.
 - `SessionCommands`: `JOIN_ROOM`, `LEAVE_ROOM`, `SET_MODE`, `START_VOTING`, `CAST_VOTE`, `START_ROUND`, `ADVANCE_PUTT`, `FINISH_ROUND`, `RETURN_TO_LOBBY`.
-- `resolveVote(votes, eligibleMaps)`: deterministic vote winner resolution with lowest-index tie-breaker.
+- `resolveVote(votes, eligibleMaps, { round, connectedIds })`: deterministic winner; counts only integer votes for eligible maps (and connected voters when given). Ties match the legacy host: tied maps ascending, winner `tied[(round * 7 + validVotes) % tied.length]`. No valid votes returns the first eligible map.
 - `canExecuteCommand(phase, command, isHost)`: phase and host command gating.
 
 ### 8. Transport interface (`src/shared/transport.js`)

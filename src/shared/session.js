@@ -62,37 +62,39 @@ export function createInitialSessionState(options = {}) {
 }
 
 /**
- * Resolves map voting deterministically.
- * If there is a tie, selects the map with the lowest index among the tied winners.
+ * Resolves map voting deterministically, matching the legacy game.
+ *
+ * Only integer votes for eligible maps count, and (when `connectedIds` is
+ * given) only votes from connected players. Ties are broken the way the legacy
+ * host does: tied maps are sorted by ascending index and the winner is
+ * `tied[(round * 7 + validVotes) % tied.length]`, so repeated ties rotate
+ * between rounds instead of always favouring the same map.
+ * With no valid votes, the first eligible map is returned.
  *
  * @param {Record<string, number>} votes Map of playerId -> mapIndex
  * @param {readonly number[]} [eligibleMaps=STARTER_COURSE_INDICES]
+ * @param {{ round?: number, connectedIds?: Iterable<string> }} [options]
  * @returns {number} Winning map index
  */
-export function resolveVote(votes, eligibleMaps = STARTER_COURSE_INDICES) {
+export function resolveVote(votes, eligibleMaps = STARTER_COURSE_INDICES, options = {}) {
+  const round = Number.isInteger(options.round) && options.round >= 0 ? options.round : 0;
+  const connected = options.connectedIds ? new Set(options.connectedIds) : null;
+  const eligible = new Set(eligibleMaps);
+
   const counts = new Map();
-  for (const map of eligibleMaps) {
-    counts.set(map, 0);
+  let validVotes = 0;
+  for (const [playerId, map] of Object.entries(votes || {})) {
+    if (connected && !connected.has(playerId)) continue;
+    if (!Number.isInteger(map) || !eligible.has(map)) continue;
+    counts.set(map, (counts.get(map) || 0) + 1);
+    validVotes++;
   }
 
-  for (const map of Object.values(votes)) {
-    if (counts.has(map)) {
-      counts.set(map, counts.get(map) + 1);
-    }
-  }
+  if (validVotes === 0) return eligibleMaps[0];
 
-  let maxVotes = -1;
-  let winningMap = eligibleMaps[0];
-
-  for (const map of eligibleMaps) {
-    const v = counts.get(map) || 0;
-    if (v > maxVotes) {
-      maxVotes = v;
-      winningMap = map;
-    }
-  }
-
-  return winningMap;
+  const top = Math.max(...counts.values());
+  const tied = [...counts.keys()].filter((m) => counts.get(m) === top).sort((a, b) => a - b);
+  return tied[(round * 7 + validVotes) % tied.length];
 }
 
 /**
