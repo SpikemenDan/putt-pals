@@ -6,7 +6,7 @@ import { solveCourse } from './solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -100,9 +100,14 @@ export function runCheck({ definitions, rules }) {
     : { code: 1, lines: ['CHECK FAILED', ...result.errors.map(error => `  ${error}`)] };
 }
 
+export function runExport() {
+  return { code: 0, lines: [JSON.stringify(createCourseDocument(), null, 2)] };
+}
+
 export const USAGE = [
   'Usage: node tools/cli/main.mjs <command>',
   '  list                          list all courses',
+  '  export                        print versioned course JSON with persistent course/putt IDs',
   '  check                         validate imported geometry, playable positions and rules',
   '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',

@@ -7,7 +7,7 @@ const { legacyRawCourses, legacyStarters, sourceHashes } = require('../tools/leg
 const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
 
 (async () => {
-  const { buildCourseCatalog, normalizeLegacyCourse, slugify, detectStaleCourses, detectStaleHashes } = await load('src/courses/index.js');
+  const { buildCourseCatalog, normalizeLegacyCourse, slugify, detectStaleCourses, detectStaleHashes, createCourseDocument, validateCourseDocument, parseCourseDocument, toSimulationCourses, createCourseData } = await load('src/courses/index.js');
   const { STARTER_COURSE_INDICES } = await load('src/shared/constants.js');
   let failed = 0;
   const run = (name, fn) => {
@@ -78,6 +78,56 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
   run('stale detection reports changed source hashes', () => {
     const result = detectStaleHashes({ htmlSha256: 'x', toolsSha256: inventory.toolsSha256 }, inventory);
     assert.deepEqual(result.differences, ['htmlSha256 changed since the inventory was recorded']);
+  });
+
+  const document = createCourseDocument();
+  const { runShot } = await load('tools/cli/commands.mjs');
+  run('versioned document round-trips all maps with persistent course and putt IDs', () => {
+    assert.equal(document.schemaVersion, 1);
+    assert.equal(document.courses.length, 22);
+    assert.deepEqual(parseCourseDocument(JSON.stringify(document)), document);
+    assert.equal(document.courses[0].putts[0].id, 'switchback-garden-putt-1');
+    const ids = document.courses.flatMap(c => [c.id, ...c.putts.map(p => p.id)]);
+    assert.equal(new Set(ids).size, ids.length);
+    const renamed = structuredClone(document);
+    renamed.courses[0].name = 'A new display name';
+    assert.equal(parseCourseDocument(JSON.stringify(renamed)).courses[0].id, document.courses[0].id);
+  });
+  run('document parser rejects unsupported versions, duplicate IDs and malformed rules/geometry', () => {
+    const mutations = [d => { d.schemaVersion = 999; }, d => { d.courses[1].id = d.courses[0].id; },
+      d => { d.courses[0].putts[1].id = d.courses[0].putts[0].id; },
+      d => { d.courses[0].putts[0].id = d.courses[0].id; },
+      d => { d.courses[0].starter = false; }, d => { d.courses.pop(); },
+      d => { d.courses[0].putts[0].index = 99; }, d => { d.courses[0].geometry.w[0][2] = -1; },
+      d => { d.courses[0].putts[0].tee = [-1, -1]; }, d => { delete d.courses[0].putts[0].limitSeconds; },
+      d => { d.courses[0].putts[0].cupRadius = 100; }, d => { d.courses[0].putts[0] = null; },
+      d => { d.courses[0].putts[0].par = { toString: null }; }, d => { d.schemaVersion = { toString: null }; }];
+    for (const mutate of mutations) {
+      const changed = structuredClone(document); mutate(changed);
+      assert.equal(validateCourseDocument(changed).valid, false);
+      assert.throws(() => parseCourseDocument(JSON.stringify(changed)));
+      assert.throws(() => toSimulationCourses(changed));
+    }
+    assert.throws(() => parseCourseDocument('{'));
+    assert.equal(validateCourseDocument(null).valid, false);
+  });
+  run('normalized simulation adapter preserves all 36 recorded starter shot results', () => {
+    const legacy = createCourseData().definitions;
+    const normalized = toSimulationCourses(document);
+    const baseline = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/solver-baseline.json'), 'utf8'));
+    for (const ref of baseline.results) assert.deepEqual(
+      runShot(normalized, ref.map, ref.putt, ref.best.deg, ref.best.power),
+      runShot(legacy, ref.map, ref.putt, ref.best.deg, ref.best.power), `${ref.map}/${ref.putt}`);
+  });
+  run('document adapter owns its geometry and preserves explicit zero penalties', () => {
+    const changed = structuredClone(document);
+    changed.courses[0].putts[0].penalty = 0;
+    const courses = toSimulationCourses(changed);
+    assert.equal(courses[0].putts[0].penalty, 0);
+    courses[0].w[0][0] += 100;
+    courses[0].putts[0].tee[0] += 100;
+    assert.deepEqual(createCourseDocument(), document);
+    assert.deepEqual(parseCourseDocument(JSON.stringify(document)), document);
   });
 
   if (failed) { console.log(`\n${failed} COURSE TEST(S) FAILED`); process.exit(1); }

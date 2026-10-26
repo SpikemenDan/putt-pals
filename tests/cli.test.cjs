@@ -57,6 +57,15 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.equal(commands.runRank(data.rules, rows).code, 1);
     }
   });
+  run('process: export emits a versioned document for every map', () => {
+    const out = cli('export');
+    assert.equal(out.status, 0, out.stderr);
+    const document = JSON.parse(out.stdout);
+    assert.equal(document.schemaVersion, 1);
+    assert.equal(document.courses.length, 22);
+    assert.equal(document.courses.filter(c => c.starter).length, 6);
+    assert.equal(document.courses[0].putts[0].id, 'switchback-garden-putt-1');
+  });
   run('process: check succeeds and historical rank exits 2', () => {
     const check = cli('check');
     assert.equal(check.status, 0, check.stderr);
@@ -143,7 +152,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
       fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
       const entry = path.join(temp, 'tools/cli/main.mjs');
-      for (const args of [['list'], ['check'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
+      for (const args of [['list'], ['check'], ['export'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
         const out = spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', cwd: temp });
         assert.equal(out.status, 0, out.stdout + out.stderr);
         if (args[0] === 'shot') assert.match(out.stdout, /SUNK/);

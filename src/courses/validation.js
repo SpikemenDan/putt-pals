@@ -7,6 +7,18 @@ const contains = (rect, p) => Array.isArray(rect) && rect.length >= 4 && rect.ev
   && p[0] >= rect[0] && p[0] <= rect[0] + rect[2] && p[1] >= rect[1] && p[1] <= rect[1] + rect[3];
 const validLimit = limit => Number.isFinite(limit) && limit >= MIN_TIMEOUT_SECONDS && limit <= MAX_TIMEOUT_SECONDS;
 
+/** Pure positional checks shared by legacy migration and normalized documents. */
+export function validatePuttPositions(geometry, putt) {
+  const errors = [];
+  for (const field of ['tee', 'hole']) {
+    const p = putt?.[field];
+    if (!point(p)) { errors.push(`invalid ${field}`); continue; }
+    if (!Array.isArray(geometry?.tiles) || !geometry.tiles.some(rect => contains(rect, p))
+      || (Array.isArray(geometry.pit) && geometry.pit.some(rect => contains(rect, p)))) errors.push(`${field} is outside playable ground`);
+  }
+  return errors;
+}
+
 /** Check both representations at the migration boundary, without evaluating legacy source. */
 export function validateCourseDefinitions(definitions, rules) {
   const errors = [];
@@ -31,14 +43,7 @@ export function validateCourseDefinitions(definitions, rules) {
     putts.forEach((putt, pi) => {
       if (!putt || typeof putt !== 'object') { errors.push(`${label} putt ${pi}: invalid definition`); return; }
       const active = { ...course, ...putt, tee: putt.tee, hole: putt.hole };
-      for (const field of ['tee', 'hole']) {
-        const p = active[field];
-        if (!point(p)) { errors.push(`${label} putt ${pi}: invalid ${field}`); continue; }
-        if (!Array.isArray(course.tiles) || !course.tiles.some(rect => contains(rect, p))
-          || (Array.isArray(course.pit) && course.pit.some(rect => contains(rect, p)))) {
-          errors.push(`${label} putt ${pi}: ${field} is outside playable ground`);
-        }
-      }
+      errors.push(...validatePuttPositions(course, active).map(error => `${label} putt ${pi}: ${error}`));
       const par = putt.par || course.par || 4;
       const penalty = course.putts && Number.isInteger(putt.pen) && putt.pen > 0 ? putt.pen : DEFAULT_PENALTY;
       const limitSeconds = validLimit(putt.limit) ? putt.limit : validLimit(course.limit) ? course.limit : Math.min(300, MIN_TIMEOUT_SECONDS * Math.max(1, par / 2));

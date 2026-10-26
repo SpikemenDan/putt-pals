@@ -23,3 +23,11 @@ Solver parity includes the legacy floating-point power endpoint (`1.000000000000
 `node tools/cli/main.mjs check` validates all imported maps without reading legacy source. It checks geometry tuple shapes, finite coordinates, positive primitive dimensions, tee/cup positions on playable tiles and outside pits, geometry/rule identity and count consistency, resolved per-putt rules, and starter total pars. It does not check HTML syntax, wall clearance, connectivity, reachability or every hazard interaction. `validate` remains the separate source/inventory hash check.
 
 `node tools/cli/main.mjs rank` audits the recorded six-map ladder without invoking the legacy VM. Counts are explicitly historical: exit 2 means structural checks pass but current difficulty is unverified; exit 1 means malformed counts, mismatched starter identity/order or non-descending difficulty. It deliberately has no success result certifying current difficulty until the separate B4 measurement work exists. No fixture is refreshed by this command.
+
+## Versioned course documents
+
+`node tools/cli/main.mjs export` prints the complete schema-version-1 course document. Each course has its existing stable ID, description and geometry; each putt has a persisted ID, a legacy index, positions and explicit scoring/timer/cup rules. Initial putt IDs use `<course-id>-putt-<1-based-number>`. Once exported, preserve IDs across display-name edits and reordering; update only the positional indices when reordering putts. Re-exporting from legacy source is a migration operation and cannot infer renamed/reordered identity.
+
+`parseCourseDocument(json)` validates version, IDs, indices, rules, geometry, starter presence and playable tee/cup positions at the boundary. Unsupported versions and duplicate/malformed IDs fail explicitly. `toSimulationCourses(document)` returns independent geometry/putt data using normalized rule names already supported by SimulationEngine. Explicit zero penalties are preserved. All 36 recorded starter shots have identical results through this adapter.
+
+The document format is available for future course-file/browser consumers; the current browser and existing CLI commands are not switched automatically by exporting. This adds no course editor, file writes or deployment.
