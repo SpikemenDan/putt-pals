@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-10-25.
+Last updated: 2026-10-26.
 
 ## Current objective
 
-B2 is committed as 3bfaebd, B3 as 216cd75, W1 as b333495, and B1 was integrated via PR #1 (1c5d66c). Task C1 (Shared Contracts) is implemented on branch agent/c1-shared-contracts and all contract verification tests pass. Game HTML, simulation tools, and embedded legacy runtime scripts remain unchanged.
+Reconcile the GitHub issue backlog and documentation with accepted main. B1 is integrated via PR #1, C1 via PR #2 at c917618, and S1 is integrated at b9ebff0. Main also contains shared-rule fixes in 4327196 and partial D1 catalog work in 543c383. Remaining task ownership/readiness is in GitHub, with discovery commands in docs/ISSUES.md. The user authorized committing/pushing this coordination update directly to main.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Review and merge C1 shared contracts. Following C1 acceptance, parallel tasks S1 (Headless Simulation), R1 (Renderer extraction), U1 (UI & Controls), and A1 (Audio adapter) can proceed against the approved contracts in src/shared/ with high-fidelity mocks.
+Fetch live agent-task issues before choosing work. D1 #8 is already active and must repair its committed file layout before its new test can run; do not duplicate it. R1/U1/A1/L1/T1, the B4 full difficulty sweep, and C2 cleanup are eligible for coordinator-confirmed claims subject to current issue state. Preserve shared-file ownership, optional/paid-service decision gates and existing user approval boundaries.
 
 ## B2 verification — 2026-10-25
 
@@ -119,3 +119,15 @@ Append the date, task ID, concrete changes, exact verification commands/results,
   - All surface drag roll distances matched legacy values exactly ($turf=261.1, sand=75.0, ice=1699.7, slime=43.8$).
 - Added `tests/simulation.test.cjs` and `npm run test:simulation`.
 - All checks (`npm run check`, `npm run build`, `npm run test:contracts`, `npm run test:simulation`) pass with zero errors.
+
+## Issue/backlog reconciliation — 2026-10-26
+
+- GitHub backlog created with agent-task, status:ready/status:active/status:blocked/status:review and optional labels, plus native blocked-by links. See docs/ISSUES.md for every issue URL. Seventeen issues exist; C1 #3 and S1 #5 are closed after integration, while D1 #8 remains active and incomplete.
+- 4327196: canonical shared scoring keeps a zero penalty, and voting matches legacy round-rotating tie-breaking with invalid/disconnected filtering. C1 issue notes were updated; these fixes supersede the original contract snapshot.
+- 543c383: actual committed catalog files are root index.js, legacy.js, legacy-adapter.cjs and courses.test.cjs; the intended src/courses/ and tools/ directories are absent. node courses.test.cjs exits 1 (cannot resolve ../tools/legacy-adapter.cjs). The issue records path repair, runnable test wiring and remaining CLI/consumer work. The commit message alone is not passing-test evidence.
+- Root contracts.test.cjs, scoring.js and session.js copies from 4327196 are tracked separately by C2 #19. This cleanup has disjoint root-file ownership from D1; canonical src/shared/ is integration-owner controlled.
+- Verified on current main: npm run test:contracts, npm run test:simulation and npm run check passed. The failed course entry point was explicitly reproduced. No source, dependency, gameplay or CI implementation was changed by this coordination task.
+- T1 #15 records that the current workflow lists legacy steps explicitly and does not yet run new contract/simulation scripts merely because npm test includes them. Q1 #18 additionally waits for B4/C2 completion. Native prerequisite links and human decision gates both matter.
+- Agent guide, README, issue template, GitHub workflow, issue index and roadmap now tell workers to select/claim issues, inspect existing claims/dependencies, and report progress on their issue/PR. Branch protection and agent dispatch were not changed.
+
+- Reconciliation cutoff extended to 9cdd12e (stale course metadata detection). The follow-up changes root courses.test.cjs/index.js/legacy-adapter.cjs and adds root stale.js; intended module placement is still not repaired. Re-running node courses.test.cjs still exits 1 with the adapter import error. D1 issue updated; no implementation changes made by this coordinator.

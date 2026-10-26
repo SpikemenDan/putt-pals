@@ -4,7 +4,7 @@
 
 1. MODERNIZATION_PLAN.md — scope, library choices, stages and acceptance gates.
 2. docs/GITHUB_WORKFLOW.md — GitHub assignment, branch, PR, review and merge workflow.
-3. Your coordinator-assigned GitHub issue and linked PR — live ownership, allowed paths, dependencies and authorization. If issues do not exist yet, use the coordinator's local TASKS.md assignment.
+3. docs/ISSUES.md and the live GitHub issue/linked PR — discover eligible work, confirm ownership, allowed paths, dependencies and authorization. GitHub issues are now set up; use them instead of selecting from a stale local TODO list.
 4. PROJECT_STATUS.md — accepted integration state and known issues.
 5. ARCHITECTURE.md and MODERNIZATION_PLAN.md — module contracts, scope and stages.
 6. TASKS.md — roadmap IDs, dependency graph and historical progress snapshots.
@@ -12,7 +12,9 @@
 
 ## Scope and authority
 
-The user authorized tasks B2, B3 and then B1 on 2026-10-25. B2/B3 are committed, and the GitHub workflow files are pushed as b333495. The user has now resumed B1 on branch agent/b1-browser-baseline. Do not execute other roadmap tasks merely because they appear in the plan.
+Baseline and shared-simulation work have landed on main. GitHub issues now track remaining work, claims, blockers and acceptance. When instructed to work on the next task, discover and claim an eligible issue using docs/ISSUES.md and the coordinator process; do not invent a task or duplicate another worker. A roadmap entry or ready label alone does not authorize the entire backlog.
+
+The user authorized creating/updating the issue backlog and committing/pushing this coordination update directly to main. That exception is limited to this setup task; ordinary implementation work still follows assigned issues, isolated task branches and the documented review/approval process.
 
 Obtain user approval before commits under the current preference. Remote writes (push, issue/PR creation, comments), merges, deployments and paid provisioning require applicable user authorization; document bounded delegated actions in an assignment and do not ask again when already authorized. These local workflow files do not grant that authorization or automatically launch agents.
 
@@ -22,12 +24,12 @@ The user's GitHub workflow request establishes separate agent branches and PRs f
 
 ## Concurrent work
 
-- A coordinator confirms one worker per GitHub issue before edits. Use TASKS.md's local assignments only until GitHub issues exist. Unassigned agents perform read-only discovery and request an eligible task.
+- Start/resume by reading current GitHub issues and related PRs. A coordinator confirms one worker/session per issue before edits. An empty assignee field is not proof a task is unclaimed; inspect its body/comments and active branches. Do not fall back to historical local assignments when GitHub already has the live record.
 - Use one isolated clone or git worktree and branch per task, normally agent/<task-id>-<description> based on origin/main. Do not run concurrent agents in the same working directory. Never reset, clean, stash or overwrite another agent's work.
 - Open a draft PR once a meaningful initial change and remote-write authorization exist. Link the issue and keep one task per PR. GitHub assignment does not itself launch an agent.
 - Only the integration owner edits package.json, package-lock.json, build/CI configuration and src/shared contracts. Workers request dependency or contract changes through that owner.
 - Agree interfaces before parallel consumers implement against them. Use mocks matching the agreed contract while dependencies are unfinished.
-- A task owner reports changed files, verification results, assumptions, failures and integration notes in its authorized issue/PR. A ready worker submits for REVIEW; the coordinator marks DONE only after accepted merge and verification. B2/B3 direct commits predate this PR workflow.
+- A task owner reports changed files, verification results, assumptions, failures and integration notes in its authorized issue/PR. Partial commits remain ACTIVE until all acceptance criteria are met. A ready worker submits for REVIEW; the coordinator closes the issue only after accepted integration and verification. Explicitly authorized direct integrations are recorded as such, not described as unperformed PR merges.
 - Keep shared status/roadmap docs coordinator-owned; workers do not all edit TASKS.md or PROJECT_STATUS.md. Live GitHub claims supersede stale roadmap snapshots.
 - Integrate dependencies in merge order, run current-head checks and obtain user merge approval unless explicitly delegated. Do not bypass branch rules or force-push shared branches.
 - Do not commit or merge changes belonging to another task without coordination. Do not publish, provision paid services, or send external messages without applicable authorization.

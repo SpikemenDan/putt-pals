@@ -8,7 +8,7 @@ Status: implementation started with B2 (solver correction) and B3 (baseline tool
 - Desktop browsers only. Native applications are outside this migration.
 - Normal hosted web application; a single downloadable HTML and offline distribution are not required.
 - Use established libraries where they remove maintenance work.
-- Multiple agents may work concurrently through assigned GitHub issues and isolated branches/PRs; follow AGENTS.md and docs/GITHUB_WORKFLOW.md. TASKS.md remains the roadmap snapshot.
+- Multiple agents may work concurrently through assigned GitHub issues and isolated branches/PRs; use docs/ISSUES.md to discover and claim work, following AGENTS.md and docs/GITHUB_WORKFLOW.md. TASKS.md remains the roadmap snapshot, not a competing live queue.
 - Preserve existing game modes, scoring, starter courses, controls, camera behavior and audio during extraction. The art direction recorded in HANDOFF.md remains a future product requirement; it is not a migration acceptance criterion.
 
 ## Recommendation

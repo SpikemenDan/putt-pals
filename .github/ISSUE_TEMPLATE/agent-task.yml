@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Read AGENTS.md and docs/GITHUB_WORKFLOW.md. The coordinator confirms ownership before work starts. This form does not launch an agent or grant permissions.
+        Read AGENTS.md, docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Check the existing backlog before creating a duplicate. The coordinator confirms one worker/session before work starts and maintains native blocked-by links plus status labels. This form does not launch an agent or grant permissions.
   - type: input
     id: roadmap-id
     attributes:

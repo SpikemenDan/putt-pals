@@ -20,6 +20,8 @@ Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and j
 | Command | Purpose |
 | --- | --- |
 | `npm run check` | Legacy tooling syntax, game syntax and course metadata checks |
+| `npm run test:contracts` | Canonical shared contract, rule, schema and mock tests |
+| `npm run test:simulation` | Extracted headless simulation parity and lifecycle tests |
 | `npm run test:physics` | Surface/timer, cup and mechanic checks; may take around a minute |
 | `npm run test:smoke` | Solo, tournament, practice, scorecard and camera behavior in jsdom |
 | `npm run test:multiplayer` | Four jsdom clients using an in-memory PeerJS substitute |
@@ -42,9 +44,15 @@ Private online rooms still depend on PeerJS signaling, and some networks need a 
 
 ## Contributing and agent coordination
 
-Read [AGENTS.md](AGENTS.md) and [the GitHub workflow guide](docs/GITHUB_WORKFLOW.md) before editing. Each worker uses an assigned issue, isolated branch/worktree and linked PR. GitHub issues/PRs track live ownership; [TASKS.md](TASKS.md) is the coordinator's roadmap snapshot, and [PROJECT_STATUS.md](PROJECT_STATUS.md) records accepted integration state. Before issues exist, local task assignments are the bootstrap fallback.
+Start with [AGENTS.md](AGENTS.md), [the issue discovery/claim guide](docs/ISSUES.md) and [the GitHub workflow](docs/GITHUB_WORKFLOW.md). The [GitHub agent backlog](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task) is now the live work queue. Agents asked to pick up work inspect ready issues, comments, native dependencies and existing claims before choosing a task. Each worker uses a confirmed issue, isolated branch/worktree and linked PR. [TASKS.md](TASKS.md) remains the coordinator's roadmap snapshot; [PROJECT_STATUS.md](PROJECT_STATUS.md) records integration evidence.
 
-Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. Its [first hosted run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160) for b333495. Branch protection, real task issues and agent runners require separate setup. No typecheck, lint, real-browser or deployment automation is claimed.
+```sh
+gh issue list --repo SpikemenDan/putt-pals --state open --label agent-task --label status:ready --search 'no:assignee'
+```
+
+An empty assignee field does not rule out a claim in the issue body/comments. Confirm one worker/session with the coordinator before editing, and report progress on the issue rather than making every worker edit shared status files.
+
+Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. Its [first hosted run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160) for b333495. Real task issues, workflow labels and native prerequisite links are now set up; branch protection and agent runners remain separate setup. The workflow's explicit steps do not yet include new contract/simulation scripts; T1 tracks that integration. No typecheck, lint, real-browser or deployment automation is claimed.
 
 The migration reference inventory and manual Chrome captures are described in [docs/BASELINE.md](docs/BASELINE.md). Run `node scripts/inventory-baseline.cjs --check` to verify the source inventory and representative headless traces; `--write` intentionally regenerates it. Embedded library evidence and provenance limits are in [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
 

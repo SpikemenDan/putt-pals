@@ -1,8 +1,8 @@
 # Modernization task ledger
 
-Roadmap and historical integration snapshot, maintained by the coordinator. GitHub issues/PRs become the live ownership/progress record once created; until then, the local assignments below apply. Read docs/GITHUB_WORKFLOW.md. Implementation was authorized through B1; B1 is paused while the user-requested GitHub workflow files are prepared. Other implementation tasks remain unassigned.
+Roadmap and historical integration snapshot, maintained by the coordinator. GitHub issues now own live claims, status, blockers and acceptance; start from docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. The user authorized this backlog reconciliation and its direct push to main. Do not use historical local assignments to claim work that is already owned in GitHub.
 
-Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE after accepted PR merge and verification; B2/B3 predate the PR workflow. BLOCKED identifies a concrete blocker; PAUSED records a deliberate user/coordinator hold. Workers report in their issue/PR, not by repeatedly editing this file.
+Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE after accepted PR merge and verification; B2/B3 predate the PR workflow. BLOCKED identifies a concrete blocker; PAUSED records a deliberate user/coordinator hold. Workers report in their issue/PR, not by repeatedly editing this file.
 
 | ID | Status | Owner | Depends on | Scope / owned files | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -10,32 +10,34 @@ Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE aft
 | B1 | DONE | Codex / root | Integrated via PR #1 | Baseline inventory and browser references; tests/fixtures | PR #1 merged into main; source inventory and Chrome screenshots recorded |
 | B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | DONE | Codex / root | Authorized 2026-10-25 | Integration owner: manifests, lockfile, dev/build/test configs | Lockfile reinstall, Vite build/HTTP checks, physics and both smoke suites passed |
-| C1 | REVIEW | Codex / root | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md, package.json, tests/contracts.test.cjs | All contracts implemented in src/shared, tests/contracts.test.cjs passing (9/9 suites), ARCHITECTURE.md updated |
-| S1 | REVIEW | Codex / root | C1 | src/simulation, tests/simulation.test.cjs, package.json | Headless simulation matches fixtures bitwise; 6 reference traces and all mechanic chambers pass |
-| R1 | TODO | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
-| U1 | TODO | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
-| D1 | ACTIVE | Claude (this session) | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
-| L1 | TODO | — | S1, C1 | src/session | XState transitions, scoring, practice and timer checks pass with fake clock |
-| A1 | TODO | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
-| N1 | TODO | — | C1, L1 | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
-| I1 | TODO | — | S1, R1, U1, L1, A1, N1, D1 | Integration owner: src/app, entry points | Complete solo/practice/tournament flows; production build; legacy tools no longer needed for runtime |
-| N2 | TODO | — | I1 | src/network reconnect/interpolation | Guest recovery, stale/duplicate rejection, capacity and clean host-loss browser checks |
-| N3 | TODO | — | N1, provider/budget decision | services/turn-credentials; network configuration via integration owner | Secrets stay server-side; short-lived credentials; forced relay and separate-network tests |
-| T1 | TODO | — | C1; incremental work as modules land | tests/integration, tests/browser | Ports meaningful smoke assertions; real WebGL and multi-page sessions; no game-state injection in primary end-to-end flow |
-| R2 | TODO | — | I1 | src/render, src/camera; dependency changes via integration owner | Three.js upgrade verified against reference views and desktop performance measurements |
-| P1 | TODO | — | S1; optional | Isolated physics prototype | Rapier comparison for ramp/drop/tube; explicit adoption/defer recommendation |
-| Q1 | TODO | — | I1, N2, N3, T1, R2 | Integration owner: CI, release configuration, docs | Production-like preview, full acceptance matrix, rollback procedure and fresh-checkout instructions |
+| [C1 #3](https://github.com/SpikemenDan/putt-pals/issues/3) | DONE | Codex / root | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md, package.json, tests/contracts.test.cjs | All contracts implemented in src/shared, tests/contracts.test.cjs passing (9/9 suites), ARCHITECTURE.md updated |
+| [S1 #5](https://github.com/SpikemenDan/putt-pals/issues/5) | DONE | Codex / root | C1 | src/simulation, tests/simulation.test.cjs, package.json | Headless simulation matches fixtures bitwise; 6 reference traces and all mechanic chambers pass |
+| [R1 #6](https://github.com/SpikemenDan/putt-pals/issues/6) | READY | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
+| [U1 #7](https://github.com/SpikemenDan/putt-pals/issues/7) | READY | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
+| [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Existing D1 worker (Claude; confirm session in issue) | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
+| [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | READY | — | S1, C1 | src/session | XState transitions, scoring, practice and timer checks pass with fake clock |
+| [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | READY | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
+| [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | BLOCKED | — | C1, L1 | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
+| [I1 #12](https://github.com/SpikemenDan/putt-pals/issues/12) | BLOCKED | — | S1, R1, U1, L1, A1, N1, D1 | Integration owner: src/app, entry points | Complete solo/practice/tournament flows; production build; legacy tools no longer needed for runtime |
+| [N2 #13](https://github.com/SpikemenDan/putt-pals/issues/13) | BLOCKED | — | I1 | src/network reconnect/interpolation | Guest recovery, stale/duplicate rejection, capacity and clean host-loss browser checks |
+| [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | BLOCKED | — | N1, provider/budget decision | services/turn-credentials; network configuration via integration owner | Secrets stay server-side; short-lived credentials; forced relay and separate-network tests |
+| [T1 #15](https://github.com/SpikemenDan/putt-pals/issues/15) | READY | — | C1; incremental work as modules land | tests/integration, tests/browser | Ports meaningful smoke assertions; real WebGL and multi-page sessions; no game-state injection in primary end-to-end flow |
+| [R2 #16](https://github.com/SpikemenDan/putt-pals/issues/16) | BLOCKED | — | I1 | src/render, src/camera; dependency changes via integration owner | Three.js upgrade verified against reference views and desktop performance measurements |
+| [P1 #17](https://github.com/SpikemenDan/putt-pals/issues/17) | BLOCKED | — | S1; optional | Isolated physics prototype | Rapier comparison for ramp/drop/tube; explicit adoption/defer recommendation |
+| [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | — | I1, N2, N3, T1, R2, B4, C2 | Integration owner: CI, release configuration, docs | Production-like preview, full acceptance matrix, rollback procedure and fresh-checkout instructions |
+| [B4 #4](https://github.com/SpikemenDan/putt-pals/issues/4) | READY | — | B2 completed | Dedicated difficulty report/fixtures; no physics retuning | Full corrected-launch sweep for all 36 starter putts; source hashes and stale counts explicit |
+| [C2 #19](https://github.com/SpikemenDan/putt-pals/issues/19) | READY | — | C1 completed | Root contracts.test.cjs, scoring.js, session.js only | Reconcile duplicate shared-contract copies; preserve canonical src/shared and tests/ behavior |
 
 ## Work allocation
 
-Initial parallel tasks: B1, B2 and B3, with exclusive file ownership. B2 owns tools.js while B3 arranges dependencies/configuration; coordinate if smoke setup would require editing tools.js.
+Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 #8 is active and only partially complete; the catalog files in 543c383 need path repair and its new course test currently fails before assertions. Do not duplicate D1 or close it based on the commit message.
 
-After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
+Use the live ready queue for R1, U1, A1, L1, T1, B4 and the narrowly scoped C2 cleanup. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
 
 ## Claim and handoff protocol
 
 1. Coordinator creates/updates the assigned GitHub issue using the Agent task form, confirms eligibility and one worker, and records exact owned paths, branch/worktree, dependencies, contract revision and allowed operations.
-2. Worker reads AGENTS.md and docs/GITHUB_WORKFLOW.md, checks the live assignment, and starts in an isolated working directory from current main. Local assignments below are only the bootstrap fallback.
+2. Worker reads AGENTS.md and docs/GITHUB_WORKFLOW.md, checks the live assignment, and starts in an isolated working directory from current main. GitHub issues are now the assignment source; entries below are historical context.
 3. Worker completes assigned scope and hands off through a linked PR with exact verification results, failures and integration notes. Request REVIEW, not DONE; remote writes and commits need applicable authorization.
 4. Integration owner reviews, obtains merge approval and merges in dependency order. After verification on main, it closes the issue and updates this roadmap and PROJECT_STATUS.md.
 5. Resolve ownership/contract conflicts through the coordinator before editing shared files. Do not let every worker modify the shared progress docs.
@@ -162,3 +164,13 @@ Commands and results:
 Known failures / untested behavior:
 Integration notes / next dependency:
 ```
+
+## Issue-backlog reconciliation — 2026-10-26
+
+- Created 16 roadmap/follow-up issues with native dependencies and status labels; backfilled C1 #3 and S1 #5 as completed. Added C2 #19 after root-level duplicate files were discovered, for 17 total tracked issues (15 open, two closed at this snapshot).
+- Recent main: c917618 (C1), b9ebff0 (S1), 4327196 (zero-penalty/vote parity fixes), 543c383 (partial D1 catalog). Original C1/S1 REVIEW rows are superseded by integration evidence.
+- Verified locally: npm run test:contracts, npm run test:simulation and npm run check pass. node courses.test.cjs fails with MODULE_NOT_FOUND for ../tools/legacy-adapter.cjs; actual catalog files are at the root rather than the intended src/courses/, tools/ and tests/ locations. Failure and remaining work are recorded in D1 #8; no implementation fix is claimed.
+- C2 #19 owns root contracts.test.cjs/scoring.js/session.js audit only; D1 owns the separate root catalog files. New CLI/course integration, TypeScript/Zod adoption and extra CI wiring are not made complete by existing commit titles.
+- Worker claims/progress stay in GitHub issues/PRs. The coordinator updates this snapshot at integration points; docs/ISSUES.md contains discovery and claim commands.
+
+- Latest reviewed follow-up 9cdd12e adds stale metadata detection but places stale.js and related files at the root. After fast-forwarding that commit, node courses.test.cjs still fails before assertions with the same adapter import error. D1 #8 remains ACTIVE; this is progress, not completion.

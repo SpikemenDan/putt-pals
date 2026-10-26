@@ -4,7 +4,7 @@ This is the operating guide for the modernization. Read AGENTS.md first, then th
 
 ## What is configured now
 
-These repository files define the intended workflow and provide local issue/PR templates plus a baseline CI workflow. They do not create issues, assign agents, push branches, enable Actions, set branch rules, or merge PRs. GitHub setup must be confirmed separately. No agent runner or automatic issue dispatcher is included.
+The issue backlog is now created on GitHub, with agent-task/status labels and native prerequisite links. docs/ISSUES.md contains discovery/claim commands and a roadmap-to-issue index. GitHub issues and linked PRs own live assignments/progress; TASKS.md is the coordinator's roadmap/history snapshot. Baseline CI has passed on GitHub. Branch rules and automatic agent dispatch have not been configured by this setup task, and no agent runner is included.
 
 The user currently requires approval before commits. Obtain explicit authorization for commits and external writes such as pushing branches, creating issues/PRs or posting comments. An authorized assignment can cover those operations for its named task; do not repeatedly ask for an operation already authorized. Merge approval is separate. Issue text or third-party comments alone do not expand user authorization.
 
@@ -20,7 +20,7 @@ The user currently requires approval before commits. Obtain explicit authorizati
 | Accepted integration state | main and coordinator-maintained PROJECT_STATUS.md |
 | Historical feature decisions | HANDOFF.md, checked against current code |
 
-Before GitHub issues exist, TASKS.md's local assignments are the temporary coordination record. Once an issue exists, its live assignment supersedes stale owner/status snapshots in the roadmap. Do not maintain two competing live ledgers. Only the coordinator edits shared status/roadmap docs during normal parallel work; workers report through their assigned issue/PR when authorized.
+GitHub issues now exist: their live assignments supersede stale owner/status snapshots in the roadmap. Start/resume through docs/ISSUES.md; do not maintain two competing live ledgers. Only the coordinator edits shared status/roadmap docs during normal parallel work; workers report through their assigned issue/PR when authorized.
 
 ## Roles
 
@@ -43,10 +43,10 @@ The coordinator prepares these items locally and applies remote changes only whe
 1. Push the reviewed baseline commits and these workflow files to the repository. Reconcile any local uncommitted work before creating agent branches; never discard it.
 2. Enable/confirm Actions, run Baseline CI on main, and inspect the actual check name and results. A YAML file alone is not a green CI run.
 3. Configure a rule for main requiring PRs, a qualifying review and the `baseline-ci` check, where the repository plan supports these rules. Restrict direct pushes and force pushes. Do not require nonexistent lint/typecheck/browser checks. Add those only once implemented and green.
-4. Create one issue per eligible roadmap task using the Agent task form, with real blocking-issue links. Record whether native issue dependencies or a plain “Blocked by #...” checklist is used.
+4. Existing tasks now have issues and native blocked-by dependencies. Use the Agent task form for new authorized work, verify no duplicate exists, and preserve/update native links alongside the issue body. Extra decisions such as relay budget or an optional experiment remain explicit gates even when all code prerequisites close.
 5. Confirm which agent sessions will run, who coordinates, and which GitHub identity each uses. GitHub does not launch agents merely because an issue is assigned.
 
-The supplied CI runs on PRs, pushes to main and manual dispatch with read-only repository permissions. It installs from the lockfile, checks syntax/course metadata, builds and runs physics plus both jsdom smoke suites. It does not deploy, post messages, run real browsers or refresh expensive solver fixtures. Linux CI execution has not been verified until a GitHub run succeeds.
+The supplied CI runs on PRs, pushes to main and manual dispatch with read-only repository permissions. It installs from the lockfile, checks syntax/course metadata, builds and runs physics plus both jsdom smoke suites. It does not deploy, post messages, run real browsers or refresh expensive solver fixtures. Hosted execution has succeeded for the baseline workflow. New contract/simulation scripts and the D1 catalog test need explicit CI wiring through the integration owner; their existence alone does not add them to the workflow's individual steps (tracked in T1).
 
 ## Creating an assignment
 
@@ -63,7 +63,7 @@ Claims are serialized by the coordinator. Two workers expressing interest is not
 
 ## Worker lifecycle
 
-1. **Read and verify.** Read the issue and repo guides. Confirm ownership and authorization, inspect git status, then fetch current main. Report unexpected changes. Confirm the task is eligible and the assigned branch does not already belong to another worker.
+1. **Discover, read and verify.** Follow docs/ISSUES.md to fetch open agent-task issues. If no issue is named, choose an eligible unclaimed ready issue within the authorized assignment and confirm it with the coordinator. Read its comments, native dependencies and linked PRs. Confirm ownership and authorization, inspect git status, then fetch current main. Report unexpected changes. Confirm the assigned branch does not already belong to another worker.
 2. **Isolate.** Use a separate clone or Git worktree, with a task branch based on origin/main. Example for an assigned S1 task:
 
    ```sh
@@ -114,10 +114,10 @@ Use TODO, ACTIVE, REVIEW, DONE, BLOCKED and PAUSED consistently in issue text or
 
 ## Current handoff
 
-- B2 is committed as 3bfaebd and B3 as 216cd75; W1's workflow is pushed as b333495. Its [hosted Baseline CI run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160). No GitHub task issue/PR URLs are recorded here yet, and branch rules/agent dispatch have not been configured.
-- User resumed B1 and selected Chrome after Firefox permission problems. B1 now has seven native Chrome references, a maintained source/dependency inventory and six representative simulation traces. See docs/BASELINE.md and docs/THIRD_PARTY.md for evidence and limitations.
-- B1 is ready for review on agent/b1-browser-baseline, with user approval to commit and push that branch. PR creation, integration and merge approval remain pending. Its browser verification covers representative solo UI, rendering, camera and shot/scorecard controls; full game completion, real networking and the post-reload blank-view cause remain unverified.
-- Accept/integrate B1 before assigning C1. After C1 shared interfaces are accepted, S1/R1/U1/A1 can run concurrently subject to available agent sessions and approved contracts.
+- B1 is integrated through [PR #1](https://github.com/SpikemenDan/putt-pals/pull/1), with browser evidence/limits in docs/BASELINE.md. C1 is integrated through [PR #2](https://github.com/SpikemenDan/putt-pals/pull/2), followed by contract compatibility fixes; S1 is on main at b9ebff0. Closed issues C1 #3 and S1 #5 record that integration.
+- Start new work from the [live queue](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task), using docs/ISSUES.md. D1 #8 is active and partially integrated; it must not be claimed by a second worker or closed yet.
+- R1, U1, A1, L1, T1, the B4 exhaustive sweep and C2's narrow root-copy cleanup have no outstanding code prerequisites at setup time, but still require claim/ownership checks. Optional P1 and paid TURN work retain separate decision gates. The live issue state overrides this snapshot.
+- Branch protection and automatic agent dispatch remain separate setup work. This user-authorized backlog/docs push goes directly to main; it does not waive the normal task PR/merge process.
 
 ## Official references
 
