@@ -9,3 +9,6 @@ test-results/
 .env.*
 !.env.example
 .DS_Store
+
+*.zip
+*.patch
