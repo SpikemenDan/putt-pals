@@ -40,6 +40,8 @@ jobs:
         run: npm run test:simulation
       - name: Check course catalog and stale metadata
         run: npm run test:courses
+      - name: Check CLI list, validate and shot commands
+        run: npm run test:cli
       - name: Check physics and mechanics
         run: npm run test:physics
       - name: Check solo and practice flows in jsdom
