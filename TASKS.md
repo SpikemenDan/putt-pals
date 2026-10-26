@@ -1,12 +1,13 @@
 # Modernization task ledger
 
-Implementation authorized for B2 and the next task, B3, on 2026-10-25. Other tasks remain unassigned. Parallel work is intended, but shared files must have one owner.
+Roadmap and historical integration snapshot, maintained by the coordinator. GitHub issues/PRs become the live ownership/progress record once created; until then, the local assignments below apply. Read docs/GITHUB_WORKFLOW.md. Implementation was authorized through B1; B1 is paused while the user-requested GitHub workflow files are prepared. Other implementation tasks remain unassigned.
 
-Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED. DONE requires the stated verification and integration review. Record a concrete reason and dependency for BLOCKED; do not use it for ordinary unfinished work.
+Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE after accepted PR merge and verification; B2/B3 predate the PR workflow. BLOCKED identifies a concrete blocker; PAUSED records a deliberate user/coordinator hold. Workers report in their issue/PR, not by repeatedly editing this file.
 
 | ID | Status | Owner | Depends on | Scope / owned files | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| B1 | TODO | — | Implementation authorization | Baseline inventory and browser references; tests/fixtures | Behavior inventory, exact library versions/licenses, screenshots and observed limitations |
+| W1 | REVIEW | Codex / root | User workflow request | GitHub workflow docs, templates and baseline CI | Local validation passed; commit/push approved; hosted CI acceptance pending |
+| B1 | PAUSED | Codex / root | Explicit resume/reassignment; permitted browser environment | Baseline inventory and browser references; tests/fixtures | Behavior inventory, exact library versions/licenses, screenshots and observed limitations |
 | B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | DONE | Codex / root | Authorized 2026-10-25 | Integration owner: manifests, lockfile, dev/build/test configs | Lockfile reinstall, Vite build/HTTP checks, physics and both smoke suites passed |
 | C1 | TODO | — | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md | Approved simulation, session, transport, snapshot and event contracts; matching mocks |
@@ -33,11 +34,11 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 
 ## Claim and handoff protocol
 
-1. Coordinator confirms task eligibility, records owner and branch/worktree, and lists exact files owned in an assignment entry below.
-2. Worker reads AGENTS.md, task dependencies and current status. Report unexpected local changes before editing.
-3. Worker completes only assigned scope and records verification plus unresolved issues. Set REVIEW, not DONE.
-4. Integration owner reviews, merges in dependency order, runs combined checks and marks DONE. Update PROJECT_STATUS.md with verified outcomes.
-5. If scope crosses ownership boundaries, request a coordinator reassignment or contract change before editing those files.
+1. Coordinator creates/updates the assigned GitHub issue using the Agent task form, confirms eligibility and one worker, and records exact owned paths, branch/worktree, dependencies, contract revision and allowed operations.
+2. Worker reads AGENTS.md and docs/GITHUB_WORKFLOW.md, checks the live assignment, and starts in an isolated working directory from current main. Local assignments below are only the bootstrap fallback.
+3. Worker completes assigned scope and hands off through a linked PR with exact verification results, failures and integration notes. Request REVIEW, not DONE; remote writes and commits need applicable authorization.
+4. Integration owner reviews, obtains merge approval and merges in dependency order. After verification on main, it closes the issue and updates this roadmap and PROJECT_STATUS.md.
+5. Resolve ownership/contract conflicts through the coordinator before editing shared files. Do not let every worker modify the shared progress docs.
 
 ## Assignment entries
 
@@ -66,7 +67,23 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 - Untested: actual browser rendering/audio and real-network connections. TypeScript/lint/format setup is deferred to M1; no such checks are claimed. B3 commit approved by the user.
 - Next: B1 browser baseline remains unassigned; C1 still depends on B1. All temporary verification servers have been stopped.
 
-Use this template when work begins:
+### B1 — 2026-10-25
+
+- Owner: Codex / root, integration owner; no concurrent workers.
+- Owned files: tests/fixtures/browser-baseline/, docs/BASELINE.md, docs/THIRD_PARTY.md, baseline inventory tooling if needed, and coordination/status docs.
+- Scope: inventory current behavior and embedded dependency evidence; capture real desktop browser reference views and observed limitations. No gameplay or runtime dependency changes. Commit only after user approval.
+- State: PAUSED by the user while defining the GitHub workflow. No baseline files or screenshots were written. Local Vite server stopped. Firefox selection returned “Computer Use permissions are not granted”; resume needs a permitted browser environment and coordinator reassignment/confirmation.
+- Source inspection only: embedded Three.js r128 / MIT and PeerJS 1.5.4 / MIT metadata found; maintained inventory artifacts and browser evidence remain unfinished.
+
+### W1 — GitHub workflow preparation
+
+- Owner: Codex / root, coordinator; local documentation/configuration only.
+- Owned files: docs/GITHUB_WORKFLOW.md, .github/ templates and CI, AGENTS.md, TASKS.md, PROJECT_STATUS.md, README.md and MODERNIZATION_PLAN.md.
+- Scope: explain GitHub assignments, isolated branches, PRs, ownership, review/merge gates and recovery; provide task/PR templates and baseline CI definition. No remote issues, pushes, comments, settings changes or agent dispatch.
+- Handoff: user approved committing and pushing the workflow files. Hosted CI acceptance remains pending; branch rules, task issue creation and agent dispatch are separate setup steps. This bootstrap uses the explicitly approved direct push; subsequent tasks follow the documented PR workflow.
+- Verification: Ruby YAML parsing passed for the issue form and CI definition; issue field IDs are unique, baseline-ci exists, and all CI npm run commands resolve to existing scripts. npm run check, npm run build and git diff --check passed. This is local syntax/consistency validation, not a hosted Actions run or GitHub form-schema validation. Existing physics/smoke suites were not repeated because their code and commands are unchanged from B3.
+
+Coordinator bootstrap assignment template (use the GitHub issue form once available):
 
 ```text
 Task:

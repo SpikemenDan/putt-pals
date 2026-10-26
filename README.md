@@ -42,4 +42,8 @@ Private online rooms still depend on PeerJS signaling, and some networks need a 
 
 ## Contributing and agent coordination
 
-Read [AGENTS.md](AGENTS.md) before editing. [TASKS.md](TASKS.md) tracks ownership and dependencies; [PROJECT_STATUS.md](PROJECT_STATUS.md) distinguishes verified behavior from planned work. [ARCHITECTURE.md](ARCHITECTURE.md) and [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) describe the migration. [HANDOFF.md](HANDOFF.md) retains historical requirements and feature logs, including stale architecture details.
+Read [AGENTS.md](AGENTS.md) and [the GitHub workflow guide](docs/GITHUB_WORKFLOW.md) before editing. Each worker uses an assigned issue, isolated branch/worktree and linked PR. GitHub issues/PRs track live ownership; [TASKS.md](TASKS.md) is the coordinator's roadmap snapshot, and [PROJECT_STATUS.md](PROJECT_STATUS.md) records accepted integration state. Before issues exist, local task assignments are the bootstrap fallback.
+
+Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. It has not run on GitHub yet. Templates and workflow files must be reviewed and pushed before use; branch protection, real task issues and agent runners require separate setup. No typecheck, lint, real-browser or deployment automation is claimed.
+
+[ARCHITECTURE.md](ARCHITECTURE.md) and [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) describe the migration. [HANDOFF.md](HANDOFF.md) retains historical requirements and feature logs, including stale architecture details.

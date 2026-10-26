@@ -8,7 +8,7 @@ Status: implementation started with B2 (solver correction) and B3 (baseline tool
 - Desktop browsers only. Native applications are outside this migration.
 - Normal hosted web application; a single downloadable HTML and offline distribution are not required.
 - Use established libraries where they remove maintenance work.
-- Multiple agents may work concurrently using AGENTS.md and TASKS.md.
+- Multiple agents may work concurrently through assigned GitHub issues and isolated branches/PRs; follow AGENTS.md and docs/GITHUB_WORKFLOW.md. TASKS.md remains the roadmap snapshot.
 - Preserve existing game modes, scoring, starter courses, controls, camera behavior and audio during extraction. The art direction recorded in HANDOFF.md remains a future product requirement; it is not a migration acceptance criterion.
 
 ## Recommendation
@@ -119,7 +119,9 @@ Compare gameplay feel, solver runtime, browser initialization, deployment size a
 
 ## Parallel execution
 
-Follow TASKS.md dependencies. Parallelize inventory and baseline collection first. After shared interfaces are frozen, separate simulation, renderer and UI owners can work concurrently with mocks. Course tools and tests can follow approved contracts. A single integration owner controls dependency manifests, lockfiles, shared contracts and milestone merges. Networking starts its behavior changes after room rules are characterized.
+Follow TASKS.md dependencies and docs/GITHUB_WORKFLOW.md. The coordinator assigns one worker per GitHub issue with exclusive owned paths; workers use isolated branches/worktrees and linked PRs. GitHub is the live assignment/progress record, while common roadmap/status docs remain coordinator-owned. Local assignments apply only until issues exist.
+
+Parallelize inventory and baseline collection first. After shared interfaces are merged and accepted, separate simulation, renderer and UI owners can work concurrently with mocks against the recorded contract commit. Course tools and tests can follow approved contracts. A single integration owner controls dependency manifests, lockfiles, shared contracts and milestone merges. Networking starts its behavior changes after room rules are characterized. Require applicable CI/review and user merge approval unless explicitly delegated; task plans do not launch agents or authorize remote writes.
 
 Each task should fit a reviewable change and have an explicit verification command. Do not equate a milestone with a single large PR. Preserve a runnable integration branch after each merge.
 

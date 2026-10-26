@@ -3,27 +3,33 @@
 ## Read first
 
 1. MODERNIZATION_PLAN.md — scope, library choices, stages and acceptance gates.
-2. PROJECT_STATUS.md — verified current state and known issues.
-3. ARCHITECTURE.md — current system and intended module boundaries.
-4. TASKS.md — task ownership, dependencies and verification requirements.
-5. HANDOFF.md sections A, B and F — historical workflow, feature state and product decisions.
+2. docs/GITHUB_WORKFLOW.md — GitHub assignment, branch, PR, review and merge workflow.
+3. Your coordinator-assigned GitHub issue and linked PR — live ownership, allowed paths, dependencies and authorization. If issues do not exist yet, use the coordinator's local TASKS.md assignment.
+4. PROJECT_STATUS.md — accepted integration state and known issues.
+5. ARCHITECTURE.md and MODERNIZATION_PLAN.md — module contracts, scope and stages.
+6. TASKS.md — roadmap IDs, dependency graph and historical progress snapshots.
+7. HANDOFF.md sections A, B and F — historical workflow, feature state and product decisions.
 
 ## Scope and authority
 
-The user requested a modernization plan and coordination files, explicitly intends multiple agents to work concurrently, and authorized B2 followed by the next task, B3, on 2026-10-25. Assignments are in TASKS.md. Do not interpret the existence of other tasks as permission to execute the entire migration.
+The user authorized tasks B2, B3 and then B1 on 2026-10-25. B2/B3 are committed. B1 is now paused while the requested GitHub workflow files are prepared. Do not resume it or execute other roadmap tasks merely because they appear in the plan.
+
+Obtain user approval before commits under the current preference. Remote writes (push, issue/PR creation, comments), merges, deployments and paid provisioning require applicable user authorization; document bounded delegated actions in an assignment and do not ask again when already authorized. These local workflow files do not grant that authorization or automatically launch agents.
 
 The confirmed target is private friend rooms in desktop browsers with a normal hosted build. Single-file/offline distribution and native packaging are outside this migration.
 
-HANDOFF.md contains an older three-file delivery constraint, strict sequential ten-minute phases and per-phase confirmation rules. This documentation request explicitly adds files and prepares parallel agent work, superseding those constraints for this planning task. Preserve the historical file. Before implementation, establish the user's implementation authorization and applicable workflow; do not silently advance P33–P61 or assume all historical approval rules have been revoked.
+The user's GitHub workflow request establishes separate agent branches and PRs for future authorized tasks, superseding HANDOFF.md's three-file delivery and strictly sequential phase process for this modernization workflow. Preserve the historical file and product requirements. The old P33–P61 feature roadmap is not authorized by a modernization assignment. Existing user approval requirements still apply.
 
 ## Concurrent work
 
-- A coordinator assigns tasks and records ownership in TASKS.md before workers edit files. Unassigned agents perform read-only discovery and ask the coordinator for a task.
-- Prefer one git worktree/branch per task. Worktrees share repository metadata but isolate working files. Never reset, clean, stash or overwrite another agent's work.
-- If sharing a working directory, file ownership must be exclusive and recorded before edits. Separate commits by assigned scope; do not stage unrelated changes.
+- A coordinator confirms one worker per GitHub issue before edits. Use TASKS.md's local assignments only until GitHub issues exist. Unassigned agents perform read-only discovery and request an eligible task.
+- Use one isolated clone or git worktree and branch per task, normally agent/<task-id>-<description> based on origin/main. Do not run concurrent agents in the same working directory. Never reset, clean, stash or overwrite another agent's work.
+- Open a draft PR once a meaningful initial change and remote-write authorization exist. Link the issue and keep one task per PR. GitHub assignment does not itself launch an agent.
 - Only the integration owner edits package.json, package-lock.json, build/CI configuration and src/shared contracts. Workers request dependency or contract changes through that owner.
 - Agree interfaces before parallel consumers implement against them. Use mocks matching the agreed contract while dependencies are unfinished.
-- A task owner reports changed files, verification results, assumptions, failures and integration notes. The coordinator verifies integration before marking the task done.
+- A task owner reports changed files, verification results, assumptions, failures and integration notes in its authorized issue/PR. A ready worker submits for REVIEW; the coordinator marks DONE only after accepted merge and verification. B2/B3 direct commits predate this PR workflow.
+- Keep shared status/roadmap docs coordinator-owned; workers do not all edit TASKS.md or PROJECT_STATUS.md. Live GitHub claims supersede stale roadmap snapshots.
+- Integrate dependencies in merge order, run current-head checks and obtain user merge approval unless explicitly delegated. Do not bypass branch rules or force-push shared branches.
 - Do not commit or merge changes belonging to another task without coordination. Do not publish, provision paid services, or send external messages without applicable authorization.
 
 ## Engineering rules
@@ -44,4 +50,4 @@ Before build setup, available checks include node --check tools.js, node tools.j
 
 After setup, use the commands actually present in package.json. Do not claim planned scripts or CI checks already exist. Report real-browser and real-network validation separately from jsdom and fake transports.
 
-Keep PROJECT_STATUS.md and TASKS.md current when completing an assigned task. Include exact commands/results and outstanding failures. Never mark a migration gate complete solely because code was written.
+Workers record exact commands/results and outstanding failures in their issue/PR handoff. The coordinator updates PROJECT_STATUS.md and TASKS.md at accepted integration points. Never mark a migration gate complete solely because code was written. Follow docs/GITHUB_WORKFLOW.md for claim, pause, transfer and conflict handling.

@@ -4,7 +4,7 @@ Last updated: 2026-10-25.
 
 ## Current objective
 
-B2 completed and committed as 3bfaebd. B3 authorized as the next task on 2026-10-25: pinned npm dependencies, Vite development/build/preview, reproducible jsdom smoke tests and setup documentation. The game HTML remains unchanged.
+B2 is committed as 3bfaebd and B3 as 216cd75. B1 was started locally and then paused at the user's request while preparing a GitHub-based multi-agent workflow. The current task is W1: local workflow documentation, issue/PR templates and baseline CI definition. No GitHub issues, PRs, pushes, settings changes or agent dispatch have been performed for W1. The game HTML remains unchanged.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-B2 and B3 are complete. B1 (browser baseline) remains unassigned and is required before C1 shared contracts and extraction. Preserve the original HTML until parity gates pass.
+B2 and B3 are complete. Review W1's workflow files, obtain commit approval, and authorize remote setup separately. Resume/reassign B1 in a permitted browser environment; it remains required before C1 shared contracts and extraction. Do not launch concurrent extraction before C1 interfaces are accepted. Preserve the original HTML until parity gates pass.
 
 ## B2 verification — 2026-10-25
 
@@ -61,7 +61,17 @@ B2 and B3 are complete. B1 (browser baseline) remains unassigned and is required
 - Vite createServer()/preview() HTTP checks: both returned the game successfully on temporary loopback ports; servers closed afterward. Sandbox loopback restrictions required approval for this verification.
 - Game HTML hash still matches the B2 fixture. No runtime dependency upgrade or behavior change. jsdom uses stubbed graphics/audio and a fake network; real browsers and real WebRTC remain B1/later acceptance work.
 - TypeScript, lint/format configuration, module extraction and CI are not added by B3. README.md documents the available commands and the temporary /putt-pals.html entry URL.
-- B3 changes are complete and approved by the user for commit. Temporary verification servers have been stopped.
+- B3 is committed as 216cd75. Temporary verification servers have been stopped.
+
+## B1 pause and W1 handoff — 2026-10-25
+
+- B1 is PAUSED, not complete: user held it to define the GitHub workflow. No browser reference screenshots or maintained inventory artifacts were created.
+- Source inspection found Three.js r128/MIT and PeerJS 1.5.4/MIT metadata. This does not constitute browser verification.
+- Browser inventory had native Firefox available, but selecting it returned “Computer Use permissions are not granted.” No permission changes were made. The local Vite server started for B1 was stopped after the user held the task.
+- W1 adds docs/GITHUB_WORKFLOW.md, GitHub Agent task and PR templates, and a baseline-ci workflow. The workflow uses the already-existing npm commands; no application/dependency changes are part of W1.
+- GitHub issues become the live owner/status record once created. TASKS.md is a coordinator-maintained roadmap/history snapshot; PROJECT_STATUS.md records accepted integration state. This avoids competing edits by workers.
+- User approved committing and pushing W1's files. Hosted CI acceptance remains pending. Branch protection, task issue creation and agent dispatch are separate setup steps and have not been performed. This explicit bootstrap approval covers a direct push; subsequent tasks follow the PR workflow.
+- Local W1 verification: YAML syntax parsed for both YAML files; CI job name, unique form field IDs and npm script references checked. npm run check, npm run build and git diff --check passed. These checks do not establish GitHub schema acceptance or a hosted runner result; physics/smoke implementations were unchanged and their suites were not repeated.
 
 ## Update format for future owners
 
