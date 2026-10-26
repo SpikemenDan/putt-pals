@@ -1,6 +1,6 @@
 # Procedural audio adapter (A1)
 
-`createAudioAdapter()` preserves the eleven legacy procedural sounds: putt, bounce, sink, sinkover, hio, power, event, splash, teleport, warp and boing. It has no React, Three.js, DOM lookup, simulation mutation, network or audio-file dependency. The embedded browser still uses its original audio; I1 owns adoption. No audio library or new dependency is introduced.
+`createAudioAdapter()` preserves the eleven legacy procedural sounds: putt, bounce, sink, sinkover, hio, power, event, splash, teleport, warp and boing. It has no React, Three.js, DOM lookup, simulation mutation, network or audio-file dependency. Delivery is tracked in [PR #25](https://github.com/SpikemenDan/putt-pals/pull/25), with acceptance after green CI and merge. The embedded browser still uses its original audio; I1 owns adoption. No audio library or new dependency is introduced.
 
 ```js
 import { createAudioAdapter } from './src/audio/index.js';

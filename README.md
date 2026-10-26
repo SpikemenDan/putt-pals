@@ -13,7 +13,7 @@ npm run dev
 
 Open `http://127.0.0.1:5173/putt-pals.html` (or the port Vite prints). The dev command also opens that page in your browser. Keep the `/putt-pals.html` path during this baseline stage; a root index entry will be introduced during module extraction.
 
-Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and jsdom 30.1.3 are pinned development dependencies. XState 5.33.3 powers the extracted headless session module. Shared contracts, simulation and course/CLI modules are available, and N1 adds transport adapters through PR #24; the shipped browser still uses its legacy embedded game. TypeScript, React and lint/format tooling remain planned; there is no type-check or lint script yet.
+Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and jsdom 30.1.3 are pinned development dependencies. XState 5.33.3 powers the extracted headless session module. Shared contracts, simulation and course/CLI modules are available, and N1 adds transport adapters through PR #24 and A1 adds the [procedural audio adapter](src/audio/README.md) through PR #25; the shipped browser still uses its legacy embedded game. TypeScript, React and lint/format tooling remain planned; there is no type-check or lint script yet.
 
 ## Commands
 
@@ -24,6 +24,7 @@ Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and j
 | `npm run test:simulation` | Extracted headless simulation parity and lifecycle tests |
 | `npm run test:session` | Fourteen fake-clock room lifecycle, voting and scoring scenarios |
 | `npm run test:network` | Nine transport/protocol scenarios, including four fake clients and PeerJS-shaped channels |
+| `npm run test:audio` | Nine procedural-recipe, domain-event and WebAudio resource/lifecycle scenarios |
 | `npm run test:cli` | Imported course/solver/arena commands, parity, file inputs and failure paths |
 | `npm run test:courses` | Validate all 22 courses and detect stale inventory/source hashes |
 | `npm run test:physics` | Surface/timer, cup and mechanic checks; may take around a minute |
@@ -56,7 +57,7 @@ gh issue list --repo SpikemenDan/putt-pals --state open --label agent-task --lab
 
 An empty assignee field does not rule out a claim in the issue body/comments. Confirm one worker/session with the coordinator before editing, and report progress on the issue rather than making every worker edit shared status files.
 
-Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. Its [first hosted run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160) for b333495. Real task issues, workflow labels and native prerequisite links are now set up; branch protection and agent runners remain separate setup. The workflow explicitly runs contract, simulation, session, network, course and CLI suites as well. N1 current-head CI and acceptance evidence are recorded in [PR #24](https://github.com/SpikemenDan/putt-pals/pull/24); local checks alone do not establish hosted acceptance. T1 still owns further integration/browser coverage. No typecheck, lint, real-browser or deployment automation is claimed.
+Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. Its [first hosted run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160) for b333495. Real task issues, workflow labels and native prerequisite links are now set up; branch protection and agent runners remain separate setup. The workflow explicitly runs contract, simulation, session, network, audio, course and CLI suites as well. N1 current-head CI and acceptance evidence are recorded in [PR #24](https://github.com/SpikemenDan/putt-pals/pull/24); local checks alone do not establish hosted acceptance. T1 still owns further integration/browser coverage. No typecheck, lint, real-browser or deployment automation is claimed.
 
 The migration reference inventory and manual Chrome captures are described in [docs/BASELINE.md](docs/BASELINE.md). Run `node scripts/inventory-baseline.cjs --check` to verify the source inventory and representative headless traces; `--write` intentionally regenerates it. Embedded library evidence and provenance limits are in [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
 

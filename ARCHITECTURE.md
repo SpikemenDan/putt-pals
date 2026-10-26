@@ -17,11 +17,19 @@ The embedded browser uses a code-derived PeerJS peer ID to select a host. An una
 
 ## Extracted modules and N1 delivery
 
-- Accepted main: src/shared/ contracts/mocks, src/simulation/ headless physics, src/courses/ normalized catalog and validation, tools/cli/ course/solver/arena commands, and src/session/ XState room lifecycle. See src/session/README.md and docs/reviews/D1_DATA_CLI.md.
+- Accepted main: src/shared/ contracts/mocks, src/simulation/ headless physics, src/courses/ normalized catalog and validation, tools/cli/ course/solver/arena commands, and src/session/ XState room lifecycle. A1 audio delivery is PR #25, effective after green CI, merge and verification. See src/session/README.md and docs/reviews/D1_DATA_CLI.md.
 - N1 delivery (PR #24): src/network/ provides solo/in-memory/PeerJS adapters, validated JSON envelopes, sender binding and the host-to-session bridge. See src/network/README.md and docs/reviews/N1_TRANSPORTS.md. Nine network scenarios, full local tests/build and baseline inventory passed; no actual WebRTC or browser adoption result is claimed.
 - N1 envelopes carry version/session/round/putt/sequence/sender/time fields, reject stale/duplicate/malformed/oversized data, and cap UTF-8 messages at 64 KiB. Commands bind playerId from the link. Current actor snapshots publish immediately; active-participant movement is batched at 70 ms. Names stay text values. This preserves client-trusted physics, without anti-cheat/accounts/host migration.
 - N1 uses the existing C1/L1 four-member bound and safe-integer score counts, not a gameplay stroke cap. Pending links consume capacity; close/dispose cleans listeners and timers. The Peer constructor and signaling/ICE options are injected; no runtime library upgrade is introduced.
-- Browser entry/composition (I1), render/camera (R1), React/input (U1), audio (A1), recovery/interpolation (N2), TURN (N3) and full browser coverage (T1) remain separate tasks. No N1 commit implies their acceptance. The build still preserves embedded scripts.
+- Browser entry/composition (I1), render/camera (R1), React/input (U1), recovery/interpolation (N2), TURN (N3) and full browser coverage (T1) remain separate tasks. No N1 commit implies their acceptance. The build still preserves embedded scripts.
+
+## Procedural audio boundary (A1, PR #25)
+
+src/audio/ exports createAudioAdapter with injected context factory, storage, randomness and diagnostics. Construction creates no AudioContext; gesture unlock creates/resumes one context reused across rooms. play consumes known cues, handleEvent translates S1/application events, updateListener accepts world-space camera arrays, and simToWorld converts event positions. The legacy eleven recipes, spatial model, master gain and mute key are preserved. No physics callback, DOM lookup, Three.js import or audio-file dependency is added.
+
+resetSession releases room voices without making another context. dispose removes explicit gesture bindings, stops/disconnects owned sources/filters/gains/panners, drops the noise buffer and awaits context close. Ended sources release their voice graphs. Concurrent unlock and failed partial initialization are coordinated; denied storage/resume cannot break gameplay. Nine instrumented-node scenarios compare all recipes against the legacy signatures and exercise actual simulation events, old/new WebAudio APIs, resource limits and repeated room cleanup. See src/audio/README.md and docs/reviews/A1_AUDIO.md.
+
+PR #25 records acceptance only after green current-head CI, merge and post-merge checks; the embedded browser audio remains unchanged until I1. The app owns event deduplication, bounce significance filtering, banners, camera updates and cleanup. Real-browser listening/autoplay/spatial balance remain separate acceptance gates.
 
 ## Target layout
 

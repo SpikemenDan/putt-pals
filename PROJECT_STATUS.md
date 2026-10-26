@@ -4,7 +4,7 @@ Last updated: 2026-10-26.
 
 ## Current objective
 
-Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module. N1 transport delivery is recorded in PR #24 (implementation 72b7498 plus review fixes); this integration record takes effect after green current-head CI and accepted PR merge. Its adapters bridge L1 and reconcile the shared 99-score mismatch. Browser adoption remains I1. GitHub issues remain the live assignment source.
+Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module. N1 transport delivery is recorded in PR #24 (implementation 72b7498 plus review fixes); this integration record takes effect after green current-head CI and accepted PR merge. Its adapters bridge L1 and reconcile the shared 99-score mismatch. A1 procedural audio delivery is PR #25, effective after green current-head CI, merge and post-merge verification; browser adoption remains I1. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. R1/U1/A1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
+Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. A1 is owned by Codex root and delivered through PR #25; do not claim duplicate audio work. R1/U1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
 
 ## B2 verification — 2026-10-25
 
@@ -162,3 +162,13 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 This record becomes effective only when https://github.com/SpikemenDan/putt-pals/pull/24 is merged after successful current-head baseline-ci; before that N1 remains REVIEW. The user explicitly requested completing N1 after PR/review/CI/merge/post-merge steps were explained, authorizing those bounded operations.
 
 N1 delivers the documented transport/host bridge and uncapped-score contract, including regression rejection of inherited-property command names. Local network/contract/session/build/inventory checks pass; full local regression evidence is above. CI and merge results are linked from PR #24 and issue #11. Post-merge verification is recorded in the issue. Accepted N1 makes its code prerequisite available to I1/N3; I1 still needs its other modules and N3 still needs its provider/budget assignment. Browser adoption, actual WebRTC, recovery and TURN remain separate acceptance work.
+
+## A1 accepted-integration record — PR #25
+
+This record becomes effective only after PR #25 merges following successful current-head CI and merged-main verification recorded in #10; until then A1 is ACTIVE/REVIEW. Base main 1387c22, worker/coordinator Codex root. The user requested completing the next task in the established implementation/commit/push/PR/review/CI/merge/post-merge workflow, bounded to A1.
+
+A1 extracts the existing eleven procedural sounds behind a domain-event adapter with injected context/storage/randomness, one context per app, gesture unlock, persistent mute, world-space listener positioning, shared coordinate conversion, bounded voices and explicit teardown. Nine deterministic audio scenarios preserve legacy synthesis signatures and verify failure handling, ended-node release and twenty room resets. Build and baseline inventory pass; full regression/hosted CI results and exact commands are recorded in docs/reviews/A1_AUDIO.md and PR #25. No dependency, physics or legacy HTML changes.
+
+Actual listening, sound balance, browser autoplay and integrated room joins/leaves remain unverified I1/T1/manual acceptance; no browser audio adoption or deployment is implied. Audio consumers must preserve legacy bounce significance filtering and emit each timeout/banner/remote stroke once. A1's code prerequisite becomes available to I1 on accepted merge, without unblocking its other missing modules.
+
+N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.com/SpikemenDan/putt-pals/actions/runs/40386990190 . This confirms the earlier N1 integration record; no new browser/network validation is implied.
