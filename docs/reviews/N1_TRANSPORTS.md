@@ -2,7 +2,7 @@
 
 Issue: https://github.com/SpikemenDan/putt-pals/issues/11
 
-Worker/integration owner: Codex root, branch `agent/n1-transports`, isolated worktree `/private/tmp/putt-pals-n1`, based on accepted main `b0dfb04` (C1 plus accepted fixes; L1 `adf2045`). The user authorized posting the issue claim/status, local implementation, and then committing this reviewed change. This handoff accompanies that local commit. Push, PR creation, merge, deployment and paid provisioning remain unauthorized and unperformed; issue closure/integration is pending.
+Worker/integration owner: Codex root, branch `agent/n1-transports`, isolated worktree `/private/tmp/putt-pals-n1`, based on accepted main `b0dfb04` (C1 plus accepted fixes; L1 `adf2045`). Implementation commit: 72b7498. The user authorized the issue claim/status, local implementation and commit, then requested updating all relevant files and pushing the task branch. This documentation follow-up records that authorization. PR creation, merge, deployment and paid provisioning remain unauthorized and unperformed; issue closure/integration is pending.
 
 ## Delivered locally
 
@@ -30,6 +30,6 @@ The browser still uses legacy networking. I1 must provide host/guest selection f
 
 Raw messages use JSON strings, 64 KiB per envelope, strict version/session/round/putt/sequence checks and a four-link-member room consistent with C1/L1. Retained snapshot history is bounded to 128 entries and the byte limit; `send` returns false for oversized snapshots and reports a rejection through `subscribeStatus` rather than truncating score state. App integration must handle failed sends/end or recreate a room. Invalid inbound messages are dropped; there is no message-rate limiter or resumable identity in this task. Presence replicates ball coordinates/mode/strokes only; future effect messages require a reviewed schema.
 
-Real-browser gameplay, actual WebRTC, restrictive/separate networks, TURN, reconnect, latency/interpolation and deployed-origin behavior have not been run. Hosted CI is pending separately approved push/PR operations. Existing source/VM migration reference paths remain untouched. N1 local results do not complete I1, N2, N3, T1, D1's browser adoption, or release gates.
+Real-browser gameplay, actual WebRTC, restrictive/separate networks, TURN, reconnect, latency/interpolation and deployed-origin behavior have not been run. Hosted CI has not run for this branch. A branch push alone does not trigger the current PR/main-only workflow; PR creation remains a separate gate. Existing source/VM migration reference paths remain untouched. N1 local results do not complete I1, N2, N3, T1, D1's browser adoption, or release gates.
 
-`ARCHITECTURE.md` shows a pre-existing checkout line-ending artifact, with no content difference when ignoring end-of-line whitespace. It is excluded from the N1 change set. Shared roadmap/status documents are unchanged.
+The user-requested documentation follow-up updates README.md, ARCHITECTURE.md, MODERNIZATION_PLAN.md, HANDOFF.md pointers, PROJECT_STATUS.md, TASKS.md, docs/ISSUES.md, docs/GITHUB_WORKFLOW.md and this review handoff. ARCHITECTURE.md is normalized to LF under .gitattributes while correcting current module/scoring descriptions. Historical feature decisions and verification logs are preserved; branch work is explicitly distinguished from accepted main. No product, source, dependency or test implementation changes are made by the documentation follow-up.

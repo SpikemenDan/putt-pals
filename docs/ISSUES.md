@@ -97,4 +97,8 @@ The root-layout failures above are historical evidence, superseded by the cleanu
 
 ## Accepted integration follow-up — 2026-10-26
 
-D1's data/CLI delivery is merged through PR #22 (8dcf760); its remaining browser/integration acceptance stays in #8. L1 is merged through PR #23 (adf2045), verified and closed in #9. N1 #11 now has integrated code prerequisites and is ready for a confirmed claim; reconcile the existing shared 99-score limit with L1 before wiring network messages. I1 remains blocked by its other prerequisites. Read live issues before acting; this snapshot does not assign or authorize another task.
+D1's data/CLI delivery is merged through PR #22 (8dcf760); its remaining browser/integration acceptance stays in #8. L1 is merged through PR #23 (adf2045), verified and closed in #9. N1 #11 had integrated code prerequisites at that cutoff; the branch handoff below supersedes its unclaimed-ready snapshot. I1 remains blocked by its other prerequisites. Read live issues before acting; this snapshot does not assign or authorize another task.
+
+## N1 branch follow-up — 2026-10-26
+
+N1 #11 is claimed by Codex root on agent/n1-transports in /private/tmp/putt-pals-n1; implementation commit 72b7498 is prepared for review. The shared score limit is reconciled on that branch. Full local tests/build/inventory and nine network scenarios passed; no hosted CI, actual WebRTC or browser adoption is claimed. The user authorized documentation updates and pushing this task branch. No PR/merge has been performed or authorized by that instruction. N1 remains ACTIVE in the live queue until review submission; do not duplicate its implementation or treat its unmerged code as an accepted prerequisite. See docs/reviews/N1_TRANSPORTS.md.

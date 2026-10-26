@@ -116,8 +116,8 @@ Use TODO, ACTIVE, REVIEW, DONE, BLOCKED and PAUSED consistently in issue text or
 
 - B1 is integrated through [PR #1](https://github.com/SpikemenDan/putt-pals/pull/1), with browser evidence/limits in docs/BASELINE.md. C1 is integrated through [PR #2](https://github.com/SpikemenDan/putt-pals/pull/2), followed by contract compatibility fixes; S1 is on main at b9ebff0. Closed issues C1 #3 and S1 #5 record that integration.
 - Start new work from the [live queue](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task), using docs/ISSUES.md. D1 #8 is active and partially integrated; it must not be claimed by a second worker or closed yet.
-- L1 is integrated through PR #23 (adf2045); #9 is closed. N1 is now ready for a confirmed claim, including integration-owner coordination of its shared 99-score limit. R1, U1, A1, T1 and B4 remain subject to live claim/ownership checks. Optional P1 and paid TURN work retain separate decision gates. The live issue state overrides this snapshot.
-- Branch protection and automatic agent dispatch remain separate setup work. This user-authorized backlog/docs push goes directly to main; it does not waive the normal task PR/merge process.
+- L1 is integrated through PR #23 (adf2045); #9 is closed. N1 is claimed by Codex root on agent/n1-transports (implementation 72b7498), with nine passing local network scenarios and the shared score limit reconciled. Its review handoff is docs/reviews/N1_TRANSPORTS.md; it is not merged or browser/WebRTC-validated. R1, U1, A1, T1 and B4 remain subject to live claim/ownership checks. Optional P1 and paid TURN work retain separate decision gates. The live issue state overrides this snapshot.
+- Branch protection and automatic agent dispatch remain separate setup work. The earlier direct-main authorization applied only to backlog/docs setup. The current N1 authorization covers documentation updates and a push of agent/n1-transports; normal PR/review/merge gates remain.
 
 ## Official references
 
