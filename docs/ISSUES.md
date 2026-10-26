@@ -74,7 +74,7 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 | R1 | [#6](https://github.com/SpikemenDan/putt-pals/issues/6) | Renderer/camera extraction |
 | U1 | [#7](https://github.com/SpikemenDan/putt-pals/issues/7) | React UI and input |
 | D1 | [#8](https://github.com/SpikemenDan/putt-pals/issues/8) | Course data and CLI migration (partial/active) |
-| L1 | [#9](https://github.com/SpikemenDan/putt-pals/issues/9) | Room lifecycle/scoring |
+| L1 | [#9](https://github.com/SpikemenDan/putt-pals/issues/9) | Room lifecycle/scoring (integrated) |
 | A1 | [#10](https://github.com/SpikemenDan/putt-pals/issues/10) | Procedural audio adapter |
 | N1 | [#11](https://github.com/SpikemenDan/putt-pals/issues/11) | Transport adapters |
 | I1 | [#12](https://github.com/SpikemenDan/putt-pals/issues/12) | Application integration |
@@ -94,3 +94,7 @@ Follow-up at the review cutoff: 9cdd12e adds stale metadata detection, also at t
 ## Cleanup follow-up
 
 The root-layout failures above are historical evidence, superseded by the cleanup: catalog modules are under src/courses/, the legacy adapter under tools/ and the course test under tests/. C2 duplicate shared-contract/test copies are removed; canonical implementations remain authoritative. Contract, simulation and course tests are explicitly wired into CI. D1 remains incomplete until geometry/consumer unification and CLI migration meet its full acceptance criteria. The user authorized this bounded integration directly on main with no concurrent workers.
+
+## Accepted integration follow-up — 2026-10-26
+
+D1's data/CLI delivery is merged through PR #22 (8dcf760); its remaining browser/integration acceptance stays in #8. L1 is merged through PR #23 (adf2045), verified and closed in #9. N1 #11 now has integrated code prerequisites and is ready for a confirmed claim; reconcile the existing shared 99-score limit with L1 before wiring network messages. I1 remains blocked by its other prerequisites. Read live issues before acting; this snapshot does not assign or authorize another task.

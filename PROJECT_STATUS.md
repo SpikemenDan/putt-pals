@@ -4,7 +4,7 @@ Last updated: 2026-10-26.
 
 ## Current objective
 
-Complete the user-authorized cleanup of misplaced files on main. Catalog module/test/adapter paths are repaired, duplicate root shared-contract files removed, and contract/simulation/course suites explicitly wired into CI. D1 remains partial; GitHub issues own remaining assignments. No concurrent workers are active per user confirmation.
+Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module; browser/transport adoption remains I1/N1. GitHub issues remain the live assignment source. N1's code prerequisites are integrated; coordinate its existing 99-score validation mismatch before wiring uncapped session scores to networking.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -16,7 +16,7 @@ Confirmed user decisions: private friend rooms; desktop browsers; no requirement
 - Historical roadmap says P1–P32 done; P33–P61 unfinished. This is historical status, not fresh verification.
 - 22 maps in the actual code; six starters and 36 starter putts.
 
-## Verification actually run during review
+## Initial review verification (historical)
 
 | Command | Result |
 | --- | --- |
@@ -30,13 +30,13 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 1. Fixed in B2: tools.js solve() previously initialized velocity with pw * 820 while game launch() used POWER=900. It now delegates to the same launch function. Exhaustive difficulty measurements still need recomputing.
 2. LADDER contains recorded counts; rank checks those historical counts rather than recomputing current physics difficulty.
-3. Tools couple to source markers in the HTML, making function moves risky.
+3. Legacy reference tools/exporters still couple to HTML source markers. Modern CLI commands now import course data/simulation directly; browser migration remains pending.
 4. Historical architecture notes contain old constants such as R=6 and MAXS=8. Current game has R=5 and unlimited strokes within the timer, with timeout rules. Prefer current code and validated behavior.
 5. Multiplayer clients report gameplay state; host coordination does not provide anti-cheat. Host migration is absent, and relay configuration is currently manual.
 
 ## Next implementation action
 
-Use live GitHub issues before selecting more work. D1 #8 still needs course geometry/consumer unification and CLI extraction; its file-placement failure is repaired by this cleanup. C2 cleanup is complete locally. Ordinary new tasks retain isolated branches and PR review; this bounded direct-main integration was explicitly authorized by the user.
+Use the live issue queue and confirm ownership before implementation. N1 #11 can be claimed after L1 closure; its first integration step must reconcile the shared 99-score limit with L1's no-stroke-cap behavior through the integration owner. R1/U1/A1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
 
 ## B2 verification — 2026-10-25
 
@@ -139,3 +139,13 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 - Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
 - D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
 - Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.
+
+## Accepted D1/L1 integration — 2026-10-26
+
+- D1 data/CLI: PR #22 merged as 8dcf760; docs/reviews/D1_DATA_CLI.md records geometry, normalized schema/IDs, CLI file inputs, solver/arena parity, provenance and remaining browser gates. D1 #8 remains open; do not repeat the delivered ports.
+- L1: PR #23 merged with user approval as adf2045, including 448f44f and ebab634. Pinned XState 5.33.3; explicit clocks/host guards; voting, synchronized starts, six-putt cards, uncapped scoring, 3/6/9-map totals, spectators/disconnects and practice/replay. test:session is wired into npm test and CI.
+- Latest PR-head CI passed: https://github.com/SpikemenDan/putt-pals/actions/runs/40355229967 . Full local npm test/build and inventory/export checks passed before merge. On merged main, locked offline npm ci, npm run test:session (14 scenarios), npm run test:contracts and npm run build passed. No new browser/real-network adoption validation is claimed.
+- Post-merge baseline-ci passed on adf2045: https://github.com/SpikemenDan/putt-pals/actions/runs/40356477704 .
+- L1 #9 is closed after accepted integration; N1 #11 is ready for coordinator-confirmed claim. N1 must preserve identity binding and reconcile the shared protocol/helper's 99-score limit before networking L1. The module preserves larger stroke counts locally; shared contracts were not silently changed.
+- I1/browser integration, real networking/recovery/TURN and B4 fresh difficulty measurements remain unfinished. No downstream module or production rollout is completed by this integration.
+- This coordinator edit writes PROJECT_STATUS.md and TASKS.md with LF as required by .gitattributes. Unrelated ARCHITECTURE.md line-ending artifacts are excluded.

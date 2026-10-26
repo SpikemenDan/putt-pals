@@ -14,10 +14,10 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 | [S1 #5](https://github.com/SpikemenDan/putt-pals/issues/5) | DONE | Codex / root | C1 | src/simulation, tests/simulation.test.cjs, package.json | Headless simulation matches fixtures bitwise; 6 reference traces and all mechanic chambers pass |
 | [R1 #6](https://github.com/SpikemenDan/putt-pals/issues/6) | READY | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
 | [U1 #7](https://github.com/SpikemenDan/putt-pals/issues/7) | READY | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
-| [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Unclaimed remaining work; prior worker stopped per user | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
-| [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | READY | — | S1, C1 | src/session | XState transitions, scoring, practice and timer checks pass with fake clock |
+| [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Data/CLI merged; confirm remaining scope in issue | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
+| [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | DONE | Codex / root | S1, C1 | src/session | PR #23 merged adf2045; 14 fake-clock scenarios, full tests/build and hosted CI pass |
 | [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | READY | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
-| [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | BLOCKED | — | C1, L1 | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
+| [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | READY | — | C1, L1 integrated | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
 | [I1 #12](https://github.com/SpikemenDan/putt-pals/issues/12) | BLOCKED | — | S1, R1, U1, L1, A1, N1, D1 | Integration owner: src/app, entry points | Complete solo/practice/tournament flows; production build; legacy tools no longer needed for runtime |
 | [N2 #13](https://github.com/SpikemenDan/putt-pals/issues/13) | BLOCKED | — | I1 | src/network reconnect/interpolation | Guest recovery, stale/duplicate rejection, capacity and clean host-loss browser checks |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | BLOCKED | — | N1, provider/budget decision | services/turn-credentials; network configuration via integration owner | Secrets stay server-side; short-lived credentials; forced relay and separate-network tests |
@@ -30,9 +30,9 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 
 ## Work allocation
 
-Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 #8 remains partially complete. The cleanup below repairs catalog paths and runs its tests; geometry/consumer unification and CLI migration remain outstanding. Confirm live ownership before resuming.
+Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 data/CLI ports are integrated through PR #22 (8dcf760), with the handoff in docs/reviews/D1_DATA_CLI.md. D1 #8 remains open for its accepted integration scope; do not duplicate its delivered CLI/geometry work. L1 #9 is integrated through PR #23 (adf2045). Confirm live ownership before resuming any remaining task.
 
-Use the live ready queue for R1, U1, A1, L1, T1, B4 (C2 cleanup is complete locally). C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
+Use the live ready queue for R1, U1, A1, N1, T1 and B4. C2 cleanup is complete and closed; L1 is integrated. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
 
 ## Claim and handoff protocol
 
@@ -182,3 +182,11 @@ Integration notes / next dependency:
 - Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
 - D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
 - Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.
+
+## L1 accepted integration — 2026-10-26
+
+- PR #23 merged as adf2045 with explicit user approval. L1 #9 is DONE/closed; no browser adoption or real-network result is implied.
+- Local full npm test/build passed before merge; 14 lifecycle scenarios/contracts/build passed again on merged main. Latest PR CI: run 40355229967 succeeded. Post-merge baseline-ci passed on adf2045: https://github.com/SpikemenDan/putt-pals/actions/runs/40356477704 .
+- N1 #11 is READY with C1/L1 accepted, unassigned pending a coordinator-confirmed claim. It must coordinate the shared 99-score validator/helper mismatch before transporting uncapped L1 scores. No N1 implementation or API change is authorized merely by this label.
+- I1 still waits on R1/U1/A1/N1/D1 and its integration gates. D1's delivered data/CLI module is on main; remaining scope stays in its issue. No blanket backlog authorization, agent launch or deployment occurs here.
+- Status docs edited here follow .gitattributes LF policy; unrelated ARCHITECTURE.md formatting is excluded.
