@@ -1,6 +1,6 @@
 # Putt Pals modernization plan
 
-Status: baseline, shared contracts/simulation, D1 data/CLI delivery and L1 lifecycle are on main. N1 transport adapters are committed on agent/n1-transports (72b7498), pending review/integration; browser adoption and real-network validation remain outstanding. See TASKS.md and PROJECT_STATUS.md for verified completion; the milestone gates below remain the migration plan.
+Status: baseline, shared contracts/simulation, D1 data/CLI delivery and L1 lifecycle are on main. N1 transport delivery is tracked through PR #24 (72b7498 plus review fixes), with acceptance effective after green CI and merge; browser adoption and real-network validation remain outstanding. See TASKS.md and PROJECT_STATUS.md for verified completion; the milestone gates below remain the migration plan.
 
 ## Confirmed scope
 

@@ -54,6 +54,7 @@ const { EventEmitter } = require('node:events');
       const receive = m => f.host.receive('a', JSON.stringify(m));
       for (const m of [make({ senderId: 'host' }), make({ version: 2 }), make({ sessionId: 'old' }), make({ roundNumber: 99 }),
         make({ payload: { type: 'START_VOTING' } }), make({ payload: { type: 'xstate.after.fake' } }),
+        ...['__proto__', 'constructor', 'toString', 'hasOwnProperty'].map(type => make({ payload: { type } })),
         make({ payload: { type: 'CAST_VOTE', mapIndex: 0, playerId: 'host' } }), make({ payload: { type: 'REPORT_SCORE', strokes: -1, roundNumber: 0, puttIndex: 0 } })]) assert.equal(receive(m), false);
       assert.equal(f.host.receive('a', 'x'.repeat(MAX_MESSAGE_BYTES + 1)), false);
       assert.equal(f.host.receive('a', { ...make() }), false);

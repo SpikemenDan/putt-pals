@@ -4,7 +4,7 @@ Last updated: 2026-10-26.
 
 ## Current objective
 
-Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module. N1's implementation is committed as 72b7498 on agent/n1-transports and prepared for review; it is not merged into main. Its adapters bridge L1 and reconcile the shared 99-score mismatch. Browser adoption remains I1. GitHub issues remain the live assignment source.
+Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module. N1 transport delivery is recorded in PR #24 (implementation 72b7498 plus review fixes); this integration record takes effect after green current-head CI and accepted PR merge. Its adapters bridge L1 and reconcile the shared 99-score mismatch. Browser adoption remains I1. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Use the live issue queue and confirm ownership before implementation. N1 #11 is owned by Codex root on agent/n1-transports; review its committed implementation and docs/reviews/N1_TRANSPORTS.md rather than claiming duplicate work. Merge approval and browser/real-WebRTC validation are still outstanding. R1/U1/A1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
+Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. R1/U1/A1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
 
 ## B2 verification — 2026-10-25
 
@@ -156,3 +156,9 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 - Solo/in-memory/injected PeerJS adapters, connection-bound commands, version/session/round/putt/sequence validation, bounded JSON snapshots and host-to-L1 bridge. Movement is batched at 70 ms. Shared timeout/protocol checks preserve scores above 99 and zero penalties.
 - Full npm test, npm run build and node scripts/inventory-baseline.cjs --check passed. Final npm run test:network passed nine fake-transport scenarios; contract and 14-scenario lifecycle checks also passed. Hosted CI, actual WebRTC and real-browser adoption were not run for this branch.
 - README, architecture, workflow/issue/roadmap snapshots and review handoff are updated together. No PR creation, merge, deployment or paid provisioning is authorized by this push. I1/N2/N3/T1 and B4 remain open under their own gates.
+
+## N1 accepted-integration record — PR #24
+
+This record becomes effective only when https://github.com/SpikemenDan/putt-pals/pull/24 is merged after successful current-head baseline-ci; before that N1 remains REVIEW. The user explicitly requested completing N1 after PR/review/CI/merge/post-merge steps were explained, authorizing those bounded operations.
+
+N1 delivers the documented transport/host bridge and uncapped-score contract, including regression rejection of inherited-property command names. Local network/contract/session/build/inventory checks pass; full local regression evidence is above. CI and merge results are linked from PR #24 and issue #11. Post-merge verification is recorded in the issue. Accepted N1 makes its code prerequisite available to I1/N3; I1 still needs its other modules and N3 still needs its provider/budget assignment. Browser adoption, actual WebRTC, recovery and TURN remain separate acceptance work.

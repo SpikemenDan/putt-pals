@@ -23,7 +23,7 @@ export function validCommand(e, isHost) {
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
     REPORT_SCORE: ['strokes', 'roundNumber', 'puttIndex', 'timedOut'],
   }[e.type];
-  if (!fields || !keys(e, ['type', ...fields])) return false;
+  if (!Array.isArray(fields) || !keys(e, ['type', ...fields])) return false;
   switch (e.type) {
     case 'JOIN_ROOM': return name(e.name);
     case 'SET_MODE': return Object.values(GameModes).includes(e.mode);

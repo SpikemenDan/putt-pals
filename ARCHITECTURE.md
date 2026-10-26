@@ -1,6 +1,6 @@
 # Architecture reference
 
-Status: accepted modules and the legacy browser are distinguished below. N1 additions are on agent/n1-transports (72b7498), pending review/integration into main; target-only modules remain proposals.
+Status: accepted modules and the legacy browser are distinguished below. N1 delivery is PR #24 (72b7498 plus review fixes), accepted when current-head CI passes and the PR merges; target-only modules remain proposals.
 
 ## Current implementation
 
@@ -15,10 +15,10 @@ The embedded browser simulation still closes over mutable global player/course s
 
 The embedded browser uses a code-derived PeerJS peer ID to select a host. An unavailable ID causes the joining browser to connect as a guest. Host snapshots are broadcast about every 70 ms. The host owns voting and room transitions; each browser simulates its own ball and reports positions, strokes and completion. This is a star topology with client-trusted gameplay, not authoritative server simulation. Signaling requires a service; some networks require TURN. Current host loss has no migration path.
 
-## Extracted modules and N1 branch status
+## Extracted modules and N1 delivery
 
 - Accepted main: src/shared/ contracts/mocks, src/simulation/ headless physics, src/courses/ normalized catalog and validation, tools/cli/ course/solver/arena commands, and src/session/ XState room lifecycle. See src/session/README.md and docs/reviews/D1_DATA_CLI.md.
-- N1 branch: src/network/ provides solo/in-memory/PeerJS adapters, validated JSON envelopes, sender binding and the host-to-session bridge. See src/network/README.md and docs/reviews/N1_TRANSPORTS.md. Nine network scenarios, full local tests/build and baseline inventory passed; no actual WebRTC or browser adoption result is claimed.
+- N1 delivery (PR #24): src/network/ provides solo/in-memory/PeerJS adapters, validated JSON envelopes, sender binding and the host-to-session bridge. See src/network/README.md and docs/reviews/N1_TRANSPORTS.md. Nine network scenarios, full local tests/build and baseline inventory passed; no actual WebRTC or browser adoption result is claimed.
 - N1 envelopes carry version/session/round/putt/sequence/sender/time fields, reject stale/duplicate/malformed/oversized data, and cap UTF-8 messages at 64 KiB. Commands bind playerId from the link. Current actor snapshots publish immediately; active-participant movement is batched at 70 ms. Names stay text values. This preserves client-trusted physics, without anti-cheat/accounts/host migration.
 - N1 uses the existing C1/L1 four-member bound and safe-integer score counts, not a gameplay stroke cap. Pending links consume capacity; close/dispose cleans listeners and timers. The Peer constructor and signaling/ICE options are injected; no runtime library upgrade is introduced.
 - Browser entry/composition (I1), render/camera (R1), React/input (U1), audio (A1), recovery/interpolation (N2), TURN (N3) and full browser coverage (T1) remain separate tasks. No N1 commit implies their acceptance. The build still preserves embedded scripts.
