@@ -46,7 +46,7 @@ The coordinator prepares these items locally and applies remote changes only whe
 4. Existing tasks now have issues and native blocked-by dependencies. Use the Agent task form for new authorized work, verify no duplicate exists, and preserve/update native links alongside the issue body. Extra decisions such as relay budget or an optional experiment remain explicit gates even when all code prerequisites close.
 5. Confirm which agent sessions will run, who coordinates, and which GitHub identity each uses. GitHub does not launch agents merely because an issue is assigned.
 
-The supplied CI runs on PRs, pushes to main and manual dispatch with read-only repository permissions. It installs from the lockfile, checks syntax/course metadata, builds and runs physics plus both jsdom smoke suites. It does not deploy, post messages, run real browsers or refresh expensive solver fixtures. Hosted execution has succeeded for the baseline workflow. New contract/simulation scripts and the D1 catalog test need explicit CI wiring through the integration owner; their existence alone does not add them to the workflow's individual steps (tracked in T1).
+The supplied CI runs on PRs, pushes to main and manual dispatch with read-only repository permissions. It installs from the lockfile, checks syntax/course metadata, builds and runs shared contracts, simulation parity, course catalog/stale-metadata checks, physics and both jsdom smoke suites. It does not deploy, post messages, run real browsers or refresh expensive solver fixtures. Hosted execution has succeeded for the baseline workflow. The integration-owner cleanup explicitly wires these suites; hosted results for that cleanup remain separate from local verification.
 
 ## Creating an assignment
 
@@ -116,7 +116,7 @@ Use TODO, ACTIVE, REVIEW, DONE, BLOCKED and PAUSED consistently in issue text or
 
 - B1 is integrated through [PR #1](https://github.com/SpikemenDan/putt-pals/pull/1), with browser evidence/limits in docs/BASELINE.md. C1 is integrated through [PR #2](https://github.com/SpikemenDan/putt-pals/pull/2), followed by contract compatibility fixes; S1 is on main at b9ebff0. Closed issues C1 #3 and S1 #5 record that integration.
 - Start new work from the [live queue](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task), using docs/ISSUES.md. D1 #8 is active and partially integrated; it must not be claimed by a second worker or closed yet.
-- R1, U1, A1, L1, T1, the B4 exhaustive sweep and C2's narrow root-copy cleanup have no outstanding code prerequisites at setup time, but still require claim/ownership checks. Optional P1 and paid TURN work retain separate decision gates. The live issue state overrides this snapshot.
+- R1, U1, A1, L1, T1 and the B4 exhaustive sweep have no outstanding code prerequisites at setup time, but still require claim/ownership checks. Optional P1 and paid TURN work retain separate decision gates. The live issue state overrides this snapshot.
 - Branch protection and automatic agent dispatch remain separate setup work. This user-authorized backlog/docs push goes directly to main; it does not waive the normal task PR/merge process.
 
 ## Official references
@@ -125,3 +125,5 @@ Use TODO, ACTIVE, REVIEW, DONE, BLOCKED and PAUSED consistently in issue text or
 - [Protected branches and required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 - [Issue form syntax](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms)
 - [Checkout action](https://github.com/actions/checkout) and [Node setup action](https://github.com/actions/setup-node)
+
+Cleanup follow-up: C2 root duplicates are removed. D1 catalog files now use src/courses/, tools/legacy-adapter.cjs and tests/courses.test.cjs. The user authorized this bounded cleanup directly on main after confirming no concurrent workers; ordinary future tasks still use issue branches and PRs. D1 remains partial: shared geometry/CLI migration is outstanding.

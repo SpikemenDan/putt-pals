@@ -14,7 +14,7 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 | [S1 #5](https://github.com/SpikemenDan/putt-pals/issues/5) | DONE | Codex / root | C1 | src/simulation, tests/simulation.test.cjs, package.json | Headless simulation matches fixtures bitwise; 6 reference traces and all mechanic chambers pass |
 | [R1 #6](https://github.com/SpikemenDan/putt-pals/issues/6) | READY | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
 | [U1 #7](https://github.com/SpikemenDan/putt-pals/issues/7) | READY | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
-| [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Existing D1 worker (Claude; confirm session in issue) | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
+| [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Unclaimed remaining work; prior worker stopped per user | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
 | [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | READY | — | S1, C1 | src/session | XState transitions, scoring, practice and timer checks pass with fake clock |
 | [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | READY | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
 | [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | BLOCKED | — | C1, L1 | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
@@ -26,13 +26,13 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 | [P1 #17](https://github.com/SpikemenDan/putt-pals/issues/17) | BLOCKED | — | S1; optional | Isolated physics prototype | Rapier comparison for ramp/drop/tube; explicit adoption/defer recommendation |
 | [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | — | I1, N2, N3, T1, R2, B4, C2 | Integration owner: CI, release configuration, docs | Production-like preview, full acceptance matrix, rollback procedure and fresh-checkout instructions |
 | [B4 #4](https://github.com/SpikemenDan/putt-pals/issues/4) | READY | — | B2 completed | Dedicated difficulty report/fixtures; no physics retuning | Full corrected-launch sweep for all 36 starter putts; source hashes and stale counts explicit |
-| [C2 #19](https://github.com/SpikemenDan/putt-pals/issues/19) | READY | — | C1 completed | Root contracts.test.cjs, scoring.js, session.js only | Reconcile duplicate shared-contract copies; preserve canonical src/shared and tests/ behavior |
+| [C2 #19](https://github.com/SpikemenDan/putt-pals/issues/19) | DONE | Codex / root | C1 completed | Root contracts.test.cjs, scoring.js, session.js only | Reconcile duplicate shared-contract copies; preserve canonical src/shared and tests/ behavior |
 
 ## Work allocation
 
-Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 #8 is active and only partially complete; the catalog files in 543c383 need path repair and its new course test currently fails before assertions. Do not duplicate D1 or close it based on the commit message.
+Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 #8 remains partially complete. The cleanup below repairs catalog paths and runs its tests; geometry/consumer unification and CLI migration remain outstanding. Confirm live ownership before resuming.
 
-Use the live ready queue for R1, U1, A1, L1, T1, B4 and the narrowly scoped C2 cleanup. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
+Use the live ready queue for R1, U1, A1, L1, T1, B4 (C2 cleanup is complete locally). C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
 
 ## Claim and handoff protocol
 
@@ -174,3 +174,11 @@ Integration notes / next dependency:
 - Worker claims/progress stay in GitHub issues/PRs. The coordinator updates this snapshot at integration points; docs/ISSUES.md contains discovery and claim commands.
 
 - Latest reviewed follow-up 9cdd12e adds stale metadata detection but places stale.js and related files at the root. After fast-forwarding that commit, node courses.test.cjs still fails before assertions with the same adapter import error. D1 #8 remains ACTIVE; this is progress, not completion.
+
+## C2 and scoped D1 layout cleanup — 2026-10-26
+
+- Worker/integration owner: Codex root. User confirmed no other agents are working and authorized committing this bounded cleanup directly on main; no PR merge or history rewrite is claimed.
+- Moved index.js/legacy.js/stale.js into src/courses/, legacy-adapter.cjs into tools/ and courses.test.cjs into tests/, preserving file content. Removed only byte-identical root scoring.js/session.js/contracts.test.cjs copies after auditing imports; canonical src/shared/ and tests/ implementations are unchanged.
+- Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
+- D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
+- Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.

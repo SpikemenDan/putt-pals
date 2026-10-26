@@ -22,6 +22,7 @@ Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and j
 | `npm run check` | Legacy tooling syntax, game syntax and course metadata checks |
 | `npm run test:contracts` | Canonical shared contract, rule, schema and mock tests |
 | `npm run test:simulation` | Extracted headless simulation parity and lifecycle tests |
+| `npm run test:courses` | Validate all 22 courses and detect stale inventory/source hashes |
 | `npm run test:physics` | Surface/timer, cup and mechanic checks; may take around a minute |
 | `npm run test:smoke` | Solo, tournament, practice, scorecard and camera behavior in jsdom |
 | `npm run test:multiplayer` | Four jsdom clients using an in-memory PeerJS substitute |

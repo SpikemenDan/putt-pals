@@ -4,7 +4,7 @@ Last updated: 2026-10-26.
 
 ## Current objective
 
-Reconcile the GitHub issue backlog and documentation with accepted main. B1 is integrated via PR #1, C1 via PR #2 at c917618, and S1 is integrated at b9ebff0. Main also contains shared-rule fixes in 4327196 and partial D1 catalog work in 543c383. Remaining task ownership/readiness is in GitHub, with discovery commands in docs/ISSUES.md. The user authorized committing/pushing this coordination update directly to main.
+Complete the user-authorized cleanup of misplaced files on main. Catalog module/test/adapter paths are repaired, duplicate root shared-contract files removed, and contract/simulation/course suites explicitly wired into CI. D1 remains partial; GitHub issues own remaining assignments. No concurrent workers are active per user confirmation.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Fetch live agent-task issues before choosing work. D1 #8 is already active and must repair its committed file layout before its new test can run; do not duplicate it. R1/U1/A1/L1/T1, the B4 full difficulty sweep, and C2 cleanup are eligible for coordinator-confirmed claims subject to current issue state. Preserve shared-file ownership, optional/paid-service decision gates and existing user approval boundaries.
+Use live GitHub issues before selecting more work. D1 #8 still needs course geometry/consumer unification and CLI extraction; its file-placement failure is repaired by this cleanup. C2 cleanup is complete locally. Ordinary new tasks retain isolated branches and PR review; this bounded direct-main integration was explicitly authorized by the user.
 
 ## B2 verification — 2026-10-25
 
@@ -131,3 +131,11 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 - Agent guide, README, issue template, GitHub workflow, issue index and roadmap now tell workers to select/claim issues, inspect existing claims/dependencies, and report progress on their issue/PR. Branch protection and agent dispatch were not changed.
 
 - Reconciliation cutoff extended to 9cdd12e (stale course metadata detection). The follow-up changes root courses.test.cjs/index.js/legacy-adapter.cjs and adds root stale.js; intended module placement is still not repaired. Re-running node courses.test.cjs still exits 1 with the adapter import error. D1 issue updated; no implementation changes made by this coordinator.
+
+## C2 and scoped D1 layout cleanup — 2026-10-26
+
+- Worker/integration owner: Codex root. User confirmed no other agents are working and authorized committing this bounded cleanup directly on main; no PR merge or history rewrite is claimed.
+- Moved index.js/legacy.js/stale.js into src/courses/, legacy-adapter.cjs into tools/ and courses.test.cjs into tests/, preserving file content. Removed only byte-identical root scoring.js/session.js/contracts.test.cjs copies after auditing imports; canonical src/shared/ and tests/ implementations are unchanged.
+- Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
+- D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
+- Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.

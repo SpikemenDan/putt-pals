@@ -34,6 +34,12 @@ jobs:
         run: npm run check
       - name: Build and verify legacy script preservation
         run: npm run build
+      - name: Check shared contracts
+        run: npm run test:contracts
+      - name: Check simulation parity
+        run: npm run test:simulation
+      - name: Check course catalog and stale metadata
+        run: npm run test:courses
       - name: Check physics and mechanics
         run: npm run test:physics
       - name: Check solo and practice flows in jsdom

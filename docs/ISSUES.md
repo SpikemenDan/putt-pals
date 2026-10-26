@@ -90,3 +90,7 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 B1 was integrated through PR #1; C1 through PR #2 at c917618; S1 is on main at b9ebff0. Contract compatibility fixes landed in 4327196. D1's 543c383 is partial: the catalog/test/adapter files were committed at the root, and `node courses.test.cjs` fails to resolve `../tools/legacy-adapter.cjs`. See D1's live issue for the repair and remaining CLI/consumer work. Do not confuse these snapshot facts with a fresh claim or current test result.
 
 Follow-up at the review cutoff: 9cdd12e adds stale metadata detection, also at the repository root. The catalog test still fails before assertions with the same adapter import error; root stale.js is part of D1 ownership. The issue records this as partial progress, not completed integration.
+
+## Cleanup follow-up
+
+The root-layout failures above are historical evidence, superseded by the cleanup: catalog modules are under src/courses/, the legacy adapter under tools/ and the course test under tests/. C2 duplicate shared-contract/test copies are removed; canonical implementations remain authoritative. Contract, simulation and course tests are explicitly wired into CI. D1 remains incomplete until geometry/consumer unification and CLI migration meet its full acceptance criteria. The user authorized this bounded integration directly on main with no concurrent workers.
