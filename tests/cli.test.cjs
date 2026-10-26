@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const os = require('node:os');
+const vm = require('node:vm');
 const { pathToFileURL } = require('node:url');
 const { loadLegacy, legacyRawCourses, sourceHashes } = require('../tools/legacy-adapter.cjs');
 
@@ -15,7 +16,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   const legacy = loadLegacy();
   const raw = legacyRawCourses(legacy);
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
-  const { createCourseData, validateCourseGeometry } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
+  const { createCourseData, validateCourseGeometry, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
   let failed = 0;
   const run = (name, fn) => {
@@ -23,6 +24,46 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     catch (error) { failed++; console.log('FAIL:', name, '\n  ', error.message); }
   };
 
+  run('all six arena transforms and resolved rules match legacy generation exactly', () => {
+    const source = fs.readFileSync(path.join(root, 'tools.js'), 'utf8');
+    const marker = 'const[,,cmd,...args]=process.argv;';
+    assert.equal(source.split(marker).length, 2);
+    const context = { require, __dirname: root, process, performance, console };
+    vm.createContext(context);
+    vm.runInContext(source.slice(0, source.indexOf(marker)) + '\nthis.ref={SPECS,arenaData,arenaLine};', context);
+    assert.equal(arenaNames.length, 6);
+    for (const name of arenaNames) {
+      const chambers = JSON.parse(JSON.stringify(context.ref.SPECS[name][1]));
+      const before = structuredClone(chambers);
+      assert.deepEqual(JSON.parse(JSON.stringify(buildArenaGeometry(chambers))), JSON.parse(JSON.stringify(context.ref.arenaData(chambers))));
+      assert.deepEqual(chambers, before, 'transform must not mutate input');
+      const course = (name, desc, tee, hole, tiles, extra) => ({ name, desc, tee, hole, tiles,
+        q: [], pl: [], rp: [], movers: [], ice: [], slime: [], pd: [], tp: [], fan: [], tornado: [], ...extra });
+      const expected = vm.runInNewContext(context.ref.arenaLine(name).trim().replace(/,$/, ''), { course });
+      assert.deepEqual(generateArena(name), JSON.parse(JSON.stringify(expected)), name);
+      const changed = generateArena(name);
+      changed.w[0][0] += 100;
+      assert.deepEqual(generateArena(name), JSON.parse(JSON.stringify(expected)), 'output must not share mutable data');
+    }
+  });
+  run('arena input validation rejects malformed or unsupported chamber data', () => {
+    for (const chambers of [null, [], Array(7).fill({}), [{ t: [1], c: [2, 3] }],
+      [{ t: [1, 2], c: [3, 4], w: [[0, 0, -1, 3]] }],
+      [{ t: [1, 2], c: [3, 4], cup: 100 }], [{ t: [1, 2], c: [3, 4], pl: [] }]]) {
+      assert.throws(() => buildArenaGeometry(chambers));
+    }
+    assert.equal(commands.runArena('unknown').code, 1);
+    assert.equal(commands.runArena('__proto__').code, 1);
+    assert.equal(commands.runArena().code, 1);
+  });
+  run('arena command emits course JSON without modifying game source', () => {
+    const before = fs.readFileSync(path.join(root, 'putt-pals.html'));
+    const out = cli('arena', 'Grand Finale');
+    assert.equal(out.status, 0, out.stderr);
+    assert.deepEqual(JSON.parse(out.stdout), generateArena('Grand Finale'));
+    assert.deepEqual(fs.readFileSync(path.join(root, 'putt-pals.html')), before);
+    assert.equal(cli('arena', 'unknown').status, 1);
+  });
   run('imported geometry and resolved rules exactly match all legacy courses', () => {
     assert.deepEqual(data.definitions, JSON.parse(JSON.stringify(legacy.HOLES)));
     assert.deepEqual(data.rules, JSON.parse(JSON.stringify(raw)));
@@ -61,7 +102,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
       fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
       const entry = path.join(temp, 'tools/cli/main.mjs');
-      for (const args of [['list'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
+      for (const args of [['list'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
         const out = spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', cwd: temp });
         assert.equal(out.status, 0, out.stdout + out.stderr);
         if (args[0] === 'shot') assert.match(out.stdout, /SUNK/);

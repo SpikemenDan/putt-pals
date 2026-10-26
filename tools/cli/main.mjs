@@ -4,7 +4,7 @@ import { createCourseData } from '../../src/courses/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runList, runValidate, runShot, runSolve, USAGE } from './commands.mjs';
+import { runList, runValidate, runShot, runSolve, runArena, USAGE } from './commands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [, , command, ...args] = process.argv;
@@ -19,11 +19,13 @@ function finish({ code, lines }) {
   process.exitCode = code;
 }
 
-if (!['list', 'validate', 'shot', 'solve'].includes(command)) {
+if (!['list', 'validate', 'shot', 'solve', 'arena'].includes(command)) {
   finish({ code: command ? 1 : 0, lines: command ? [`Unknown command: ${command}`, ...USAGE] : USAGE });
 } else {
   const data = createCourseData();
-  if (command === 'solve') {
+  if (command === 'arena') {
+    finish(runArena(args.join(' ')));
+  } else if (command === 'solve') {
     finish(runSolve(data.definitions, ...args));
   } else if (command === 'shot') {
     finish(runShot(data.definitions, ...args));

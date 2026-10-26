@@ -5,7 +5,7 @@ import { solveCourse } from './solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -83,9 +83,18 @@ export function runSolve(holes, mapArg, puttArg, flag) {
   return { code: result.best ? 0 : 1, result, lines: [JSON.stringify({ map, putt, ...result })] };
 }
 
+/** Emit validated data; never patch the legacy HTML. */
+export function runArena(name) {
+  try {
+    const course = generateArena(name);
+    return { code: 0, result: course, lines: [JSON.stringify(course, null, 2)] };
+  } catch (error) { return fail(error.message); }
+}
+
 export const USAGE = [
   'Usage: node tools/cli/main.mjs <command>',
   '  list                          list all courses',
+  '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
   '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
