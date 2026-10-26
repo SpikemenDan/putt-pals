@@ -42,6 +42,8 @@ jobs:
         run: npm run test:session
       - name: Check room transports and protocol boundaries
         run: npm run test:network
+      - name: Check procedural audio and resource ownership
+        run: npm run test:audio
       - name: Check course catalog and stale metadata
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands

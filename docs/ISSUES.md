@@ -106,3 +106,7 @@ N1 #11 is claimed by Codex root on agent/n1-transports in /private/tmp/putt-pals
 ## N1 integration record — PR #24
 
 The follow-up delivery is https://github.com/SpikemenDan/putt-pals/pull/24. N1 is REVIEW until current-head CI and accepted merge; after post-merge verification the coordinator closes #11 and removes its status label. The user delegated completing this bounded workflow. Issue/PR evidence supersedes the earlier ACTIVE/claim snapshots. I1/N3 code dependencies may be reconsidered only after accepted merge; product/provider/budget and other prerequisites still apply.
+
+## A1 delivery — PR #25
+
+A1 #10 is owned by Codex root on agent/a1-procedural-audio, based on 1387c22. Delivery: https://github.com/SpikemenDan/putt-pals/pull/25 . It is ACTIVE/REVIEW until green current-head CI, merge and merged-main verification; the coordinator then closes it and removes the status label. Nine instrumented-node audio scenarios cover all eleven legacy recipes and ownership/failure behavior; real-browser listening/autoplay and I1 adoption are separate gates. Exact results: docs/reviews/A1_AUDIO.md. The user requested completing this next eligible task in the established workflow; no other task, deployment or paid service is authorized.

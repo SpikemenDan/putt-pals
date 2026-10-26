@@ -16,7 +16,7 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 | [U1 #7](https://github.com/SpikemenDan/putt-pals/issues/7) | READY | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
 | [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Data/CLI merged; confirm remaining scope in issue | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
 | [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | DONE | Codex / root | S1, C1 | src/session | PR #23 merged adf2045; 14 fake-clock scenarios, full tests/build and hosted CI pass |
-| [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | READY | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
+| [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | DONE* | Codex / root | C1 | src/audio; dedicated tests and test wiring | PR #25; nine audio scenarios and eleven-cue legacy parity; effective after green CI, merge and verification |
 | [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | DONE* | Codex / root | C1, L1 integrated | src/network; bounded shared fixes and test wiring | PR #24; nine network scenarios/full tests/build pass; acceptance effective after green CI and merge |
 | [I1 #12](https://github.com/SpikemenDan/putt-pals/issues/12) | BLOCKED | — | S1, R1, U1, L1, A1, N1, D1 | Integration owner: src/app, entry points | Complete solo/practice/tournament flows; production build; legacy tools no longer needed for runtime |
 | [N2 #13](https://github.com/SpikemenDan/putt-pals/issues/13) | BLOCKED | — | I1 | src/network reconnect/interpolation | Guest recovery, stale/duplicate rejection, capacity and clean host-loss browser checks |
@@ -32,7 +32,7 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 
 Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 data/CLI ports are integrated through PR #22 (8dcf760), with the handoff in docs/reviews/D1_DATA_CLI.md. D1 #8 remains open for its accepted integration scope; do not duplicate its delivered CLI/geometry work. L1 #9 is integrated through PR #23 (adf2045). Confirm live ownership before resuming any remaining task.
 
-N1 delivery is in PR #24; its review handoff is docs/reviews/N1_TRANSPORTS.md. The DONE* record takes effect only after successful current-head CI and accepted PR merge; before then N1 is REVIEW. Use the live ready queue for R1, U1, A1, T1 and B4. C2 cleanup is complete and closed; L1 is integrated. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
+N1 delivery is in PR #24; its review handoff is docs/reviews/N1_TRANSPORTS.md. The DONE* record takes effect only after successful current-head CI and accepted PR merge; before then N1 is REVIEW. A1 delivery is PR #25, with its accepted-integration record below. Use the live ready queue for R1, U1, T1 and B4. C2 cleanup is complete and closed; L1 is integrated. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
 
 ## Claim and handoff protocol
 
@@ -200,3 +200,9 @@ Integration notes / next dependency:
 ## N1 completion record — PR #24
 
 The DONE* row is effective only after PR #24 merges with green current-head baseline-ci; it is a proposed integration record while on the PR branch. User delegated the explained PR/review/CI/merge/post-merge completion workflow. Issue #11 records final merge/verification evidence. N1 code prerequisites then become available to downstream owners, without completing I1/N2/N3/T1 or authorizing a new task.
+
+## A1 completion record — PR #25
+
+The A1 DONE* row becomes effective only after https://github.com/SpikemenDan/putt-pals/pull/25 merges with successful current-head CI and merged-main verification. Until then the live issue is ACTIVE/REVIEW. Worker/coordinator Codex root, branch agent/a1-procedural-audio, base 1387c22. The user requested completing the next eligible task in the established workflow; scope is A1 only.
+
+The adapter preserves all eleven procedural sound recipes and handles lazy gesture unlock, mute persistence, listener coordinates, domain-event mapping and explicit node/context cleanup. Nine instrumented-node scenarios include legacy waveform/envelope/timing parity, actual simulation events and twenty room-reset cycles. See docs/reviews/A1_AUDIO.md for exact verification and limitations. Browser adoption/listening remains I1/T1/manual release work; no additional module or deployment is completed. I1 still requires its other accepted prerequisites.

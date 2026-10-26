@@ -1,6 +1,6 @@
 # PUTT PALS v4 (PARTY CIRCUIT) — HANDOFF & LIVE PHASE TRACKER
 
-Historical feature/workflow record. For current modernization work, start with AGENTS.md, docs/ISSUES.md and the live GitHub assignment; PROJECT_STATUS.md and TASKS.md record integration evidence, and ARCHITECTURE.md describes current modules. Preserve the product decisions and historical logs below. N1 transport delivery/acceptance is tracked in PR #24 and issue #11; it is not browser adoption or authorization to start P33–P61.
+Historical feature/workflow record. For current modernization work, start with AGENTS.md, docs/ISSUES.md and the live GitHub assignment; PROJECT_STATUS.md and TASKS.md record integration evidence, and ARCHITECTURE.md describes current modules. Preserve the product decisions and historical logs below. N1 transport delivery/acceptance is tracked in PR #24 and issue #11; A1 audio delivery is tracked in PR #25 and issue #10; it is not browser adoption or authorization to start P33–P61.
 
 Contents: A workflow rules | B current state | C phase checklist | F decisions | H architecture reference | J editing safely | K syntax check | N tools | L environment | I testing | M progress log | O verified solutions | playtest checklist | spec v2 triage | spec v2 (verbatim requirements).
 
