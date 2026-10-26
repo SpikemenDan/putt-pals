@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const CLI_BOUNDARY = 'const[,,cmd,...args]=process.argv;';
@@ -48,4 +49,10 @@ function legacyRawCourses(A = loadLegacy()) {
   }));
 }
 
-module.exports = { loadLegacy, legacyStarters, legacyRawCourses };
+/** SHA-256 of the game HTML and tools.js, the same fields the inventory records. */
+function sourceHashes() {
+  const hash = file => createHash('sha256').update(fs.readFileSync(path.join(root, file), 'utf8')).digest('hex');
+  return { htmlSha256: hash('putt-pals.html'), toolsSha256: hash('tools.js') };
+}
+
+module.exports = { loadLegacy, legacyStarters, legacyRawCourses, sourceHashes };

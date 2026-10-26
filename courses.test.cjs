@@ -1,12 +1,13 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { legacyRawCourses, legacyStarters } = require('../tools/legacy-adapter.cjs');
+const fs = require('node:fs');
+const { legacyRawCourses, legacyStarters, sourceHashes } = require('../tools/legacy-adapter.cjs');
 
 const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
 
 (async () => {
-  const { buildCourseCatalog, normalizeLegacyCourse, slugify } = await load('src/courses/index.js');
+  const { buildCourseCatalog, normalizeLegacyCourse, slugify, detectStaleCourses, detectStaleHashes } = await load('src/courses/index.js');
   const { STARTER_COURSE_INDICES } = await load('src/shared/constants.js');
   let failed = 0;
   const run = (name, fn) => {
@@ -49,6 +50,34 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     const course = normalizeLegacyCourse(raw[0], true);
     course.putts[0].tee[0] = -999;
     assert.notEqual(raw[0].putts[0].tee[0], -999);
+  });
+
+  const inventory = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/source-inventory.json'), 'utf8'));
+
+  run('live course data matches the recorded inventory (22 maps)', () => {
+    const result = detectStaleCourses(raw, inventory.courses);
+    assert.deepEqual(result.differences, []);
+  });
+  run('live source hashes match the recorded inventory', () => {
+    const result = detectStaleHashes(sourceHashes(), inventory);
+    assert.deepEqual(result.differences, []);
+  });
+  run('stale detection reports changed par, tee, name, putt count and course count', () => {
+    const edited = JSON.parse(JSON.stringify(raw));
+    edited[0].putts[1].par += 1;
+    edited[8].putts[2].tee = [1, 2];
+    edited[20].name = 'Renamed';
+    edited[5].putts.pop();
+    edited.pop();
+    const result = detectStaleCourses(edited, inventory.courses);
+    assert.equal(result.stale, true);
+    for (const pattern of [/course 0 .* putt 1: par/, /course 8 .* putt 2: tee/, /name is now "Renamed"/, /course 5 .* putt count/, /course count/]) {
+      assert.ok(result.differences.some(d => pattern.test(d)), `missing report for ${pattern}`);
+    }
+  });
+  run('stale detection reports changed source hashes', () => {
+    const result = detectStaleHashes({ htmlSha256: 'x', toolsSha256: inventory.toolsSha256 }, inventory);
+    assert.deepEqual(result.differences, ['htmlSha256 changed since the inventory was recorded']);
   });
 
   if (failed) { console.log(`\n${failed} COURSE TEST(S) FAILED`); process.exit(1); }
