@@ -1,13 +1,18 @@
 #!/usr/bin/env node
-import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
+import { createCourseData } from '../../src/courses/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runList, runValidate, runShot, USAGE } from './commands.mjs';
 
-const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [, , command, ...args] = process.argv;
+
+const liveHashes = () => Object.fromEntries(
+  [['htmlSha256', 'putt-pals.html'], ['toolsSha256', 'tools.js']].map(([key, file]) =>
+    [key, createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]),
+);
 
 function finish({ code, lines }) {
   console.log(lines.join('\n'));
@@ -17,16 +22,15 @@ function finish({ code, lines }) {
 if (!['list', 'validate', 'shot'].includes(command)) {
   finish({ code: command ? 1 : 0, lines: command ? [`Unknown command: ${command}`, ...USAGE] : USAGE });
 } else {
-  const adapter = require('../legacy-adapter.cjs');
-  const legacy = adapter.loadLegacy();
+  const data = createCourseData();
   if (command === 'shot') {
-    finish(runShot(legacy.HOLES, ...args));
+    finish(runShot(data.definitions, ...args));
   } else {
-    const raw = adapter.legacyRawCourses(legacy);
+    const raw = data.rules;
     if (command === 'list') finish(runList(raw));
     else {
       const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
-      finish(runValidate({ raw, inventory, hashes: adapter.sourceHashes() }));
+      finish(runValidate({ raw, inventory, hashes: liveHashes(), courseHashes: data.sourceHashes }));
     }
   }
 }

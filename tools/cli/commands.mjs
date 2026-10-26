@@ -13,6 +13,7 @@ const fail = message => ({ code: 1, lines: [`ERROR: ${message}`] });
 
 export function runList(raw) {
   const catalog = buildCourseCatalog(raw);
+  if (!catalog.valid) return { code: 1, lines: ['LIST FAILED', ...catalog.errors] };
   const lines = catalog.courses.map(
     c => `${String(c.index).padStart(2)}  ${c.id.padEnd(22)} ${c.starter ? 'starter' : '       '}  ${c.putts.length} putt${c.putts.length === 1 ? '' : 's'}`,
   );
@@ -20,11 +21,12 @@ export function runList(raw) {
 }
 
 /** Schema check plus stale-metadata check against the recorded inventory. */
-export function runValidate({ raw, inventory, hashes }) {
+export function runValidate({ raw, inventory, hashes, courseHashes }) {
   const catalog = buildCourseCatalog(raw);
   const stale = detectStaleCourses(raw, inventory.courses);
   const staleHashes = detectStaleHashes(hashes, inventory);
-  const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences];
+  const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences,
+    ...(courseHashes ? detectStaleHashes(courseHashes, inventory).differences.map(message => `Imported courses: ${message}`) : [])];
   if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
   return {
     code: 0,
@@ -37,6 +39,7 @@ export function runValidate({ raw, inventory, hashes }) {
  * Hazard time is frozen at zero, the same condition the recorded reference traces use.
  */
 export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
+  if ([mapArg, puttArg, degArg, powerArg].some(value => value == null || String(value).trim() === '')) return fail('shot requires map, putt, deg and power');
   const map = Number(mapArg);
   const putt = Number(puttArg);
   const deg = Number(degArg);
