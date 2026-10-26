@@ -1,0 +1,16 @@
+/** Legacy P9/P11 procedural recipes; no audio files or browser globals. */
+export function createRecipes({ tone, puff, random }) {
+  return Object.freeze({
+  putt:(c,t,o)=>{tone(c,o,'sine',210,70,t,.09,.9);puff(c,o,'highpass',2500,2500,t,.04,.45);},
+  bounce:(c,t,o)=>{tone(c,o,'triangle',560+random()*120,300,t,.07,.6);puff(c,o,'bandpass',1500,1500,t,.025,.3);},
+  sink:(c,t,o)=>{tone(c,o,'sine',1100,330,t,.18,.7);tone(c,o,'sine',160,60,t+.12,.25,.8);[659,784,988].forEach((f,i)=>tone(c,o,'sine',f,f,t+.28+i*.12,.35,.3));},
+  sinkover:(c,t,o)=>{tone(c,o,'triangle',262,131,t,.6,.5);tone(c,o,'triangle',196,98,t+.15,.6,.5);},
+  hio:(c,t,o)=>{[523,659,784,1047,1319].forEach((f,i)=>tone(c,o,'triangle',f,f,t+i*.09,.5,.4));puff(c,o,'highpass',6000,6000,t+.3,.5,.12);},
+  power:(c,t,o)=>{tone(c,o,'sine',523,1046,t,.25,.4);tone(c,o,'sine',784,1568,t+.1,.25,.35);},
+  event:(c,t,o)=>{tone(c,o,'sine',660,880,t,.15,.35);},
+  splash:(c,t,o)=>{puff(c,o,'lowpass',3000,300,t,.5,1);tone(c,o,'sine',300,100,t,.2,.3);},
+  teleport:(c,t,o)=>{tone(c,o,'sine',300,1500,t,.3,.4);tone(c,o,'sine',306,1520,t,.3,.3);},
+  warp:(c,t,o)=>{tone(c,o,'sine',200,900,t,.6,.4);tone(c,o,'sine',203,910,t,.6,.3);puff(c,o,'bandpass',800,2500,t,.6,.2);},
+  boing:(c,t,o)=>{tone(c,o,'sine',180,700,t,.22,.6);tone(c,o,'square',180,700,t,.15,.08);}
+  });
+}
