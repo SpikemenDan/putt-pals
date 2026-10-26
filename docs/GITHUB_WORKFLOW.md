@@ -114,11 +114,10 @@ Use TODO, ACTIVE, REVIEW, DONE, BLOCKED and PAUSED consistently in issue text or
 
 ## Current handoff
 
-- B2 is committed as 3bfaebd and B3 as 216cd75; no GitHub issue/PR URLs are recorded here yet.
-- B1 was started locally and then held at the user's request while defining this workflow. No baseline screenshots or browser-behavior claims were produced. Local Vite verification server was stopped.
-- Embedded source inventory found Three.js r128 / MIT and PeerJS 1.5.4 / MIT metadata. This is source inspection only; B1 still needs maintained inventory artifacts and real-browser references.
-- Browser tooling returned “Computer Use permissions are not granted” when selecting Firefox. B1 needs a permitted browser environment; no permission change has been made.
-- Finish and review this workflow change before dispatching more implementation tasks. Resume/reassign B1 explicitly, then C1 follows B1/B2/B3. After C1, S1/R1/U1/A1 can run concurrently subject to available agent sessions and approved contracts.
+- B2 is committed as 3bfaebd and B3 as 216cd75; W1's workflow is pushed as b333495. Its [hosted Baseline CI run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160). No GitHub task issue/PR URLs are recorded here yet, and branch rules/agent dispatch have not been configured.
+- User resumed B1 and selected Chrome after Firefox permission problems. B1 now has seven native Chrome references, a maintained source/dependency inventory and six representative simulation traces. See docs/BASELINE.md and docs/THIRD_PARTY.md for evidence and limitations.
+- B1 is ready for review on agent/b1-browser-baseline, with user approval to commit and push that branch. PR creation, integration and merge approval remain pending. Its browser verification covers representative solo UI, rendering, camera and shot/scorecard controls; full game completion, real networking and the post-reload blank-view cause remain unverified.
+- Accept/integrate B1 before assigning C1. After C1 shared interfaces are accepted, S1/R1/U1/A1 can run concurrently subject to available agent sessions and approved contracts.
 
 ## Official references
 
