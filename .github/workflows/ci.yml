@@ -40,6 +40,8 @@ jobs:
         run: npm run test:simulation
       - name: Check room lifecycle with fake clocks
         run: npm run test:session
+      - name: Check room transports and protocol boundaries
+        run: npm run test:network
       - name: Check course catalog and stale metadata
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands

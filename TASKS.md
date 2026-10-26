@@ -17,7 +17,7 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 | [D1 #8](https://github.com/SpikemenDan/putt-pals/issues/8) | ACTIVE | Data/CLI merged; confirm remaining scope in issue | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
 | [L1 #9](https://github.com/SpikemenDan/putt-pals/issues/9) | DONE | Codex / root | S1, C1 | src/session | PR #23 merged adf2045; 14 fake-clock scenarios, full tests/build and hosted CI pass |
 | [A1 #10](https://github.com/SpikemenDan/putt-pals/issues/10) | READY | — | C1 | src/audio | Existing synthesized audio preserved; domain-event adapter and cleanup verified |
-| [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | READY | — | C1, L1 integrated | src/network | Solo, fake and PeerJS adapters pass protocol/identity/host-guard checks |
+| [N1 #11](https://github.com/SpikemenDan/putt-pals/issues/11) | DONE* | Codex / root | C1, L1 integrated | src/network; bounded shared fixes and test wiring | PR #24; nine network scenarios/full tests/build pass; acceptance effective after green CI and merge |
 | [I1 #12](https://github.com/SpikemenDan/putt-pals/issues/12) | BLOCKED | — | S1, R1, U1, L1, A1, N1, D1 | Integration owner: src/app, entry points | Complete solo/practice/tournament flows; production build; legacy tools no longer needed for runtime |
 | [N2 #13](https://github.com/SpikemenDan/putt-pals/issues/13) | BLOCKED | — | I1 | src/network reconnect/interpolation | Guest recovery, stale/duplicate rejection, capacity and clean host-loss browser checks |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | BLOCKED | — | N1, provider/budget decision | services/turn-credentials; network configuration via integration owner | Secrets stay server-side; short-lived credentials; forced relay and separate-network tests |
@@ -32,7 +32,7 @@ Snapshot statuses: TODO, READY, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future ta
 
 Baseline tasks B1/B2/B3 are integrated. C1 #3 and S1 #5 are closed after integration. D1 data/CLI ports are integrated through PR #22 (8dcf760), with the handoff in docs/reviews/D1_DATA_CLI.md. D1 #8 remains open for its accepted integration scope; do not duplicate its delivered CLI/geometry work. L1 #9 is integrated through PR #23 (adf2045). Confirm live ownership before resuming any remaining task.
 
-Use the live ready queue for R1, U1, A1, N1, T1 and B4. C2 cleanup is complete and closed; L1 is integrated. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
+N1 delivery is in PR #24; its review handoff is docs/reviews/N1_TRANSPORTS.md. The DONE* record takes effect only after successful current-head CI and accepted PR merge; before then N1 is REVIEW. Use the live ready queue for R1, U1, A1, T1 and B4. C2 cleanup is complete and closed; L1 is integrated. C1/S1 dependencies are integrated; record current accepted contract commits, including 4327196 compatibility fixes. Assign only as many tasks as available agents, and finish/review tasks before creating more work. D1 and L1 follow the simulation. T1 can begin harness work against the contracts and add coverage as implementations land. I1 integrates these paths before networking behavior and library upgrades expand the scope.
 
 ## Claim and handoff protocol
 
@@ -190,3 +190,13 @@ Integration notes / next dependency:
 - N1 #11 is READY with C1/L1 accepted, unassigned pending a coordinator-confirmed claim. It must coordinate the shared 99-score validator/helper mismatch before transporting uncapped L1 scores. No N1 implementation or API change is authorized merely by this label.
 - I1 still waits on R1/U1/A1/N1/D1 and its integration gates. D1's delivered data/CLI module is on main; remaining scope stays in its issue. No blanket backlog authorization, agent launch or deployment occurs here.
 - Status docs edited here follow .gitattributes LF policy; unrelated ARCHITECTURE.md formatting is excluded.
+
+## N1 branch review prepared — 2026-10-26
+
+- Codex root implemented N1 in /private/tmp/putt-pals-n1, branch agent/n1-transports, based on b0dfb04. Implementation commit: 72b7498. User authorized the commit, subsequent coordination-file updates and branch push; PR creation/merge remain separate.
+- Nine network scenarios, full npm test, build and baseline inventory passed locally; no actual WebRTC/browser adoption or hosted CI result. See docs/reviews/N1_TRANSPORTS.md for exact commands, changed paths and integration limits.
+- N1 stays ACTIVE pending its review submission and accepted integration. I1 and N3 are not unblocked by an unmerged branch. The earlier N1 READY/99-limit notes are historical and superseded for this branch.
+
+## N1 completion record — PR #24
+
+The DONE* row is effective only after PR #24 merges with green current-head baseline-ci; it is a proposed integration record while on the PR branch. User delegated the explained PR/review/CI/merge/post-merge completion workflow. Issue #11 records final merge/verification evidence. N1 code prerequisites then become available to downstream owners, without completing I1/N2/N3/T1 or authorizing a new task.

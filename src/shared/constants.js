@@ -31,8 +31,8 @@ export const SURFACE_DRAG = Object.freeze({
   slime: 6.0,
 });
 
-// Maximum score per hole (prevents infinite loops / overflow)
-export const MAX_SCORE = 99;
+// Deprecated compatibility export: scores have no gameplay cap. Bound wire counts to exact integers.
+export const MAX_SCORE = Number.MAX_SAFE_INTEGER;
 
 // --- Course & Rule Constants ---
 export const MIN_TIMEOUT_SECONDS = 120;

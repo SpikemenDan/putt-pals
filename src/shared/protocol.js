@@ -6,7 +6,6 @@
 import {
   PROTOCOL_VERSION,
   MAX_PLAYER_NAME_LENGTH,
-  MAX_SCORE,
   MAX_PLAYERS,
 } from './constants.js';
 
@@ -31,10 +30,11 @@ export function validatePresence(d, maxMaps = 22) {
 
   const numericFields = [d.x, d.y, d.z, d.c, d.str, d.round];
   if (!numericFields.every(Number.isFinite)) return false;
+  if (!Number.isSafeInteger(d.str) || d.str < 0) return false;
 
   if (!Array.isArray(d.s)) return false;
   if (d.s.length > 36) return false; // Max holes in a tournament
-  if (!d.s.every(n => Number.isFinite(n) && n >= 0 && n <= MAX_SCORE)) return false;
+  if (!d.s.every(n => Number.isSafeInteger(n) && n >= 0)) return false;
 
   if (d.fx != null) {
     if (typeof d.fx !== 'object') return false;

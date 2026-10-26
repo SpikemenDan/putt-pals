@@ -111,6 +111,12 @@ async function run() {
     fx: null,
   };
   assert.equal(shared.validatePresence(validPresenceMsg), true);
+  assert.equal(shared.validatePresence({ ...validPresenceMsg, str: 150, s: [150] }), true);
+  assert.equal(shared.validatePresence({ ...validPresenceMsg, str: -1 }), false);
+  assert.equal(shared.validatePresence({ ...validPresenceMsg, s: [1.5] }), false);
+  assert.equal(shared.validatePresence({ ...validPresenceMsg, s: [Number.MAX_SAFE_INTEGER + 1] }), false);
+  assert.equal(shared.calculateTimeoutScore(150, 2, 0), 150);
+  assert.equal(shared.calculateTimeoutScore(0, 2, 0), 2);
   assert.equal(shared.validatePresence({ n: '' }), false); // empty name
   assert.equal(shared.validatePresence({ n: 'AveryLongNameToRejectImmediately' }), false); // > 14 chars
 

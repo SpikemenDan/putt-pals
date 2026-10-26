@@ -1,19 +1,27 @@
 # Architecture reference
 
-Status: current implementation described below; target modules are proposals.
+Status: accepted modules and the legacy browser are distinguished below. N1 delivery is PR #24 (72b7498 plus review fixes), accepted when current-head CI passes and the PR merges; target-only modules remain proposals.
 
 ## Current implementation
 
-- putt-pals.html: styles, screen markup, embedded Three.js r128 and PeerJS, and an application IIFE. Approximately 790 KB. Runtime code has not yet been extracted.
+- putt-pals.html: styles, screen markup, embedded Three.js r128 and PeerJS, and an application IIFE. Approximately 790 KB. The embedded browser runtime remains in place while extracted modules await adoption.
 - tools.js: Node CLI for validation, map generation, physics solving, surface/cup/mechanic checks and jsdom/fake-network smoke tests.
 - HANDOFF.md: historical roadmap and logs. Several architectural details are stale; verify against code rather than copying its constants.
-- package.json / package-lock.json: pinned Vite 8.3.5 and jsdom 30.1.3 development dependencies, with npm commands for development, build, preview and existing checks. vite.config.mjs builds the legacy HTML to dist/putt-pals.html. scripts/check-build.cjs verifies preservation of all three embedded scripts. No TypeScript, React or new runtime dependencies have been introduced yet.
+- package.json / package-lock.json: pinned Vite 8.3.5 and jsdom 30.1.3 development dependencies, with npm commands for development, build, preview and existing checks. vite.config.mjs builds the legacy HTML to dist/putt-pals.html. scripts/check-build.cjs verifies preservation of all three embedded scripts. XState 5.33.3 is installed for the headless session actor. TypeScript and React are not installed yet.
 
 The game has 22 maps and six starter courses with six putts each. Physics advances at 1/240 second, with a requestAnimationFrame accumulator. Simulation coordinates use x/y as the ground plane and z for height. Three.js uses y for height, so rendering swaps axes.
 
-The simulation closes over mutable global player/course state and can call UI and publication functions. Tools extract selected function text from the HTML using markers and execute it in a Node VM. This is a temporary compatibility mechanism, not a reusable module boundary.
+The embedded browser simulation still closes over mutable global player/course state and UI/publication functions. Accepted src/simulation/ exposes a headless engine with fixture parity; src/courses/ and tools/cli/ import validated geometry and the shared simulation. Legacy tools.js and migration reference exporters retain marker/VM extraction during parity and browser migration; normal modern CLI commands do not execute legacy source.
 
-PeerJS uses a code-derived peer ID to select a host. An unavailable ID causes the joining browser to connect as a guest. Host snapshots are broadcast about every 70 ms. The host owns voting and room transitions; each browser simulates its own ball and reports positions, strokes and completion. This is a star topology with client-trusted gameplay, not authoritative server simulation. Signaling requires a service; some networks require TURN. Current host loss has no migration path.
+The embedded browser uses a code-derived PeerJS peer ID to select a host. An unavailable ID causes the joining browser to connect as a guest. Host snapshots are broadcast about every 70 ms. The host owns voting and room transitions; each browser simulates its own ball and reports positions, strokes and completion. This is a star topology with client-trusted gameplay, not authoritative server simulation. Signaling requires a service; some networks require TURN. Current host loss has no migration path.
+
+## Extracted modules and N1 delivery
+
+- Accepted main: src/shared/ contracts/mocks, src/simulation/ headless physics, src/courses/ normalized catalog and validation, tools/cli/ course/solver/arena commands, and src/session/ XState room lifecycle. See src/session/README.md and docs/reviews/D1_DATA_CLI.md.
+- N1 delivery (PR #24): src/network/ provides solo/in-memory/PeerJS adapters, validated JSON envelopes, sender binding and the host-to-session bridge. See src/network/README.md and docs/reviews/N1_TRANSPORTS.md. Nine network scenarios, full local tests/build and baseline inventory passed; no actual WebRTC or browser adoption result is claimed.
+- N1 envelopes carry version/session/round/putt/sequence/sender/time fields, reject stale/duplicate/malformed/oversized data, and cap UTF-8 messages at 64 KiB. Commands bind playerId from the link. Current actor snapshots publish immediately; active-participant movement is batched at 70 ms. Names stay text values. This preserves client-trusted physics, without anti-cheat/accounts/host migration.
+- N1 uses the existing C1/L1 four-member bound and safe-integer score counts, not a gameplay stroke cap. Pending links consume capacity; close/dispose cleans listeners and timers. The Peer constructor and signaling/ICE options are injected; no runtime library upgrade is introduced.
+- Browser entry/composition (I1), render/camera (R1), React/input (U1), audio (A1), recovery/interpolation (N2), TURN (N3) and full browser coverage (T1) remain separate tasks. No N1 commit implies their acceptance. The build still preserves embedded scripts.
 
 ## Target layout
 
@@ -77,7 +85,7 @@ The contracts below are implemented in `src/shared/` and verified by `tests/cont
 - Functions: `simToWorld(simX, simY, simZ, origin, heightOffset)`, `worldToSim(worldX, worldY, worldZ, origin, heightOffset)`, `simToWorldGround([simX, simY], origin)`.
 
 ### 3. Pure scoring calculations (`src/shared/scoring.js`)
-- `calculateTimeoutScore(strokes, par, penalty)`: `Math.min(99, Math.max(strokes, par + penalty))`.
+- `calculateTimeoutScore(strokes, par, penalty)`: `Math.max(strokes, par + penalty)` after defensive input normalization; N1 removes the old 99-score cap and preserves zero penalties. Wire scores/strokes are nonnegative safe integers.
 - `formatScoreEntry(score, timedOut, par, penalty)`: e.g. "1" or "2+3*".
 - `summarizeScorecard(holes)`: computes total strokes, total par, +/- relative score, hole-in-ones, timeouts.
 - `rankPlayers(players)`: ranks players by lowest total strokes, breaking ties by highest hole-in-ones.

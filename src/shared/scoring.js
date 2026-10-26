@@ -3,7 +3,7 @@
  * Encapsulates the tournament, standard, and timeout scoring rules.
  */
 
-import { MAX_SCORE, DEFAULT_PAR, DEFAULT_PENALTY } from './constants.js';
+import { DEFAULT_PAR, DEFAULT_PENALTY } from './constants.js';
 
 /**
  * Calculates timeout score for an unfinished putt.
@@ -16,11 +16,11 @@ import { MAX_SCORE, DEFAULT_PAR, DEFAULT_PENALTY } from './constants.js';
  */
 export function calculateTimeoutScore(strokes, par = DEFAULT_PAR, penalty = DEFAULT_PENALTY) {
   const finiteOr = (value, fallback) => (Number.isFinite(Number(value)) && value !== null && value !== '' ? Number(value) : fallback);
-  const safeStrokes = Math.max(0, Math.min(MAX_SCORE, finiteOr(strokes, 0)));
+  const safeStrokes = Math.max(0, finiteOr(strokes, 0));
   const safePar = Math.max(1, finiteOr(par, DEFAULT_PAR));
   // A penalty of 0 is valid (courses allow 0..10), so only fall back when missing or non-numeric.
   const safePenalty = Math.max(0, finiteOr(penalty, DEFAULT_PENALTY));
-  return Math.min(MAX_SCORE, Math.max(safeStrokes, safePar + safePenalty));
+  return Math.max(safeStrokes, safePar + safePenalty);
 }
 
 /**
