@@ -1,0 +1,35 @@
+# N1 transport review handoff
+
+Issue: https://github.com/SpikemenDan/putt-pals/issues/11
+
+Worker/integration owner: Codex root, branch `agent/n1-transports`, isolated worktree `/private/tmp/putt-pals-n1`, based on accepted main `b0dfb04` (C1 plus accepted fixes; L1 `adf2045`). The user authorized posting the issue claim/status, local implementation, and then committing this reviewed change. This handoff accompanies that local commit. Push, PR creation, merge, deployment and paid provisioning remain unauthorized and unperformed; issue closure/integration is pending.
+
+## Delivered locally
+
+- `src/network/`: common JSON boundary and transport, solo/in-memory adapters, injected PeerJS adapter, host-to-L1 bridge and interface documentation.
+- `tests/network.test.cjs`: nine scenarios covering four clients through six putts/results, 150-stroke scores, authority and identity binding, malformed/oversized/incompatible/stale/duplicate messages, validated snapshots, movement cadence, late spectators, capacity/disconnect/host loss, startup failures/timeouts/cancellation and listener cleanup.
+- Integration-owner bounded shared changes: uncapped timeout helper and safe-integer presence scores/strokes; deprecated `MAX_SCORE` compatibility export becomes the safe-integer bound. Contract regression tests preserve zero penalty and reject fractional/negative/unsafe wire counts. L1 README's obsolete 99-cap warning is updated; no actor implementation changes.
+- `package.json` and `.github/workflows/ci.yml` run `test:network`. No new dependencies or lockfile changes. No HTML, rendering, course or simulation algorithm edits.
+
+The bridge binds events to current connection IDs before invoking L1, publishes authoritative actor snapshots immediately, and batches movement into dirty snapshots at 70 ms. It preserves the existing client-trusted simulation model. This does not authenticate accounts, provide anti-cheat, resume identity, interpolation or host migration.
+
+## Verification
+
+- `npm ci --ignore-scripts`: existing locked dependencies installed, audit reported zero vulnerabilities. Initial offline install failed because XState was not cached; it was not reported as passing.
+- `npm run test:network`: passed nine scenarios, including fake PeerJS channels; no real WebRTC claim.
+- `npm run test:contracts`: passed all nine groups, including new >99/zero-penalty and invalid-count regression assertions.
+- `npm run test:session`: passed all 14 lifecycle scenarios.
+- `npm run build`: passed, all embedded scripts preserved byte-for-byte.
+- `node scripts/inventory-baseline.cjs --check`: passed; source hashes, embedded library versions, 22 courses and six traces unchanged.
+- Full `npm test`: passed end-to-end, including contracts, simulation, session, network, courses, CLI full-grid/robust-solution parity, physics/mechanics and legacy solo/practice/tournament/four-client jsdom smoke suites. After final network boundary/resource refinements, `npm run test:network` passed all nine scenarios again; affected contract/session checks were also rerun successfully.
+- `git -c core.whitespace=cr-at-eol diff --check` and syntax checks for every new network implementation module passed. No hosted CI or real-browser/network run is claimed.
+
+## Integration notes and remaining gates
+
+The browser still uses legacy networking. I1 must provide host/guest selection from invitation codes, fresh host session IDs, the existing Peer constructor and signaling/ICE configuration, connect/subscribe/join lifecycle, one host bridge and deterministic teardown. Names are plain text values and must be rendered as text. Local host authority comes from `transport.isHost`; actor snapshots retain the actor's host-view `isHost` field. Guest clocks use timestamp offset without RTT correction.
+
+Raw messages use JSON strings, 64 KiB per envelope, strict version/session/round/putt/sequence checks and a four-link-member room consistent with C1/L1. Retained snapshot history is bounded to 128 entries and the byte limit; `send` returns false for oversized snapshots and reports a rejection through `subscribeStatus` rather than truncating score state. App integration must handle failed sends/end or recreate a room. Invalid inbound messages are dropped; there is no message-rate limiter or resumable identity in this task. Presence replicates ball coordinates/mode/strokes only; future effect messages require a reviewed schema.
+
+Real-browser gameplay, actual WebRTC, restrictive/separate networks, TURN, reconnect, latency/interpolation and deployed-origin behavior have not been run. Hosted CI is pending separately approved push/PR operations. Existing source/VM migration reference paths remain untouched. N1 local results do not complete I1, N2, N3, T1, D1's browser adoption, or release gates.
+
+`ARCHITECTURE.md` shows a pre-existing checkout line-ending artifact, with no content difference when ignoring end-of-line whitespace. It is excluded from the N1 change set. Shared roadmap/status documents are unchanged.
