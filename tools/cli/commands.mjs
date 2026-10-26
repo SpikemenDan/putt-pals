@@ -4,7 +4,7 @@
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, parseCourseSnapshot } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -30,6 +30,41 @@ export function runValidate({ raw, inventory, hashes }) {
     code: 0,
     lines: [`VALIDATE OK: ${catalog.courses.length} courses match the schema and the recorded inventory`],
   };
+}
+
+/**
+ * VM-free validation: geometry + catalog schema of the committed snapshot, then
+ * staleness of the snapshot against the recorded inventory.
+ */
+export function runValidateSnapshot({ snapshotText, inventory }) {
+  let loaded;
+  try {
+    loaded = parseCourseSnapshot(snapshotText);
+  } catch (error) {
+    return { code: 1, lines: ['VALIDATE FAILED', ...error.message.split('\n').map(l => `  ${l}`)] };
+  }
+  const stale = detectStaleCourses(loaded.catalog, inventory.courses);
+  const staleHashes = detectStaleHashes(loaded.source, inventory);
+  const problems = [...stale.differences, ...staleHashes.differences];
+  if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
+  return {
+    code: 0,
+    lines: [`VALIDATE OK: ${loaded.courses.length} courses match the schema, geometry rules and the recorded inventory`],
+  };
+}
+
+/** Checks the committed snapshot against a fresh read of the legacy source (needs the VM adapter). */
+export function runSnapshotParity({ snapshotText, liveCourses, liveCatalog, liveHashes }) {
+  const snapshot = JSON.parse(snapshotText);
+  const problems = [];
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (!same(snapshot.courses, liveCourses)) problems.push('course geometry differs from the live legacy data');
+  if (!same(snapshot.catalog, liveCatalog)) problems.push('course catalog differs from the live legacy data');
+  if (!same(snapshot.source, liveHashes)) problems.push('source hashes differ from the live legacy files');
+  if (problems.length) {
+    return { code: 1, lines: ['SNAPSHOT STALE', ...problems.map(p => `  ${p}`), '  run: node scripts/export-courses.cjs --write'] };
+  }
+  return { code: 0, lines: ['SNAPSHOT PARITY OK: snapshot matches the live legacy data'] };
 }
 
 /**
@@ -69,6 +104,7 @@ export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
 export const USAGE = [
   'Usage: node tools/cli/main.mjs <command>',
   '  list                          list all courses',
-  '  validate                      schema + stale-metadata check (exit 1 on any problem)',
+  '  validate [--live]             schema, geometry and stale-metadata check (exit 1 on any problem);',
+  '                                --live also compares the snapshot with the legacy source (slow, uses the VM)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
 ];

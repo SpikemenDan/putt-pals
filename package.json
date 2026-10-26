@@ -11,7 +11,7 @@
     "build": "vite build && node scripts/check-build.cjs",
     "preview": "vite preview --host 127.0.0.1 --open /putt-pals.html",
     "check": "node --check tools.js && node --check tests/solver-baseline.cjs && node tools.js check",
-    "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:courses && npm run test:cli && npm run test:physics && npm run test:smoke && npm run test:multiplayer",
+    "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:courses && npm run test:cli && npm run test:geometry && npm run test:physics && npm run test:smoke && npm run test:multiplayer",
     "test:contracts": "node tests/contracts.test.cjs",
     "test:simulation": "node tests/simulation.test.cjs",
     "test:courses": "node tests/courses.test.cjs",
@@ -21,7 +21,10 @@
     "baseline:solver": "node tests/solver-baseline.cjs",
     "solve": "node tools.js solve",
     "rank": "node tools.js rank",
-    "test:cli": "node tests/cli.test.cjs"
+    "test:cli": "node tests/cli.test.cjs",
+    "test:geometry": "node tests/geometry.test.cjs",
+    "courses:export": "node scripts/export-courses.cjs --write",
+    "courses:check": "node scripts/export-courses.cjs --check"
   },
   "devDependencies": {
     "jsdom": "30.1.3",

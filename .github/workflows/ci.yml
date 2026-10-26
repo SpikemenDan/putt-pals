@@ -42,6 +42,8 @@ jobs:
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands
         run: npm run test:cli
+      - name: Check course geometry snapshot and VM-free simulation parity
+        run: npm run test:geometry
       - name: Check physics and mechanics
         run: npm run test:physics
       - name: Check solo and practice flows in jsdom

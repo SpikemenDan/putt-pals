@@ -62,6 +62,17 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.match(r.stdout, /VALIDATE OK: 22 courses/);
   });
+  run('process: validate --live also proves the snapshot matches the legacy source', () => {
+    const r = cli('validate', '--live');
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /SNAPSHOT PARITY OK/);
+  });
+  run('shot sinks a known reference shot', () => {
+    const ref = inventory.simulationReferences.shots[0];
+    const r = cli('shot', String(ref.map), String(ref.putt), String(ref.shot.deg), String(ref.shot.power));
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /SUNK/);
+  });
   run('process: shot sinks a known reference shot', () => {
     const ref = inventory.simulationReferences.shots[0];
     const r = cli('shot', String(ref.map), String(ref.putt), String(ref.shot.deg), String(ref.shot.power));

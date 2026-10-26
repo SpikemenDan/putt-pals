@@ -139,3 +139,12 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 - Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
 - D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
 - Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.
+
+## D1 course geometry snapshot — 2026-10-26
+
+- Added `src/courses/data/courses.snapshot.json`, generated from the legacy game data by `scripts/export-courses.cjs` (`--write` / `--check`), and `src/courses/geometry.js` (geometry validation, freezing loader). The snapshot keeps legacy field names so `SimulationEngine` consumes it unchanged.
+- `tools/cli/main.mjs` now reads the snapshot: `list`, `validate` and `shot` no longer execute legacy source. `validate --live` additionally compares the snapshot with the legacy source through the VM adapter.
+- Geometry rules checked for all 22 courses: rectangles, ramps (`[x, y, w, h, dir, z0, z1, 'launch'?]`), fixed-length hazard tuples, and every tee and cup (course-level and per putt) inside a tile.
+- `tests/geometry.test.cjs` (`npm run test:geometry`) replays all six reference traces from snapshot data with no VM. `tests/cli.test.cjs` and the geometry suite are now in `npm test` and CI.
+- Still open for D1: the HTML remains the source of truth (the snapshot is derived, not authoritative); `tools.js` still uses the VM for solver and arena generation; generated-arena parity and positional-tuple to named-record conversion are not done. Shot output for hazards uses frozen hazard time 0, as before.
+
