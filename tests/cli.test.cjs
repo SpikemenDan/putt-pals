@@ -73,6 +73,37 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.code, 1);
     assert.ok(out.lines.some(line => line.includes('Imported courses:')));
   });
+  run('solve reproduces all 36 recorded first robust starter shots', () => {
+    const refs = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/solver-baseline.json'), 'utf8')).results;
+    assert.equal(refs.length, 36);
+    for (const ref of refs) {
+      const out = commands.runSolve(data.definitions, ref.map, ref.putt);
+      assert.equal(out.code, 0, `${ref.map}/${ref.putt}`);
+      assert.deepEqual(out.result.best, ref.best, `${ref.map}/${ref.putt}`);
+      assert.ok(out.result.hits > 0);
+    }
+  });
+  run('full solve preserves the legacy endpoint and complete-grid hit count', () => {
+    const out = commands.runSolve(data.definitions, 0, 0, '--full');
+    assert.equal(out.code, 0);
+    assert.equal(out.result.hits, 811, 'legacy full-grid comparison on current hashed source');
+    assert.deepEqual(out.result.best, inventory.simulationReferences.shots[0].shot);
+  });
+  run('solve rejects missing, invalid and unknown arguments', () => {
+    for (const args of [[], ['', 0], [99, 0], [0, 99], [0, 0, '--typo']]) {
+      assert.equal(commands.runSolve(data.definitions, ...args).code, 1);
+    }
+  });
+  run('process: solve runs without legacy files', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-solver-imports-'));
+    try {
+      fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
+      fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
+      const out = spawnSync(process.execPath, [path.join(temp, 'tools/cli/main.mjs'), 'solve', '0', '0'], { encoding: 'utf8', cwd: temp });
+      assert.equal(out.status, 0, out.stderr);
+      assert.deepEqual(JSON.parse(out.stdout).best, inventory.simulationReferences.shots[0].shot);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  });
   run('list shows 22 courses and 6 starters', () => {
     const { code, lines } = commands.runList(raw);
     assert.equal(code, 0);

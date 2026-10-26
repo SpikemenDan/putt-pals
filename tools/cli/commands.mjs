@@ -1,3 +1,4 @@
+import { solveCourse } from './solver.mjs';
 /**
  * CLI command logic. Every command returns { code, lines } and never prints,
  * so it can be tested without spawning a process.
@@ -69,9 +70,23 @@ export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
   };
 }
 
+/** Search the legacy shot grid with imported courses and the shared simulation. */
+export function runSolve(holes, mapArg, puttArg, flag) {
+  if ([mapArg, puttArg].some(value => value == null || String(value).trim() === '')) return fail('solve requires map and putt');
+  const map = Number(mapArg);
+  const putt = Number(puttArg);
+  if (!Number.isInteger(map) || map < 0 || map >= holes.length) return fail(`map must be an integer 0..${holes.length - 1}`);
+  const count = holes[map].putts?.length ?? 1;
+  if (!Number.isInteger(putt) || putt < 0 || putt >= count) return fail(`putt must be an integer 0..${count - 1} for map ${map}`);
+  if (flag != null && flag !== '--full') return fail('only --full is supported after map and putt');
+  const result = solveCourse(holes[map], putt, { full: flag === '--full' });
+  return { code: result.best ? 0 : 1, result, lines: [JSON.stringify({ map, putt, ...result })] };
+}
+
 export const USAGE = [
   'Usage: node tools/cli/main.mjs <command>',
   '  list                          list all courses',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
+  '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
 ];
