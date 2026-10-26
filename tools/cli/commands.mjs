@@ -1,10 +1,12 @@
+export { runRank } from './rank.mjs';
+import { solveCourse } from './solver.mjs';
 /**
  * CLI command logic. Every command returns { code, lines } and never prints,
  * so it can be tested without spawning a process.
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument, validateCourseDocument } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -12,7 +14,9 @@ export const MAX_TICKS = 240 * 120;
 const fail = message => ({ code: 1, lines: [`ERROR: ${message}`] });
 
 export function runList(raw) {
-  const catalog = buildCourseCatalog(raw);
+  const catalog = Array.isArray(raw) ? buildCourseCatalog(raw)
+    : { ...validateCourseDocument(raw), courses: raw?.courses };
+  if (!catalog.valid) return { code: 1, lines: ['LIST FAILED', ...catalog.errors] };
   const lines = catalog.courses.map(
     c => `${String(c.index).padStart(2)}  ${c.id.padEnd(22)} ${c.starter ? 'starter' : '       '}  ${c.putts.length} putt${c.putts.length === 1 ? '' : 's'}`,
   );
@@ -20,11 +24,12 @@ export function runList(raw) {
 }
 
 /** Schema check plus stale-metadata check against the recorded inventory. */
-export function runValidate({ raw, inventory, hashes }) {
+export function runValidate({ raw, inventory, hashes, courseHashes }) {
   const catalog = buildCourseCatalog(raw);
   const stale = detectStaleCourses(raw, inventory.courses);
   const staleHashes = detectStaleHashes(hashes, inventory);
-  const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences];
+  const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences,
+    ...(courseHashes ? detectStaleHashes(courseHashes, inventory).differences.map(message => `Imported courses: ${message}`) : [])];
   if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
   return {
     code: 0,
@@ -37,6 +42,7 @@ export function runValidate({ raw, inventory, hashes }) {
  * Hazard time is frozen at zero, the same condition the recorded reference traces use.
  */
 export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
+  if ([mapArg, puttArg, degArg, powerArg].some(value => value == null || String(value).trim() === '')) return fail('shot requires map, putt, deg and power');
   const map = Number(mapArg);
   const putt = Number(puttArg);
   const deg = Number(degArg);
@@ -66,9 +72,51 @@ export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
   };
 }
 
+/** Search the legacy shot grid with imported courses and the shared simulation. */
+export function runSolve(holes, mapArg, puttArg, flag) {
+  if ([mapArg, puttArg].some(value => value == null || String(value).trim() === '')) return fail('solve requires map and putt');
+  const map = Number(mapArg);
+  const putt = Number(puttArg);
+  if (!Number.isInteger(map) || map < 0 || map >= holes.length) return fail(`map must be an integer 0..${holes.length - 1}`);
+  const count = holes[map].putts?.length ?? 1;
+  if (!Number.isInteger(putt) || putt < 0 || putt >= count) return fail(`putt must be an integer 0..${count - 1} for map ${map}`);
+  if (flag != null && flag !== '--full') return fail('only --full is supported after map and putt');
+  const result = solveCourse(holes[map], putt, { full: flag === '--full' });
+  return { code: result.best ? 0 : 1, result, lines: [JSON.stringify({ map, putt, ...result })] };
+}
+
+/** Emit validated data; never patch the legacy HTML. */
+export function runArena(name) {
+  try {
+    const course = generateArena(name);
+    return { code: 0, result: course, lines: [JSON.stringify(course, null, 2)] };
+  } catch (error) { return fail(error.message); }
+}
+
+/** Geometry, playable positions and resolved-rule parity for all imported maps. */
+export function runCheck({ definitions, rules, document }) {
+  const result = document ? validateCourseDocument(document) : validateCourseDefinitions(definitions, rules);
+  const count = document ? document.courses?.length : definitions?.length;
+  return result.valid
+    ? { code: 0, lines: [`CHECK OK: ${count} courses; geometry, playable tee/cup positions and resolved rules agree`] }
+    : { code: 1, lines: ['CHECK FAILED', ...result.errors.map(error => `  ${error}`)] };
+}
+
+export function runExport(document = createCourseDocument()) {
+  const checked = validateCourseDocument(document);
+  if (!checked.valid) return { code: 1, lines: ['EXPORT FAILED', ...checked.errors] };
+  return { code: 0, lines: [JSON.stringify(document, null, 2)] };
+}
+
 export const USAGE = [
-  'Usage: node tools/cli/main.mjs <command>',
+  'Usage: node tools/cli/main.mjs <command> [--courses <file.json>]',
+  '  --courses is supported by list, check, export, shot and solve',
   '  list                          list all courses',
+  '  export                        print versioned course JSON with persistent course/putt IDs',
+  '  check                         validate imported geometry, playable positions and rules',
+  '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
+  '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
+  '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
 ];
