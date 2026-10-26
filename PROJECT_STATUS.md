@@ -4,7 +4,7 @@ Last updated: 2026-10-25.
 
 ## Current objective
 
-B2 is committed as 3bfaebd, B3 as 216cd75 and W1 as b333495. W1 is pushed and its hosted CI passed. The user resumed B1 and selected Chrome for browser verification. B1 artifacts are ready for review on agent/b1-browser-baseline; the user approved their commit and branch push. Integration and merge approval remain pending. Game HTML, simulation tools, dependencies and CI configuration are unchanged by B1.
+B2 is committed as 3bfaebd, B3 as 216cd75, W1 as b333495, and B1 was integrated via PR #1 (1c5d66c). Task C1 (Shared Contracts) is implemented on branch agent/c1-shared-contracts and all contract verification tests pass. Game HTML, simulation tools, and embedded legacy runtime scripts remain unchanged.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Review B1's docs/BASELINE.md, source inventory and Chrome references, including disclosed limitations. Obtain approval before committing/publishing, and integrate B1 before assigning C1 shared contracts. Do not launch concurrent extraction before C1 interfaces are accepted. Branch rules, GitHub task issues and agent dispatch remain separate setup actions. Preserve the original HTML until parity gates pass.
+Review and merge C1 shared contracts. Following C1 acceptance, parallel tasks S1 (Headless Simulation), R1 (Renderer extraction), U1 (UI & Controls), and A1 (Audio adapter) can proceed against the approved contracts in src/shared/ with high-fidelity mocks.
 
 ## B2 verification — 2026-10-25
 
@@ -87,3 +87,22 @@ Review B1's docs/BASELINE.md, source inventory and Chrome references, including 
 ## Update format for future owners
 
 Append the date, task ID, concrete changes, exact verification commands/results, known failures and next dependency. Keep planned work distinct from completed/verified behavior. Do not include credentials or private relay tokens.
+
+## C1 verification — 2026-10-25
+
+- Implemented pure shared contracts and mocks in `src/shared/`:
+  - `constants.js`: physics constants ($R=5$, $CUP=15/8$, $POWER=900$, $\Delta t=1/240$, drag coefficients), course limits, tournament starters, protocol version ($1$), player colors.
+  - `coords.js`: bidirectionally tested transforms between simulation ground plane ($[x,y,z]$) and Three.js 3D world space ($[x, y+R, z]$).
+  - `scoring.js`: pure calculation for timeout scoring ($Math.max(strokes, par + penalty)$), scorecard summaries, and tournament rankings with tie-breaking.
+  - `courses.js`: schemas and validation for putts and courses, enforcing starter course constraints and time limits ($120..600$s).
+  - `protocol.js`: message schemas and boundary validators for player presence, room snapshots, and guest votes.
+  - `simulation.js`: pure player simulation state record factory, $applyShot$ launch physics, and typed domain events.
+  - `session.js`: session phases, game modes, commands, and deterministic voting resolution with tie-breaking.
+  - `transport.js`: connection states and room transport contract interface.
+  - `render.js`: camera modes, immutable render snapshot factory, and AABB sightline obstruction raycasting for wall fading.
+  - `mocks.js`: high-fidelity `MockSimulation`, `MockTransportHub`, and `MockTransport` for parallel consumer testing.
+- `src/package.json`: configured `{"type": "module"}` to ensure seamless ES module imports without Node typeless warnings or impacting root CommonJS tools.
+- `tests/contracts.test.cjs`: 9 test suites covering all modules, roundtrip transforms, scoring rules, schemas, and mocks. Passed 9/9.
+- `package.json`: added `test:contracts` script and integrated it into `npm test`.
+- `ARCHITECTURE.md`: updated with full contract specifications.
+- Regression verification: `npm run check`, `npm run build`, `npm run test:physics`, `npm run test:smoke`, `npm run test:multiplayer`, and `npm test` all passed with zero errors.

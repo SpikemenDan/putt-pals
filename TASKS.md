@@ -7,10 +7,10 @@ Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE aft
 | ID | Status | Owner | Depends on | Scope / owned files | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | W1 | DONE | Codex / root | Approved bootstrap commit/push | GitHub workflow docs, templates and baseline CI | b333495 pushed; hosted Baseline CI run 40247672160 succeeded |
-| B1 | REVIEW | Codex / root | Resumed by user; pending acceptance/integration | Baseline inventory and browser references; tests/fixtures | Source inventory, six traces, seven Chrome screenshots, limitations recorded |
+| B1 | DONE | Codex / root | Integrated via PR #1 | Baseline inventory and browser references; tests/fixtures | PR #1 merged into main; source inventory and Chrome screenshots recorded |
 | B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | DONE | Codex / root | Authorized 2026-10-25 | Integration owner: manifests, lockfile, dev/build/test configs | Lockfile reinstall, Vite build/HTTP checks, physics and both smoke suites passed |
-| C1 | TODO | — | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md | Approved simulation, session, transport, snapshot and event contracts; matching mocks |
+| C1 | REVIEW | Codex / root | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md, package.json, tests/contracts.test.cjs | All contracts implemented in src/shared, tests/contracts.test.cjs passing (9/9 suites), ARCHITECTURE.md updated |
 | S1 | TODO | — | C1 | src/simulation | Headless imported simulation matches fixtures; deterministic time input; no browser dependencies |
 | R1 | TODO | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
 | U1 | TODO | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
@@ -80,6 +80,39 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 - Browser evidence: solo entry, six-card selection, actual Switchback Garden rendering, all three cameras, pointer shot changing strokes 0 to 1, live scorecard and Escape, sound/quality label toggles and restore. User explicitly selected Chrome; Firefox is not claimed as tested.
 - Limitations: practice/tournament completion, real WebRTC/relay, console audit, audio quality and performance remain unverified in the real browser. Blank content after reload and a later ScreenCaptureKit -3812 error are recorded without assigning a product cause.
 - Verification: node scripts/inventory-baseline.cjs --write and --check passed; all six representative traces sunk in one stroke; screenshot JPEG formats, dimensions and hashes recorded and representative images visually inspected. Game/tools hashes match B2; no runtime/dependency changes. User approved committing and pushing agent/b1-browser-baseline; PR creation, integration and merge approval remain pending. C1 still awaits B1 acceptance.
+
+
+### C1 — 2026-10-25
+
+- Owner: Codex / root, integration owner.
+- Branch/worktree: agent/c1-shared-contracts.
+- Owned files: src/shared/*, ARCHITECTURE.md, package.json, tests/contracts.test.cjs, TASKS.md, PROJECT_STATUS.md.
+- Scope: Define and verify approved simulation, session, transport, snapshot, scoring, and domain event contracts, schemas, coordinate transforms, and high-fidelity mocks.
+- Changes:
+  - Added `src/package.json` declaring `"type": "module"` for clean ES module exports across `src/shared/`.
+  - Implemented `src/shared/constants.js` with all baseline physics and game constants (BALL_RADIUS 5, CUP 15/8, POWER 900, 240Hz timestep, surface drag, player colors).
+  - Implemented `src/shared/coords.js` with `simToWorld`, `worldToSim`, `simToWorldGround` transformations.
+  - Implemented `src/shared/scoring.js` with `calculateTimeoutScore`, `formatScoreEntry`, `summarizeScorecard`, and `rankPlayers`.
+  - Implemented `src/shared/courses.js` with putt and course validation schemas.
+  - Implemented `src/shared/protocol.js` with boundary validation for untrusted presence, snapshot, and vote messages.
+  - Implemented `src/shared/simulation.js` with domain events, player state factory, and `applyShot`.
+  - Implemented `src/shared/session.js` with session commands, phases, and deterministic voting resolution.
+  - Implemented `src/shared/transport.js` with `ConnectionStates` and `RoomTransportContract`.
+  - Implemented `src/shared/render.js` with camera modes, render snapshot factory, and sightline obstruction raycasting.
+  - Implemented `src/shared/mocks.js` with `MockSimulation`, `MockTransportHub`, and `MockTransport`.
+  - Added comprehensive test suite in `tests/contracts.test.cjs` covering all 10 contract modules.
+  - Updated `package.json` with `test:contracts` script integrated into `npm test`.
+  - Updated `ARCHITECTURE.md` recording all agreed contracts.
+- Verification:
+  - `node tests/contracts.test.cjs`: all 9 contract suites passed with zero errors or warnings.
+  - `npm run check`: passed.
+  - `npm run build`: passed (preserved byte-for-byte embedded scripts).
+  - `npm run test:physics`: passed (all 19 surface/timer, 7 cup, 8 mechanic checks).
+  - `npm run test:smoke`: passed.
+  - `npm run test:multiplayer`: passed (4 clients, voting, scoring, timeouts, disconnect).
+  - `npm test`: passed all stages sequentially.
+- Integration notes:
+  - Contracts are ready for dependent implementation tasks (S1 Headless Simulation, R1 Renderer extraction, U1 React UI/Input, A1 Audio adapter, N1 Network transport, T1 Integration tests).
 
 ### W1 — GitHub workflow preparation
 

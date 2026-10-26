@@ -61,7 +61,67 @@ These are design requirements, not existing API declarations:
 - Rendering: explicit sim-to-world transform, snapshot interpolation, resource ownership/disposal. Visual interpolation never changes scoring or authoritative room transitions.
 - UI: cached immutable snapshots and stable subscribe/getSnapshot methods; commands for input, no direct mutations of simulation state.
 
-The integration owner records actual signatures here before parallel dependent tasks start. Changing an agreed signature requires notifying every affected owner and updating tests/mocks together.
+## Agreed shared contracts (Task C1)
+
+The contracts below are implemented in `src/shared/` and verified by `tests/contracts.test.cjs`:
+
+### 1. Constants (`src/shared/constants.js`)
+- Physics: `BALL_RADIUS = 5`, `DEFAULT_CUP_RADIUS = 15`, `MIN_CUP_RADIUS = 8`, `SHOT_POWER = 900`, `FIXED_TIMESTEP = 1 / 240`, `TURF_FRICTION = 0.75`.
+- Surface drag multipliers: `turf: 1.0`, `sand: 3.5`, `ice: 0.15`, `slime: 6.0`.
+- Limits & Rules: `MIN_TIMEOUT_SECONDS = 120`, `MAX_TIMEOUT_SECONDS = 600`, `DEFAULT_PAR = 2`, `DEFAULT_PENALTY = 3`, `STARTER_COURSE_INDICES = [0, 8, 20, 21, 5, 19]`.
+- Network & Protocol: `PROTOCOL_VERSION = 1`, `MAX_PLAYERS = 4`, `SNAPSHOT_INTERVAL_MS = 70`, `VOTING_COUNTDOWN_SECONDS = 15`, `RECONNECT_GRACE_PERIOD_MS = 30000`, `MAX_PLAYER_NAME_LENGTH = 14`.
+
+### 2. Coordinate transformations (`src/shared/coords.js`)
+- Simulation: horizontal plane `[x, y]`, vertical elevation `z`.
+- Three.js World: horizontal `x = simX + origin[0]`, vertical `y = simZ + BALL_RADIUS`, horizontal depth `z = simY + origin[1]`.
+- Functions: `simToWorld(simX, simY, simZ, origin, heightOffset)`, `worldToSim(worldX, worldY, worldZ, origin, heightOffset)`, `simToWorldGround([simX, simY], origin)`.
+
+### 3. Pure scoring calculations (`src/shared/scoring.js`)
+- `calculateTimeoutScore(strokes, par, penalty)`: `Math.min(99, Math.max(strokes, par + penalty))`.
+- `formatScoreEntry(score, timedOut, par, penalty)`: e.g. "1" or "2+3*".
+- `summarizeScorecard(holes)`: computes total strokes, total par, +/- relative score, hole-in-ones, timeouts.
+- `rankPlayers(players)`: ranks players by lowest total strokes, breaking ties by highest hole-in-ones.
+
+### 4. Course validation & schemas (`src/shared/courses.js`)
+- `validatePutt(putt)`: validates tee, hole, par (1..10), penalty (0..10), optional limitSeconds (120..600), cupRadius (8..15).
+- `validateCourse(course)`: validates id, name, index, starter constraints (6 putts, in starter set).
+- `normalizeLimit(limit)`: enforces 120..600 second bounds, defaulting to 120.
+
+### 5. Protocol boundary validation (`src/shared/protocol.js`)
+- `validatePresence(data, maxMaps)`: validates player name length, map index, coordinates, scores array, powerups.
+- `validateRoomSnapshot(snapshot, maxMaps)`: validates room phase, map, round, start time, roster.
+- `validateVote(vote, maxMaps)`: validates map voting index.
+- `createMessageEnvelope(type, payload, senderId)`: standard envelope with version, timestamp, type, payload, senderId.
+
+### 6. Simulation interface & domain events (`src/shared/simulation.js`)
+- `createPlayerState(name, colorIndex, options)`: pure player simulation state record without global closures.
+- `applyShot(player, angle, power, powerMultiplier)`: sets velocities, strokes, and emits shot event.
+- `SimulationEventTypes`: `shot`, `bounce`, `surface_change`, `cup_lip`, `sink`, `hazard`, `out_of_bounds`, `rest`, `timeout`.
+- Simulation contract: `addPlayer(id, name, colorIndex)`, `getPlayer(id)`, `launch(playerId, angle, power)`, `step(dt)`, `getSnapshot()`, `dispose()`.
+
+### 7. Session lifecycle & state machine (`src/shared/session.js`)
+- `SessionPhases`: `lobby`, `select`, `play`, `results`.
+- `GameModes`: `standard`, `tournament_3`, `tournament_6`, `tournament_9`, `practice`, `putt_practice`.
+- `SessionCommands`: `JOIN_ROOM`, `LEAVE_ROOM`, `SET_MODE`, `START_VOTING`, `CAST_VOTE`, `START_ROUND`, `ADVANCE_PUTT`, `FINISH_ROUND`, `RETURN_TO_LOBBY`.
+- `resolveVote(votes, eligibleMaps)`: deterministic vote winner resolution with lowest-index tie-breaker.
+- `canExecuteCommand(phase, command, isHost)`: phase and host command gating.
+
+### 8. Transport interface (`src/shared/transport.js`)
+- `ConnectionStates`: `disconnected`, `connecting`, `connected`, `reconnecting`, `closed`.
+- `RoomTransportContract`: `connect()`, `send(msg)`, `subscribe(listener)`, `close()`, `now()`, `isHost`, `peerId`, `connectionState`.
+- `isRoomTransport(transport)`: runtime contract conformance validator.
+
+### 9. Render contracts & camera (`src/shared/render.js`)
+- `CameraModes`: `ball`, `hole`, `world`, `free_roam`.
+- `createRenderSnapshot(...)`: immutable render snapshot decoupling Three.js from simulation loops.
+- `checkSightlineObstructions(cameraPos, ballPos, boundingBoxes)`: ray-AABB sightline test for wall fading.
+
+### 10. High-fidelity mocks (`src/shared/mocks.js`)
+- `createSampleCourse()`: sample course fixture for standalone testing.
+- `MockSimulation`: headless simulation mock implementing `SimulationEngineContract`.
+- `MockTransportHub` & `MockTransport`: in-memory multi-node virtual transport for fake-network integration tests.
+
+Changing an agreed signature requires updating `src/shared/`, `tests/contracts.test.cjs`, and notifying affected task owners.
 
 ## Deferred architecture changes
 
