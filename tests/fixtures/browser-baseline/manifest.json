@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "b33349584bdc7d446a0a8ec26cfbbaf06bf7dbd3",
+  "htmlSha256": "e5b5a6746bcc409902978a0ef469b5bff63fff4359157d6a62dd4713db8b4e75",
+  "toolsSha256": "5531b117fde01f4e3234c9c3e11084d7197eb6a07adb58e621ec020ba275d4fd",
+  "browser": "Google Chrome",
+  "installedBundleVersion": "155.0.8059.85",
+  "versionEvidence": "Application Info.plist; running build not separately queried",
+  "macOS": "26.6.2",
+  "url": "http://127.0.0.1:5173/putt-pals.html",
+  "captureMethod": "Unedited native browser-window screenshots through Computer Use; real WebGL, no test hooks",
+  "viewport": "Native window captures; CSS viewport and device scale not measured",
+  "visualComparison": "Manual references; not seeded pixel-diff goldens",
+  "captures": [
+    {
+      "file": "01-landing.jpg",
+      "description": "Landing screen",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 315253,
+      "sha256": "b75eb830fe2f1ea4e4f13da11c46f2be93125756568d4cd2970249f9b81c86a0"
+    },
+    {
+      "file": "02-solo-lobby.jpg",
+      "description": "Solo lobby, synthetic name Baseline, Standard mode",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 248147,
+      "sha256": "68e1fbe9df34c56740a8acbb5a8d4528f833ba530205c953925803b751572a38"
+    },
+    {
+      "file": "03-course-picker.jpg",
+      "description": "Six starter courses and map pars",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 467827,
+      "sha256": "86c18236b6629ae0d6697aef7ab275c0ccb6c9a70ce30223cb98d091900dd921"
+    },
+    {
+      "file": "04-switchback-ball-camera.jpg",
+      "description": "Switchback Garden putt 1, Ball cam, zero strokes",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 680343,
+      "sha256": "219fb4e84b6a644b499158ab6a4b1839a39131e4a5625aa5fe319bf277078d24"
+    },
+    {
+      "file": "05-switchback-hole-camera.jpg",
+      "description": "Switchback Garden putt 1, Hole view, zero strokes",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 541776,
+      "sha256": "d6ced6fe6f38179304a29cf7dcccceab9bc9feeb1bf4152823cf5c6c8a846970"
+    },
+    {
+      "file": "06-switchback-world-camera.jpg",
+      "description": "Switchback Garden putt 1, World view, zero strokes",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 462085,
+      "sha256": "9e966fe2cf5666d5abc044b78737f9f0c71c7d276bbb730a645e1d58f4eba8d8"
+    },
+    {
+      "file": "07-live-scorecard.jpg",
+      "description": "Live scorecard after a real pointer-driven stroke; not a sink",
+      "format": "JPEG",
+      "width": 3024,
+      "height": 1900,
+      "bytes": 482341,
+      "sha256": "ceb449ba44e82d7f47353863d186092669d30b8d9c1016df6809fc45d18aa451"
+    }
+  ],
+  "observations": {
+    "shot": "Pointer drag changed strokes and live total from 0 to 1; no successful sink claimed",
+    "cameras": "Ball cam, Hole view and World view selected through UI",
+    "scorecard": "Card opened a live paper scorecard; Escape closed it",
+    "settings": "Sound and Quality labels toggled Off/Low and were restored On/High",
+    "limitations": [
+      "Attempted mode-menu selection did not change Standard mode; no real-browser practice capture",
+      "Post-reload blank content was observed; later native capture failed with ScreenCaptureKit -3812; cause unresolved",
+      "No real WebRTC, forced TURN, complete tournament, audio quality, console-error audit or measured performance claim"
+    ]
+  }
+}

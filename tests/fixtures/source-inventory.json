@@ -1,0 +1,1709 @@
+{
+  "schemaVersion": 1,
+  "evidence": "source metadata and headless simulation; no real-browser execution",
+  "htmlSha256": "e5b5a6746bcc409902978a0ef469b5bff63fff4359157d6a62dd4713db8b4e75",
+  "toolsSha256": "5531b117fde01f4e3234c9c3e11084d7197eb6a07adb58e621ec020ba275d4fd",
+  "libraries": [
+    {
+      "name": "three",
+      "version": "0.128.0",
+      "revision": "128",
+      "license": "MIT",
+      "evidence": "runtime THREE.REVISION and embedded SPDX header",
+      "bytes": 603447,
+      "sha256": "ba0c6cb529517d7e286dadcd68d37ff5220aa638e4ac2cd7fcb316aae580924d",
+      "upstreamByteIdentityVerified": false
+    },
+    {
+      "name": "peerjs",
+      "version": "1.5.4",
+      "license": "MIT",
+      "evidence": "package metadata embedded in bundle",
+      "bytes": 92867,
+      "sha256": "7f13b0bcec0318369506f6b84afee3c6187ed382602fc09e7b10ad8cd1e06c99",
+      "upstreamByteIdentityVerified": false
+    }
+  ],
+  "starters": [
+    0,
+    8,
+    20,
+    21,
+    5,
+    19
+  ],
+  "constants": {
+    "R": 5,
+    "CUP": 15,
+    "CUP_MIN": 8,
+    "K_TURF": 0.75,
+    "POWER": 900
+  },
+  "courses": [
+    {
+      "index": 0,
+      "name": "Switchback Garden",
+      "starter": true,
+      "puttCount": 6,
+      "par": 12,
+      "limitSeconds": 120,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 12,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 1,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            80,
+            80
+          ],
+          "hole": [
+            240,
+            80
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        },
+        {
+          "index": 1,
+          "tee": [
+            320,
+            210
+          ],
+          "hole": [
+            480,
+            80
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        },
+        {
+          "index": 2,
+          "tee": [
+            560,
+            146
+          ],
+          "hole": [
+            720,
+            146
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        },
+        {
+          "index": 3,
+          "tee": [
+            80,
+            290
+          ],
+          "hole": [
+            240,
+            420
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        },
+        {
+          "index": 4,
+          "tee": [
+            320,
+            356
+          ],
+          "hole": [
+            480,
+            356
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        },
+        {
+          "index": 5,
+          "tee": [
+            560,
+            290
+          ],
+          "hole": [
+            720,
+            420
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 120,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Clover Crossing",
+      "starter": false,
+      "puttCount": 1,
+      "par": 3,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 2,
+        "w": 2,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 1,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            95,
+            250
+          ],
+          "hole": [
+            700,
+            250
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Moonshot",
+      "starter": false,
+      "puttCount": 1,
+      "par": 3,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 2,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 1,
+        "pl": 0,
+        "rp": 1,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            250
+          ],
+          "hole": [
+            690,
+            250
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Portal Archipelago",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 2,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            100,
+            100
+          ],
+          "hole": [
+            690,
+            400
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Clockwork Maze",
+      "starter": false,
+      "puttCount": 1,
+      "par": 6,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 3,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 2,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            80,
+            80
+          ],
+          "hole": [
+            720,
+            420
+          ],
+          "par": 6,
+          "penalty": 3,
+          "limitSeconds": 300,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Cyclone Ring",
+      "starter": true,
+      "puttCount": 6,
+      "par": 23,
+      "limitSeconds": 210,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 14,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 4,
+        "tornado": 4,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            76,
+            216
+          ],
+          "hole": [
+            244,
+            76
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 14
+        },
+        {
+          "index": 1,
+          "tee": [
+            316,
+            146
+          ],
+          "hole": [
+            484,
+            196
+          ],
+          "par": 3,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 9
+        },
+        {
+          "index": 2,
+          "tee": [
+            556,
+            76
+          ],
+          "hole": [
+            724,
+            216
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 11
+        },
+        {
+          "index": 3,
+          "tee": [
+            76,
+            426
+          ],
+          "hole": [
+            244,
+            286
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 11
+        },
+        {
+          "index": 4,
+          "tee": [
+            316,
+            286
+          ],
+          "hole": [
+            484,
+            426
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 10
+        },
+        {
+          "index": 5,
+          "tee": [
+            556,
+            426
+          ],
+          "hole": [
+            724,
+            286
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 210,
+          "cupRadius": 8
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Skybridge",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 2,
+        "rp": 1,
+        "pd": 0,
+        "tp": 0,
+        "fan": 1,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            250
+          ],
+          "hole": [
+            690,
+            250
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Pinwheel",
+      "starter": false,
+      "puttCount": 1,
+      "par": 3,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 2,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 1,
+        "tornado": 0,
+        "movers": 1,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            100,
+            250
+          ],
+          "hole": [
+            700,
+            250
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Dune Serpent",
+      "starter": true,
+      "puttCount": 6,
+      "par": 15,
+      "limitSeconds": 150,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 14,
+        "sand": 6,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            76,
+            216
+          ],
+          "hole": [
+            244,
+            76
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 1,
+          "tee": [
+            316,
+            76
+          ],
+          "hole": [
+            484,
+            216
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 2,
+          "tee": [
+            556,
+            146
+          ],
+          "hole": [
+            724,
+            146
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 3,
+          "tee": [
+            76,
+            426
+          ],
+          "hole": [
+            244,
+            426
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 4,
+          "tee": [
+            316,
+            286
+          ],
+          "hole": [
+            484,
+            426
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 5,
+          "tee": [
+            556,
+            426
+          ],
+          "hole": [
+            724,
+            286
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Twin Peaks",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 4,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            80,
+            250
+          ],
+          "hole": [
+            710,
+            250
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Wind Tunnel",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 1,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 2,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            90
+          ],
+          "hole": [
+            710,
+            410
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Fortress Spiral",
+      "starter": false,
+      "puttCount": 1,
+      "par": 6,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 5,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            90
+          ],
+          "hole": [
+            400,
+            250
+          ],
+          "par": 6,
+          "penalty": 3,
+          "limitSeconds": 300,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Bounce Harbor",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 2,
+        "pl": 0,
+        "rp": 0,
+        "pd": 2,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            250
+          ],
+          "hole": [
+            700,
+            250
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Hourglass",
+      "starter": false,
+      "puttCount": 1,
+      "par": 3,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 1,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 1,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            100,
+            250
+          ],
+          "hole": [
+            700,
+            250
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Thunder Basin",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 2,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 2,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            250
+          ],
+          "hole": [
+            710,
+            250
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Portal Labyrinth",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 3,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 2,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            90
+          ],
+          "hole": [
+            710,
+            410
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Crescent Coast",
+      "starter": false,
+      "puttCount": 1,
+      "par": 5,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 1,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 1,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            100,
+            90
+          ],
+          "hole": [
+            700,
+            90
+          ],
+          "par": 5,
+          "penalty": 3,
+          "limitSeconds": 300,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Elevator Alley",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 1,
+        "rp": 1,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 1,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            90,
+            250
+          ],
+          "hole": [
+            710,
+            250
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Comet Run",
+      "starter": false,
+      "puttCount": 1,
+      "par": 4,
+      "limitSeconds": null,
+      "geometryCounts": {
+        "tiles": 3,
+        "w": 0,
+        "sand": 0,
+        "ice": 0,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 1,
+        "pd": 0,
+        "tp": 1,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 2
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            80,
+            250
+          ],
+          "hole": [
+            700,
+            400
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 240,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "Grand Finale",
+      "starter": true,
+      "puttCount": 6,
+      "par": 24,
+      "limitSeconds": 240,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 16,
+        "sand": 0,
+        "ice": 2,
+        "slime": 3,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 2,
+        "tp": 2,
+        "fan": 3,
+        "tornado": 5,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            76,
+            216
+          ],
+          "hole": [
+            244,
+            76
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 10
+        },
+        {
+          "index": 1,
+          "tee": [
+            316,
+            146
+          ],
+          "hole": [
+            486,
+            146
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 10
+        },
+        {
+          "index": 2,
+          "tee": [
+            556,
+            76
+          ],
+          "hole": [
+            724,
+            216
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 9
+        },
+        {
+          "index": 3,
+          "tee": [
+            76,
+            286
+          ],
+          "hole": [
+            244,
+            426
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 8
+        },
+        {
+          "index": 4,
+          "tee": [
+            316,
+            426
+          ],
+          "hole": [
+            484,
+            296
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 8
+        },
+        {
+          "index": 5,
+          "tee": [
+            556,
+            286
+          ],
+          "hole": [
+            724,
+            426
+          ],
+          "par": 4,
+          "penalty": 4,
+          "limitSeconds": 240,
+          "cupRadius": 8
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "Frost Hollow",
+      "starter": true,
+      "puttCount": 6,
+      "par": 18,
+      "limitSeconds": 150,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 15,
+        "sand": 0,
+        "ice": 6,
+        "slime": 0,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 0,
+        "tp": 0,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            76,
+            216
+          ],
+          "hole": [
+            244,
+            76
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 1,
+          "tee": [
+            316,
+            76
+          ],
+          "hole": [
+            484,
+            216
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 2,
+          "tee": [
+            556,
+            146
+          ],
+          "hole": [
+            724,
+            146
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 12
+        },
+        {
+          "index": 3,
+          "tee": [
+            76,
+            426
+          ],
+          "hole": [
+            244,
+            426
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        },
+        {
+          "index": 4,
+          "tee": [
+            316,
+            286
+          ],
+          "hole": [
+            484,
+            426
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 11
+        },
+        {
+          "index": 5,
+          "tee": [
+            556,
+            426
+          ],
+          "hole": [
+            724,
+            286
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 150,
+          "cupRadius": 15
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "Slime Springs",
+      "starter": true,
+      "puttCount": 6,
+      "par": 19,
+      "limitSeconds": 180,
+      "geometryCounts": {
+        "tiles": 1,
+        "w": 16,
+        "sand": 0,
+        "ice": 0,
+        "slime": 5,
+        "pit": 0,
+        "pl": 0,
+        "rp": 0,
+        "pd": 2,
+        "tp": 4,
+        "fan": 0,
+        "tornado": 0,
+        "movers": 0,
+        "q": 0
+      },
+      "putts": [
+        {
+          "index": 0,
+          "tee": [
+            76,
+            216
+          ],
+          "hole": [
+            226,
+            76
+          ],
+          "par": 2,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 8
+        },
+        {
+          "index": 1,
+          "tee": [
+            316,
+            146
+          ],
+          "hole": [
+            486,
+            146
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        },
+        {
+          "index": 2,
+          "tee": [
+            556,
+            146
+          ],
+          "hole": [
+            731,
+            146
+          ],
+          "par": 4,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 15
+        },
+        {
+          "index": 3,
+          "tee": [
+            76,
+            286
+          ],
+          "hole": [
+            244,
+            426
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 14
+        },
+        {
+          "index": 4,
+          "tee": [
+            316,
+            426
+          ],
+          "hole": [
+            484,
+            296
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 9
+        },
+        {
+          "index": 5,
+          "tee": [
+            556,
+            286
+          ],
+          "hole": [
+            724,
+            426
+          ],
+          "par": 3,
+          "penalty": 3,
+          "limitSeconds": 180,
+          "cupRadius": 12
+        }
+      ]
+    }
+  ],
+  "simulationReferences": {
+    "timestepSeconds": 0.004166666666666667,
+    "conditions": "Centered release, no power-ups, headless hazard time frozen at zero; samples every 240 ticks and on completion. Floating-point samples are reference evidence, not a cross-platform bitwise guarantee.",
+    "shots": [
+      {
+        "map": 0,
+        "putt": 0,
+        "shot": {
+          "deg": 31,
+          "power": 0.8
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 80,
+            "y": 80,
+            "z": 0,
+            "vx": 617.1604565055209,
+            "vy": 370.827413935239,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 240,
+            "x": 198.88419139928095,
+            "y": 172.61230534950835,
+            "z": 0,
+            "vx": 160.0185557900209,
+            "vy": -117.25469327791296,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 480,
+            "x": 245.76148528898898,
+            "y": 100.25354612005033,
+            "z": 0,
+            "vx": -43.405821418151554,
+            "vy": -38.787698879699974,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 562,
+            "x": 240,
+            "y": 80,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      },
+      {
+        "map": 8,
+        "putt": 0,
+        "shot": {
+          "deg": 22.5,
+          "power": 1
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 76,
+            "y": 216,
+            "z": 0,
+            "vx": 831.4915792601581,
+            "vy": 344.4150891285808,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 240,
+            "x": 250.7824035445232,
+            "y": 102.31154299334403,
+            "z": 0,
+            "vx": 115.13704665968581,
+            "vy": -58.160153973201496,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 350,
+            "x": 244,
+            "y": 76,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      },
+      {
+        "map": 20,
+        "putt": 0,
+        "shot": {
+          "deg": 19,
+          "power": 0.75
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 76,
+            "y": 216,
+            "z": 0,
+            "vx": 638.2250385295389,
+            "vy": 219.75850425858073,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 240,
+            "x": 101.99699453120108,
+            "y": 97.90649078413544,
+            "z": 0,
+            "vx": 187.2090246441664,
+            "vy": -116.91145775963003,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 480,
+            "x": 218.34196567201872,
+            "y": 71.88918775639456,
+            "z": 0,
+            "vx": 64.02176999592244,
+            "vy": 32.784746075662646,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 555,
+            "x": 244,
+            "y": 76,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      },
+      {
+        "map": 21,
+        "putt": 0,
+        "shot": {
+          "deg": 15.5,
+          "power": 1
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 76,
+            "y": 216,
+            "z": 0,
+            "vx": 867.2674078877607,
+            "vy": 240.51453847043115,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 240,
+            "x": 223.93481132907914,
+            "y": 65.82768968518121,
+            "z": 0,
+            "vx": 150.81554943961268,
+            "vy": -75.85651232112639,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 480,
+            "x": 231.1514693477924,
+            "y": 76.40884746923871,
+            "z": -0.8739818819470074,
+            "vx": -49.02552269519735,
+            "vy": 19.04938904242629,
+            "vz": -29.72301103528292,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 498,
+            "x": 226,
+            "y": 76,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      },
+      {
+        "map": 5,
+        "putt": 0,
+        "shot": {
+          "deg": 31,
+          "power": 1
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 76,
+            "y": 216,
+            "z": 0,
+            "vx": 771.4505706319011,
+            "vy": 463.5342674190487,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 217,
+            "x": 244,
+            "y": 76,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      },
+      {
+        "map": 19,
+        "putt": 0,
+        "shot": {
+          "deg": 31.5,
+          "power": 0.85
+        },
+        "samples": [
+          {
+            "tick": 0,
+            "x": 76,
+            "y": 216,
+            "z": 0,
+            "vx": 652.2697257308806,
+            "vy": 399.7114020077008,
+            "vz": 0,
+            "str": 1,
+            "mode": "play",
+            "moving": true,
+            "over": null
+          },
+          {
+            "tick": 222,
+            "x": 244,
+            "y": 76,
+            "z": -31,
+            "vx": 0,
+            "vy": 0,
+            "vz": 0,
+            "str": 1,
+            "mode": "sunk",
+            "moving": false,
+            "over": false
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -6,8 +6,8 @@ Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE aft
 
 | ID | Status | Owner | Depends on | Scope / owned files | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| W1 | REVIEW | Codex / root | User workflow request | GitHub workflow docs, templates and baseline CI | Local validation passed; commit/push approved; hosted CI acceptance pending |
-| B1 | PAUSED | Codex / root | Explicit resume/reassignment; permitted browser environment | Baseline inventory and browser references; tests/fixtures | Behavior inventory, exact library versions/licenses, screenshots and observed limitations |
+| W1 | DONE | Codex / root | Approved bootstrap commit/push | GitHub workflow docs, templates and baseline CI | b333495 pushed; hosted Baseline CI run 40247672160 succeeded |
+| B1 | REVIEW | Codex / root | Resumed by user; pending acceptance/integration | Baseline inventory and browser references; tests/fixtures | Source inventory, six traces, seven Chrome screenshots, limitations recorded |
 | B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | DONE | Codex / root | Authorized 2026-10-25 | Integration owner: manifests, lockfile, dev/build/test configs | Lockfile reinstall, Vite build/HTTP checks, physics and both smoke suites passed |
 | C1 | TODO | — | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md | Approved simulation, session, transport, snapshot and event contracts; matching mocks |
@@ -74,6 +74,12 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 - Scope: inventory current behavior and embedded dependency evidence; capture real desktop browser reference views and observed limitations. No gameplay or runtime dependency changes. Commit only after user approval.
 - State: PAUSED by the user while defining the GitHub workflow. No baseline files or screenshots were written. Local Vite server stopped. Firefox selection returned “Computer Use permissions are not granted”; resume needs a permitted browser environment and coordinator reassignment/confirmation.
 - Source inspection only: embedded Three.js r128 / MIT and PeerJS 1.5.4 / MIT metadata found; maintained inventory artifacts and browser evidence remain unfinished.
+- Resumed: user requested finishing the task. Working branch agent/b1-browser-baseline, exclusive working directory. Owned paths additionally include scripts/inventory-baseline.cjs and tests/fixtures/source-inventory.json. Browser access now works after the initial permission/time-out failures. No GitHub issue exists yet; this remains the documented local bootstrap assignment.
+- Changes: docs/BASELINE.md behavior/evidence inventory, docs/THIRD_PARTY.md embedded dependency provenance, generated source inventory with 22 courses/36 starter putts and six one-stroke reference traces, and seven unedited Chrome reference screenshots with a source-hashed manifest.
+- Coordinator-owned README.md and docs/GITHUB_WORKFLOW.md updated with the baseline handoff and confirmed hosted CI outcome.
+- Browser evidence: solo entry, six-card selection, actual Switchback Garden rendering, all three cameras, pointer shot changing strokes 0 to 1, live scorecard and Escape, sound/quality label toggles and restore. User explicitly selected Chrome; Firefox is not claimed as tested.
+- Limitations: practice/tournament completion, real WebRTC/relay, console audit, audio quality and performance remain unverified in the real browser. Blank content after reload and a later ScreenCaptureKit -3812 error are recorded without assigning a product cause.
+- Verification: node scripts/inventory-baseline.cjs --write and --check passed; all six representative traces sunk in one stroke; screenshot JPEG formats, dimensions and hashes recorded and representative images visually inspected. Game/tools hashes match B2; no runtime/dependency changes. User approved committing and pushing agent/b1-browser-baseline; PR creation, integration and merge approval remain pending. C1 still awaits B1 acceptance.
 
 ### W1 — GitHub workflow preparation
 
@@ -82,6 +88,7 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 - Scope: explain GitHub assignments, isolated branches, PRs, ownership, review/merge gates and recovery; provide task/PR templates and baseline CI definition. No remote issues, pushes, comments, settings changes or agent dispatch.
 - Handoff: user approved committing and pushing the workflow files. Hosted CI acceptance remains pending; branch rules, task issue creation and agent dispatch are separate setup steps. This bootstrap uses the explicitly approved direct push; subsequent tasks follow the documented PR workflow.
 - Verification: Ruby YAML parsing passed for the issue form and CI definition; issue field IDs are unique, baseline-ci exists, and all CI npm run commands resolve to existing scripts. npm run check, npm run build and git diff --check passed. This is local syntax/consistency validation, not a hosted Actions run or GitHub form-schema validation. Existing physics/smoke suites were not repeated because their code and commands are unchanged from B3.
+- Hosted follow-up: commit b333495 was pushed under explicit bootstrap approval; Baseline CI run 40247672160 completed successfully. Branch protection, task issue creation and agent dispatch remain separate, unperformed setup steps.
 
 Coordinator bootstrap assignment template (use the GitHub issue form once available):
 

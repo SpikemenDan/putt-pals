@@ -4,7 +4,7 @@ Last updated: 2026-10-25.
 
 ## Current objective
 
-B2 is committed as 3bfaebd and B3 as 216cd75. B1 was started locally and then paused at the user's request while preparing a GitHub-based multi-agent workflow. The current task is W1: local workflow documentation, issue/PR templates and baseline CI definition. No GitHub issues, PRs, pushes, settings changes or agent dispatch have been performed for W1. The game HTML remains unchanged.
+B2 is committed as 3bfaebd, B3 as 216cd75 and W1 as b333495. W1 is pushed and its hosted CI passed. The user resumed B1 and selected Chrome for browser verification. B1 artifacts are ready for review on agent/b1-browser-baseline; the user approved their commit and branch push. Integration and merge approval remain pending. Game HTML, simulation tools, dependencies and CI configuration are unchanged by B1.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-B2 and B3 are complete. Review W1's workflow files, obtain commit approval, and authorize remote setup separately. Resume/reassign B1 in a permitted browser environment; it remains required before C1 shared contracts and extraction. Do not launch concurrent extraction before C1 interfaces are accepted. Preserve the original HTML until parity gates pass.
+Review B1's docs/BASELINE.md, source inventory and Chrome references, including disclosed limitations. Obtain approval before committing/publishing, and integrate B1 before assigning C1 shared contracts. Do not launch concurrent extraction before C1 interfaces are accepted. Branch rules, GitHub task issues and agent dispatch remain separate setup actions. Preserve the original HTML until parity gates pass.
 
 ## B2 verification — 2026-10-25
 
@@ -72,6 +72,17 @@ B2 and B3 are complete. Review W1's workflow files, obtain commit approval, and 
 - GitHub issues become the live owner/status record once created. TASKS.md is a coordinator-maintained roadmap/history snapshot; PROJECT_STATUS.md records accepted integration state. This avoids competing edits by workers.
 - User approved committing and pushing W1's files. Hosted CI acceptance remains pending. Branch protection, task issue creation and agent dispatch are separate setup steps and have not been performed. This explicit bootstrap approval covers a direct push; subsequent tasks follow the PR workflow.
 - Local W1 verification: YAML syntax parsed for both YAML files; CI job name, unique form field IDs and npm script references checked. npm run check, npm run build and git diff --check passed. These checks do not establish GitHub schema acceptance or a hosted runner result; physics/smoke implementations were unchanged and their suites were not repeated.
+
+## B1 review handoff — 2026-10-25/26
+
+- User resumed B1 and explicitly requested Chrome after Firefox access problems. Seven unedited Chrome screenshots are saved under tests/fixtures/browser-baseline/ with a manifest containing source hashes, dimensions, capture context and limitations.
+- Real UI evidence: landing, solo lobby, six starter cards, actual rendered Switchback Garden, Ball/Hole/World cameras, one pointer-driven stroke, live scorecard, Escape close and sound/quality control labels. Sound and quality were restored to On/High. No successful sink or full browser game completion is claimed.
+- docs/BASELINE.md inventories implemented behavior with source/jsdom/Chrome evidence separated. docs/THIRD_PARTY.md records Three.js r128 (0.128.0 inferred)/MIT and PeerJS 1.5.4/MIT source metadata and attribution limits.
+- scripts/inventory-baseline.cjs generates/checks tests/fixtures/source-inventory.json: source/library hashes, all 22 course definitions' rule/geometry inventory and six representative one-stroke traces using real launch/step functions. Headless trace conditions are explicit and not a real input replay.
+- Commands: node scripts/inventory-baseline.cjs --write; node scripts/inventory-baseline.cjs --check; node --check scripts/inventory-baseline.cjs; git diff --check. Passed. No dependency or game/tool changes required.
+- Chrome showed blank content after reload; HTTP still served the game, and a later native capture failed with ScreenCaptureKit -3812. Root cause unresolved. Practice/results/tournament completion, console audit, audio quality, actual performance and real WebRTC/TURN are not browser-verified by B1.
+- Hosted Baseline CI run 40247672160 succeeded for b333495: https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160. This verifies W1's existing headless/build workflow on GitHub, not the new B1 artifacts.
+- Status: REVIEW, not DONE; user approved the B1 commit and branch push. PR creation, integration and merge approval remain pending. No GitHub issues/PRs/settings changes or agent dispatch performed for B1.
 
 ## Update format for future owners
 

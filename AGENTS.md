@@ -12,7 +12,7 @@
 
 ## Scope and authority
 
-The user authorized tasks B2, B3 and then B1 on 2026-10-25. B2/B3 are committed. B1 is now paused while the requested GitHub workflow files are prepared. Do not resume it or execute other roadmap tasks merely because they appear in the plan.
+The user authorized tasks B2, B3 and then B1 on 2026-10-25. B2/B3 are committed, and the GitHub workflow files are pushed as b333495. The user has now resumed B1 on branch agent/b1-browser-baseline. Do not execute other roadmap tasks merely because they appear in the plan.
 
 Obtain user approval before commits under the current preference. Remote writes (push, issue/PR creation, comments), merges, deployments and paid provisioning require applicable user authorization; document bounded delegated actions in an assignment and do not ask again when already authorized. These local workflow files do not grant that authorization or automatically launch agents.
 
