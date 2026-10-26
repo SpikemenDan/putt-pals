@@ -11,7 +11,7 @@ Statuses: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. Future tasks are DONE aft
 | B2 | DONE | Codex / root | Authorized 2026-10-25 | Legacy solver correction; tools.js and regression harness | Real launch reused; 36/36 starter putts robust; source-hashed results recorded |
 | B3 | DONE | Codex / root | Authorized 2026-10-25 | Integration owner: manifests, lockfile, dev/build/test configs | Lockfile reinstall, Vite build/HTTP checks, physics and both smoke suites passed |
 | C1 | REVIEW | Codex / root | B1, B2, B3 | Integration owner: src/shared, ARCHITECTURE.md, package.json, tests/contracts.test.cjs | All contracts implemented in src/shared, tests/contracts.test.cjs passing (9/9 suites), ARCHITECTURE.md updated |
-| S1 | TODO | — | C1 | src/simulation | Headless imported simulation matches fixtures; deterministic time input; no browser dependencies |
+| S1 | REVIEW | Codex / root | C1 | src/simulation, tests/simulation.test.cjs, package.json | Headless simulation matches fixtures bitwise; 6 reference traces and all mechanic chambers pass |
 | R1 | TODO | — | C1 | src/render, src/camera | Extracted renderer preserves reference views; explicit coordinate transform and disposal |
 | U1 | TODO | — | C1 | src/ui, src/input | React screens and desktop controls work with mock snapshots/commands |
 | D1 | TODO | — | S1 | src/courses, tools/cli | Schemas pass for 22 maps; CLI imports simulation; generated arena parity and stale-metadata detection |
@@ -81,6 +81,32 @@ After C1: S1, R1, U1 and A1 can proceed against approved contracts. Assign only 
 - Limitations: practice/tournament completion, real WebRTC/relay, console audit, audio quality and performance remain unverified in the real browser. Blank content after reload and a later ScreenCaptureKit -3812 error are recorded without assigning a product cause.
 - Verification: node scripts/inventory-baseline.cjs --write and --check passed; all six representative traces sunk in one stroke; screenshot JPEG formats, dimensions and hashes recorded and representative images visually inspected. Game/tools hashes match B2; no runtime/dependency changes. User approved committing and pushing agent/b1-browser-baseline; PR creation, integration and merge approval remain pending. C1 still awaits B1 acceptance.
 
+
+
+### S1 — 2026-10-25
+
+- Owner: Codex / root, worker / integration owner.
+- Branch/worktree: agent/s1-simulation.
+- Owned files: src/simulation/*, tests/simulation.test.cjs, package.json, TASKS.md, PROJECT_STATUS.md.
+- Scope: Extract pure headless simulation engine from legacy HTML closures into `src/simulation/`. Pure JavaScript physics, fixed 240Hz stepping, explicit hazard time injection, domain events, and zero browser/DOM/renderer dependencies.
+- Changes:
+  - Implemented `src/simulation/physics.js`: pure collision routines for inside, rampHeight, surfaceHeight, contactHeight, cupOf, cupCollision, bounce, movingRect, sinkBall, outOfBounds, stopBall, and stepBall.
+  - Implemented `src/simulation/engine.js`: `SimulationEngine` class managing players, step progression, event collection, snapshots, and disposal.
+  - Implemented `src/simulation/index.js`: unified re-exports for the simulation module.
+  - Added test suite `tests/simulation.test.cjs` verifying:
+    - 9 launch angle/power combinations.
+    - Bitwise sample parity against the 6 baseline traces in `tests/fixtures/source-inventory.json` (courses 0, 8, 20, 21, 5, 19).
+    - 4 mechanic chambers (fan, teleporter, jump pad, tornado) in the 6-chamber arena.
+    - Exact surface roll distances (turf=261.1, sand=75.0, ice=1699.7, slime=43.8).
+    - SimulationEngine lifecycle, snapshots, settlement, and disposal guards.
+  - Added `test:simulation` script in `package.json` and included in `npm test`.
+- Verification:
+  - `npm run test:simulation`: all parity checks passed with 100% bitwise trajectory match.
+  - `npm run test:contracts`: all 9 contract suites passed.
+  - `npm run check`: passed.
+  - `npm run build`: passed.
+- Integration notes:
+  - Simulation is ready for downstream tasks: D1 (Courses schema/CLI imports), L1 (Session lifecycle state machine), and I1 (Runtime integration).
 
 ### C1 — 2026-10-25
 

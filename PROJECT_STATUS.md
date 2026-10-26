@@ -106,3 +106,16 @@ Append the date, task ID, concrete changes, exact verification commands/results,
 - `package.json`: added `test:contracts` script and integrated it into `npm test`.
 - `ARCHITECTURE.md`: updated with full contract specifications.
 - Regression verification: `npm run check`, `npm run build`, `npm run test:physics`, `npm run test:smoke`, `npm run test:multiplayer`, and `npm test` all passed with zero errors.
+
+## S1 verification — 2026-10-25
+
+- Extracted headless simulation engine in `src/simulation/`:
+  - `physics.js`: pure math and dynamics functions without global closures or browser APIs.
+  - `engine.js`: `SimulationEngine` managing step loops, domain events, snapshots, and player states.
+  - `index.js`: unified module interface.
+- Bitwise parity verified against legacy fixtures:
+  - All 6 starter reference traces from `tests/fixtures/source-inventory.json` matched at every recorded tick ($t=0, 240, 480$) and identical sink ticks ($562, 350, 555, 498, 217, 222$).
+  - All 4 mechanic arena chambers (fan, teleporter, jump pad, tornado) verified to sink when active and fail when stripped.
+  - All surface drag roll distances matched legacy values exactly ($turf=261.1, sand=75.0, ice=1699.7, slime=43.8$).
+- Added `tests/simulation.test.cjs` and `npm run test:simulation`.
+- All checks (`npm run check`, `npm run build`, `npm run test:contracts`, `npm run test:simulation`) pass with zero errors.
