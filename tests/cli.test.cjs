@@ -18,12 +18,53 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const { createCourseData, validateCourseGeometry, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
+  const arenaDataModule = await import(pathToFileURL(path.join(root, 'src/courses/arena-specs.js')).href);
   let failed = 0;
   const run = (name, fn) => {
     try { fn(); console.log('PASS:', name); }
     catch (error) { failed++; console.log('FAIL:', name, '\n  ', error.message); }
   };
 
+  run('check accepts all maps and rejects geometry/rule mismatches and unplayable positions', () => {
+    assert.equal(commands.runCheck(data).code, 0);
+    for (const mutate of [d => { d.definitions[0].putts[0].tee = [-100, -100]; },
+      d => { d.definitions[0].pit.push([70, 70, 30, 30]); },
+      d => { d.definitions[0].putts[0].par += 1; },
+      d => { d.definitions[0].putts[0].cup = 8; },
+      d => { d.definitions[0].putts.pop(); },
+      d => { delete d.definitions[10]; delete d.rules[10]; },
+      d => { d.definitions[0].par += 1; },
+      d => { d.rules[0].putts[0].limitSeconds += 1; },
+      d => { d.definitions[0].hole = [NaN, 1]; d.definitions[0].putts[0].hole = [NaN, 1]; }]) {
+      const changed = structuredClone(data);
+      mutate(changed);
+      assert.equal(commands.runCheck(changed).code, 1);
+    }
+    assert.equal(commands.runCheck({ definitions: null, rules: [] }).code, 1);
+    assert.equal(commands.runCheck({ definitions: [], rules: [{ putts: 'bad' }] }).code, 1);
+  });
+  run('rank labels historical counts and never certifies current difficulty', () => {
+    const out = commands.runRank(data.rules);
+    assert.equal(out.code, 2);
+    assert.match(out.lines.join('\n'), /HISTORICAL COUNTS/);
+    assert.match(out.lines.join('\n'), /total 5213/);
+    assert.equal(out.lines.filter(line => /^\d\./.test(line)).length, 6);
+    const { arenaSourceData } = arenaDataModule;
+    for (const mutate of [rows => { rows.pop(); }, rows => { rows[0][1] = 'wrong'; },
+      rows => { rows[0][2][0] = -1; }, rows => { rows[1][2] = Array(6).fill(9999); }]) {
+      const rows = structuredClone(arenaSourceData.ladder);
+      mutate(rows);
+      assert.equal(commands.runRank(data.rules, rows).code, 1);
+    }
+  });
+  run('process: check succeeds and historical rank exits 2', () => {
+    const check = cli('check');
+    assert.equal(check.status, 0, check.stderr);
+    assert.match(check.stdout, /CHECK OK: 22 courses/);
+    const rank = cli('rank');
+    assert.equal(rank.status, 2, rank.stderr);
+    assert.match(rank.stdout, /Current difficulty remains unverified/);
+  });
   run('all six arena transforms and resolved rules match legacy generation exactly', () => {
     const source = fs.readFileSync(path.join(root, 'tools.js'), 'utf8');
     const marker = 'const[,,cmd,...args]=process.argv;';
@@ -102,7 +143,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
       fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
       const entry = path.join(temp, 'tools/cli/main.mjs');
-      for (const args of [['list'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
+      for (const args of [['list'], ['check'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
         const out = spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', cwd: temp });
         assert.equal(out.status, 0, out.stdout + out.stderr);
         if (args[0] === 'shot') assert.match(out.stdout, /SUNK/);

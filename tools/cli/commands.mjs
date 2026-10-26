@@ -1,3 +1,4 @@
+export { runRank } from './rank.mjs';
 import { solveCourse } from './solver.mjs';
 /**
  * CLI command logic. Every command returns { code, lines } and never prints,
@@ -5,7 +6,7 @@ import { solveCourse } from './solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena } from '../../src/courses/index.js';
+import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions } from '../../src/courses/index.js';
 
 /** Safety cap: 120 simulated seconds at 240 Hz. */
 export const MAX_TICKS = 240 * 120;
@@ -91,9 +92,19 @@ export function runArena(name) {
   } catch (error) { return fail(error.message); }
 }
 
+/** Geometry, playable positions and resolved-rule parity for all imported maps. */
+export function runCheck({ definitions, rules }) {
+  const result = validateCourseDefinitions(definitions, rules);
+  return result.valid
+    ? { code: 0, lines: [`CHECK OK: ${definitions.length} courses; geometry, playable tee/cup positions and resolved rules agree`] }
+    : { code: 1, lines: ['CHECK FAILED', ...result.errors.map(error => `  ${error}`)] };
+}
+
 export const USAGE = [
   'Usage: node tools/cli/main.mjs <command>',
   '  list                          list all courses',
+  '  check                         validate imported geometry, playable positions and rules',
+  '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
   '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',
