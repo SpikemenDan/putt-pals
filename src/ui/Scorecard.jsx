@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PLAYER_COLORS } from '../render/materials.js';
+import { PLAYER_COLORS } from '../shared/constants.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import styles from './Scorecard.module.css';

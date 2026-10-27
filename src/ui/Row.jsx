@@ -1,4 +1,4 @@
-import { PLAYER_COLORS } from '../render/materials.js';
+import { PLAYER_COLORS } from '../shared/constants.js';
 import styles from './Row.module.css';
 
 /** Legacy row(c, name, a, b, hd): colour dot, name and two right-aligned columns. */

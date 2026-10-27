@@ -50,6 +50,8 @@ jobs:
         run: npm run test:input
       - name: Check React screens, UI store and cleanup
         run: npm run test:ui
+      - name: Check the composed app flows, four clients and cleanup
+        run: npm run test:app
       - name: Check course catalog and stale metadata
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands

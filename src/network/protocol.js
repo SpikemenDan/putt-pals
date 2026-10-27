@@ -36,10 +36,16 @@ export function validCommand(e, isHost) {
     default: return true;
   }
 }
+/** Power-up aura shown on a ball ('' for none) and attacks that affect other players (I1). */
+export const PRESENCE_EFFECTS = Object.freeze(['', 'mag', 'steady', 'rew', 'rev', 'zany']);
+export const PRESENCE_ATTACKS = Object.freeze(['rev', 'zany']);
+const validFx = fx => record(fx) && keys(fx, ['id', 't']) && count(fx.id) && PRESENCE_ATTACKS.includes(fx.t);
 export function validPresence(p) {
-  return record(p) && keys(p, ['x', 'y', 'z', 'mode', 'strokes'])
+  return record(p) && keys(p, ['x', 'y', 'z', 'mode', 'strokes', 'effect', 'fx'])
     && [p.x, p.y, p.z].every(n => Number.isFinite(n) && Math.abs(n) <= 1000000)
-    && ['play', 'sunk', 'timeout', 'spectator'].includes(p.mode) && count(p.strokes);
+    && ['play', 'sunk', 'timeout', 'spectator'].includes(p.mode) && count(p.strokes)
+    && (p.effect === undefined || PRESENCE_EFFECTS.includes(p.effect))
+    && (p.fx === undefined || validFx(p.fx));
 }
 export function validSnapshot(s) {
   if (!record(s) || !['lobby', 'select', 'play', 'results'].includes(s.phase)
