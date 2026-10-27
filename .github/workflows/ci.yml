@@ -46,6 +46,10 @@ jobs:
         run: npm run test:audio
       - name: Check renderer and camera parity with the legacy scene
         run: npm run test:render
+      - name: Check desktop input parity with the legacy handlers
+        run: npm run test:input
+      - name: Check React screens, UI store and cleanup
+        run: npm run test:ui
       - name: Check course catalog and stale metadata
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands

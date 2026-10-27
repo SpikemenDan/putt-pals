@@ -1,0 +1,3 @@
+/* Legacy button.ghost and button.atk variants. */
+.ghost{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+.atk{background:#0aa6c9}

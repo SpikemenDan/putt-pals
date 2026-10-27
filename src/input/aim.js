@@ -1,0 +1,45 @@
+/**
+ * Shot aiming rules, ported verbatim from the legacy game.
+ *
+ * Deterministic sway: one fixed-frequency sine whose amplitude is spread(power).
+ * The offset is exactly 0 at every zero crossing, so releasing there gives a
+ * perfectly centred shot at any power. No randomness anywhere.
+ */
+
+/** Seconds per sway cycle. */
+export const SWAY_PERIOD = 1.4;
+export const SWAY_W = 2 * Math.PI / SWAY_PERIOD;
+/** Below this charge no aim guide is drawn (and the sway time is not refreshed). */
+export const GUIDE_MIN_CHARGE = 0.015;
+/** Below this charge a release cancels instead of shooting. */
+export const SHOT_MIN_CHARGE = 0.025;
+/** Pull distance (CSS px) for full power, capped by 36% of the canvas width. */
+export const FULL_PULL_PX = 260;
+/** Arrow keys and non-orbit drags rotate aim by this many radians per step/pixel factor. */
+export const AIM_STEP = 0.06;
+export const DRAG_RADIANS_PER_PX = 0.006;
+
+/** Angular spread (radians) at a power 0..1. */
+export function spread(power) { return 0.002 + 0.14 * Math.pow(power, 2.6); }
+
+/** Sway offset (radians) at a power and a time in seconds. */
+export function sway(power, time) { return spread(power) * Math.sin(time * SWAY_W); }
+
+/**
+ * Direction the ball actually leaves in.
+ * @param {{aimAngle:number, charge:number, time:number, reverse?:boolean, steady?:boolean}} input
+ *   time is the sway time last shown on screen, so what you see is what you shoot.
+ */
+export function shotAngle({ aimAngle, charge, time, reverse = false, steady = false }) {
+  return aimAngle + (reverse ? Math.PI : 0) + (steady ? 0 : sway(charge, time));
+}
+
+/** Charge 0..1 from a pointer drag distance in CSS pixels. */
+export function chargeFromDrag(dx, dy, canvasWidth) {
+  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * 0.36));
+}
+
+/** The power meter caption. */
+export function accuracyText(charging, charge) {
+  return charging ? Math.round(charge * 100) + '% power · ±' + (spread(charge) * 180 / Math.PI).toFixed(1) + '° spread' : 'Pull to set power';
+}
