@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-10-26.
+Last updated: 2026-10-27.
 
 ## Current objective
 
-Accepted main now includes D1's data/CLI delivery through PR #22 (8dcf760), its handoff bf658b0, and L1 room lifecycle/scoring through PR #23 (adf2045). L1 is complete as a headless module. N1 transport delivery is recorded in PR #24 (implementation 72b7498 plus review fixes); this integration record takes effect after green current-head CI and accepted PR merge. Its adapters bridge L1 and reconcile the shared 99-score mismatch. A1 procedural audio delivery is PR #25, effective after green current-head CI, merge and post-merge verification; browser adoption remains I1. GitHub issues remain the live assignment source.
+Accepted main (e7a59ed) contains every module I1 needs: S1 simulation, D1 course data/CLI, L1 session, N1 transports, A1 audio, R1 renderer/camera (PR #27) and U1 React UI/input (PR #29), plus the B4 difficulty sweep (PR #28). R1 and U1 are closed. I1 #12 is now ACTIVE: compose these modules into the runnable app while keeping the legacy page runnable until parity gates pass. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -172,3 +172,9 @@ A1 extracts the existing eleven procedural sounds behind a domain-event adapter 
 Actual listening, sound balance, browser autoplay and integrated room joins/leaves remain unverified I1/T1/manual acceptance; no browser audio adoption or deployment is implied. Audio consumers must preserve legacy bounce significance filtering and emit each timeout/banner/remote stroke once. A1's code prerequisite becomes available to I1 on accepted merge, without unblocking its other missing modules.
 
 N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.com/SpikemenDan/putt-pals/actions/runs/40386990190 . This confirms the earlier N1 integration record; no new browser/network validation is implied.
+
+## R1/U1 integration and coordinator cleanup — 2026-10-27
+
+- R1 merged via PR #27 (f72a374) and U1 via PR #29 (e7a59ed); both passed hosted CI before and after merge. Handoffs: docs/reviews/R1_RENDERER.md, docs/reviews/U1_UI_INPUT.md.
+- Known issues found during U1: (1) `npm run build` drops standard `backdrop-filter` from the legacy page, so built glass panels lose their blur in Chrome/Firefox (dev server unaffected; the build check does not cover CSS); (2) `PLAYER_COLORS` in src/shared/constants.js does not match the game palette. Both are assigned to I1.
+- Real-browser evidence so far: U1 Chromium pixel parity for menus/HUD (scripts/ui-visual-parity.cjs). Real WebGL output, audio and WebRTC remain unverified until I1/T1.
