@@ -38,7 +38,7 @@ Run on Node 22.23.4 after `npm ci` from the main lockfile:
 | `node scripts/inventory-baseline.cjs --check` | Passed; legacy source hashes unchanged |
 | `git diff --check` | Clean; CI YAML parses and references `npm run test:render` |
 
-Not verified: real WebGL rendering, pixels against `tests/fixtures/browser-baseline/`, GPU memory, frame time and real browsers. jsdom stubs WebGL output and the legacy PMREM environment map falls back to `null` there, as it does in the smoke tests. Hosted CI has not run this change.
+Not verified: real WebGL rendering, pixels against `tests/fixtures/browser-baseline/`, GPU memory, frame time and real browsers. jsdom stubs WebGL output and the legacy PMREM environment map falls back to `null` there, as it does in the smoke tests. Hosted CI later passed on the PR (run 40435405178) and after merge on main (run 40436390477).
 
 ## Integration notes
 
