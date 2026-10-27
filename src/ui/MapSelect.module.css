@@ -1,0 +1,7 @@
+/* Course voting grid (legacy #mapgrid, .mapcard, #puttpick). */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:20px}.mapcard{margin:0;background:rgba(255,255,255,.16);text-align:left;padding:12px;color:#fff8ff;border:2px solid transparent}.mapcard.selected{border-color:#ffc77f}.mapcard svg{width:100%;height:115px;background:#10242c;border-radius:8px}.mapcard strong{display:block;margin:8px 0}.mapcard small{display:block;min-height:36px;color:#bad1cc}.mapcard:disabled{opacity:.85;cursor:default}
+.mapcard[data-v]:not([data-v="0"])::after{content:"🗳 " attr(data-v) " vote(s)";display:block;color:#ffca91;font-weight:700;margin-top:6px}
+.mapcard{background:rgba(22,48,58,.55)!important;backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.14)}
+.mapcard.selected{border-color:#ffc77f!important;box-shadow:0 0 28px #ffc77f55}
+@media (max-width:640px){.grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
+.puttpick{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}

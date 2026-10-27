@@ -1,0 +1,26 @@
+/* P27 paper mini-golf scorecard and its overlay (legacy #cardov, #cardwrap, #cardx, .paper). */
+.overlay{--pp-paper:#f7f0dc;--pp-ink:#2b2a26;--pp-line:#b9a875;--pp-band:#eadfb8;--pp-lead:#fff1a0;--pp-red:#c2402d;--pp-gold:#b8860b;position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:12px}
+.overlay[hidden]{display:none}
+.wrap{position:relative;pointer-events:auto;max-width:min(96vw,720px);max-height:86vh;overflow:auto;border-radius:6px;box-shadow:0 16px 48px rgba(0,0,0,.4)}
+.close{position:absolute;top:6px;right:8px;z-index:2;width:28px;height:28px;padding:0;border-radius:50%;border:1px solid var(--pp-line,#b9a875);background:#fffaf0;color:#2b2a26;font-size:18px;line-height:24px;cursor:pointer}
+.paper{--pp-paper:#f7f0dc;--pp-ink:#2b2a26;--pp-line:#b9a875;--pp-band:#eadfb8;--pp-lead:#fff1a0;--pp-red:#c2402d;--pp-gold:#b8860b;background:var(--pp-paper) repeating-linear-gradient(0deg,transparent 0 23px,rgba(150,125,70,.07) 23px 24px);color:var(--pp-ink);border:2px solid #cdbb8a;border-radius:6px;padding:14px 16px 10px;text-align:left;text-shadow:none}
+.paper .ptitle{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 34px 8px 0;font-size:14px}
+.paper .ptitle b{letter-spacing:3px;font-size:15px}
+.paper .ptbl{overflow-x:auto}
+.paper table{border-collapse:collapse;width:100%;min-width:430px;font-variant-numeric:tabular-nums}
+.paper th,.paper td{border:1px solid var(--pp-line);padding:4px 6px;text-align:center;font-size:14px;color:var(--pp-ink);background:transparent}
+.paper th{background:var(--pp-band);font-weight:700}
+.paper .nm{text-align:left;white-space:nowrap}
+.paper .nm i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;border:1px solid #2b2a26}
+.paper tr.par td{background:var(--pp-band);font-weight:700}
+.paper tbody td:not(.nm){font-family:'Segoe Print','Bradley Hand','Marker Felt','Comic Sans MS',cursive;font-size:16px}
+.paper tr.lead td{background:var(--pp-lead);font-weight:700}
+.paper td.st{font-weight:700;border-left-width:2px}
+.paper td span{display:inline-block;min-width:1.7em;line-height:1.6em}
+.paper td.u span{border:2px solid var(--pp-red);border-radius:50%}
+.paper td.hio span{color:var(--pp-gold);font-weight:800;text-decoration:underline}
+.paper td.o span{color:#4a4638}
+.paper td.lv span{color:#8a8470;font-style:italic}
+.paper .pleg{margin-top:6px;font-size:11px;opacity:.75}
+.inEnd .paper{margin:14px 0 10px}
+@media (max-width:640px){.paper{padding:10px 8px 8px}.paper th,.paper td{padding:3px 4px;font-size:12px}.paper tbody td:not(.nm){font-size:14px}.paper .ptitle{flex-direction:column;gap:2px}}

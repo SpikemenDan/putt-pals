@@ -1,0 +1,20 @@
+/* Element defaults and theme variables, ported from the legacy page in source order.
+   Component styles live in CSS Modules next to each component. */
+:root{--bg:#f6eefa;--fg:#2a1633;--card:#fff;--ac:#ff4fb8;--mut:#7d6a88;--bd:#e3d3ee;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1024;--fg:#f4e8fb;--card:#2a1836;--ac:#ff6cc7;--mut:#b8a3c6;--bd:#4a2f5c}}
+:root[data-theme="dark"]{--bg:#1c1024;--fg:#f4e8fb;--card:#2a1836;--ac:#ff6cc7;--mut:#b8a3c6;--bd:#4a2f5c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{margin:0 0 6px;font-size:28px}
+p{line-height:1.45}
+label{display:block;margin:12px 0;font-size:14px;color:var(--mut)}
+input{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--fg)}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:0;background:var(--ac);color:#fff;cursor:pointer;margin:4px 6px 4px 0;touch-action:manipulation;user-select:none}
+[hidden]{display:none!important}
+
+body{background:radial-gradient(ellipse at top,#c4a8f6,#7a63c4 70%);color:#f8f2ff} :root{--fg:#f8f2ff;--bg:#6a55b8;--card:rgba(88,66,152,.58);--bd:rgba(255,255,255,.38);--mut:#e0d4f8;--ac:#ffb3de}
+h1{font-size:38px;letter-spacing:-1.5px} button{border-radius:12px}
+details{font-size:13px;color:var(--mut);margin-top:16px}textarea{width:100%;height:80px;background:#0b1a21;color:#c8e7db}
+button:disabled{cursor:not-allowed;opacity:.45}
+select{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.28);color:var(--fg)}
+@media (max-width:640px){h1{font-size:28px}}
