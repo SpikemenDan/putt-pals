@@ -15,18 +15,32 @@ const PEER_SERVER = { host: '127.0.0.1', port: PEER_PORT, path: PEER_PATH, secur
 
 const best = (map, putt) => solver.results.find(r => r.map === map && r.putt === putt).best;
 
+/** Fails with the page's console output attached, so CI-only failures explain themselves. */
+async function explained(log, label, fn) {
+  try { await fn(); } catch (error) { error.message += `\n--- ${label}: page console ---\n` + (log.join('\n') || '(empty)'); throw error; }
+}
+
 /** Opens the app in a page and returns a player handle. Collects page errors for assertions. */
 async function openApp(page, name) {
-  const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-  await page.addInitScript(peer => { window.__PP_APP_HOOK = true; window.__PP_PEER_SERVER = peer; }, PEER_SERVER);
+  const errors = [], log = [];
+  page.on('pageerror', error => { errors.push(error.message); log.push('pageerror: ' + error.message); });
+  page.on('console', message => { log.push(message.type() + ': ' + message.text()); if (message.type() === 'error') errors.push(message.text()); });
+  await page.addInitScript(peer => {
+    window.__PP_APP_HOOK = true; window.__PP_PEER_SERVER = peer;
+    // Every banner the page shows, so short-lived banners can be asserted after the fact.
+    window.__ppBanners = [];
+    new MutationObserver(() => {
+      const text = document.querySelector('[data-ui=banner]')?.textContent;
+      if (text && text !== window.__ppBanners.at(-1)) window.__ppBanners.push(text);
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+  }, PEER_SERVER);
   await page.goto('/');
-  await expect(page.locator('[data-ui=landing]')).toBeVisible();
+  await explained(log, name + ' start screen', () => expect(page.locator('[data-ui=landing]')).toBeVisible());
 
   const visible = ui => page.locator(`[data-ui=${ui}]`);
   const p = {
-    name, page, errors,
+    name, page, errors, log,
+    banners: () => page.evaluate(() => window.__ppBanners),
     ui: visible,
     button: label => page.getByRole('button', { name: label, exact: true }),
     async solo() {
@@ -38,7 +52,7 @@ async function openApp(page, name) {
       await visible('landing').getByLabel('Your name').fill(name);
       await visible('landing').getByLabel(/room code/i).fill(code);
       await p.button('Join room').click();
-      await expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible();
+      await explained(log, name + ' join', () => expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
     },
     /** Room snapshot fields the specs compare, read from the running app. */
     snapshot: () => page.evaluate(() => {

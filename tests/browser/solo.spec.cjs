@@ -23,8 +23,8 @@ test('solo: a full six-putt map renders in WebGL and scores six holes in one', a
     // Solo records the putt and advances at once, so watch the recorded scores.
     await until(async () => (await ana.snapshot()).players.solo?.scores.length > k, { label: 'sink ' + (k + 1) });
     expect((await ana.snapshot()).players.solo.scores[k], `putt ${k + 1} is a hole in one`).toBe(1);
-    // The "Hole in one!" toast is replaced within about a second in real time; the banner lasts longer.
-    if (k === 0) await expect(ana.ui('banner')).toHaveText('AnaHOLE IN ONE');
+    // Toasts and banners are short-lived in real time, so check the banners the page recorded.
+    if (k === 0) await until(async () => (await ana.banners()).includes('AnaHOLE IN ONE'), { label: 'hole-in-one banner' });
   }
 
   await expect(ana.ui('results')).toBeVisible({ timeout: 30_000 });

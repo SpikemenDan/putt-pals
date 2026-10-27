@@ -6,6 +6,8 @@ const { openApp, until, playPutt } = require('./support/app.cjs');
 const NAMES = ['Ana', 'Ben', 'Cy', 'Dee'];
 
 test('multiplayer: four pages on real WebRTC play a full map and agree on the results', async ({ browser }, testInfo) => {
+  // Four software-rendered WebGL pages on a CI runner take several minutes per map.
+  test.setTimeout(900_000);
   const code = 'T1' + Date.now().toString(36).slice(-5).toUpperCase();
   const contexts = await Promise.all(NAMES.map(() => browser.newContext({ baseURL: testInfo.project.use.baseURL, viewport: { width: 800, height: 600 } })));
   try {
