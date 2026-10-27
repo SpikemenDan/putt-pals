@@ -44,6 +44,8 @@ jobs:
         run: npm run test:network
       - name: Check procedural audio and resource ownership
         run: npm run test:audio
+      - name: Check renderer and camera parity with the legacy scene
+        run: npm run test:render
       - name: Check course catalog and stale metadata
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands
