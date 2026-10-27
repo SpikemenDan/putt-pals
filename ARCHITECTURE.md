@@ -142,3 +142,7 @@ Changing an agreed signature requires updating `src/shared/`, `tests/contracts.t
 ## Deferred architecture changes
 
 Rapier requires its own evaluated physics migration. Colyseus or another authoritative game server is unnecessary for the confirmed initial private-room scope. Host migration, public matchmaking, accounts, persistence, native packaging and offline packaging remain deferred.
+
+## Modular application (I1)
+
+`index.html` loads `src/app/main.js`, which composes all modules through `createApp()` (src/app/README.md). The app owns one animation-frame loop, one 100 ms HUD tick and explicit disposal. Three.js 0.128.0 and PeerJS 1.5.4 are npm dependencies at the versions the legacy page embeds. `putt-pals.html` remains a separate, unchanged build input. Contract changes made as integration owner: `PLAYER_COLORS` is now the game's eight-colour palette (shared by renderer and UI), and presence accepts optional validated `effect` and `fx` fields. Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs guards the legacy CSS.

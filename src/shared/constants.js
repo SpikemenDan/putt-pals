@@ -54,10 +54,5 @@ export const RECONNECT_GRACE_PERIOD_MS = 30000;
 // Maximum name length
 export const MAX_PLAYER_NAME_LENGTH = 14;
 
-// Player color palette indices
-export const PLAYER_COLORS = Object.freeze([
-  0xff5252, // Coral Red
-  0x448aff, // Ocean Blue
-  0x69f0ae, // Mint Green
-  0xffd740, // Sun Yellow
-]);
+// Player colour palette: the game's eight ball/scoreboard colours, indexed by player colour index (mod 8).
+export const PLAYER_COLORS = Object.freeze(['#ff4fb8', '#3e8ef7', '#f5a623', '#8e4ec6', '#12a594', '#e5484d', '#99d52a', '#e8e8e8']);

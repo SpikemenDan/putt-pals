@@ -13,8 +13,8 @@ export const SHADER_VERTEX = 'varying vec2 u;void main(){u=uv;gl_Position=projec
 
 export const EFFECT_COLORS = Object.freeze({ mag: 0x36cfff, steady: 0x73ffaa, rew: 0xffffff, rev: 0xbd72ff, zany: 0xff7d38 });
 export const EFFECT_KINDS = Object.freeze(Object.keys(EFFECT_COLORS));
-/** Player colours by colour index (legacy COLS). */
-export const PLAYER_COLORS = Object.freeze(['#ff4fb8', '#3e8ef7', '#f5a623', '#8e4ec6', '#12a594', '#e5484d', '#99d52a', '#e8e8e8']);
+/** Player colours by colour index (legacy COLS); the canonical list lives in src/shared/constants.js. */
+export { PLAYER_COLORS } from '../shared/constants.js';
 /** Teleporter pair colours (legacy TPC). */
 export const TELEPORTER_COLORS = Object.freeze([0xb44cff, 0xff9a2e, 0x3dff9a]);
 

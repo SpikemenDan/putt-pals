@@ -48,6 +48,8 @@ export function createUiStore({ courses, clock = globalThis }) {
   let bannerBusy = false, bannerTimer = null;
   let announcedRound = null, lastPhase = null;
   const holeInOnes = new Set();
+  const knownScores = new Map();
+  const hio = (player, key) => { if (!holeInOnes.has(key)) { holeInOnes.add(key); announce(player.name, 'HOLE IN ONE', 'hio'); } };
   const listeners = new Set();
   const cache = new Map();
   let snapshot = null, disposed = false;
@@ -124,12 +126,22 @@ export function createUiStore({ courses, clock = globalThis }) {
       const course = courses[room.mapIndex];
       if (course.putts.length > 1) announce('PUTT ' + ((room.puttIndex | 0) + 1) + ' / ' + course.putts.length, course.name.toUpperCase(), 'event');
     }
-    if (phase === SessionPhases.PLAY) {
-      for (const id of room.roster || []) {
-        const p = room.players?.[id];
-        const key = room.roundNumber + ':' + id;
-        if (p && p.done && p.score === 1 && !holeInOnes.has(key)) { holeInOnes.add(key); announce(p.name, 'HOLE IN ONE', 'hio'); }
+    // Hole-in-one banners: from a live finished putt, or from a newly recorded score when the session
+    // records the putt and starts the next one in the same update (e.g. the last player to finish).
+    // At results the finished map is already in completedMaps; keep counting it as the current map.
+    const mapNo = (room.completedMaps?.length | 0) - (phase === SessionPhases.RESULTS ? 1 : 0);
+    for (const id of room.roster || []) {
+      const p = room.players?.[id];
+      if (!p) continue;
+      const scores = p.scores || [];
+      const known = knownScores.get(id);
+      if (!known || known.mapNo !== mapNo || known.length > scores.length) knownScores.set(id, { mapNo, length: known && known.mapNo === mapNo ? Math.min(known.length, scores.length) : scores.length });
+      const fresh = knownScores.get(id);
+      for (let k = fresh.length; k < scores.length; k++) {
+        if (scores[k]?.score === 1 && !scores[k].timedOut) hio(p, mapNo + ':' + k + ':' + id);
       }
+      fresh.length = scores.length;
+      if (phase === SessionPhases.PLAY && p.done && p.score === 1 && !p.timedOut) hio(p, mapNo + ':' + room.puttIndex + ':' + id);
     }
     if (phase === SessionPhases.RESULTS && lastPhase !== SessionPhases.RESULTS) {
       cardOpen = false;
@@ -151,7 +163,12 @@ export function createUiStore({ courses, clock = globalThis }) {
     /** Local player/app state: active, connecting, connected, id, isHost, roomCode, mode, strokes, inventory, soundOn, qualityHigh, viewLabel, colors. */
     setLocal(partial) {
       local = { ...local, ...partial };
-      if (!local.active) { room = null; cardOpen = false; announcedRound = null; lastPhase = null; holeInOnes.clear(); }
+      if (!local.active) {
+        room = null; cardOpen = false; announcedRound = null; lastPhase = null; holeInOnes.clear(); knownScores.clear();
+        // Leaving a room drops its pending toasts and banners.
+        clock.clearTimeout(toastTimer); clock.clearTimeout(bannerTimer); toastTimer = bannerTimer = null;
+        bannerQueue.length = 0; bannerBusy = false; toast = ''; banner = { ...banner, show: false };
+      }
       observe(); publish();
     },
     /** Room-clock tick for countdowns and timers (legacy 100 ms interval). */
