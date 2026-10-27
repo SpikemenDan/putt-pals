@@ -47,13 +47,13 @@ Run on Node 22.23.4 after `npm ci`:
 
 | Command | Result |
 | --- | --- |
-| `npm test` | RESULT_NPM_TEST |
+| `npm test` | Passed end to end in about 11 minutes: check, contracts, simulation, session, network, audio, render, input (10), UI (12), courses, CLI, physics, solo smoke, four-client smoke |
 | `npm run test:ui` | 12 scenarios passed |
 | `npm run test:input` | 10 scenarios passed |
-| `npm run build` | RESULT_BUILD |
-| `node scripts/inventory-baseline.cjs --check` | RESULT_INVENTORY |
-| `node scripts/ui-visual-parity.cjs` + `python3 scripts/ui-visual-diff.py` (Chromium via Playwright 1.63) | RESULT_PARITY |
-| `git diff --check` | RESULT_DIFFCHECK |
+| `npm run build` | Passed; embedded scripts preserved byte for byte (CSS finding 1 still applies to the legacy page) |
+| `node scripts/inventory-baseline.cjs --check` | Passed; legacy source hashes unchanged |
+| `node scripts/ui-visual-parity.cjs` + `python3 scripts/ui-visual-diff.py` (Chromium via Playwright 1.63) | 16 screen pairs. Pixel-identical: landing, lobby, voting, countdown, game HUD and results at 1280 px; landing, lobby, voting, countdown and game HUD at 600 px; both unfocused scorecards. Scorecard: 0.02%/0.05% = the intended Close focus ring only. Narrow results: 0.004%, a 6×8 px patch on the timer digit where the legacy HUD (100 ms tick) was sampled a tick apart |
+| `git diff --check` | Clean |
 
 Not verified: Firefox/WebKit rendering, real input devices, screen readers, and the UI wired to a live renderer, simulation and network (I1). The parity run hides the 3D canvas on both pages. Hosted CI runs on the PR.
 
