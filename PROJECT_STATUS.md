@@ -4,7 +4,7 @@ Last updated: 2026-10-27.
 
 ## Current objective
 
-Accepted main (e7a59ed) contains every module I1 needs: S1 simulation, D1 course data/CLI, L1 session, N1 transports, A1 audio, R1 renderer/camera (PR #27) and U1 React UI/input (PR #29), plus the B4 difficulty sweep (PR #28). R1 and U1 are closed. I1 #12 is now ACTIVE: compose these modules into the runnable app while keeping the legacy page runnable until parity gates pass. GitHub issues remain the live assignment source.
+Accepted main (09eaf50) contains the integrated modular app: I1 #12 (PR #31) composes S1, D1, L1, N1, A1, R1 and U1 behind index.html/src/app, while the legacy page stays built until Q1 decides hosting. N2, R2 and T1 are ready; N3 waits on the provider/budget decision and Q1 on the remaining tasks. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
 
@@ -36,7 +36,7 @@ Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdo
 
 ## Next implementation action
 
-Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. A1 is owned by Codex root and delivered through PR #25; do not claim duplicate audio work. R1/U1/T1/B4 remain separate eligible tasks subject to live claims. D1 #8 stays open for remaining accepted integration scope; its geometry/CLI ports are already merged and must not be duplicated. I1 remains blocked by its other prerequisites. No new task is launched by this status update.
+Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. A1 is owned by Codex root and delivered through PR #25; do not claim duplicate audio work. I1 is integrated (PR #31) and D1 closes with it. N2, R2 and T1 are eligible subject to live claims; N3 and Q1 remain blocked. No new task is launched by this status update.
 
 ## B2 verification — 2026-10-25
 
@@ -178,3 +178,11 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - R1 merged via PR #27 (f72a374) and U1 via PR #29 (e7a59ed); both passed hosted CI before and after merge. Handoffs: docs/reviews/R1_RENDERER.md, docs/reviews/U1_UI_INPUT.md.
 - Known issues found during U1: (1) `npm run build` drops standard `backdrop-filter` from the legacy page, so built glass panels lose their blur in Chrome/Firefox (dev server unaffected; the build check does not cover CSS); (2) `PLAYER_COLORS` in src/shared/constants.js does not match the game palette. Both are assigned to I1.
 - Real-browser evidence so far: U1 Chromium pixel parity for menus/HUD (scripts/ui-visual-parity.cjs). Real WebGL output, audio and WebRTC remain unverified until I1/T1.
+
+## I1 integration — 2026-10-27
+
+- I1 merged via PR #31 (09eaf50); current-head and post-merge baseline-ci passed (run 40591136455). Local `npm test`, `npm run build` and `node scripts/inventory-baseline.cjs --check` passed. Handoff: docs/reviews/I1_APP.md; overview: src/app/README.md.
+- D1 #8 closes with I1: its remaining browser-adoption scope was delivered there.
+- Both U1 findings are fixed in I1: the build no longer minifies CSS, so standard `backdrop-filter` survives (asserted by scripts/check-build.cjs), and `PLAYER_COLORS` is now the game palette.
+- Unblocked: N2 and R2 are READY; T1 stays READY and can now cover the integrated app. N3 stays BLOCKED on the provider/budget decision; Q1 stays BLOCKED on N2, N3, T1, R2 and B4.
+- Not verified: Firefox/WebKit, real GPUs and frame rate, WebRTC across separate networks/TURN, guest recovery and real-browser audio listening. Hosting index.html instead of the legacy page is a Q1 decision.
