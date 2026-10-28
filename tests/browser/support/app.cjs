@@ -24,7 +24,11 @@ async function explained(log, label, fn) {
 async function openApp(page, name) {
   const errors = [], log = [];
   page.on('pageerror', error => { errors.push(error.message); log.push('pageerror: ' + error.message); });
-  page.on('console', message => { log.push(message.type() + ': ' + message.text()); if (message.type() === 'error') errors.push(message.text()); });
+  page.on('console', message => {
+    log.push(message.type() + ': ' + message.text());
+    // Headed browsers request /favicon.ico, which the app does not ship; that 404 is not an app error.
+    if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) errors.push(message.text());
+  });
   await page.addInitScript(peer => {
     window.__PP_APP_HOOK = true; window.__PP_PEER_SERVER = peer;
     // Every banner the page shows, so short-lived banners can be asserted after the fact.

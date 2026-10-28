@@ -38,8 +38,8 @@ test('multiplayer: four pages on real WebRTC play a full map and agree on the re
     for (const p of players) await until(() => p.ready(), { label: p.name + ' map start' });
     // Everyone sees the other three balls and a four-row scoreboard.
     for (const p of players) {
-      await until(() => p.page.evaluate(() => window.__ppApp.renderer.remoteCount), { label: p.name + ' remote balls' });
-      expect(await p.page.evaluate(() => window.__ppApp.renderer.remoteCount), p.name + ' draws the three others').toBe(3);
+      // Remote balls appear as each peer's first presence arrives, so wait for all three.
+      await until(async () => (await p.page.evaluate(() => window.__ppApp.renderer.remoteCount)) === 3, { label: p.name + ' draws the three others' });
     }
     expect(await ana.canvasColours(), 'host WebGL canvas shows a rendered course').toBeGreaterThan(20);
 
