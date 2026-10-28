@@ -207,3 +207,25 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - Current-head CI on 5331595: baseline-ci and browser-ci passed in Chromium, Firefox and WebKit (run 40615922756). WebKit multiplayer is skipped until N3 #14 provides a TURN relay. CI runners have no GPU, so Chromium and Firefox run headed under xvfb with Mesa software GL.
 - Known flake: the first Chromium attempt on 5331595 failed when one guest's join in the four-player spec did not reach the lobby within 15 s (empty page console); the rerun passed with no code change. The same code had passed on 56dedf6. Watch for repeats; a timing issue in the join path would fall under N2 #13.
 - Unblocked: I2b #41 can add its committed WebGL-fallback spec. Q1 still waits on N2, N3, R2 and B4.
+
+## N2 integration — 2026-10-27
+
+- N2 #13 merged via PR #43 (3f5d010): guest recovery, 8-player rooms, remote interpolation and actionable connection errors. Its PR ran only baseline-ci, because the branch predated browser-ci. Handoff: docs/reviews/N2_NETWORK.md.
+- Post-merge CI on 3f5d010 failed: browser-ci Chromium's four-player spec timed out when guest "Cy" did not reach the lobby within 15 s (run 40618503597; empty page console). baseline-ci, Firefox and WebKit passed. This is the second such Chromium join timeout in three runs (see the T1 entry), so it is a recurring flake, not a one-off; a fix is proposed but not yet started. CI on 734b3d1 was still running at this snapshot.
+- Not yet covered in a real browser: N2 in Firefox/WebKit, and committed specs for room-full, resume, reconnect and host loss.
+- Q1 now waits on N3, R2 and B4.
+
+## R2 integration record — PR #53
+
+Effective after green current-head checks, accepted merge and post-merge verification recorded in [#16](https://github.com/SpikemenDan/putt-pals/issues/16): Three.js is pinned to 0.186.1 with explicit color/shader/light migration and PMREM/shadow disposal. The full local suite and three-engine selected browser flows passed; Mac M1 Pro renderer probe averages ~8.33 ms across six starters, with stable counters and no browser errors. CPU submission increased; full-app FPS is not measured by this probe. Handoff/evidence: docs/reviews/R2_RENDERER.md and tests/fixtures/render-migration/. Until PR #53 merges this is a proposed integration record, not accepted main behavior.
+
+The user authorized merging now using the Mac target and moved Windows Radeon 860M / RTX 5060 Laptop GPU verification to nonblocking [R2w #52](https://github.com/SpikemenDan/putt-pals/issues/52), intended for the other Windows-capable agent after a confirmed claim. PR #53 also restores the normal baseline/browser CI accidentally replaced by the throwaway diagnostics in PR #51, while preserving T1c-owned source/harness work and excluding only its explicitly named diagnostic probe from the normal acceptance run. No deployment, Windows evidence or new art implementation is implied.
+
+
+## S2 cup-capture integration record — 2026-10-28
+
+Effective only after current-head CI, accepted merge and merged-main verification recorded in [#54](https://github.com/SpikemenDan/putt-pals/issues/54): the shared simulation no longer treats the cup depression as a downhill terrain ramp. Slow centred shots fall under gravity; fast/airborne shots can cross, and grazing overlap can miss or lip out. Browser and CLI still use the same simulation. The user explicitly authorized the PR/review/CI/merge/post-merge workflow after the shot-margin changes were disclosed.
+
+Local full npm test/build, 439 controlled trajectories and nine selected real-browser tests across Chromium/Firefox/WebKit passed. New source-fingerprinted evidence retains nominal hole-in-ones for all 36 starters, with robust shots on the existing grid for 31. Cyclone Ring P3/P5 and Grand Finale P1/P3/P5 have nominal solutions but do not meet the previous robustness margin. Twelve historical shot inputs now miss; the original fixtures/legacy HTML remain unchanged. Switchback Garden P1 full-grid hits are 377 (previous 811); this is not a complete current difficulty ladder. Q1 #18 must review the five narrower windows and refresh all 36 full-grid difficulty results before release acceptance. No deployment, new art/power-up work or Rapier adoption is implied. Handoff: docs/reviews/S2_CUP_CAPTURE.md.
+
+P1 remains deferred by user request; its isolated experiment/evidence is preserved on agent/p1-rapier-prototype at 6ba6115, not merged into production.

@@ -29,7 +29,7 @@ module.exports = defineConfig({
   projects: [
     // On CI, Chromium's built-in SwiftShader is too slow for real-time putt timers; draw through ANGLE on
     // Mesa's software OpenGL instead (the workflow provides a virtual display).
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 }, launchOptions: { args: process.env.CI ? ['--use-angle=gl', '--ignore-gpu-blocklist'] : [] } } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 }, launchOptions: { args: [...(process.env.CI ? ['--use-angle=gl', '--ignore-gpu-blocklist'] : []), ...(process.env.PP_CHROMIUM_ARGS ? process.env.PP_CHROMIUM_ARGS.split(' ') : [])] } } },
     // GPU-less CI runners: Firefox blocklists software WebGL unless forced, and the app needs WebGL to start.
     { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 }, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } } },
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } } },

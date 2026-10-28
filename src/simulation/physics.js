@@ -188,6 +188,7 @@ export function bounce(player, r, ballRadius = BALL_RADIUS) {
  * @returns {boolean} Whether ball sank into cup
  */
 export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
+  if (player.mode !== 'play') return false;
   const C = cupOf(course);
   const lip = (DEFAULT_CUP_RADIUS - C) / (DEFAULT_CUP_RADIUS - MIN_CUP_RADIUS);
   const sc = C / DEFAULT_CUP_RADIUS;
@@ -325,10 +326,35 @@ export function stopBall(player, events = []) {
  */
 export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
   if (!player.moving || player.mode !== 'play') return [];
+  // Resolve fast cup crossings spatially instead of depending on tick alignment.
+  // Ordinary terrain keeps its original single-step path. The cap bounds work
+  // for pathological velocities; normal shots and tested impulses (<=9000) need <=15.
+  const dx = player.vx * dt;
+  const dy = player.vy * dt;
+  const distance2 = dx * dx + dy * dy;
+  const t = distance2 > 0 ? Math.max(0, Math.min(1,
+    ((course.hole[0] - player.x) * dx + (course.hole[1] - player.y) * dy) / distance2)) : 0;
+  const crossesCup = Math.hypot(player.x + t * dx - course.hole[0],
+    player.y + t * dy - course.hole[1]) < cupOf(course) + BALL_RADIUS;
+  const steps = crossesCup ? Math.min(128, Math.max(1,
+    Math.ceil(Math.sqrt(distance2) / (BALL_RADIUS / 2)))) : 1;
+  if (steps === 1) return stepBallTick(player, course, dt, hazardTime);
+  const events = [];
+  for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
+    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps));
+  }
+  return events;
+}
+
+function stepBallTick(player, course, dt, hazardTime) {
+  if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
   let f = contactHeight(course, player.x, player.y);
-  const air = player.z > f + 0.8 || (player.vz > 5 && player.padCooldown > 0);
+  // Cup support is a curved rim, not a ramp that may pull the ball downward.
+  // Detach as soon as support falls away; gravity determines time to drop.
+  const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
+  const air = player.z > f + (overCup ? 1e-6 : 0.8) || (player.vz > 5 && player.padCooldown > 0);
 
   if (air) {
     player.vz -= GRAVITY * dt;
@@ -375,12 +401,12 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
     player.vy *= decay;
 
     const gx =
-      (contactHeight(course, player.x + 0.2, player.y) -
-        contactHeight(course, player.x - 0.2, player.y)) /
+      (surfaceHeight(course, player.x + 0.2, player.y) -
+        surfaceHeight(course, player.x - 0.2, player.y)) /
       0.4;
     const gy =
-      (contactHeight(course, player.x, player.y + 0.2) -
-        contactHeight(course, player.x, player.y - 0.2)) /
+      (surfaceHeight(course, player.x, player.y + 0.2) -
+        surfaceHeight(course, player.x, player.y - 0.2)) /
       0.4;
 
     if (Math.abs(gx) < 20 && Math.abs(gy) < 20) {

@@ -6,12 +6,12 @@
 // covers the real drag path. window.__ppApp (enabled by __PP_APP_HOOK) is read for state and never
 // written.
 const { expect } = require('@playwright/test');
-const solver = require('../../fixtures/solver-baseline.json');
+const solver = require('../../fixtures/cup-capture/solutions.json');
 
 const PEER_PORT = 9310;
 const PEER_PATH = '/pp';
 // Loopback signalling and no STUN, so tests never touch the public network.
-const PEER_SERVER = { host: '127.0.0.1', port: PEER_PORT, path: PEER_PATH, secure: false, config: { iceServers: [] } };
+const PEER_SERVER = { debug: Number(process.env.PP_PEER_DEBUG || 0), host: '127.0.0.1', port: PEER_PORT, path: PEER_PATH, secure: false, config: { iceServers: [] } };
 
 const best = (map, putt) => solver.results.find(r => r.map === map && r.putt === putt).best;
 
