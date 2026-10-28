@@ -19,8 +19,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
 (async () => {
   const host = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBeVisual: true });
   Object.assign(globalThis, { window: host.window, document: host.window.document, HTMLElement: host.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
-  const { modulePath } = await buildApp();
-  const appModule = await import(modulePath);
+  const { modulePath, moduleUrl } = await buildApp();
+  const appModule = await import(moduleUrl);
   const { createApp } = appModule;
   const { act } = (await import('react')).default;
   const THREE = await import('three');
