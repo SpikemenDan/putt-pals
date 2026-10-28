@@ -3,7 +3,8 @@
 // PeerServer started by tests/browser/support/global-setup.cjs. Run with `npm run test:browser`.
 const { defineConfig, devices } = require('@playwright/test');
 
-const PORT = 4173;
+// PP_TEST_PORT moves the preview server so two checkouts can run the suite at once.
+const PORT = Number(process.env.PP_TEST_PORT) || 4173;
 
 module.exports = defineConfig({
   testDir: 'tests/browser',
@@ -37,7 +38,8 @@ module.exports = defineConfig({
   webServer: {
     command: `npm run build && npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}/`,
-    reuseExistingServer: !process.env.CI,
+    // Reusing a server is opt-in: a running server may belong to another checkout and serve its build.
+    reuseExistingServer: !process.env.CI && process.env.PP_REUSE_SERVER === '1',
     timeout: 180_000,
   },
 });
