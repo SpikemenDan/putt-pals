@@ -4,7 +4,7 @@
  */
 
 import { InputCommands } from '../input/commands.js';
-import { MAX_PLAYER_NAME_LENGTH, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
+import { MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS, RECONNECT_GRACE_PERIOD_MS, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
 import { GameModes } from '../shared/session.js';
 
 export const UiCommands = Object.freeze({
@@ -38,11 +38,22 @@ export const MESSAGES = Object.freeze({
   roomCodeRequired: 'Enter a room code.',
   connectFailed: 'Could not connect. Check internet / TURN settings and retry.',
   connectionLost: 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.',
+  reconnecting: `Connection dropped. Reconnecting… your place in the room is kept for ${RECONNECT_GRACE_PERIOD_MS / 1000} seconds.`,
   inviteSolo: 'Join a room from the lobby to invite friends.',
   inviteCopied: 'Invite copied. Keep the host tab open.',
   freeRoamHint: 'Free roam: WASD fly, Q/E down/up, Shift fast, drag to look',
   webglUnavailable: "This browser or device can't run the 3D course: WebGL is unavailable (hardware acceleration may be turned off, or WebGL blocked). Turn on hardware acceleration in your browser settings, or try another desktop browser.",
 });
+
+/** Why joining an online room failed, in words a player can act on (shown on the start screen). */
+export const CONNECT_ERRORS = Object.freeze({
+  'room-full': `That room is full (${MAX_PLAYERS} players). Ask someone to leave, or use a different room code.`,
+  'no-webrtc': "This browser can't make peer-to-peer connections (WebRTC is unavailable or blocked), so online rooms won't work here. Try another desktop browser, or play solo.",
+  'connection-timeout': 'Could not reach the room in time. Check your internet connection, or add a TURN relay under Online connection settings, then try again.',
+  'signaling-disconnected': 'Lost contact with the connection server. Check your internet connection and try again.',
+  'identity-rejected': 'The room did not accept this player identity. Reload the page and join again.',
+});
+export const connectErrorMessage = reason => CONNECT_ERRORS[reason] || MESSAGES.connectFailed;
 
 export const VOTE_SECONDS = VOTING_COUNTDOWN_SECONDS;
 

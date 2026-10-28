@@ -22,7 +22,7 @@ export const BANNER_HIO_MS = 2800;
 export const BANNER_GAP_MS = 350;
 
 const DEFAULT_LOCAL = Object.freeze({
-  active: false, connecting: false, connected: true, id: null, isHost: false, roomCode: '',
+  active: false, connecting: false, connectError: '', connected: true, id: null, isHost: false, roomCode: '',
   mode: 'lobby', strokes: 0, inventory: [], soundOn: true, qualityHigh: true, viewLabel: 'Ball cam', colors: null, webglUnavailable: false,
 });
 
@@ -68,7 +68,7 @@ export function createUiStore({ courses, clock = globalThis }) {
     const hasRoom = !!room && local.active;
     const view = {
       screens: reuse('screens', screens),
-      landing: reuse('landing', { connecting: !!local.connecting }),
+      landing: reuse('landing', { connecting: !!local.connecting, error: local.connectError || '' }),
       lobby: reuse('lobby', hasRoom && screens.lobby ? lobbyView(room, local, now, courses) : null),
       voting: reuse('voting', hasRoom && screens.voting ? votingView(room, local, now, courses) : null),
       hud: reuse('hud', hasRoom && screens.game ? hudView(room, local, now, courses) : null),

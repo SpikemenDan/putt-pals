@@ -34,8 +34,8 @@ const assert = require('node:assert/strict');
   let failed = 0;
   const run = (name, fn) => { try { fn(); console.log('PASS:', name); } catch (error) { failed++; console.error('FAIL:', name, error.stack); } };
   run('host commands, membership limits, detached snapshots and disposal are enforced', () => {
-    const f = make(['a', 'b', 'c']);
-    assert.equal(f.send('JOIN_ROOM', { name: 'd' }, 'd'), false);
+    const f = make(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    assert.equal(f.send('JOIN_ROOM', { name: 'h' }, 'h'), false, 'an eighth guest exceeds MAX_PLAYERS (8)');
     assert.equal(f.send('START_VOTING', {}, 'a'), false);
     assert.equal(f.send('SET_MODE', { mode: GameModes.PRACTICE }), false);
     const s = f.state(); s.players.host.name = 'changed'; s.roster.push('fake');
