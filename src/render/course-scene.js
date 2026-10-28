@@ -132,7 +132,7 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     const portal = new THREE.Mesh(new THREE.CircleGeometry(22, 32), library.portal(color));
     portal.rotation.x = -Math.PI / 2; portal.position.set(...at(x, y, 1.8)); g.add(portal);
     // r128 used the beam hex unconverted; keep that additive glow rather than the linearised colour (R2c #57).
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 80, 24, 1, true), new THREE.MeshBasicMaterial({ color: displayColor(new THREE.Color(), color), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 80, 24, 1, true), new THREE.MeshBasicMaterial({ color: displayColor(new THREE.Color(), color), userData: { displayColor: true }, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
     beam.position.set(...at(x, y, 40)); g.add(beam);
   }
   for (const fa of hl.fan) {
