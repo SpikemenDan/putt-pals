@@ -13,13 +13,15 @@ import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
 import { createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, placeAura, placeBlob } from './actors.js';
 import { createWallFade } from './wall-fade.js';
+import { sizeInk } from './outline.js';
 
 const R = BALL_RADIUS;
 /** Legacy canvas aspect: height is 0.625 of the width. */
 export const VIEW_ASPECT = 1.6;
 const MAX_PIXEL_RATIO = 2;
 
-const defaultWebGLRenderer = (THREE, canvas) => new THREE.WebGLRenderer({ canvas, antialias: true });
+// The stencil buffer masks planar ink outlines (outline.js).
+const defaultWebGLRenderer = (THREE, canvas) => new THREE.WebGLRenderer({ canvas, antialias: true, stencil: true });
 
 /** Remote positions ease toward the latest snapshot and snap after a teleport (legacy dispOf). */
 export function smoothRemotePosition(previous, target) {
@@ -35,9 +37,11 @@ export function smoothRemotePosition(previous, target) {
  * @param {() => number} [options.random=Math.random] Texture noise, fan particle phases and confetti
  * @param {number} [options.devicePixelRatio=1]
  * @param {(THREE: object, canvas: HTMLCanvasElement) => object} [options.createWebGLRenderer]
+ * @param {'toon'|'legacy'} [options.style='toon'] Comic toon look (V1a #58); 'legacy' only for historical parity checks
  */
-export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer }) {
+export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer, style = 'toon' }) {
   if (!THREE) throw new TypeError('THREE is required');
+  const toon = style === 'toon';
   const makeCanvas = createCanvas || (() => canvas.ownerDocument.createElement('canvas'));
   const V = THREE.Vector3;
 
@@ -47,11 +51,12 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   // r152 replaced outputEncoding; keep r128 injection for the historical parity suite.
   if (Number(THREE.REVISION) >= 152) renderer.outputColorSpace = THREE.SRGBColorSpace;
   else renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  // Toon colours are authored flat palette values, so they are shown as they are, without tone mapping.
+  renderer.toneMapping = toon ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = toon ? 1 : 1.15;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MAX_PIXEL_RATIO));
 
-  const library = createMaterialLibrary({ THREE, createCanvas: makeCanvas, random, maxAnisotropy: renderer.capabilities.getMaxAnisotropy() });
+  const library = createMaterialLibrary({ THREE, createCanvas: makeCanvas, random, maxAnisotropy: renderer.capabilities.getMaxAnisotropy(), style });
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0xf0d8ee, 1800, 7000);
   const camera = new THREE.PerspectiveCamera(60, VIEW_ASPECT, 3, 8000);
@@ -60,8 +65,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
 
   // r155 removed the implicit PI multiplier for hemisphere/directional lights.
   const lightScale = Number(THREE.REVISION) >= 155 ? Math.PI : 1;
-  scene.add(new THREE.HemisphereLight(0xe2f0ff, 0xf2c9e8, 0.9 * lightScale));
-  const sun = new THREE.DirectionalLight(0xfff0cc, 1.5 * lightScale);
+  // Toon bands compare light levels, so the toon lights are white; the palette carries the colour.
+  scene.add(new THREE.HemisphereLight(toon ? 0xffffff : 0xe2f0ff, toon ? 0xffffff : 0xf2c9e8, 0.9 * lightScale));
+  const sun = new THREE.DirectionalLight(toon ? 0xffffff : 0xfff0cc, 1.5 * lightScale);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0004;
@@ -73,7 +79,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   scene.add(sky);
   let environment = null;
   let generator, envGeometry;
-  try {
+  // Flat toon materials take no reflections, so only the legacy style needs an environment map.
+  if (!toon) try {
     generator = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene();
     envGeometry = new THREE.SphereGeometry(50, 24, 16);
@@ -88,8 +95,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     envGeometry?.dispose();
   }
 
+  // Floating dream shapes and the ground plane are legacy scenery; the toon course floats in the sky (V1b #59).
   const dreamBits = [];
-  {
+  if (!toon) {
     const colors = [0xffc8e0, 0xc8e6ff, 0xd8ffd0, 0xfff0b8, 0xe0d0ff];
     for (let i = 0; i < 30; i++) {
       const a = i * 2.399, r = 1500 + (i % 7) * 330, color = colors[i % 5];
@@ -102,13 +110,16 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       dreamBits.push(mesh);
     }
   }
-  const ground = new THREE.Mesh(own(new THREE.PlaneGeometry(14000, 14000)), own(new THREE.MeshStandardMaterial({ color: 0xd9c8f4, roughness: 1 })));
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.set(1500, -90, 650);
-  ground.receiveShadow = true;
-  scene.add(ground);
+  if (!toon) {
+    const ground = new THREE.Mesh(own(new THREE.PlaneGeometry(14000, 14000)), own(new THREE.MeshStandardMaterial({ color: 0xd9c8f4, roughness: 1 })));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(1500, -90, 650);
+    ground.receiveShadow = true;
+    scene.add(ground);
+  }
 
   const disposeObject = object => {
+    if (object.userData.ink) disposeObject(object.userData.ink);
     object.geometry?.dispose();
     if (object.material) {
       const map = object.material.map;
@@ -125,7 +136,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   scene.add(localAura);
   const localBlob = actor(createBlob(library));
   scene.add(localBlob);
-  const trail = createTrail(THREE);
+  const trail = createTrail(THREE, { toon });
   scene.add(actor(trail.points));
   const confetti = createConfetti(THREE, random);
   scene.add(actor(confetti.points));
@@ -136,6 +147,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const remotes = new Map();
   const updateWallFade = createWallFade(THREE);
   let build = null, lastMode = '', width = 0, disposed = false;
+  const bufferSize = new THREE.Vector2();
 
   function remoteActor(id) {
     let entry = remotes.get(id);
@@ -302,6 +314,11 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       sun.target.position.set(...pose.sunTarget);
       sun.position.set(pose.sunTarget[0] + 250, pose.sunTarget[1] + 700, pose.sunTarget[2] + 350);
       updateWallFade(build.wallFade, dt, camera.position, pose.fadeTarget ? new V(...pose.fadeTarget) : null);
+      if (toon) {
+        // A fading wall drops its ink at once, so nothing dark is left over the ball behind it.
+        for (const w of build.wallFade) if (w.mesh.userData.ink) w.mesh.userData.ink.visible = w.alpha > 0.98;
+        if (renderer.getDrawingBufferSize) { renderer.getDrawingBufferSize(bufferSize); sizeInk(library.inkUniforms, bufferSize.x, bufferSize.y); }
+      }
       renderer.render(scene, camera);
     },
 
