@@ -323,9 +323,18 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
 
   const dispatch = createUiDispatcher(store, handle);
 
+  let webglFailed = false;
   function onCanvas(canvas) {
-    if (!canvas || renderer || disposed) return;
-    renderer = createGameRenderer({ THREE, canvas, random, devicePixelRatio: win.devicePixelRatio || 1, ...(createWebGLRenderer ? { createWebGLRenderer } : {}) });
+    if (!canvas || renderer || webglFailed || disposed) return;
+    // Without WebGL (disabled, blocklisted driver, GPU-less machine) the UI keeps working without the 3D view.
+    try {
+      renderer = createGameRenderer({ THREE, canvas, random, devicePixelRatio: win.devicePixelRatio || 1, ...(createWebGLRenderer ? { createWebGLRenderer } : {}) });
+    } catch (error) {
+      webglFailed = true;
+      win.console?.warn('Putt Pals: 3D view unavailable.', error);
+      setLocal({ webglUnavailable: true });
+      return;
+    }
     renderer.canvasWidth = () => Math.floor(canvas.parentNode?.clientWidth || 0);
     view = createGameView({ renderer });
     const ray = new THREE.Raycaster();

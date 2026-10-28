@@ -23,7 +23,7 @@ export const BANNER_GAP_MS = 350;
 
 const DEFAULT_LOCAL = Object.freeze({
   active: false, connecting: false, connected: true, id: null, isHost: false, roomCode: '',
-  mode: 'lobby', strokes: 0, inventory: [], soundOn: true, qualityHigh: true, viewLabel: 'Ball cam', colors: null,
+  mode: 'lobby', strokes: 0, inventory: [], soundOn: true, qualityHigh: true, viewLabel: 'Ball cam', colors: null, webglUnavailable: false,
 });
 
 function deepFreeze(value) {
@@ -76,6 +76,7 @@ export function createUiStore({ courses, clock = globalThis }) {
       scorecard: reuse('scorecard', hasRoom && (cardOpen || screens.results) && room.phase !== SessionPhases.LOBBY && room.phase !== SessionPhases.SELECT ? scorecardView(room, local, courses) : null),
       results: reuse('results', hasRoom && screens.results ? resultsView(room, local, courses) : null),
       toast,
+      webglUnavailable: !!local.webglUnavailable,
       banner: reuse('banner', { ...banner }),
     };
     return Object.freeze(view);

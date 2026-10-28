@@ -3,6 +3,7 @@
 // from the project. The project Vite configuration is not used.
 const path = require('node:path');
 const fs = require('node:fs');
+const { pathToFileURL } = require('node:url');
 
 const root = path.resolve(__dirname, '..', '..');
 
@@ -35,7 +36,9 @@ async function buildEntry(entry, name) {
   const files = fs.readdirSync(outDir);
   const js = files.find(f => f === name + '.mjs' || f === name + '.js');
   const css = files.find(f => f.endsWith('.css'));
-  return { modulePath: path.join(outDir, js), css: css ? fs.readFileSync(path.join(outDir, css), 'utf8') : '' };
+  // import() needs a file URL: a bare Windows path (c:\...) is read as a URL with scheme "c:".
+  const modulePath = path.join(outDir, js);
+  return { modulePath, moduleUrl: pathToFileURL(modulePath).href, css: css ? fs.readFileSync(path.join(outDir, css), 'utf8') : '' };
 }
 
 const buildUi = () => buildEntry('src/ui/index.js', 'ui');

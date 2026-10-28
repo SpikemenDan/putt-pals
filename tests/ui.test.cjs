@@ -33,10 +33,10 @@ function fakeClock() {
 }
 
 (async () => {
-  const { modulePath } = await buildUi();
+  const { moduleUrl } = await buildUi();
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' });
   Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
-  const ui = await import(modulePath);
+  const ui = await import(moduleUrl);
   const React = (await import('react')).default;
   const { act } = React;
   const { createCourseData } = await import('../src/courses/index.js');

@@ -41,6 +41,7 @@ export const MESSAGES = Object.freeze({
   inviteSolo: 'Join a room from the lobby to invite friends.',
   inviteCopied: 'Invite copied. Keep the host tab open.',
   freeRoamHint: 'Free roam: WASD fly, Q/E down/up, Shift fast, drag to look',
+  webglUnavailable: "This browser or device can't run the 3D course: WebGL is unavailable (hardware acceleration may be turned off, or WebGL blocked). Turn on hardware acceleration in your browser settings, or try another desktop browser.",
 });
 
 export const VOTE_SECONDS = VOTING_COUNTDOWN_SECONDS;
