@@ -8,7 +8,8 @@
 const { expect } = require('@playwright/test');
 const solver = require('../../fixtures/cup-capture/solutions.json');
 
-const PEER_PORT = 9310;
+// global-setup.cjs picks a free port per run and publishes it here, so parallel runs never collide.
+const PEER_PORT = Number(process.env.PP_PEER_PORT) || 9310;
 const PEER_PATH = '/pp';
 // Loopback signalling and no STUN, so tests never touch the public network.
 const PEER_SERVER = { debug: Number(process.env.PP_PEER_DEBUG || 0), host: '127.0.0.1', port: PEER_PORT, path: PEER_PATH, secure: false, config: { iceServers: [] } };
