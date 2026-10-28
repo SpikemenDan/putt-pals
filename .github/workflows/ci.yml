@@ -87,8 +87,14 @@ jobs:
         run: npm ci
       - name: Install the Playwright browser and its system libraries
         run: npx playwright install --with-deps ${{ matrix.browser }}
-      - name: Run real-browser solo, input, practice and four-player WebRTC flows
+      # GPU-less runners: Firefox needs Mesa's software GL/EGL drivers for WebGL (Chromium and WebKit bundle their own).
+      - name: Install software OpenGL for Firefox
+        if: matrix.browser == 'firefox'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libegl-mesa0 libgl1
+      - name: Run real-browser solo, input, practice, lifecycle and four-player WebRTC flows
         run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
       - name: Upload the Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v7

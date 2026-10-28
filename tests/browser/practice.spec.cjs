@@ -39,3 +39,28 @@ test('putt practice: the picker starts a putt, completion replays it, the bar st
 
   expect(ana.errors, 'no page or console errors').toEqual([]);
 });
+
+test('course practice: a real two-minute timeout scores par + penalty and the map still finishes', async ({ page }) => {
+  // The first putt is left to run out its 2:00 limit in real time.
+  test.setTimeout(600_000);
+  const ana = await openApp(page, 'Ana');
+  await ana.solo();
+  await ana.ui('room-lobby').locator('select').selectOption('practice');
+  await ana.button('Start Game').click();
+  await expect(ana.ui('map-select').locator('p').first()).toHaveText('Practice · pick any map to start. No voting, no opponents.');
+  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await until(() => ana.ready(), { label: 'ready' });
+  await until(() => page.evaluate(() => window.__ppApp.store.getSnapshot().hud.warn), { timeout: 130_000, label: 'last ten seconds warning' });
+  await until(async () => (await ana.snapshot()).players.solo.scores.length > 0, { timeout: 30_000, label: 'timeout' });
+  expect(await page.evaluate(() => window.__ppApp.room.snapshot.players.solo.scores[0]), 'timeout scores par 2 + penalty 3').toEqual({ score: 5, timedOut: true, par: 2, penalty: 3 });
+  for (let k = 1; k < 6; k++) {
+    await until(async () => (await page.evaluate(() => window.__ppApp.putt?.puttIndex)) === k, { label: 'putt ' + (k + 1) });
+    await playPutt([ana]);
+    await until(async () => (await ana.snapshot()).players.solo.scores.length > k, { label: 'sink ' + (k + 1) });
+  }
+  await expect(ana.ui('results')).toBeVisible({ timeout: 30_000 });
+  await expect(ana.ui('results').locator('p').first()).toHaveText('Switchback Garden: Ana 10. Practice round finished.');
+  await ana.button('Pick another map').click();
+  await expect(ana.ui('map-select')).toBeVisible();
+  expect(ana.errors, 'no page or console errors').toEqual([]);
+});
