@@ -13,6 +13,7 @@
  * globals. The library owns everything it creates; `dispose()` releases all of it.
  */
 
+import { BALL_RADIUS } from '../shared/constants.js';
 import { createInkMaterial, createInkUniforms, INK_COLOR } from './outline.js';
 
 export const SHADER_VERTEX = 'varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
@@ -148,7 +149,8 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
   const ink = toon ? Object.freeze({
     solid: own(createInkMaterial(THREE, inkUniforms)),
     planar: own(createInkMaterial(THREE, inkUniforms, { planar: true })),
-    overlay: own(createInkMaterial(THREE, inkUniforms, { overlay: true })),
+    ball: own(createInkMaterial(THREE, inkUniforms, { lift: BALL_RADIUS * 0.3 })),
+    overlay: own(createInkMaterial(THREE, inkUniforms, { overlay: true, lift: BALL_RADIUS * 0.3 })),
   }) : null;
   const sharedMaterials = new Set([water, pad, skyMaterial, ...Object.values(ink || {})]);
   const toonCompile = shader => {
@@ -163,7 +165,7 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
     time,
     textures,
     inkUniforms,
-    /** Shared ink materials (toon style only): `solid` back-face hull, `planar` flat surfaces, `overlay` translucent owners. */
+    /** Shared ink materials (toon style only): `solid` back-face hull, `planar` flat surfaces, `ball` and `overlay` (see-through) balls. */
     ink,
     skyMaterial,
     water,

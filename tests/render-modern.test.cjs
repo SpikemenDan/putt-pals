@@ -83,7 +83,7 @@ const { JSDOM } = require('jsdom');
   assert.equal(builds, 52); assert.ok(patches > 52);
   assert.equal(trees, 0, 'no landscape trees');
   assert.ok(inked > 52 * 10 && cutInk >= 52, `ink on every solid (${inked} hulls, ${cutInk} with the cup cutout)`);
-  assert.ok(r.localBall.userData.ink?.material === r.library.ink.solid, 'local ball is inked');
+  assert.ok(r.localBall.userData.ink?.material === r.library.ink.ball, 'local ball is inked, lifted so a wall behind it cannot clip the ring');
   {
     // Remote (see-through) balls draw their ink after themselves so the hull never shows through.
     const remote = r.scene.children.find(o => o.isMesh && o !== r.localBall && o.material.userData?.toon && o.material.transparent);

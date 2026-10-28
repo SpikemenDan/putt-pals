@@ -1,6 +1,6 @@
 # Renderer
 
-The modular app uses the pinned Three.js 0.186.1 renderer. Course object layout, camera behavior and gameplay remain extracted from the legacy game; modern color management, lighting and shader output are handled explicitly.
+The modular app uses the pinned Three.js 0.186.1 renderer. Course object layout, camera behavior and gameplay remain extracted from the legacy game; modern color management, lighting and shader output are handled explicitly. The default look is the V1a toon style, while `style: 'legacy'` exists solely for historical r128 parity.
 
 ## Using it
 
@@ -36,6 +36,7 @@ All inputs are plain simulation-space snapshots. The renderer never mutates simu
 ## Ownership and disposal
 
 - `createMaterialLibrary()` owns shared canvas textures, the sky, water and jump-pad materials and the shared time uniform.
+- `library.ink.{solid,planar,overlay}` are shared library materials; per-build cup ink materials and hull geometries are owned and disposed by the build; actor hulls are disposed with their ball.
 - Each `buildCourseScene()` owns every geometry, material and texture it creates, including materials replaced by the cup-cutout clone. `setCourse()` disposes the previous build before adding the next, and shared library resources are never disposed by a course swap.
 - Remote players keep one hidden actor per id (legacy behaviour). Renaming a player disposes the old label texture instead of leaking it.
 - Environment lighting owns the PMREM render target (including its framebuffer), not just its texture. Generator and temporary geometry cleanup also runs on failed PMREM generation. The directional shadow target is released at final disposal.
@@ -50,7 +51,19 @@ All inputs are plain simulation-space snapshots. The renderer never mutates simu
 - live frames in ball cam, hole view and world view with zoom/orbit input, a rolling and sinking ball (trail, spin, confetti), free-roam flight, a remote player (smoothing, teleport, rename, aura, shadow) and the putt-to-putt transition: camera position/orientation and the complete scene every frame;
 - wall fading between camera and ball and around the camera; resource release across 44 course swaps and final disposal.
 
-The second suite uses the installed Three.js package: all 52 putt builds, finite vertices, current cup-shader hooks, output/texture color spaces, light scaling and resource disposal. Both suites stub WebGL. Real Chrome profiling and screenshots use `tests/render/probe.html` and `tests/render/profile.cjs`; see `docs/reviews/R2_RENDERER.md` for commands, evidence and limits. B1 screenshots remain a geometry/camera reference; exact pastel colors are not R2 acceptance.
+The second suite uses the installed Three.js package: all 52 putt builds, finite vertices, current cup-shader hooks, output/texture color spaces, light scaling and resource disposal. Both suites stub WebGL. Real Chrome profiling and screenshots use `tests/render/probe.html` and `tests/render/profile.cjs`; see `docs/reviews/R2_RENDERER.md` for commands, evidence and limits. B1 screenshots remain a geometry/camera reference; exact pastel colors are not R2 acceptance. `tests/render-modern.test.cjs` covers the toon style (no textures, chained cup patch, ink on every solid, faded walls drop ink, no trees/ground/dream shapes) and checks that every course's toon build has the same object layout as the legacy build, minus trees, plus ink hulls; `tests/render.test.cjs` and the r128 topology check in `tests/app.test.cjs` pin style 'legacy'.
+
+## Toon style (V1a #58)
+
+- `createGameRenderer()` and `createMaterialLibrary()` take a new option `style`: `'toon'` (default) or `'legacy'`. `'legacy'` keeps the old textured materials, landscape trees, ground plane, floating dream shapes, PMREM environment map and ACES tone mapping so historical parity tests keep running.
+- Toon style renders every course surface in one flat color from `TOON_PALETTE` in `materials.js` (no image textures). Lit surfaces use `library.toon(color, overrides)`: a `MeshLambertMaterial` with an `onBeforeCompile` patch posterizing light into three flat bands (cast shadows kept) with screen-space halftone dots in the two darker bands.
+- Toon lighting uses white lights, `NoToneMapping`, no PMREM environment map, and omits ground planes, dream shapes, and landscape trees.
+- The cup cutout in `course-scene.js` chains onto the toon patch (the toon patch runs first) and its program cache key becomes `cup-cut-v5-<radius>|toon-v1`.
+- `src/render/outline.js` provides ink outlines for closed meshes using an inverted back-face hull on merged smoothed normals, pushed out 4 drawing-buffer pixels per 1280 px of width.
+- Flat open meshes (flag, water, ramps) use a planar hull whose border vertices are pushed away from the mesh center; the owner writes stencil and the hull draws only outside it (the default WebGL renderer requests a stencil buffer).
+- Remote see-through balls use an overlay ink material drawn after the ball. Cup-cut mesh hulls get the same cutout. Hulls are children of their mesh (`userData.ink` on the mesh, `userData.inkHull` on the hull), never cast shadows and are not raycast by wall fade. Fading walls immediately hide their ink.
+- The renderer keeps shared ink uniforms (width, resolution, halftone cell) in step with the drawing-buffer size each frame.
+- Effect shaders (water, pads, portals, power blocks, vortex, hazards, particles, auras, trail) have toon variants posterized into hard bands; they write display sRGB values directly as fixed by R2c #57. Portals draw their ink ring in the shader.
 
 ## Legacy behaviour preserved, and what was not ported
 

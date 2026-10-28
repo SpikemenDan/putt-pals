@@ -22,11 +22,18 @@ const INK_VERTEX = `uniform float ink;uniform vec2 res;
 #ifdef INK_PLANAR
 attribute float inkEdge;
 #endif
+#ifdef INK_LIFT
+uniform float inkLift;
+#endif
 #ifdef INK_CUP
 varying vec3 cupWorld;
 #endif
 void main(){
-  vec4 clip=projectionMatrix*modelViewMatrix*vec4(position,1.);
+  vec4 view=modelViewMatrix*vec4(position,1.);
+#ifdef INK_LIFT
+  view.z+=inkLift;
+#endif
+  vec4 clip=projectionMatrix*view;
 #ifdef INK_CUP
   cupWorld=(modelMatrix*vec4(position,1.)).xyz;
 #endif
@@ -34,7 +41,9 @@ void main(){
   vec4 c=projectionMatrix*modelViewMatrix*vec4(0.,0.,0.,1.);
   vec2 dir=(clip.xy/clip.w-c.xy/c.w)*res*inkEdge;
 #else
-  vec2 dir=(projectionMatrix*vec4(normalize(normalMatrix*normal),0.)).xy*res;
+  // Screen direction of the normal: project a point nudged along it, with the perspective divide.
+  vec4 n=projectionMatrix*(view+vec4(normalize(normalMatrix*normal)*.01*max(1.,-view.z),0.));
+  vec2 dir=(n.xy/n.w-clip.xy/clip.w)*res;
 #endif
   float len=length(dir);
   if(len>1e-4&&clip.w>0.)clip.xy+=dir/len*ink*2./res*clip.w;
@@ -74,11 +83,14 @@ export function sizeInk(uniforms, width, height) {
  * @param {boolean} [options.planar=false] Flat open surface: extrude from the mesh centre
  * @param {boolean} [options.overlay=false] For translucent owners: drawn after them, so the owner hides the hull's inside
  * @param {{center: [number, number], radius: number}|null} [options.cup=null] Cup cutout (world x/z), as on the turf
+ * @param {number} [options.lift=0] Moves the hull this far toward the camera (view units). A ball's back
+ *   half can touch a wall it rests against; a small lift (a third of its radius) keeps the ring in front.
  */
-export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null } = {}) {
+export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null, lift = 0 } = {}) {
   const defines = {};
   const own = { ink: uniforms.ink, res: uniforms.res };
   if (planar) defines.INK_PLANAR = '';
+  if (lift) { defines.INK_LIFT = ''; own.inkLift = { value: lift }; }
   if (cup) {
     defines.INK_CUP = '';
     own.cupCenter = { value: new THREE.Vector2(...cup.center) };

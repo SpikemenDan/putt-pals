@@ -19,7 +19,7 @@ export function createBall(library, color, opacity, environment) {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 20), library.toon(color, { transparent: opacity < 1, opacity }));
     mesh.castShadow = true;
     // A see-through remote ball draws its ink after itself, so the hull's inside never shows through it.
-    addInk(THREE, mesh, opacity < 1 ? library.ink.overlay : library.ink.solid);
+    addInk(THREE, mesh, opacity < 1 ? library.ink.overlay : library.ink.ball);
     return mesh;
   }
   const map = library.textures.ball.clone();
