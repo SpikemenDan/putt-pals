@@ -1,9 +1,9 @@
 /**
  * Procedural textures and shader materials shared by every course build.
  *
- * Ported from the legacy renderer (putt-pals.html, "rendering" section) with
- * identical colours, shader source and parameters. Browser objects are
- * injected: `THREE` (r128 namespace), `createCanvas()` for canvas textures and
+ * Retains the legacy renderer's authored texture and effect recipes, with
+ * explicit modern display-output conversion. Browser objects are
+ * injected: `THREE`, `createCanvas()` for canvas textures and
  * `random()` for texture noise, so the module never touches globals.
  *
  * The library owns everything it creates; `dispose()` releases all of it.
@@ -41,7 +41,7 @@ function noise(g, size, count, alpha, random) {
 
 /**
  * @param {object} options
- * @param {object} options.THREE Three.js r128 namespace
+ * @param {object} options.THREE Three.js namespace
  * @param {() => HTMLCanvasElement} options.createCanvas
  * @param {() => number} [options.random=Math.random] Texture noise source
  * @param {number} [options.maxAnisotropy=1]
@@ -61,7 +61,10 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = maxAnisotropy;
-    if (srgb) texture.encoding = THREE.sRGBEncoding;
+    if (srgb) {
+      if (Number(THREE.REVISION) >= 152) texture.colorSpace = THREE.SRGBColorSpace;
+      else texture.encoding = THREE.sRGBEncoding;
+    }
     return track ? own(texture) : texture;
   }
 
@@ -79,9 +82,11 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
   });
   const sharedTextures = new Set(Object.values(textures));
 
-  const skyMaterial = own(new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, vertexShader: SKY_VERTEX, fragmentShader: SKY_FRAGMENT }));
-  const water = own(new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: WATER_FRAGMENT }));
-  const pad = own(new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: PAD_FRAGMENT }));
+  // Custom shaders must opt into the same display conversion as built-in materials.
+  const shader = fragment => displayFragment(THREE, fragment);
+  const skyMaterial = own(new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, vertexShader: SKY_VERTEX, fragmentShader: shader(SKY_FRAGMENT) }));
+  const water = own(new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(WATER_FRAGMENT) }));
+  const pad = own(new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(PAD_FRAGMENT) }));
   water.userData.shared = pad.userData.shared = true;
 
   return {
@@ -105,16 +110,23 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
       return new THREE.MeshStandardMaterial(Object.assign({ map, bumpMap: map, bumpScale: 0.5, roughness: 0.55, metalness: 0.05 }, overrides || {}));
     },
     portal(color) {
-      return new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time, col: { value: new THREE.Color(color) } }, vertexShader: SHADER_VERTEX, fragmentShader: PORTAL_FRAGMENT });
+      return new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time, col: { value: new THREE.Color(color) } }, vertexShader: SHADER_VERTEX, fragmentShader: shader(PORTAL_FRAGMENT) });
     },
-    powerBlock() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: POWER_BLOCK_FRAGMENT }); },
-    vortex() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fragmentShader: VORTEX_FRAGMENT }); },
-    hazard() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: HAZARD_FRAGMENT }); },
-    vortexParticles() { return new THREE.ShaderMaterial({ uniforms: { t: time }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: PARTICLE_VERTEX, fragmentShader: PARTICLE_FRAGMENT }); },
-    aura() { return new THREE.ShaderMaterial({ uniforms: { t: time, col: { value: new THREE.Color(0xffffff) }, kind: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, vertexShader: AURA_VERTEX, fragmentShader: AURA_FRAGMENT }); },
+    powerBlock() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(POWER_BLOCK_FRAGMENT) }); },
+    vortex() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fragmentShader: shader(VORTEX_FRAGMENT) }); },
+    hazard() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(HAZARD_FRAGMENT) }); },
+    vortexParticles() { return new THREE.ShaderMaterial({ uniforms: { t: time }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: PARTICLE_VERTEX, fragmentShader: shader(PARTICLE_FRAGMENT) }); },
+    aura() { return new THREE.ShaderMaterial({ uniforms: { t: time, col: { value: new THREE.Color(0xffffff) }, kind: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, vertexShader: AURA_VERTEX, fragmentShader: shader(AURA_FRAGMENT) }); },
     dispose() {
       for (const resource of owned) resource.dispose();
       owned.clear();
     },
   };
+}
+
+/** r154+ display output chunks. Render targets (PMREM) keep linear output automatically. */
+export function displayFragment(THREE, source) {
+  if (Number(THREE.REVISION) < 154) return source;
+  const end = source.lastIndexOf('}');
+  return source.slice(0, end) + '\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n' + source.slice(end);
 }

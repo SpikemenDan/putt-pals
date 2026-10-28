@@ -15,7 +15,7 @@
     "test:contracts": "node tests/contracts.test.cjs",
     "test:simulation": "node tests/simulation.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
-    "test:render": "node tests/render.test.cjs",
+    "test:render": "node tests/render.test.cjs && node tests/render-modern.test.cjs",
     "test:input": "node tests/input.test.cjs",
     "test:ui": "node tests/ui.test.cjs",
     "test:app": "node tests/app.test.cjs",
@@ -42,7 +42,7 @@
     "peerjs": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "three": "0.128.0",
+    "three": "0.186.1",
     "xstate": "5.33.3"
   }
 }

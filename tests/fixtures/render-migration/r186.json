@@ -1,0 +1,207 @@
+{
+  "sources": {
+    "src/render/renderer.js": "a855ccc89bb947369dddf6bb8bb836c3c3e3bd51a61a694dabb44d790f4f812b",
+    "src/render/materials.js": "ca91983ab377f8de3544cadc968eee07ad87ce50b4e3039b9b1a6795cec5a9a2",
+    "src/render/actors.js": "29b80b2e8e470ddc8e3cf4f0b30c0fff8297222d021d9e6d80f90a213fc694a4",
+    "tests/render/probe.html": "5456882f9d638f5ab85e2cc9d2e8fe221cf7ac0c6499afd17031d4a8ee374e04",
+    "tests/render/profile.cjs": "1b0db6a935db102c8e8053833becf68fb6f4094d26feba7534493b29e0f19501"
+  },
+  "capturedAt": "2026-10-28T03:16:40.861Z",
+  "hardware": {
+    "revision": "186",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "dpr": 2,
+    "width": 2560,
+    "height": 1600
+  },
+  "workload": "1280x800 CSS / DPR 2, high quality, 7 remote actors, aim and auras, 60 warmup + 300 measured frames per starter",
+  "samples": [
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "frameIntervalMs": {
+        "mean": 8.332666666666666,
+        "median": 8.300000000000182,
+        "p95": 9,
+        "max": 9.300000000000182
+      },
+      "renderSubmissionMs": {
+        "mean": 1.5759999997417131,
+        "median": 1.199999988079071,
+        "p95": 4,
+        "max": 5.5
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "frameIntervalMs": {
+        "mean": 8.333,
+        "median": 8.300000000000182,
+        "p95": 9.099999999999454,
+        "max": 9.300000000000182
+      },
+      "renderSubmissionMs": {
+        "mean": 1.8163333329558373,
+        "median": 1.2000000029802322,
+        "p95": 4.100000008940697,
+        "max": 6.200000002980232
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "frameIntervalMs": {
+        "mean": 8.333666666666668,
+        "median": 8.300000000001091,
+        "p95": 9.199999999999818,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "mean": 1.841333333402872,
+        "median": 1.2999999970197678,
+        "p95": 4.200000002980232,
+        "max": 6.4000000059604645
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "frameIntervalMs": {
+        "mean": 8.333333333333334,
+        "median": 8.299999999999272,
+        "p95": 9.200000000000728,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "mean": 2.1253333332637947,
+        "median": 1.5,
+        "p95": 4.800000011920929,
+        "max": 10.199999988079071
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "frameIntervalMs": {
+        "mean": 8.333333333333334,
+        "median": 8.300000000001091,
+        "p95": 9.100000000000364,
+        "max": 9.5
+      },
+      "renderSubmissionMs": {
+        "mean": 2.0833333327372867,
+        "median": 1.5,
+        "p95": 4.700000002980232,
+        "max": 6.799999997019768
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "frameIntervalMs": {
+        "mean": 8.333333333333334,
+        "median": 8.30000000000291,
+        "p95": 9.19999999999709,
+        "max": 9.299999999999272
+      },
+      "renderSubmissionMs": {
+        "mean": 2.319000000208616,
+        "median": 1.7000000029802322,
+        "p95": 5.4000000059604645,
+        "max": 6.799999997019768
+      }
+    }
+  ],
+  "resources": {
+    "builds": 52,
+    "memory": [
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      },
+      {
+        "geometries": 100,
+        "textures": 24,
+        "programs": 21,
+        "calls": 141,
+        "triangles": 33376
+      }
+    ]
+  },
+  "errors": []
+}

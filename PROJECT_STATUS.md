@@ -214,3 +214,9 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - Post-merge CI on 3f5d010 failed: browser-ci Chromium's four-player spec timed out when guest "Cy" did not reach the lobby within 15 s (run 40618503597; empty page console). baseline-ci, Firefox and WebKit passed. This is the second such Chromium join timeout in three runs (see the T1 entry), so it is a recurring flake, not a one-off; a fix is proposed but not yet started. CI on 734b3d1 was still running at this snapshot.
 - Not yet covered in a real browser: N2 in Firefox/WebKit, and committed specs for room-full, resume, reconnect and host loss.
 - Q1 now waits on N3, R2 and B4.
+
+## R2 integration record — PR #53
+
+Effective after green current-head checks, accepted merge and post-merge verification recorded in [#16](https://github.com/SpikemenDan/putt-pals/issues/16): Three.js is pinned to 0.186.1 with explicit color/shader/light migration and PMREM/shadow disposal. The full local suite and three-engine selected browser flows passed; Mac M1 Pro renderer probe averages ~8.33 ms across six starters, with stable counters and no browser errors. CPU submission increased; full-app FPS is not measured by this probe. Handoff/evidence: docs/reviews/R2_RENDERER.md and tests/fixtures/render-migration/. Until PR #53 merges this is a proposed integration record, not accepted main behavior.
+
+The user authorized merging now using the Mac target and moved Windows Radeon 860M / RTX 5060 Laptop GPU verification to nonblocking [R2w #52](https://github.com/SpikemenDan/putt-pals/issues/52), intended for the other Windows-capable agent after a confirmed claim. PR #53 also restores the normal baseline/browser CI accidentally replaced by the throwaway diagnostics in PR #51, while preserving T1c-owned source/harness work and excluding only its explicitly named diagnostic probe from the normal acceptance run. No deployment, Windows evidence or new art implementation is implied.

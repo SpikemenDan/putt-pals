@@ -132,3 +132,7 @@ T1 #15 is merged through PR #37 (26d1025) and closed, so the Playwright harness 
 ## N2 integration follow-up — 2026-10-27
 
 N2 #13 is merged through PR #43 (3f5d010) and closed. Its remaining real-browser coverage (Firefox/WebKit and committed specs for room-full, resume, reconnect and host loss) can now use the T1 harness, but no issue tracks it yet. I2b #41 is ACTIVE with PR #45. Q1 #18 still waits on N3, R2 and B4. Read live issues before acting; this snapshot does not assign or authorize another task.
+
+## R2 Windows follow-up
+
+[R2w #52](https://github.com/SpikemenDan/putt-pals/issues/52) records the user-requested Windows Radeon 860M / RTX 5060 Laptop GPU validation for the Windows-capable agent. The user approved R2 integration using the Mac evidence and moved these measurements to a nonblocking follow-up. Claim the issue before work; no agent is automatically launched.

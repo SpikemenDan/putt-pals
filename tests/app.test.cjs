@@ -4,7 +4,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
 const { buildApp } = require('./support/build-ui.cjs');
 const { createScheduler, createStubRenderers, createAudioRecorder, createWindow } = require('./support/app-harness.cjs');
@@ -374,21 +373,28 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   });
 
   // ---------------------------------------------------------------------------------------------
-  await scenario('library: npm three@0.128.0 builds every course scene identically to the Three.js embedded in the legacy page', async () => {
+  await scenario('library: pinned Three.js preserves legacy course object topology and transforms', async () => {
     const html = fs.readFileSync(path.join(root, 'putt-pals.html'), 'utf8');
     const embedded = new JSDOM('', { runScripts: 'outside-only' }).window;
     embedded.eval(html.match(/<script>\/\* three\.js \(inlined\) \*\/([\s\S]*?)<\/script>/)[1]);
-    assert.equal(embedded.THREE.REVISION, THREE.REVISION);
+    assert.equal(embedded.THREE.REVISION, '128');
+    const pinned = require('../package.json').dependencies.three;
+    assert.equal(THREE.REVISION, pinned.split('.')[1], 'runtime uses the pinned Three.js revision');
     const { buildCourseScene, createMaterialLibrary } = await import('../src/render/index.js');
     const { createCourseData } = await import('../src/courses/index.js');
     const { definitions } = createCourseData();
     const ctx = new Proxy(function () {}, { get: (_, k) => (k === 'measureText' ? () => ({ width: 10 }) : ctx), set: () => true, apply: () => ctx });
     const canvas = () => ({ width: 0, height: 0, getContext: () => ctx });
-    const sha = v => createHash('sha256').update(JSON.stringify(v)).digest('hex').slice(0, 16);
+    // Current TorusGeometry exposes tube-angle defaults that r128 did not record.
+    const dimensions = geometry => ({
+      ...(geometry.type === 'TorusGeometry' ? { thetaStart: 0, thetaLength: Math.PI * 2 } : {}),
+      ...Object.fromEntries(Object.entries(geometry.parameters || {}).filter(([key]) => !/Segments$/.test(key))),
+    });
     const describe = o => ({
       type: o.type, p: o.position.toArray(), r: o.rotation.toArray().slice(0, 3), s: o.scale.toArray(),
-      g: o.geometry && !o.isSprite ? { t: o.geometry.type, a: Object.fromEntries(Object.entries(o.geometry.attributes).map(([k, a]) => [k, sha(Array.from(a.array))])), i: o.geometry.index ? sha(Array.from(o.geometry.index.array)) : null } : null,
-      m: o.material ? { t: o.material.type, c: o.material.color?.getHex(), tr: o.material.transparent, side: o.material.side, vs: o.material.vertexShader ? sha(o.material.vertexShader) : null, fs: o.material.fragmentShader ? sha(o.material.fragmentShader) : null } : null,
+      // Segment defaults can change between Three.js releases; authored dimensions must not.
+      g: o.geometry && !o.isSprite ? { type: o.geometry.type, dimensions: dimensions(o.geometry) } : null,
+      m: o.material ? { t: o.material.type, c: o.material.color?.getHex(), tr: o.material.transparent, side: o.material.side, shader: !!o.material.isShaderMaterial } : null,
       c: o.children.map(describe),
     });
     let builds = 0;
