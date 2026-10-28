@@ -37,8 +37,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
     async function run(ms) { for (let t = 0; t < ms; t += 500) { await act(async () => { scheduler.advance(Math.min(500, ms - t)); }); await settle(); } }
     async function until(fn, ms = 60000, label = 'condition') { for (let t = 0; t <= ms; t += 100) { if (fn()) return; await run(100); } assert.fail('timed out waiting for ' + label); }
-    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true } = {}) {
+    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true, storage = {} } = {}) {
       const win = createWindow(scheduler, { url });
+      for (const [k, v] of Object.entries(storage)) win.w.sessionStorage.setItem(k, v); // a reloaded tab keeps its sessionStorage
       const audio = createAudioRecorder();
       let app;
       await act(async () => { app = createApp({ root: win.w.document.getElementById('root'), THREE, window: win.w, random, createWebGLRenderer, createAudio: () => audio, createTransport: memoryTransport ? options => hub.create(options) : undefined }); });
@@ -305,14 +306,21 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(Object.keys(totals).length, 5);
     assert.equal(Object.values(totals).filter(t => t.name === 'Dee').length, 2);
     for (const c of [ben, cy, dee]) assert.deepEqual(c.snapshot.totals, totals, `${c.name} sees the same totals`);
-    // Host loss: guests get the disconnect notice.
+    // Host loss: guests first try to reconnect (as guests only), then get the explicit disconnect notice.
     await ana.click('Back to lobby');
     await ana.click('Leave room');
     await W.run(300);
     for (const g of guests) {
+      assert.equal(g.$('[role=alert]').hidden, false, `${g.name} sees the reconnecting notice`);
+      assert.equal(g.text('[role=alert]'), 'Connection dropped. Reconnecting… your place in the room is kept for 30 seconds.');
+    }
+    await W.run(32000);
+    for (const g of guests) {
       assert.equal(g.$('[role=alert]').hidden, false, `${g.name} sees the disconnect notice`);
       assert.equal(g.text('[role=alert]'), 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.');
+      assert.equal(g.app.room.isHost, false, 'no guest took over as host');
     }
+    assert.equal(W.hub.rooms.has('puttpals-circuit-v6-party'), false, 'nobody claimed the host ID');
     for (const c of all) await c.dispose();
     assert.equal(W.hub.rooms.size, 0, 'every transport left the hub');
   });
@@ -427,6 +435,45 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(Boolean(ok.app.renderer), true);
     await c.dispose();
     await ok.dispose();
+  });
+
+  await scenario('guest recovery: a dropped guest reconnects to the same seat mid-round, and a reload resumes it with its scores', async () => {
+    const W = world();
+    const ana = await W.client('Ana'); await ana.join('resume');
+    const ben = await W.client('Ben'); await ben.join('resume');
+    const benId = ben.app.room.localId, hostId = ana.app.room.localId;
+    await ana.click('Start Game');
+    await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'voting');
+    for (const c of [ana, ben]) await c.click(c.$('[data-ui=map-select] button[data-v]'));
+    await W.until(() => ana.ready() && ben.ready(), 10000, 'map start');
+    // Network loss (no LEAVE): Ben sees a reconnecting notice, the host keeps his seat.
+    await act(async () => { W.hub.rooms.get(hostId).detach(benId); });
+    await W.settle();
+    assert.equal(ben.text('[role=alert]'), 'Connection dropped. Reconnecting… your place in the room is kept for 30 seconds.');
+    assert.equal(ana.snapshot.players[benId].connected, true, 'the seat is held during grace');
+    await W.until(() => ben.app.room.connected, 5000, 'automatic reconnect');
+    assert.equal(ben.app.room.localId, benId, 'same identity'); assert.equal(ben.$('[role=alert]').hidden, true);
+    assert.equal(ben.snapshot.players[benId].connected, true); assert.equal(ben.snapshot.roster.includes(benId), true);
+    await W.playPutt([ana, ben]);
+    await W.until(() => ana.snapshot.players[benId].scores.length === 1, 30000, 'putt recorded for both');
+    assert.equal(ana.snapshot.players[benId].scores[0].score, 1, "Ben's hole in one after reconnecting counts");
+    // Reload: pagehide disposes the app (sending LEAVE), sessionStorage survives in the tab.
+    const stored = ben.win.w.sessionStorage.getItem('putt-pals:resume:resume');
+    assert.ok(stored && JSON.parse(stored).peerId === benId, 'identity stored per room code');
+    await ben.dispose();
+    await W.run(100);
+    assert.equal(ana.snapshot.players[benId].connected, false);
+    const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=resume', storage: { 'putt-pals:resume:resume': stored } });
+    const [n, r] = reloaded.doc.querySelectorAll('[data-ui=landing] input');
+    assert.equal(n.value, 'Ben', 'the name is prefilled after reload'); assert.equal(r.value, 'resume');
+    await reloaded.click('Join room');
+    await W.until(() => reloaded.app.room?.connected && reloaded.snapshot?.players[benId]?.connected, 5000, 'resumed seat');
+    assert.equal(reloaded.app.room.localId, benId);
+    assert.equal(reloaded.snapshot.players[benId].scores[0].score, 1, 'scores survive the reload');
+    // An explicit Leave forgets the identity: the next join is a fresh seat.
+    await act(async () => { reloaded.app.dispatch({ type: 'leave' }); });
+    assert.equal(reloaded.win.w.sessionStorage.getItem('putt-pals:resume:resume'), null);
+    for (const c of [ana, reloaded]) await c.dispose();
   });
 
   await scenario('capacity: eight clients fill a room and play; a ninth is told the room is full; no WebRTC is explained up front', async () => {

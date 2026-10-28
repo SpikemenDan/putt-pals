@@ -4,6 +4,8 @@ import { GameModes } from '../shared/session.js';
 export const MAX_MESSAGE_BYTES = 65536;
 export const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
 export const count = n => Number.isSafeInteger(n) && n >= 0;
+/** Guest resume secret (N2): random, URL-safe, never broadcast by the host. */
+export const validResumeToken = t => typeof t === 'string' && /^[a-zA-Z0-9_-]{16,64}$/.test(t);
 const record = o => o !== null && typeof o === 'object' && !Array.isArray(o);
 const name = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
 const keys = (o, allowed) => Object.keys(o).every(k => allowed.includes(k));
@@ -17,7 +19,7 @@ export function validCommand(e, isHost) {
   if (!record(e) || typeof e.type !== 'string') return false;
   if (!isHost && hostCommands.includes(e.type)) return false;
   const fields = {
-    JOIN_ROOM: ['name'], LEAVE_ROOM: [], SET_MODE: ['mode'], START_VOTING: [],
+    JOIN_ROOM: ['name', 'resume'], LEAVE_ROOM: [], SET_MODE: ['mode'], START_VOTING: [],
     CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'], RETURN_TO_LOBBY: [],
     PRACTICE_STEP: ['step'], PRACTICE_MAPS: [],
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
@@ -25,7 +27,7 @@ export function validCommand(e, isHost) {
   }[e.type];
   if (!Array.isArray(fields) || !keys(e, ['type', ...fields])) return false;
   switch (e.type) {
-    case 'JOIN_ROOM': return name(e.name);
+    case 'JOIN_ROOM': return name(e.name) && (e.resume === undefined || validResumeToken(e.resume));
     case 'SET_MODE': return Object.values(GameModes).includes(e.mode);
     case 'CAST_VOTE': return index(e.mapIndex, 22);
     case 'START_ROUND': return index(e.puttIndex, 6);

@@ -71,6 +71,7 @@ export function screensView(room, local, now) {
     game: (play && !inCountdown(room, now)) || (active && room.phase === SessionPhases.RESULTS),
     results: active && room.phase === SessionPhases.RESULTS,
     netNotice: !!local.active && local.connected === false,
+    reconnecting: !!local.active && !!local.reconnecting,
   };
 }
 

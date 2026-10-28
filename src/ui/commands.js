@@ -4,7 +4,7 @@
  */
 
 import { InputCommands } from '../input/commands.js';
-import { MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
+import { MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS, RECONNECT_GRACE_PERIOD_MS, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
 import { GameModes } from '../shared/session.js';
 
 export const UiCommands = Object.freeze({
@@ -38,6 +38,7 @@ export const MESSAGES = Object.freeze({
   roomCodeRequired: 'Enter a room code.',
   connectFailed: 'Could not connect. Check internet / TURN settings and retry.',
   connectionLost: 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.',
+  reconnecting: `Connection dropped. Reconnecting… your place in the room is kept for ${RECONNECT_GRACE_PERIOD_MS / 1000} seconds.`,
   inviteSolo: 'Join a room from the lobby to invite friends.',
   inviteCopied: 'Invite copied. Keep the host tab open.',
   freeRoamHint: 'Free roam: WASD fly, Q/E down/up, Shift fast, drag to look',

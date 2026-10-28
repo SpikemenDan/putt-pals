@@ -19,6 +19,8 @@ import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
 
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
+/** Per-tab guest identity for each room code, so a reload can resume the same seat (N2). */
+const RESUME_KEY = code => 'putt-pals:resume:' + code;
 
 /**
  * @param {object} options
@@ -53,6 +55,12 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   const setLocal = partial => store.setLocal(partial);
   const toast = text => store.toast(text);
   const alert = message => { try { win.alert(message); } catch { /* no dialog support */ } };
+  // sessionStorage can be missing or throw (privacy modes); resuming is then simply unavailable.
+  const resume = {
+    read(code) { try { return JSON.parse(win.sessionStorage.getItem(RESUME_KEY(code)) || 'null'); } catch { return null; } },
+    write(code, value) { try { win.sessionStorage.setItem(RESUME_KEY(code), JSON.stringify(value)); } catch { /* not resumable */ } },
+    forget(code) { try { win.sessionStorage.removeItem(RESUME_KEY(code)); } catch { /* nothing stored */ } },
+  };
 
   // ---------------------------------------------------------------- rooms
   async function join({ multi, name, roomCode, iceText }) {
@@ -63,8 +71,10 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     if (multi && !createTransport && typeof win.RTCPeerConnection !== 'function') { setLocal({ connectError: connectErrorMessage('no-webrtc') }); return; }
     setLocal({ connecting: true, connectError: '' });
     try {
-      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, peerOptions: { ...peerServer, ...request.peerOptions }, Peer, clock, random, createTransport });
+      const stored = multi ? resume.read(request.roomCode) : null;
+      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, peerOptions: { ...peerServer, ...request.peerOptions }, Peer, clock, random, createTransport, identity: stored });
       if (disposed) { opened.close(); return; }
+      if (opened.identity) resume.write(request.roomCode, { ...opened.identity, name: request.name });
       room = opened; leaving = false;
       remoteSeen.clear(); presence = {}; activeRound = null; lastPhase = null;
       setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
@@ -75,20 +85,24 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     }
   }
 
-  function leave() {
+  /** @param {boolean} [forget] An explicit Leave also forgets this tab's identity for the room, so rejoining is a fresh seat. */
+  function leave(forget = false) {
     if (!room) return;
+    if (forget && room.roomCode) resume.forget(room.roomCode);
     leaving = true;
     for (const stop of roomStops.splice(0)) stop();
     room.close(); room = null;
     endPutt();
     activeRound = null; lastPhase = null; presence = {}; remoteSeen.clear();
     audio.resetSession();
-    setLocal({ active: false, connecting: false, connected: true, mode: 'lobby', strokes: 0, inventory: [] });
+    setLocal({ active: false, connecting: false, connected: true, reconnecting: false, mode: 'lobby', strokes: 0, inventory: [] });
   }
 
   function onStatus({ state }) {
     if (leaving || !room) return;
-    if (state === 'disconnected' || state === 'closed') { input?.cancel(); setLocal({ connected: false }); }
+    if (state === 'reconnecting') { input?.cancel(); setLocal({ connected: false, reconnecting: true }); }
+    else if (state === 'connected') setLocal({ connected: true, reconnecting: false });
+    else if (state === 'disconnected' || state === 'closed') { input?.cancel(); setLocal({ connected: false, reconnecting: false }); }
   }
 
   /** Session snapshot for the UI, with live stroke counts from presence (as the legacy scoreboard). */
@@ -275,7 +289,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     switch (command.type) {
       case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText }); break;
       case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name }); break;
-      case UiCommands.LEAVE: leave(); break;
+      case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT: if (putt?.shoot(command.angle, command.power)) publish(true); break;
       case UiCommands.USE_ITEM: {
@@ -358,7 +372,8 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     frameId = win.requestAnimationFrame(frame);
   }
 
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: initialRoomCode(win.location?.hash || '', random) });
+  const startCode = initialRoomCode(win.location?.hash || '', random);
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '' });
 
   return {
     store,

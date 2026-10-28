@@ -3,15 +3,31 @@
  * player to claim the room code's host ID becomes host and later players join
  * as guests (the legacy peerRoom() behaviour). Hides host/guest differences
  * behind one interface: room snapshots, remote presence, commands and status.
+ *
+ * Guests (N2) join with a resumable identity: a peer ID plus a secret token
+ * that only the host learns. If a guest's link drops, the room reports
+ * `reconnecting` and retries as a guest with the same identity while the host
+ * holds the seat (RECONNECT_GRACE_PERIOD_MS). It never claims the host ID, so
+ * host loss stays explicit: after the grace period it reports `host-lost`.
  */
 
 import { bindRoomSession, createPeerTransport, createSoloTransport } from '../network/index.js';
+import { validResumeToken } from '../network/protocol.js';
 import { createRoomSession } from '../session/index.js';
+import { RECONNECT_GRACE_PERIOD_MS } from '../shared/constants.js';
 import { hostIdFor, PRESENCE_INTERVAL_MS, SOLO_ID } from './rules.js';
 
 const randomId = random => Array.from({ length: 16 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(random() * 36)]).join('');
 /** Errors meaning the room code's host ID is taken, so this player should join as a guest. */
 const HOST_TAKEN = new Set(['identity-unavailable', 'Duplicate peer identity']);
+/** Refusals that reconnecting cannot fix. */
+const FINAL = new Set(['room-full', 'identity-rejected']);
+/** Delay between guest reconnect attempts. */
+export const RECONNECT_RETRY_MS = 2000;
+
+/** A guest's resumable identity: its peer ID plus a secret only the host learns. */
+export const validIdentity = v => !!v && typeof v === 'object' && typeof v.peerId === 'string' && /^pp-[a-z0-9]{16}$/.test(v.peerId) && validResumeToken(v.token);
+export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), token: randomId(random) + randomId(random) });
 
 /**
  * @param {object} options
@@ -23,34 +39,47 @@ const HOST_TAKEN = new Set(['identity-unavailable', 'Duplicate peer identity']);
  * @param {{now: () => number, setTimeout: Function, clearTimeout: Function}} options.clock Local monotonic clock
  * @param {() => number} [options.random]
  * @param {(options: object) => object} [options.createTransport] Test seam; defaults to PeerJS
+ * @param {{peerId: string, token: string}} [options.identity] Guest identity to resume (a new one is made if missing or invalid)
+ * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, Peer, clock, random = Math.random, createTransport }) {
+export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, Peer, clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS }) {
   const now = () => clock.now();
   const makePeer = createTransport || (options => createPeerTransport({ Peer, peerOptions, clock, ...options }));
+  const wait = ms => new Promise(resolve => clock.setTimeout(resolve, ms));
+  const hostId = multi ? hostIdFor(roomCode) : SOLO_ID;
+  const guest = validIdentity(identity) ? { peerId: identity.peerId, token: identity.token } : createIdentity(random);
   let transport, session = null, unbind = null;
+
+  /** Guest link with this player's identity. After a reload the old peer ID can stay registered for a few seconds, so retry within grace. */
+  const connectGuest = async () => {
+    const until = clock.now() + graceMs;
+    for (;;) {
+      const t = makePeer({ peerId: guest.peerId, hostId, now });
+      try { await t.connect(); return t; } catch (error) {
+        t.close();
+        if (!HOST_TAKEN.has(error?.message) || clock.now() + RECONNECT_RETRY_MS > until) throw error;
+      }
+      await wait(RECONNECT_RETRY_MS);
+    }
+  };
 
   if (!multi) {
     transport = createSoloTransport({ peerId: SOLO_ID, sessionId: randomId(random), now });
+    await transport.connect();
   } else {
-    const hostId = hostIdFor(roomCode);
     transport = makePeer({ peerId: hostId, hostId, sessionId: randomId(random), now });
     try {
       await transport.connect();
     } catch (error) {
       transport.close();
       if (!HOST_TAKEN.has(error?.message)) throw error;
-      transport = makePeer({ peerId: 'pp-' + randomId(random), hostId, now });
+      transport = await connectGuest();
     }
-  }
-  try {
-    if (transport.connectionState !== 'connected') await transport.connect();
-  } catch (error) {
-    transport.close();
-    throw error;
   }
 
   const snapshotListeners = new Set(), presenceListeners = new Set(), statusListeners = new Set();
   const emitSnapshot = s => { for (const l of [...snapshotListeners]) l(s); };
+  const emitStatus = status => { for (const l of [...statusListeners]) l(status); };
   const presence = new Map(); // host: latest presence per sender for the current round
   const emitPresence = () => { const map = Object.fromEntries([...presence].map(([id, v]) => [id, v.payload])); for (const l of [...presenceListeners]) l(map); };
   const stops = [];
@@ -58,7 +87,7 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
 
   if (transport.isHost) {
     session = createRoomSession({ hostId: transport.peerId, hostName: name, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
-    unbind = bindRoomSession(transport, session, { clock });
+    unbind = bindRoomSession(transport, session, { clock, graceMs });
     stops.push(session.subscribe(s => {
       last = s;
       for (const [id, v] of presence) if (v.roundNumber !== s.roundNumber || v.puttIndex !== s.puttIndex || !s.players[id]?.connected) presence.delete(id);
@@ -77,8 +106,11 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
     const pump = () => { if (closed) return; if (dirty) { dirty = false; emitPresence(); } timer = clock.setTimeout(pump, PRESENCE_INTERVAL_MS); };
     timer = clock.setTimeout(pump, PRESENCE_INTERVAL_MS);
     stops.push(() => clock.clearTimeout(timer));
+    stops.push(transport.subscribeStatus(emitStatus));
   } else {
-    stops.push(transport.subscribe(message => {
+    // Guest: the transport is replaced on reconnect, so its subscriptions are made again each time.
+    let linkStops = [], retry = null;
+    const onMessage = message => {
       if (message.type !== 'snapshot') return;
       const { presence: positions = {}, ...snapshot } = message.payload;
       last = snapshot;
@@ -86,15 +118,43 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
       presence.clear();
       for (const [id, payload] of Object.entries(positions)) presence.set(id, { payload });
       emitPresence();
-    }));
-    transport.send({ type: 'command', payload: { type: 'JOIN_ROOM', name } });
+    };
+    const unwire = () => { for (const stop of linkStops.splice(0)) stop(); };
+    const reconnect = until => {
+      retry = clock.setTimeout(async () => {
+        retry = null;
+        if (closed) return;
+        let next;
+        try { next = await connectGuest(); } catch {
+          if (closed) return;
+          if (clock.now() + RECONNECT_RETRY_MS <= until) reconnect(until); else emitStatus({ state: 'disconnected', reason: 'host-lost' });
+          return;
+        }
+        if (closed) { next.close(); return; }
+        transport = next; wire(); emitStatus({ state: 'connected', reason: null });
+      }, RECONNECT_RETRY_MS);
+    };
+    const onLinkStatus = status => {
+      if (closed || status.state !== 'disconnected' || FINAL.has(status.reason)) { emitStatus(status); return; }
+      // The host holds this guest's seat for the same grace period; retry as a guest only (no host migration).
+      unwire(); transport.close();
+      emitStatus({ state: 'reconnecting', reason: status.reason });
+      reconnect(clock.now() + graceMs);
+    };
+    function wire() {
+      linkStops = [transport.subscribe(onMessage), transport.subscribeStatus(onLinkStatus)];
+      transport.send({ type: 'command', payload: { type: 'JOIN_ROOM', name, resume: guest.token } });
+    }
+    wire();
+    stops.push(() => { unwire(); if (retry !== null) clock.clearTimeout(retry); });
   }
-  stops.push(transport.subscribeStatus(status => { for (const l of [...statusListeners]) l(status); }));
 
   return {
     isHost: transport.isHost,
     localId: transport.peerId,
     roomCode: multi ? roomCode : '',
+    /** Guest identity to keep for resuming this room after a reload (null for hosts and solo). */
+    identity: multi && !transport.isHost ? { ...guest } : null,
     /** Room clock: host monotonic time (guests apply the host offset). */
     now: () => transport.now(),
     get snapshot() { return last; },
@@ -109,10 +169,11 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
     /** Leaves the room and releases the transport, session bridge and timers. Idempotent. */
     close() {
       if (closed) return;
+      const wasConnected = transport.connectionState === 'connected';
       closed = true;
+      if (!transport.isHost && wasConnected) transport.send({ type: 'command', payload: { type: 'LEAVE_ROOM' } });
       for (const stop of stops.splice(0)) stop();
       snapshotListeners.clear(); presenceListeners.clear(); statusListeners.clear();
-      if (!transport.isHost && transport.connectionState === 'connected') transport.send({ type: 'command', payload: { type: 'LEAVE_ROOM' } });
       unbind?.();
       transport.close();
       session?.dispose();

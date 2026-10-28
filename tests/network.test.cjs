@@ -150,11 +150,50 @@ const { EventEmitter } = require('node:events');
     assert.equal(f.host.links.size, 7); assert.equal(f.hub.rooms.has('h'), false);
     const duplicate = f.hub.create({ peerId: 'a', hostId: 'host' });
     await assert.rejects(duplicate.connect(), /Duplicate/);
-    f.guests[0].close(); assert.equal(f.session.getSnapshot().players.a.connected, false);
+    f.guests[0].close(); assert.equal(f.session.getSnapshot().players.a.connected, true, 'a dropped guest keeps its seat during the grace period');
+    f.clock.increment(29999); assert.equal(f.session.getSnapshot().players.a.connected, true);
+    f.clock.increment(1); assert.equal(f.session.getSnapshot().players.a.connected, false, 'and leaves when the 30 s grace ends');
     assert.equal(f.host.links.size, 6); assert.equal(f.guests[0].send({ type: 'command', payload: { type: 'LEAVE_ROOM' } }), false);
     let lost; f.guests[1].subscribeStatus(s => { lost = s; });
     f.host.close(); assert.deepEqual(lost, { state: 'disconnected', reason: 'host-lost' });
     f.close(); extra.close(); duplicate.close(); assert.equal(f.hub.rooms.size, 0);
+  });
+  await run('resume: a dropped guest keeps its seat and scores for 30 s; only its token can reclaim it, before or after grace', async () => {
+    const f = await fixture();
+    try {
+      const token = 'resume-token-aaaaaaaa', join = (t, resume) => t.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Ana', ...(resume ? { resume } : {}) } });
+      const reconnect = async resume => {
+        const t = f.hub.create({ peerId: 'r', hostId: 'host', now: () => f.clock.now() }), statuses = [];
+        t.subscribeStatus(st => statuses.push(st)); await t.connect(); join(t, resume); return { t, statuses };
+      };
+      let r = await reconnect(token);
+      f.command('START_VOTING'); for (const t of [f.host, ...f.guests, r.t]) f.command('CAST_VOTE', { mapIndex: 0 }, t);
+      f.clock.increment(4000);
+      let s = f.session.getSnapshot(); assert.equal(s.roster.includes('r'), true);
+      f.command('REPORT_SCORE', { roundNumber: s.roundNumber, puttIndex: s.puttIndex, strokes: 2 }, r.t);
+      // The link drops without a LEAVE (network loss): the seat is held.
+      f.host.detach('r'); assert.equal(r.t.connectionState, 'disconnected'); r.t.close();
+      assert.equal(f.session.getSnapshot().players.r.connected, true);
+      // Someone else takes the free peer ID: a wrong or missing token is refused and cannot act.
+      const thief = await reconnect('stolen-token-bbbbbbbb');
+      assert.deepEqual(thief.statuses.at(-1), { state: 'disconnected', reason: 'identity-rejected' });
+      thief.t.close();
+      const bare = await reconnect(undefined);
+      assert.deepEqual(bare.statuses.at(-1), { state: 'disconnected', reason: 'identity-rejected' }, 'no token for a token-owned seat is refused');
+      assert.equal(f.command('CAST_VOTE', { mapIndex: 0 }, bare.t), false, 'and the refused link can send nothing more');
+      bare.t.close();
+      assert.equal(f.session.getSnapshot().players.r.connected, true, 'the impostors did not end the grace period');
+      // The owner returns within grace: same seat, same scores, the grace timer is cancelled.
+      r = await reconnect(token); f.clock.increment(30000);
+      s = f.session.getSnapshot();
+      assert.equal(s.players.r.connected, true); assert.equal(s.players.r.score, 2); assert.equal(s.roster.includes('r'), true);
+      // After grace runs out the player leaves, and the token still restores the same record.
+      f.host.detach('r'); r.t.close(); f.clock.increment(30000);
+      assert.equal(f.session.getSnapshot().players.r.connected, false);
+      r = await reconnect(token);
+      s = f.session.getSnapshot(); assert.equal(s.players.r.connected, true); assert.equal(s.players.r.score, 2);
+      r.t.close();
+    } finally { f.close(); }
   });
   await run('solo transport uses the same command and session boundary', async () => {
     const clock = new SimulatedClock();
@@ -194,7 +233,7 @@ const { EventEmitter } = require('node:events');
     assert.equal(session.getSnapshot().players.guest.connected, true);
     assert.equal(guest.sessionId, 'peer-session');
     const peers = [...FakePeer.peers.values()], links = peers.flatMap(p => p.links);
-    guest.close(); assert.equal(session.getSnapshot().players.guest.connected, false);
+    guest.close(); clock.increment(30000); assert.equal(session.getSnapshot().players.guest.connected, false);
     stop(); host.close(); session.dispose();
     assert.equal(FakePeer.peers.size, 0);
     for (const emitter of [...peers, ...links]) assert.equal(emitter.eventNames().length, 0);
