@@ -13,7 +13,7 @@ Status: baseline, shared contracts/simulation, D1 data/CLI delivery and L1 lifec
 
 ## Recommendation
 
-Incrementally extract and modernize the existing game. Keep its custom physics initially and keep PeerJS for private rooms. Establish a shared simulation and trustworthy tests before upgrading rendering or changing behavior. Do not implement the unfinished P33–P61 feature backlog as part of this migration.
+Incrementally extract and modernize the existing game. Keep its custom physics initially. The user selected server-owned private rooms on Cloudflare Workers + SQLite-backed Durable Objects over WebSockets (N4 #65, 2026-10-28); retain the current PeerJS runtime until the new path passes acceptance. Establish a shared simulation and trustworthy tests before upgrading rendering or changing behavior. Do not implement the unfinished P33–P61 feature backlog as part of this migration.
 
 ## Technology decisions
 
@@ -24,8 +24,8 @@ Incrementally extract and modernize the existing game. Keep its custom physics i
 | Menus and HUD | React, CSS Modules | Replace imperative screen construction with components. Keep physics and per-frame mesh updates outside React. Preserve existing visuals before any redesign. |
 | Room lifecycle | XState | Model lobby, voting, playing, results and disconnect states with explicit events and guards. Separate room lifecycle from individual ball states. |
 | Boundary validation | Zod | Validate course files and untrusted network messages with shared schemas and explicit limits. TypeScript alone does not validate incoming data. |
-| Networking | PeerJS/WebRTC | Appropriate to private friend rooms; preserve browser host coordination initially. Add versioning, connection status and tested recovery behavior. |
-| Restrictive networks | Managed TURN service plus a small credential endpoint | Remove manual ICE JSON from the normal player flow. Credentials are short lived; provider secrets stay on the endpoint. Provider and spending limit must be selected before provisioning. |
+| Networking | WebSockets to a Cloudflare Worker + one SQLite-backed Durable Object per room (N4 target) | Server owns room coordination; browser physics stays local. Current PeerJS remains until migration acceptance. |
+| Room hosting | Cloudflare Workers Free plan initially; measured quotas | N4 replaces the planned gameplay TURN path. N3 #14 remains paused. Account changes, deployment and paid upgrades require separate authorization. |
 | Unit and integration tests | Vitest | Port useful existing physics, scoring, room and fake-network checks. Use fake clocks and explicit dependencies. |
 | Browser tests | Playwright | Test actual WebGL initialization, controls, browser lifecycle and multi-page sessions in Chromium, Firefox and WebKit. Real Safari remains a manual release check where available. |
 | Formatting and lint | ESLint and Prettier | Conventional TypeScript/React tooling; avoid large unrelated format changes. |
@@ -80,6 +80,10 @@ Exit: all existing modes complete through the actual UI; practice and tournament
 
 ### M4 — Harden private-room networking
 
+**Updated target — N4 #65:** the following original PeerJS/TURN list is preserved as historical migration context, not the selected new implementation. See [server-room contracts](docs/networking/SERVER_ROOMS.md) and #66/#68–#73 for the replacement work. Backend owns membership/voting/scoring/timers/round transitions; clients retain local simulation and interpolation. Secure WebSockets remove gameplay signaling/TURN dependence. The creator is a controller player; their departure does not end the room. Controller succession, reconnect and empty-room durations are validated configuration with user-confirmed defaults of immediate/30 seconds/15 minutes.
+
+Replacement exit gate: four-player actual-browser/separate-network games through an authorized deployed Worker; controller departure, guest recovery, hibernation/restart deadline catch-up, forged/stale/versioned messages, bounded queues/admission and quota failure tested; compatible persistence/deployment/rollback and usage measurements documented. Local contract/mocks cannot establish this gate. N3 stays paused; Q1 waits on accepted N4.
+
 1. Preserve the host-and-guests topology and current trust model first. The host owns room transitions; clients still simulate their balls. This is not anti-cheat or server-authoritative physics.
 2. Put PeerJS behind the shared room interface and test it through a fake transport.
 3. Define a protocol version, session/round IDs, message sequence numbers, payload size limits and Zod schemas. Reject incompatible clients, stale rounds, malformed values and unauthorized room commands.
@@ -127,9 +131,9 @@ Each task should fit a reviewable change and have an explicit verification comma
 
 ## Decisions still needed before dependent work
 
-- TURN provider and monthly budget, before provisioning or endpoint integration. Local architecture and tests can proceed without this decision.
+- N4 Cloudflare account/preview deployment authorization, quota expectations and any later spending limit. N3 TURN provider selection is paused and not a prerequisite for the selected WebSocket architecture.
 - Hosting target and CI provider, before deploying previews.
-- Exact private-room capacity and guest reconnect grace period; proposed defaults are four active players and 30 seconds, subject to confirmation when M4 starts.
+- N4 preserves four members including spectators/reservations. The user confirmed immediate controller succession, 30-second reconnect grace and 15-minute empty retention, with validated settings that can be changed for new rooms. See #66 for contracts and configuration bounds.
 - Reference desktop hardware for performance acceptance, before setting M5 budgets.
 
 ## Sources

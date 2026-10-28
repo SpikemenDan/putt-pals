@@ -1,5 +1,11 @@
 # Architecture reference
 
+## Server-room migration decision (N4, 2026-10-28)
+
+The user selected Cloudflare Workers + SQLite-backed Durable Objects and WebSockets for future server-owned rooms (#65). The additive N4a contract (#66) is specified in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md), with validators/mocks in `src/network/contracts/server-room.js` and `server-room-mocks.js`. It separates backend authority from a player controller, versions the wire protocol independently from existing PeerJS v1, and defines durable domain checkpoints plus absolute deadlines. User-confirmed configurable defaults are immediate controller succession, 30-second reconnect grace and 15-minute empty-room retention.
+
+This is a proposed contract until accepted integration. Online browser gameplay still uses PeerJS; no Worker, persistence or deployed recovery is implemented by #66. Solo and browser physics remain local. #68–#73 cover implementation and acceptance. N3 TURN #14 stays paused; Q1 #18 now depends on N4 instead. The historical architecture descriptions below describe earlier integration cutoffs and do not override this selected target or current code.
+
 Status: accepted modules and the legacy browser are distinguished below. N1 delivery is PR #24 (72b7498 plus review fixes), accepted when current-head CI passes and the PR merges; target-only modules remain proposals.
 
 ## Current implementation

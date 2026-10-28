@@ -251,3 +251,21 @@ The S2 DONE* row is effective only after green current-head CI, authorized merge
 - Local browser tests run Chromium only (npx playwright test --project=chromium); CI browser-ci covers Firefox and WebKit.
 - Coordinator cleanup: deleted merged branches agent/n2b-network-browser-specs, agent/r2-three-upgrade, agent/s2-cup-capture and agent/t1c-diag, and superseded feature/d1-course-snapshot (tip ca68091).
 - The conditional DONE* records for R2 (PR #53) and S2 (PR #55) earlier in this file are now accepted.
+
+
+## N4 server-room plan and N4a integration — PR #74
+
+The user selected server-owned rooms on Cloudflare Workers + SQLite-backed Durable Objects over WebSockets. N4 #65 replaces N3 as Q1's networking prerequisite; N3 #14 stays PAUSED with its local changes preserved. This supersedes the earlier Q1/TURN-only snapshot. N4a #66 is REVIEW until green current-head CI, the user-authorized PR #74 merge and merged-main verification recorded in #66. The user authorized merge when ready on 2026-10-28. No contract is accepted merely by this proposed record.
+
+| ID / issue | Status until accepted integration | Scope / dependency |
+| --- | --- | --- |
+| N4 #65 | BLOCKED | Tracking parent for accepted server-room migration and hosted validation |
+| N4a #66 | REVIEW (DONE only after PR #74 acceptance) | Wire/checkpoint contracts, policy, mocks, tests and design; implementation 3e5985d plus documentation follow-up; accepted merge SHA recorded in live issue |
+| N4b #68 | BLOCKED until #66 accepted, then eligible for claim | Local Cloudflare Worker/SQLite Durable Object tooling, no account connection/deploy |
+| N4c #69 | BLOCKED on #66/#68 | Backend authority and room coordinator |
+| N4d #70 | BLOCKED on #69 | Durable room restoration, deadlines, reconnect and controller recovery |
+| N4e #71 | BLOCKED on #66/#69/#70 | Browser WebSocket adoption; solo/local physics retained |
+| N4f #72 | BLOCKED on #68/#69/#70/#71 | Cross-browser/local-runtime verification and usage limits |
+| N4g #73 | BLOCKED on #68/#72 and deployment authorization | Cloudflare connection, authorized preview, actual separate-network acceptance and rollback |
+
+Coordinator updates downstream issues with the actual accepted contract SHA after merge/verification; workers must not use an unmerged branch as accepted main. The contract's configurable defaults are immediate succession, 30-second grace and 15-minute empty retention, confirmed by the user. No Cloudflare runtime or recovery implementation, actual server connection, paid service or production deployment is completed by N4a.
