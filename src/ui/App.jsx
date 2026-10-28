@@ -12,8 +12,10 @@ import './global.css';
 
 function Screens({ onCanvas, initialName, initialRoomCode }) {
   const screens = useView(v => v.screens);
+  const webglUnavailable = useView(v => v.webglUnavailable);
   return (
     <div className={app.app}>
+      <div className={app.netnotice} hidden={!webglUnavailable} role="status" data-ui="webgl-notice">{webglUnavailable ? MESSAGES.webglUnavailable : ''}</div>
       <Landing hidden={!screens.landing} initialName={initialName} initialRoomCode={initialRoomCode} />
       <RoomLobby hidden={!screens.lobby} />
       <MapSelect hidden={!screens.voting} />

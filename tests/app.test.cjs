@@ -37,11 +37,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
     async function run(ms) { for (let t = 0; t < ms; t += 500) { await act(async () => { scheduler.advance(Math.min(500, ms - t)); }); await settle(); } }
     async function until(fn, ms = 60000, label = 'condition') { for (let t = 0; t <= ms; t += 100) { if (fn()) return; await run(100); } assert.fail('timed out waiting for ' + label); }
-    async function client(name, { url } = {}) {
+    async function client(name, { url, createWebGLRenderer = renderers.factory } = {}) {
       const win = createWindow(scheduler, { url });
       const audio = createAudioRecorder();
       let app;
-      await act(async () => { app = createApp({ root: win.w.document.getElementById('root'), THREE, window: win.w, random, createWebGLRenderer: renderers.factory, createAudio: () => audio, createTransport: options => hub.create(options) }); });
+      await act(async () => { app = createApp({ root: win.w.document.getElementById('root'), THREE, window: win.w, random, createWebGLRenderer, createAudio: () => audio, createTransport: options => hub.create(options) }); });
       await settle();
       const doc = win.w.document;
       const shown = el => !!el && !el.closest('[hidden]');
@@ -396,6 +396,37 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       builds++;
     }
     assert.equal(builds, 22);
+  });
+
+  await scenario('webgl unavailable: a throwing renderer factory leaves the start screen usable, shows the notice and solo play does not crash', async () => {
+    const w = world();
+    const c = await w.client('Ana', { createWebGLRenderer: () => { throw new Error('Error creating WebGL context.'); } });
+    assert.equal(c.shown('[data-ui=landing]'), true);
+    assert.equal(c.shown('[data-ui=webgl-notice]'), true);
+    const text = c.text('[data-ui=webgl-notice]');
+    assert.equal(text.includes('WebGL'), true);
+    assert.equal(text.includes('hardware acceleration'), true);
+    assert.equal(text.includes('another desktop browser'), true);
+    assert.equal(c.app.renderer, null);
+    assert.equal(c.app.view, null);
+    assert.equal(c.app.input, null);
+    await c.solo();
+    await c.click('Start Game');
+    await c.click(c.$('[data-ui=map-select] button[data-v]'));
+    await w.until(() => c.shown('[data-ui=game]'), 5000, 'game screen');
+    assert.equal(c.text('[data-ui=hud-info]'), 'Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0 · 2:00');
+    assert.ok(c.putt, 'the round starts without a 3D view');
+    await c.shoot(0, 0.5);
+    for (const label of ['View: Ball cam', 'Quality: High']) await c.click(label);
+    await w.run(2000);
+    assert.equal(c.shown('[data-ui=webgl-notice]'), true, 'the notice stays visible in game');
+    assert.equal(w.renderers.instances.length, 0);
+    const ok = await world().client('Ok');
+    assert.equal(ok.shown('[data-ui=webgl-notice]'), false);
+    assert.equal(ok.text('[data-ui=webgl-notice]'), '');
+    assert.equal(Boolean(ok.app.renderer), true);
+    await c.dispose();
+    await ok.dispose();
   });
 
   await scenario('protocol: presence carries validated, optional aura and attack fields', async () => {
