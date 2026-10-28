@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-10-28T13:55:18.649Z",
+  "browser": "156.0.8078.49",
+  "headless": true,
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "results": [
+    {
+      "ready": true,
+      "scene": "flat",
+      "elapsed": 2.012499999999995,
+      "position": [
+        1083.2624435424805,
+        0,
+        -0.08995227515697507
+      ],
+      "frameCount": 128,
+      "initializationMs": 50.5,
+      "colliders": 4
+    },
+    {
+      "ready": true,
+      "scene": "ramp",
+      "elapsed": 2.012499999999995,
+      "position": [
+        608.7666988372803,
+        -0.16220336547121406,
+        59.9559736251831
+      ],
+      "frameCount": 251,
+      "initializationMs": 50.5,
+      "colliders": 6
+    },
+    {
+      "ready": true,
+      "scene": "drop",
+      "elapsed": 2.012499999999995,
+      "position": [
+        1138.4949684143066,
+        0,
+        -0.09295113384723691
+      ],
+      "frameCount": 375,
+      "initializationMs": 50.5,
+      "colliders": 5
+    },
+    {
+      "ready": true,
+      "scene": "tube",
+      "elapsed": 2.012499999999995,
+      "position": [
+        1290.1237487792969,
+        -0.3114603692665696,
+        -0.08929550647735623
+      ],
+      "frameCount": 498,
+      "initializationMs": 50.5,
+      "colliders": 5
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "limitations": "Real browser production-bundle smoke, not a human feel/listening or full-game test."
+}
