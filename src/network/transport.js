@@ -46,6 +46,17 @@ export class RoomTransport {
     const sent = this.write('reject', { reason }, id);
     this.detach(id, true); return sent;
   }
+  /**
+   * Host: sends the welcome again on every link that has not delivered a valid message yet. Chromium can
+   * drop the first messages written the instant a received data channel opens, and a guest without a
+   * welcome rejects every snapshot, so the bridge calls this until each guest answers (T1c, #48).
+   */
+  greet() {
+    if (!this.isHost) return false;
+    let sent = false;
+    for (const [id, link] of this.links) if (link.sequence < 0 && this.write('welcome', {}, id)) sent = true;
+    return sent;
+  }
   frame(type, payload) {
     return encode({ version: PROTOCOL_VERSION, sessionId: this.sessionId, senderId: this.peerId,
       sequence: this.sequence++, roundNumber: this.roundNumber, puttIndex: this.puttIndex, now: this.now(), type, payload });
