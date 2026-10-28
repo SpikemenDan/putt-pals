@@ -14,6 +14,7 @@ import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
 import { createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, placeAura, placeBlob } from './actors.js';
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
+import { createSkyWorld } from './sky-world.js';
 
 const R = BALL_RADIUS;
 /** Legacy canvas aspect: height is 0.625 of the width. */
@@ -58,7 +59,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
 
   const library = createMaterialLibrary({ THREE, createCanvas: makeCanvas, random, maxAnisotropy: renderer.capabilities.getMaxAnisotropy(), style });
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xf0d8ee, 1800, 7000);
+  // The toon fog matches the sky's horizon band, so far geometry fades into the sky, not into pink.
+  scene.fog = new THREE.Fog(toon ? 0xdbf2ff : 0xf0d8ee, 1800, 7000);
   const camera = new THREE.PerspectiveCamera(60, VIEW_ASPECT, 3, 8000);
   const owned = new Set();
   const own = resource => { owned.add(resource); return resource; };
@@ -75,8 +77,11 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   Object.assign(sun.shadow.camera, { left: -560, right: 560, top: 460, bottom: -460, near: 100, far: 2200 });
   scene.add(sun, sun.target);
 
-  const sky = new THREE.Mesh(own(new THREE.SphereGeometry(6000, 24, 16)), library.skyMaterial);
+  // The toon style swaps the pastel dome for the V1b sky world (banded sky, sun, clouds, birds).
+  const skyWorld = toon ? createSkyWorld({ THREE }) : null;
+  const sky = skyWorld ? skyWorld.dome : new THREE.Mesh(own(new THREE.SphereGeometry(6000, 24, 16)), library.skyMaterial);
   scene.add(sky);
+  if (skyWorld) scene.add(skyWorld.group);
   let environment = null;
   let generator, envGeometry;
   // Flat toon materials take no reflections, so only the legacy style needs an environment map.
@@ -311,6 +316,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       camera.position.set(...pose.position);
       camera.lookAt(new V(...pose.look));
       sky.position.copy(camera.position);
+      skyWorld?.update(t, camera.position);
       sun.target.position.set(...pose.sunTarget);
       sun.position.set(pose.sunTarget[0] + 250, pose.sunTarget[1] + 700, pose.sunTarget[2] + 350);
       updateWallFade(build.wallFade, dt, camera.position, pose.fadeTarget ? new V(...pose.fadeTarget) : null);
@@ -333,6 +339,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const object of ownedActors) { scene.remove(object); disposeObject(object); }
       for (const resource of owned) resource.dispose();
       owned.clear();
+      skyWorld?.dispose();
       sun.shadow.dispose?.();
       library.dispose();
       renderer.dispose?.();
