@@ -1,6 +1,6 @@
 # R2w Windows GPU validation
 
-Status: REVIEW pending; issue https://github.com/SpikemenDan/putt-pals/issues/52 ; branch `agent/r2w-windows-gpu` from `origin/main` 03e4db5 (includes R2 merge 62482f8, PR #53). Worker: Claude Code (Opus 5.5) Windows session on the reference laptop, SpikemenDan account. Captured 2026-10-28.
+Status: REVIEW; issue https://github.com/SpikemenDan/putt-pals/issues/52 ; branch `agent/r2w-windows-gpu` from `origin/main` 03e4db5 (includes R2 merge 62482f8, PR #53). Worker: Claude Code (Opus 5.5) Windows session on the reference laptop, SpikemenDan account. Captured 2026-10-28.
 
 ## Scope
 
@@ -17,7 +17,7 @@ Confirm the merged Three.js 0.186.1 renderer (R2) against the r128 baseline on t
 | Power state | ON BATTERY (77-88%). Power plan: High performance. Overlay: Best power efficiency (GUID 961cc777-...) |
 | Window & Framebuffer | Chrome maximized (`--start-maximized`), viewport 1536x730 CSS at DPR 1.25. Probe canvas 1536x960 CSS -> 1920x1200 framebuffer (2.30 MP). Complete app canvas 1550x968 framebuffer |
 
-Power state was on battery with "Best power efficiency" overlay active, representing a throttled condition; AC power with "Best performance" was not measured and remains an open item.
+Power state was on battery with "Best power efficiency" overlay active, representing a throttled condition. On 2026-10-28 the user decided not to rerun on AC with "Best performance", so this battery evidence is final for R2w. The Radeon target passes even in this throttled condition.
 
 ## GPU selection and proof
 
@@ -102,11 +102,11 @@ One 0.186.1 RTX vsync run (16:29 UTC) had a complete-app pass where Frost Hollow
 
 ## Limits and open items
 
-- AC power with "Best performance" power mode not measured (battery throttled state only).
+- AC power with the "Best performance" power mode was not measured; the user decided no AC rerun is needed.
 - Thermal endurance, exact GPU memory bytes, and multiplayer network load not measured.
 - Chrome browser tested; Firefox and Edge unmeasured.
 - Renderer probe and an idle complete app only; no shot-in-flight or multiplayer app frame times.
-- Next actions: coordinator review; an AC rerun if the user plugs the laptop in; V1 #33 to decide whether the hazard-shader saturation is fixed within V1 or as a separate renderer fix.
+- Next actions: coordinator review and user merge approval; V1 #33 to decide whether the hazard-shader saturation is fixed within V1 or as a separate renderer fix.
 
 ## Files
 
