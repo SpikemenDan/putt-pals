@@ -57,6 +57,7 @@ Use an isolated checkout/worktree and task branch based on current main. Do not 
 | status:active | Owned/reserved or partially implemented; do not duplicate |
 | status:blocked | Waiting on a prerequisite, decision or concrete blocker |
 | status:review | Implementation prepared; acceptance/integration pending |
+| status:paused | Deliberately held by the user or coordinator; do not resume without explicit go-ahead |
 | optional | Requires explicit coordinator/user selection, even after code prerequisites close |
 
 Use one status label on each open agent task. Completed issues are closed; their native prerequisite links remain as history. Labels are maintained by the coordinator and can lag a just-merged PR, so read the issue and accepted code before acting.
@@ -80,12 +81,20 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 | N1 | [#11](https://github.com/SpikemenDan/putt-pals/issues/11) | Transport adapters |
 | I1 | [#12](https://github.com/SpikemenDan/putt-pals/issues/12) | Application integration |
 | N2 | [#13](https://github.com/SpikemenDan/putt-pals/issues/13) | Guest recovery/interpolation |
+| N2b | [#47](https://github.com/SpikemenDan/putt-pals/issues/47) | Committed real-browser N2 specs |
 | N3 | [#14](https://github.com/SpikemenDan/putt-pals/issues/14) | Managed TURN |
 | T1 | [#15](https://github.com/SpikemenDan/putt-pals/issues/15) | Integration/browser coverage |
+| T1c | [#48](https://github.com/SpikemenDan/putt-pals/issues/48) | Chromium multiplayer join flake |
 | R2 | [#16](https://github.com/SpikemenDan/putt-pals/issues/16) | Three.js upgrade |
-| P1 | [#17](https://github.com/SpikemenDan/putt-pals/issues/17) | Optional Rapier experiment |
+| R2w | [#52](https://github.com/SpikemenDan/putt-pals/issues/52) | Windows GPU validation |
+| R2c | [#57](https://github.com/SpikemenDan/putt-pals/issues/57) | Effect-shader colour fix after the Three.js upgrade |
+| P1 | [#17](https://github.com/SpikemenDan/putt-pals/issues/17) | Optional Rapier experiment (paused) |
 | Q1 | [#18](https://github.com/SpikemenDan/putt-pals/issues/18) | Release readiness |
-| V1 | [#33](https://github.com/SpikemenDan/putt-pals/issues/33) | Comic art direction |
+| V1 | [#33](https://github.com/SpikemenDan/putt-pals/issues/33) | Comic art direction (umbrella for V1a–V1d) |
+| V1a | [#58](https://github.com/SpikemenDan/putt-pals/issues/58) | Toon look foundation |
+| V1b | [#59](https://github.com/SpikemenDan/putt-pals/issues/59) | Sky world |
+| V1c | [#60](https://github.com/SpikemenDan/putt-pals/issues/60) | Per-map palettes, ambient weather visuals and fans |
+| V1d | [#61](https://github.com/SpikemenDan/putt-pals/issues/61) | Comic HUD styling |
 | G1 | [#34](https://github.com/SpikemenDan/putt-pals/issues/34) | New course mechanics and power-ups |
 | K1 | [#35](https://github.com/SpikemenDan/putt-pals/issues/35) | Course redesign |
 | M1 | [#36](https://github.com/SpikemenDan/putt-pals/issues/36) | Menus, loading screen and feedback polish |
@@ -137,3 +146,7 @@ N2 #13 is merged through PR #43 (3f5d010) and closed. Its remaining real-browser
 ## R2 Windows follow-up
 
 [R2w #52](https://github.com/SpikemenDan/putt-pals/issues/52) records the user-requested Windows Radeon 860M / RTX 5060 Laptop GPU validation for the Windows-capable agent. The user approved R2 integration using the Mac evidence and moved these measurements to a nonblocking follow-up. Claim the issue before work; no agent is automatically launched.
+
+## Coordinator follow-up — 2026-10-28
+
+B4 (#4), I2b (#41), R2 (#16), S2 (#54), R2w (#52), T1c (#48) and N2b (#47) are closed after PR merges and verification. R2c #57 is ACTIVE with PR #63 open to restore effect-shader colours under the new colour pipeline. V1 #33 is an umbrella split into V1a–V1d (#58–#61); V1a is blocked by R2c, and V1b–V1d by V1a. The approved reference look is on branch `reference/v1-toon-sample`. G1 and K1 still come after Q1. P1 #17 is paused by the user. Q1 #18 waits only on N3 #14. PR #62 introduced `PP_TEST_PORT` and `PP_REUSE_SERVER` to run browser suites side by side. Local browser runs use Chromium only (`npx playwright test --project=chromium`), with CI covering Firefox and WebKit. Read live issues before acting; this snapshot does not assign or authorize another task.

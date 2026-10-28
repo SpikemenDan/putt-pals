@@ -1,12 +1,12 @@
 # Project status
 
-Last updated: 2026-10-27.
+Last updated: 2026-10-28.
 
 ## Current objective
 
-Accepted main (09eaf50) contains the integrated modular app: I1 #12 (PR #31) composes S1, D1, L1, N1, A1, R1 and U1 behind index.html/src/app, while the legacy page stays built until Q1 decides hosting. N2, R2 and T1 are ready; N3 waits on the provider/budget decision and Q1 on the remaining tasks. GitHub issues remain the live assignment source.
+Accepted main (44c082a) contains the integrated modular app (I1 #12, PR #31) plus N2, T1, R2 (Three.js 0.186.1) and S2; the legacy page stays built until Q1 decides hosting. R2c #57 is active with PR #63 open; V1a waits on it and V1b–V1d on V1a; N3 waits on the provider/budget decision and Q1 only on N3; P1 is paused; G1 and K1 come after Q1. GitHub issues remain the live assignment source.
 
-Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work.
+Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work; smooth flat-colour toon look without scenery clutter; per-putt walled islands with designed gaps; true portal pairs; stronger fans; Wind, Snow, Storm and Lightning as attack power-ups; visual-only ambient weather on Frost Hollow and Cyclone Ring.
 
 ## Repository baseline
 
@@ -229,3 +229,18 @@ Effective only after current-head CI, accepted merge and merged-main verificatio
 Local full npm test/build, 439 controlled trajectories and nine selected real-browser tests across Chromium/Firefox/WebKit passed. New source-fingerprinted evidence retains nominal hole-in-ones for all 36 starters, with robust shots on the existing grid for 31. Cyclone Ring P3/P5 and Grand Finale P1/P3/P5 have nominal solutions but do not meet the previous robustness margin. Twelve historical shot inputs now miss; the original fixtures/legacy HTML remain unchanged. Switchback Garden P1 full-grid hits are 377 (previous 811); this is not a complete current difficulty ladder. Q1 #18 must review the five narrower windows and refresh all 36 full-grid difficulty results before release acceptance. No deployment, new art/power-up work or Rapier adoption is implied. Handoff: docs/reviews/S2_CUP_CAPTURE.md.
 
 P1 remains deferred by user request; its isolated experiment/evidence is preserved on agent/p1-rapier-prototype at 6ba6115, not merged into production.
+
+## Coordinator update — 2026-10-28
+
+- R2 and S2 records above are now accepted (PR #53 62482f8, PR #55 03e4db5; #16 and #54 closed).
+- B4 #4 verified on main and closed (PR #28 4e3eb9e).
+- I2b #41 closed via PR #45 (db3245a).
+- R2w #52 closed via PR #56 (49b74e9) with its washed-out shader finding, being fixed separately in R2c #57 (PR #63 open).
+- T1c #48 closed via PR #50 (b257e39), fixing the recurring Chromium join timeout noted in the T1/N2 entries.
+- N2b #47: PR #49 (1c719e2) merged; the issue was closed by hand because the PR lacked `Closes`.
+- Main advanced to 44c082a via PR #62 (no issue): browser test runs can share a machine. The PeerServer takes a free port (`PP_PEER_PORT` can pin one), `PP_TEST_PORT` sets the preview port and server reuse is opt-in with `PP_REUSE_SERVER=1`.
+- V1 #33 is an umbrella split into V1a–V1d (#58–#61); V1a is blocked by R2c #57, and V1b–V1d by V1a. Reference look: branch reference/v1-toon-sample.
+- P1 #17 paused; Rapier experiment preserved on agent/p1-rapier-prototype (6ba6115).
+- Q1 #18 waits only on N3 #14 (TURN provider decision).
+- Local browser tests run Chromium only (`npx playwright test --project=chromium`), with CI browser-ci covering Firefox and WebKit.
+- Branch cleanup: deleted merged branches agent/n2b-network-browser-specs, agent/r2-three-upgrade, agent/s2-cup-capture and agent/t1c-diag, and superseded feature/d1-course-snapshot (tip ca68091).
