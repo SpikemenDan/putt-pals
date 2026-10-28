@@ -45,7 +45,7 @@ The solver fixture at `tests/fixtures/solver-baseline.json` records the first ro
 
 Vite currently processes the existing HTML without extracting or upgrading its embedded runtime scripts. The build check protects that baseline; it does not certify rendering. Deploy only the generated `dist/` directory to static HTTPS hosting, with `/putt-pals.html` as the game URL. Development and preview servers bind to loopback by default; they are not production hosts. Hosting setup and deployment are not part of this baseline task.
 
-Private online rooms still depend on PeerJS signaling, and some networks need a TURN relay. The existing lobby exposes manual ICE settings. N1 provides [modular adapters and connection status](src/network/README.md), with its [review handoff](docs/reviews/N1_TRANSPORTS.md); module acceptance is recorded in PR #24, while I1 browser adoption remains outstanding. Managed relay credentials and guest recovery remain planned. Use solo mode to develop without online services.
+The current online-room implementation still uses PeerJS signaling and exposes manual ICE settings. N1 provides [modular PeerJS adapters](src/network/README.md); the modular app's online rooms currently use that path. The selected next architecture is server-owned Cloudflare Durable Object rooms over WebSockets. N4a's contract is accepted at `b30552f` and documented in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md); N4b #68 is ready for coordinator-confirmed local tooling work. The server runtime, browser cutover and deployment are not implemented yet, and N3/TURN is paused rather than a fallback. Use solo mode to develop without online services.
 
 ## Contributing and agent coordination
 

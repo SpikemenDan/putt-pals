@@ -1,6 +1,6 @@
 # Server-owned friend rooms — N4a contract
 
-Status: proposed contract for #66, parent #65. Not yet integrated or adopted by gameplay. Current main still uses PeerJS for online rooms. N3 #14 remains paused with its local changes preserved. No Cloudflare account connection, provisioning, deployment or service spending is authorized by this document. An accepted contract commit must be recorded in #68–#73 after review/integration.
+Status: accepted N4a contract, merged through [PR #74](https://github.com/SpikemenDan/putt-pals/pull/74) as `b30552f` (contract implementation `3e5985d`, documentation follow-up `c4c7af5`). It is not yet adopted by gameplay: current main still uses PeerJS for online rooms. N3 #14 remains paused with its local changes preserved. No Cloudflare account connection, provisioning, deployment or service spending is authorized by this document. Record the accepted main contract revision `b30552f` in downstream N4 issues and PRs.
 
 The user selected planning for Cloudflare Workers + SQLite-backed Durable Objects, WebSockets and browser-local physics. One Durable Object owns each room; the Worker routes connections and serves the static build. This replaces signaling/TURN for the normal gameplay path. TURN is not a fallback for a failed WebSocket. No accounts, matchmaking, server physics or anti-cheat is introduced.
 

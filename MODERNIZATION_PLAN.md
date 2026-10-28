@@ -84,16 +84,17 @@ Exit: all existing modes complete through the actual UI; practice and tournament
 
 Replacement exit gate: four-player actual-browser/separate-network games through an authorized deployed Worker; controller departure, guest recovery, hibernation/restart deadline catch-up, forged/stale/versioned messages, bounded queues/admission and quota failure tested; compatible persistence/deployment/rollback and usage measurements documented. Local contract/mocks cannot establish this gate. N3 stays paused; Q1 waits on accepted N4.
 
-1. Preserve the host-and-guests topology and current trust model first. The host owns room transitions; clients still simulate their balls. This is not anti-cheat or server-authoritative physics.
-2. Put PeerJS behind the shared room interface and test it through a fake transport.
-3. Define a protocol version, session/round IDs, message sequence numbers, payload size limits and Zod schemas. Reject incompatible clients, stale rounds, malformed values and unauthorized room commands.
-4. Choose and enforce an explicit room capacity, including spectators, in both transport and UI. Do not silently inherit inconsistent existing connection limits.
-5. Add interpolated remote movement and measure snapshot size/rate. Keep immediate local shot feedback and critical state transitions reliable.
-6. Add connection progress, timeouts, retry and clear disconnect behavior. For a guest reconnect, use a short-lived host-issued resume identity; retain roster and scores for a defined grace period. Test identity restoration and duplicate/stale messages.
-7. Keep host loss explicit: end the room with an actionable return-to-lobby path. Automatic host migration is deferred because it requires more than reconnecting a PeerJS peer.
-8. Integrate managed TURN with short-lived credentials from a minimal endpoint. Confirm the signaling provider, service limits and credential origin restrictions. Keep direct connections when available.
+The accepted implementation sequence is tracked by N4 #65 and child issues:
 
-Exit: four-player real-browser sessions finish a full game; invalid and stale messages are rejected; guest recovery works within the chosen grace period; host loss has a clean outcome. Verify direct and forced-relay connections, including players on separate networks. Fake networking alone is insufficient.
+1. N4a #66 — agree server-room protocol, controller/lifecycle policy, versioned durable checkpoint and deadlines. Integrated on main at `b30552f`; see [the accepted contract](docs/networking/SERVER_ROOMS.md).
+2. N4b #68 — reproducible local Worker, SQLite-backed Durable Object and static/WebSocket routing setup.
+3. N4c #69 — server-owned lifecycle authority, socket admission, bounded queues and message/rate validation.
+4. N4d #70 — durable checkpoint restore, alarms, reconnect/controller recovery and hibernation behavior.
+5. N4e #71 — browser WebSocket client and UI cutover while retaining local solo play and physics.
+6. N4f #72 — cross-browser local-runtime coverage, quota/performance measures and abuse/failure tests.
+7. N4g #73 — only after separate authorization, deploy a preview and validate secure WebSockets, separate-network play and rollback.
+
+The browser remains client-trusted for ball physics; the backend owns room lifecycle and scoring coordination. The creator is a player/controller, not a server owner, and leaving does not end the room. Keep four-member capacity, local solo play and existing game modes. The detailed exit gate is in N4 #65: real deployed separate-network browser sessions, controller departure, recovery across hibernation/restart, validation/rate/admission limits, quota evidence and compatible rollback. N3 TURN is paused and is not a prerequisite or fallback.
 
 ### M5 — Upgrade Three.js and verify desktop rendering
 
@@ -107,7 +108,7 @@ Exit: reference views are reviewed, supported desktop browsers render without er
 ### M6 — Release and retire legacy paths
 
 1. Configure CI for npm ci, formatting/lint, tsc --noEmit, Vitest, production build and browser smoke tests. Keep exhaustive solver sweeps scheduled or manually invoked.
-2. Deploy the static build to a preview environment and the TURN credential endpoint separately. Verify HTTPS, signaling, relay and asset loading from the deployed origin.
+2. Deploy the static build and room Worker/Durable Objects to an authorized preview. Verify HTTPS/WSS routing, room admission and asset loading from the deployed origin.
 3. Set immutable caching for hashed assets and appropriate HTML caching. Protocol/configuration versions detect incompatible tabs rather than corrupting rooms after an update.
 4. Complete manual desktop playtests covering controls, camera, sound, practice, tournaments, four-player rooms and network loss.
 5. Keep a tested rollback artifact; archive legacy code after migration acceptance and retire marker-based tools and temporary adapters.

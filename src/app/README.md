@@ -1,6 +1,6 @@
 # Modular application (I1)
 
-`index.html` → `src/app/main.js` → `createApp()` runs the game from the extracted modules: course data (D1), simulation (S1), room session (L1), transports (N1), audio (A1), renderer and camera (R1), React UI and input (U1). The legacy single-file game stays at `putt-pals.html`, unchanged and still built, until the modular app is accepted as its replacement.
+`index.html` → `src/app/main.js` → `createApp()` runs the game from the extracted modules: course data (D1), simulation (S1), room session (L1), transports (N1), audio (A1), renderer and camera (R1), React UI and input (U1). The legacy single-file game stays at `putt-pals.html`, unchanged and still built; Q1 owns the hosting/release decision. N4a's server-room contract is accepted at `b30552f`, but the modular app still uses PeerJS until N4's server and browser-adoption tasks are integrated.
 
 ```js
 import * as THREE from 'three';          // three@0.128.0, the version the legacy page embeds

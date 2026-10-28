@@ -1,6 +1,6 @@
 # N1 room transports
 
-This module implements the C1 transport shape for solo, deterministic in-memory links, and injected PeerJS data channels. The browser entry point still uses its embedded legacy room implementation; I1 owns adoption. No PeerJS dependency or version upgrade is introduced here.
+This module implements the C1 transport shape for solo, deterministic in-memory links, and injected PeerJS data channels. The modular app currently uses PeerJS for online rooms. N4a's separate server-room v2 contracts are accepted on main at `b30552f` and documented in [SERVER_ROOMS.md](../../docs/networking/SERVER_ROOMS.md); they do not implement a Worker or replace this adapter. N4b–N4g track local setup, server/runtime recovery, client cutover and authorized deployment.
 
 ```js
 import { createPeerTransport, bindRoomSession } from './src/network/index.js';

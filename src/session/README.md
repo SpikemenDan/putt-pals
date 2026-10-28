@@ -1,6 +1,6 @@
 # Host-owned room lifecycle
 
-L1 implements the room coordinator as an XState 5 actor. It has no DOM, renderer, audio or transport dependency. Browser/PeerJS adoption remains I1/N1; the embedded browser game is unchanged.
+L1 implements the local room coordinator as an XState 5 actor. It has no DOM, renderer, audio or transport dependency. I1/N1 adopted it in the modular PeerJS app; the legacy browser game is unchanged. N4a's server-room contract is accepted at `b30552f`, while server-side authority, durable restore and WebSocket adoption remain unimplemented in N4c–N4e.
 
 ```js
 import { createRoomSession, SessionEvents } from './src/session/index.js';

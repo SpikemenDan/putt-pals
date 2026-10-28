@@ -4,7 +4,7 @@ Last updated: 2026-10-28.
 
 ## Current objective
 
-Accepted main at this review base is 52abc2d, including the modular app and R2c shader-colour fix (PR #63). N4 #65 is the selected server-owned Cloudflare/WebSocket networking plan; N3 #14 is paused, and Q1 now depends on N4 rather than TURN. N4a #66 is delivered through PR #74, with acceptance effective only after green current-head CI, authorized merge and post-merge verification recorded in that issue. The browser still uses PeerJS until N4 implementation/adoption. V1a #58 is active separately in PR #67; its live issue controls ownership. P1 remains paused; G1 and K1 remain after Q1. GitHub issues remain the live assignment source.
+Accepted main is `b30552f`, including the N4a server-room contract through PR #74. Current-head baseline-ci and Chromium/Firefox/WebKit browser-ci all passed before merge. The contract is integrated, but the browser still uses PeerJS until N4 implementation/adoption. N4b #68 is now ready for coordinator-confirmed claim; later N4 tasks remain blocked by their native prerequisites. N3 #14 is paused and Q1 depends on N4 #65, not TURN. V1a #58 is active separately in PR #67; its live issue controls ownership. P1 remains paused; G1 and K1 remain after Q1. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work; smooth flat-colour toon look without scenery clutter; per-putt walled islands with designed gaps; true portal pairs; stronger fans; Wind, Snow, Storm and Lightning as attack power-ups; visual-only ambient weather on Frost Hollow and Cyclone Ring.
 
@@ -241,15 +241,13 @@ P1 remains deferred by user request; its isolated experiment/evidence is preserv
 - Main advanced to 44c082a via PR #62 (no issue): browser test runs can share a machine. The PeerServer takes a free port (`PP_PEER_PORT` can pin one), `PP_TEST_PORT` sets the preview port and server reuse is opt-in with `PP_REUSE_SERVER=1`.
 - V1 #33 is an umbrella split into V1a–V1d (#58–#61); V1a is blocked by R2c #57, and V1b–V1d by V1a. Reference look: branch reference/v1-toon-sample.
 - P1 #17 paused; Rapier experiment preserved on agent/p1-rapier-prototype (6ba6115).
-- Q1 #18 waits only on N3 #14 (TURN provider decision).
+- At this 2026-10-28 snapshot, Q1 #18 still listed N3 #14 as its networking prerequisite; the N4 decision and accepted integration below supersede that state.
 - Local browser tests run Chromium only (`npx playwright test --project=chromium`), with CI browser-ci covering Firefox and WebKit.
 - Branch cleanup: deleted merged branches agent/n2b-network-browser-specs, agent/r2-three-upgrade, agent/s2-cup-capture and agent/t1c-diag, and superseded feature/d1-course-snapshot (tip ca68091).
 
 
-## N4a integration record — PR #74
+## N4a accepted integration — PR #74
 
-This record takes effect after PR #74 merges under the user's 2026-10-28 authorization, current-head CI passes and merged-main verification is recorded in #66. Until then #66 remains REVIEW. Contract implementation is 3e5985d plus this coordinator documentation follow-up; the actual accepted merge SHA is recorded in #66 and downstream issues after integration.
+PR #74 merged to main as `b30552f` on 2026-10-28. Its head `c4c7af5` includes the contract implementation `3e5985d` and coordinator documentation follow-up. Hosted baseline-ci and browser-ci (Chromium, Firefox and WebKit) passed on the PR head. The accepted v2 room wire/checkpoint contracts, validation and mocks are in `src/network/contracts/`; lifecycle policy and recovery decisions are documented in `docs/networking/SERVER_ROOMS.md`. No Worker, server persistence, browser cutover, actual deployment or recovery is implemented by N4a.
 
-Pure v2 wire validators/mocks live in src/network/contracts/, with policy and durable domain checkpoint/absolute-deadline contracts documented in docs/networking/SERVER_ROOMS.md. The user confirmed configurable defaults of immediate controller succession, 30-second reconnect grace and 15-minute empty-room retention; overrides affect new rooms. Existing PeerJS v1/solo gameplay and physics remain unchanged. The 15 new boundary scenarios and existing regression component suites passed locally; see PR #74 for the initial fingerprint-layout failure and corrected CLI rerun. Hosted checks and their final outcomes are recorded on the PR/issue, not presumed here.
-
-#68 (local Worker/SQLite Durable Object tooling) becomes eligible only after accepted #66 integration; #69–#73 retain their prerequisite chains. No Worker, client migration, actual persistence/recovery or deployment is implemented by these contracts. N3 stays paused with uncommitted work preserved. No automatic next-task launch, account connection or spending is authorized by this integration record.
+N4b #68 is eligible for a coordinator-confirmed claim against accepted main `b30552f`. N4c–N4g remain gated by their native dependency chains. N3 #14 stays paused as an alternative and is not an N4 prerequisite. No Cloudflare account connection, deployment or spending is authorized by this integration record.
