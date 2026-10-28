@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Renderer migration probe</title><style>body{margin:0;background:#222}canvas{display:block;width:1280px;height:800px}</style></head><body><canvas></canvas><script type="module">
+import * as THREE from 'three';
+import { createGameRenderer, createGameView } from '/src/render/index.js';
+import { createCourseData } from '/src/courses/index.js';
+const renderer = createGameRenderer({ THREE, canvas: document.querySelector('canvas'), random: () => .37, devicePixelRatio: 2 });
+const view = createGameView({ renderer });
+const { definitions } = createCourseData();
+renderer.resize(1280);
+let local, now = 0;
+function select(map, putt = 0) {
+  view.setCourse(definitions[map], putt);
+  const c = renderer.course.course;
+  local = { x: c.tee[0], y: c.tee[1], z: 0, vx: 0, vy: 0, moving: false, mode: 'play', color: 0, effect: 'mag' };
+}
+function frame() {
+  now += 1000 / 60;
+  view.frame({ now, dt: 1 / 60, hazardTime: now / 1000, local,
+    remotes: Array.from({length: 7}, (_, i) => ({ id: 'remote-' + i, name: 'Player ' + i, x: local.x + i * 15, y: local.y + 25, z: 0, color: i + 1, effect: 'steady' })),
+    aim: { charge: .7, angle: .4, aimAngle: .4, spread: .1, reverse: false } });
+}
+select(0);
+window.probe = { THREE, renderer, view, definitions, select, frame, get local() { return local; } };
+</script></body></html>

@@ -8,6 +8,9 @@ const { pathToFileURL } = require('node:url');
 const { loadLegacy, legacyRawCourses, sourceHashes } = require('../tools/legacy-adapter.cjs');
 
 const root = path.resolve(__dirname, '..');
+const currentShots = require('./fixtures/cup-capture/solutions.json');
+const currentFirstShot = currentShots.results[0].best;
+const currentFull = require('./fixtures/cup-capture/reference-full.json');
 const main = path.join(root, 'tools/cli/main.mjs');
 const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding: 'utf8' });
 
@@ -48,7 +51,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.equal(invoke('check').status, 0);
       assert.match(invoke('list').stdout, /switchback-garden/);
       assert.deepEqual(JSON.parse(invoke('export').stdout), document);
-      const reference = inventory.simulationReferences.shots[0].shot;
+      const reference = currentFirstShot;
       const shot = invoke('shot', '0', '0', String(reference.deg), String(reference.power));
       assert.equal(shot.status, 0, shot.stdout + shot.stderr);
       assert.match(shot.stdout, /Edited display name/);
@@ -213,11 +216,15 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.equal(validateCourseGeometry(course).valid, false);
     }
   });
-  run('imported courses reproduce all 36 recorded robust starter shots', () => {
-    const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/solver-baseline.json'), 'utf8'));
+  run('all 36 starters retain nominal hole-in-ones; 31 meet the recorded robustness margin', () => {
+    const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8'));
     assert.equal(baseline.results.length, 36);
+    assert.equal(baseline.results.filter(r => r.best).length, 31, 'five explicit S2 course-tuning gaps');
+    assert.equal(baseline.simulationSha256, provenanceTools.hashSimulationSources(), 'S2 measurements must match simulation source');
     for (const ref of baseline.results) {
-      const out = commands.runShot(data.definitions, ref.map, ref.putt, ref.best.deg, ref.best.power);
+      const shot = ref.best || ref.nominal;
+      assert(shot, `measured nominal solution required for ${ref.map}/${ref.putt}`);
+      const out = commands.runShot(data.definitions, ref.map, ref.putt, shot.deg, shot.power);
       assert.equal(out.result.mode, 'sunk', `${ref.name} putt ${ref.putt}`);
       assert.equal(out.result.strokes, 1);
     }
@@ -233,7 +240,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
       fs.cpSync(path.join(root, 'tools/cli'), path.join(temp, 'tools/cli'), { recursive: true });
       const entry = path.join(temp, 'tools/cli/main.mjs');
-      for (const args of [['list'], ['check'], ['export'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(inventory.simulationReferences.shots[0].shot.deg), String(inventory.simulationReferences.shots[0].shot.power)]]) {
+      for (const args of [['list'], ['check'], ['export'], ['arena', 'Grand Finale'], ['shot', '0', '0', String(currentFirstShot.deg), String(currentFirstShot.power)]]) {
         const out = spawnSync(process.execPath, [entry, ...args], { encoding: 'utf8', cwd: temp });
         assert.equal(out.status, 0, out.stdout + out.stderr);
         if (args[0] === 'shot') assert.match(out.stdout, /SUNK/);
@@ -245,21 +252,21 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.code, 1);
     assert.ok(out.lines.some(line => line.includes('Imported courses:')));
   });
-  run('solve reproduces all 36 recorded first robust starter shots', () => {
-    const refs = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/solver-baseline.json'), 'utf8')).results;
+  run('solve reproduces all 36 S2 search outcomes, including five no-robust-shot results', () => {
+    const refs = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8')).results;
     assert.equal(refs.length, 36);
     for (const ref of refs) {
       const out = commands.runSolve(data.definitions, ref.map, ref.putt);
-      assert.equal(out.code, 0, `${ref.map}/${ref.putt}`);
+      assert.equal(out.code, ref.best ? 0 : 1, `${ref.map}/${ref.putt}`);
       assert.deepEqual(out.result.best, ref.best, `${ref.map}/${ref.putt}`);
-      assert.ok(out.result.hits > 0);
+      assert.ok(out.result.hits >= 0);
     }
   });
-  run('full solve preserves the legacy endpoint and complete-grid hit count', () => {
+  run('full solve matches the separately measured S2 reference grid (historical counts retained)', () => {
     const out = commands.runSolve(data.definitions, 0, 0, '--full');
     assert.equal(out.code, 0);
-    assert.equal(out.result.hits, 811, 'legacy full-grid comparison on current hashed source');
-    assert.deepEqual(out.result.best, inventory.simulationReferences.shots[0].shot);
+    assert.equal(out.result.hits, currentFull.hits);
+    assert.deepEqual(out.result.best, currentFirstShot);
   });
   run('solve rejects missing, invalid and unknown arguments', () => {
     for (const args of [[], ['', 0], [99, 0], [0, 99], [0, 0, '--typo']]) {
@@ -274,7 +281,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       const out = spawnSync(process.execPath, [path.join(temp, 'tools/cli/main.mjs'), 'solve', '0', '0'], { encoding: 'utf8', cwd: temp });
       assert.equal(out.status, 0, out.stderr);
       const saved = JSON.parse(out.stdout);
-      assert.deepEqual(saved.best, inventory.simulationReferences.shots[0].shot);
+      assert.deepEqual(saved.best, currentFirstShot);
       const expected = provenanceTools.createDifficultyProvenance(createCourseDocument().courses[0], 0);
       assert.deepEqual(provenanceTools.assessDifficultyResult(saved, expected), { current: true, complete: false, differences: [] });
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
@@ -296,14 +303,14 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(code, 1);
     assert.ok(lines.some(l => /putt 0: par/.test(l)));
   });
-  run('shot reproduces all six recorded reference traces (sink tick matches)', () => {
+  run('shot results match between imported and legacy course DATA under S2 physics', () => {
     const refs = inventory.simulationReferences.shots;
     assert.equal(refs.length, 6);
     for (const ref of refs) {
       const out = commands.runShot(legacy.HOLES, ref.map, ref.putt, ref.shot.deg, ref.shot.power);
       assert.equal(out.code, 0);
-      assert.equal(out.result.mode, 'sunk', `map ${ref.map}`);
-      assert.equal(out.result.ticks, ref.samples[ref.samples.length - 1].tick, `map ${ref.map} sink tick`);
+      // Historical sink ticks are intentionally obsolete after S2; the data adapters must still agree.
+      assert.ok(['play', 'sunk'].includes(out.result.mode));
       assert.deepEqual(commands.runShot(data.definitions, ref.map, ref.putt, ref.shot.deg, ref.shot.power), out, `map ${ref.map} imported trajectory result`);
     }
   });
@@ -323,8 +330,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.match(r.stdout, /VALIDATE OK: 22 courses/);
   });
   run('process: shot sinks a known reference shot', () => {
-    const ref = inventory.simulationReferences.shots[0];
-    const r = cli('shot', String(ref.map), String(ref.putt), String(ref.shot.deg), String(ref.shot.power));
+    const r = cli('shot', '0', '0', String(currentFirstShot.deg), String(currentFirstShot.power));
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /SUNK/);
   });

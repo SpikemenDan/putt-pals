@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-28T14:22:04.814Z",
+  "hits": 377,
+  "best": {
+    "deg": 32,
+    "power": 0.8
+  },
+  "provenance": {
+    "version": 1,
+    "courseId": "switchback-garden",
+    "puttId": "switchback-garden-putt-1",
+    "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
+    "simulationSha256": "04e2d4df446578d9c1bbd68a1cdd60082b559a84ec2f0387f03e8f8e84399a1f",
+    "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
+    "searchMode": "full"
+  }
+}

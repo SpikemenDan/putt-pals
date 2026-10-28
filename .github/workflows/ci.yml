@@ -92,12 +92,14 @@ jobs:
       - name: Install a virtual display and software OpenGL
         if: matrix.browser != 'webkit'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
+      # PR #51 accidentally merged the diagnostic workflow. Restore the normal gates;
+      # keep the diagnostic probe available explicitly, outside the default acceptance run.
       - name: Run real-browser solo, input, practice, lifecycle and four-player WebRTC flows
         run: |
           if [ "${{ matrix.browser }}" != webkit ]; then
-            xvfb-run -a --server-args="-screen 0 1280x1024x24" npx playwright test --project=${{ matrix.browser }} --headed
+            xvfb-run -a --server-args="-screen 0 1280x1024x24" npx playwright test --grep-invert 'join repro' --project=${{ matrix.browser }} --headed
           else
-            npx playwright test --project=${{ matrix.browser }}
+            npx playwright test --grep-invert 'join repro' --project=${{ matrix.browser }}
           fi
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'

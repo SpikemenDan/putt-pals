@@ -44,6 +44,8 @@ export function createPeerTransport({ Peer, peerOptions = {}, clock = globalThis
     };
     const drop = () => { if (open) transport.detach(connection.peer); else dispose(); };
     on('open', () => {
+      // Chromium can fire `open` twice on a received channel; attaching again would close this link (T1c, #48).
+      if (open) return;
       clock.clearTimeout(linkTimer);
       open = transport.attach(connection.peer, raw => connection.send(raw), dispose);
     });

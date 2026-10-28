@@ -10,7 +10,8 @@ import { RECONNECT_GRACE_PERIOD_MS, SNAPSHOT_INTERVAL_MS } from '../shared/const
  *
  * Liveness (opt-in, the app turns it on): with `heartbeatMs` the host re-sends the snapshot at least
  * that often, so guests can tell a quiet room from a dead host; with `linkTimeoutMs` a guest link that
- * has been silent that long (guests ping) is dropped, which starts its grace period.
+ * has been silent that long (guests ping) is dropped, which starts its grace period. With `heartbeatMs`
+ * the host also re-sends the welcome at that interval to guests that have not answered it yet.
  */
 export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0 } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
@@ -61,11 +62,14 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     }
     if (['peer-open', 'peer-close', 'command'].includes(message.type)) publish();
   });
-  let lastBeat = transport.localNow();
+  let lastBeat = transport.localNow(), lastGreet = lastBeat;
   const tick = () => {
     if (stopped) return;
     const now = transport.localNow();
     if (linkTimeoutMs > 0) for (const id of [...transport.links.keys()]) if (now - transport.lastSeen(id) > linkTimeoutMs) transport.detach(id);
+    // A lost welcome leaves a guest unable to accept snapshots; repeat it (then a snapshot) until the guest answers.
+    // Timed apart from lastBeat, which a busy room keeps resetting.
+    if (heartbeatMs > 0 && now - lastGreet >= heartbeatMs) { lastGreet = now; if (transport.greet()) dirty = true; }
     if (dirty || (heartbeatMs > 0 && now - lastBeat >= heartbeatMs)) { lastBeat = now; publish(); }
     timer = clock.setTimeout(tick, SNAPSHOT_INTERVAL_MS);
   };
