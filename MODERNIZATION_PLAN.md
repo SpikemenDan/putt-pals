@@ -1,6 +1,6 @@
 # Putt Pals modernization plan
 
-Status: baseline, shared contracts/simulation, D1 data/CLI delivery and L1 lifecycle are on main. N1 transport delivery is tracked through PR #24 (72b7498 plus review fixes), with acceptance effective after green CI and merge; A1 procedural audio is delivered through PR #25 with acceptance after green CI/merge/verification; browser adoption, real listening and real-network validation remain outstanding. See TASKS.md and PROJECT_STATUS.md for verified completion; the milestone gates below remain the migration plan.
+Status: baseline, shared contracts/simulation, D1 data/CLI delivery and L1 lifecycle are on main. N4a's server-room contract is integrated through PR #74 at `b30552f`; N4b's local Worker/SQLite Durable Object and Static Assets/WebSocket routing scaffold is integrated through PR #75 at `be77190`. The scaffold does not implement room protocol, gameplay authority, durable recovery, browser adoption or deployment. N1 transport delivery is tracked through PR #24 (72b7498 plus review fixes), with acceptance effective after green CI and merge; A1 procedural audio is delivered through PR #25 with acceptance after green CI/merge/verification; browser adoption, real listening and real-network validation remain outstanding. See TASKS.md and PROJECT_STATUS.md for verified completion; the milestone gates below remain the migration plan.
 
 ## Confirmed scope
 
@@ -87,7 +87,7 @@ Replacement exit gate: four-player actual-browser/separate-network games through
 The accepted implementation sequence is tracked by N4 #65 and child issues:
 
 1. N4a #66 — agree server-room protocol, controller/lifecycle policy, versioned durable checkpoint and deadlines. Integrated on main at `b30552f`; see [the accepted contract](docs/networking/SERVER_ROOMS.md).
-2. N4b #68 — reproducible local Worker, SQLite-backed Durable Object and static/WebSocket routing setup.
+2. N4b #68 — reproducible local Worker, SQLite-backed Durable Object and static/WebSocket routing setup. Integrated through PR #75 at `be77190`; see [local Cloudflare setup](docs/networking/CLOUDFLARE_SETUP.md). Protocol/game authority and persistence remain N4c/N4d work.
 3. N4c #69 — server-owned lifecycle authority, socket admission, bounded queues and message/rate validation.
 4. N4d #70 — durable checkpoint restore, alarms, reconnect/controller recovery and hibernation behavior.
 5. N4e #71 — browser WebSocket client and UI cutover while retaining local solo play and physics.
