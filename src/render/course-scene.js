@@ -9,7 +9,7 @@
  */
 
 import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
-import { TELEPORTER_COLORS } from './materials.js';
+import { displayColor, TELEPORTER_COLORS } from './materials.js';
 import { createWorldTransform, resolveRenderCourse } from './transform.js';
 
 /** Text sprite used for tee/cup markers and player names (legacy label()). */
@@ -131,7 +131,8 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     const x = k ? t[2] : t[0], y = k ? t[3] : t[1], color = TELEPORTER_COLORS[t[4] % 3];
     const portal = new THREE.Mesh(new THREE.CircleGeometry(22, 32), library.portal(color));
     portal.rotation.x = -Math.PI / 2; portal.position.set(...at(x, y, 1.8)); g.add(portal);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 80, 24, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
+    // r128 used the beam hex unconverted; keep that additive glow rather than the linearised colour (R2c #57).
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 80, 24, 1, true), new THREE.MeshBasicMaterial({ color: displayColor(new THREE.Color(), color), userData: { displayColor: true }, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
     beam.position.set(...at(x, y, 40)); g.add(beam);
   }
   for (const fa of hl.fan) {

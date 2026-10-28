@@ -390,11 +390,12 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       ...(geometry.type === 'TorusGeometry' ? { thetaStart: 0, thetaLength: Math.PI * 2 } : {}),
       ...Object.fromEntries(Object.entries(geometry.parameters || {}).filter(([key]) => !/Segments$/.test(key))),
     });
+    // R2c #57: displayColor() materials hold raw sRGB components, so read them back unconverted.
     const describe = o => ({
       type: o.type, p: o.position.toArray(), r: o.rotation.toArray().slice(0, 3), s: o.scale.toArray(),
       // Segment defaults can change between Three.js releases; authored dimensions must not.
       g: o.geometry && !o.isSprite ? { type: o.geometry.type, dimensions: dimensions(o.geometry) } : null,
-      m: o.material ? { t: o.material.type, c: o.material.color?.getHex(), tr: o.material.transparent, side: o.material.side, shader: !!o.material.isShaderMaterial } : null,
+      m: o.material ? { t: o.material.type, c: o.material.color?.getHex(o.material.userData.displayColor ? 'srgb-linear' : undefined), tr: o.material.transparent, side: o.material.side, shader: !!o.material.isShaderMaterial } : null,
       c: o.children.map(describe),
     });
     let builds = 0;

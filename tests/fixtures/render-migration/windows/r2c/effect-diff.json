@@ -1,0 +1,112 @@
+{
+ "map-0-follow.png": {
+  "effectShare": 0.0014,
+  "effect_r128_vs_before": 9.8,
+  "effect_r128_vs_after": 6.27,
+  "rest_before_vs_after": 0.07,
+  "whole_r128_vs_before": 7.02,
+  "whole_r128_vs_after": 7.0,
+  "sat_r128": 35.3,
+  "sat_before": 21.7,
+  "sat_after": 37.0
+ },
+ "map-0-hole.png": {
+  "effectShare": 0.0058,
+  "effect_r128_vs_before": 68.09,
+  "effect_r128_vs_after": 0.41,
+  "rest_before_vs_after": 0.02,
+  "whole_r128_vs_before": 8.74,
+  "whole_r128_vs_after": 8.34,
+  "sat_r128": 198.8,
+  "sat_before": 112.6,
+  "sat_after": 199.0
+ },
+ "map-0-strategic.png": {
+  "effectShare": 0.0039,
+  "effect_r128_vs_before": 69.55,
+  "effect_r128_vs_after": 0.28,
+  "rest_before_vs_after": 0.0,
+  "whole_r128_vs_before": 7.96,
+  "whole_r128_vs_after": 7.69,
+  "sat_r128": 203.1,
+  "sat_before": 114.5,
+  "sat_after": 203.4
+ },
+ "map-0-trail.png": {
+  "effectShare": 0.0048,
+  "effect_r128_vs_before": 10.17,
+  "effect_r128_vs_after": 4.51,
+  "rest_before_vs_after": 0.08,
+  "whole_r128_vs_before": 7.02,
+  "whole_r128_vs_after": 7.0,
+  "sat_r128": 32.9,
+  "sat_before": 15.1,
+  "sat_after": 33.6
+ },
+ "map-19-strategic.png": {
+  "effectShare": 0.0062,
+  "effect_r128_vs_before": 36.92,
+  "effect_r128_vs_after": 0.64,
+  "rest_before_vs_after": 0.06,
+  "whole_r128_vs_before": 7.83,
+  "whole_r128_vs_after": 7.59,
+  "sat_r128": 127.8,
+  "sat_before": 83.1,
+  "sat_after": 128.2
+ },
+ "map-20-strategic.png": {
+  "effectShare": 0.0,
+  "effect_r128_vs_before": 0.0,
+  "effect_r128_vs_after": 0.0,
+  "rest_before_vs_after": 0.0,
+  "whole_r128_vs_before": 7.7,
+  "whole_r128_vs_after": 7.7,
+  "sat_r128": 0,
+  "sat_before": 0,
+  "sat_after": 0
+ },
+ "map-21-follow.png": {
+  "effectShare": 0.0727,
+  "effect_r128_vs_before": 17.0,
+  "effect_r128_vs_after": 2.31,
+  "rest_before_vs_after": 0.27,
+  "whole_r128_vs_before": 6.44,
+  "whole_r128_vs_after": 5.21,
+  "sat_r128": 27.4,
+  "sat_before": 61.6,
+  "sat_after": 30.3
+ },
+ "map-21-strategic.png": {
+  "effectShare": 0.0105,
+  "effect_r128_vs_before": 37.31,
+  "effect_r128_vs_after": 0.5,
+  "rest_before_vs_after": 0.03,
+  "whole_r128_vs_before": 7.98,
+  "whole_r128_vs_after": 7.56,
+  "sat_r128": 122.8,
+  "sat_before": 80.8,
+  "sat_after": 123.4
+ },
+ "map-5-strategic.png": {
+  "effectShare": 0.0001,
+  "effect_r128_vs_before": 16.94,
+  "effect_r128_vs_after": 19.9,
+  "rest_before_vs_after": 0.03,
+  "whole_r128_vs_before": 7.67,
+  "whole_r128_vs_after": 7.68,
+  "sat_r128": 37.5,
+  "sat_before": 33.4,
+  "sat_after": 42.6
+ },
+ "map-8-strategic.png": {
+  "effectShare": 0.0,
+  "effect_r128_vs_before": 6.56,
+  "effect_r128_vs_after": 1.17,
+  "rest_before_vs_after": 0.0,
+  "whole_r128_vs_before": 7.7,
+  "whole_r128_vs_after": 7.7,
+  "sat_r128": 19.7,
+  "sat_before": 0.0,
+  "sat_after": 23.2
+ }
+}
