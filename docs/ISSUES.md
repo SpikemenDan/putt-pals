@@ -67,6 +67,7 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 
 | ID | Issue | Scope |
 | --- | --- | --- |
+| S2 | [#54](https://github.com/SpikemenDan/putt-pals/issues/54) | Cup capture, fast overshoot and airborne/lip-out correction |
 | C1 | [#3](https://github.com/SpikemenDan/putt-pals/issues/3) | Shared contracts (integrated) |
 | S1 | [#5](https://github.com/SpikemenDan/putt-pals/issues/5) | Headless simulation (integrated) |
 | B4 | [#4](https://github.com/SpikemenDan/putt-pals/issues/4) | Exhaustive corrected-launch difficulty sweep |

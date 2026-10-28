@@ -1,6 +1,6 @@
 # S2 — Cup capture and overshoot correction
 
-Local review candidate for #54, on `agent/s2-cup-capture` in `/private/tmp/putt-pals-s2`, based on accepted main `62482f8`. Worker/coordinator/integration owner: Codex root / arshakir. The user authorized committing and pushing this S2 delivery on 2026-10-28. PR creation and merge remain separate approval gates. P1 was archived separately as `6ba6115` on `agent/p1-rapier-prototype`; no Rapier dependency or production adoption is involved here.
+Local review candidate for #54, on `agent/s2-cup-capture` in `/private/tmp/putt-pals-s2`, based on accepted main `62482f8`. Worker/coordinator/integration owner: Codex root / arshakir. The user authorized committing and pushing this S2 delivery on 2026-10-28. The user subsequently authorized the complete PR/review/CI/merge/post-merge workflow, including merge after successful checks. P1 was archived separately as `6ba6115` on `agent/p1-rapier-prototype`; no Rapier dependency or production adoption is involved here.
 
 ## Problem and resulting behaviour
 
@@ -66,8 +66,8 @@ The measurement command writes evidence and deliberately signals missing robust 
 - 36/36 nominal solution replay and current simulation-source hash checks passed separately.
 - Selected production browser command above: **9/9 passed** (cup regression, full six-putt solo and input in Chromium, Firefox and WebKit; 5.5 minutes). Chromium production miss/capture screenshots are retained alongside the diagnostic captures. Full `npm test`: **passed, exit 0**, including both final legacy smoke suites. The final added near-threshold cases and strengthened 36-shot/source-fingerprint assertions also passed separately after the aggregate run (439 dedicated trajectories total).
 
-No S2 hosted CI, real-network session or subjective human playtest is claimed. No production merge, deployment, shared-contract migration or source extraction is involved.
+Hosted CI and merged-main verification are recorded in the linked PR/#54 during the authorized completion workflow. No real-network session or subjective human playtest is claimed by the local evidence above. No production merge, deployment, shared-contract migration or source extraction is involved.
 
 ## Handoff and remaining gates
 
-Local implementation and verification are complete; keep #54 ACTIVE until authorized review submission, then REVIEW pending user acceptance/integration. The user approved the S2 commit and branch push on 2026-10-28 after reviewing the reported verification and shot-margin limits. PR creation and merge remain separate; this delivery does not close the issue or adopt the change on main. Decide whether the five robustness gaps need tuning before integration or are accepted as a recorded gameplay consequence, and track the full difficulty refresh before release. Do not close this issue solely because the code is written.
+Local implementation and verification are complete; keep #54 ACTIVE until authorized review submission, then REVIEW pending user acceptance/integration. The user approved the S2 commit and branch push on 2026-10-28 after reviewing the reported verification and shot-margin limits. The user subsequently authorized PR creation and merge after successful review/checks, with the five narrower shot margins explicitly disclosed. Acceptance becomes effective only after current-head CI, merge and merged-main verification recorded in #54. The user authorized the merge workflow after the five robustness gaps were disclosed; retain them as an explicit gameplay consequence and release follow-up in Q1 #18. Recompute full difficulty before release; no course tuning is silently included. Do not close this issue solely because the code is written.
