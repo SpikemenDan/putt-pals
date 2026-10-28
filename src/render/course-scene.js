@@ -1,15 +1,19 @@
 /**
  * Builds the Three.js scene graph for one course putt.
  *
- * A faithful port of the legacy buildAll(): same meshes, order, dimensions,
- * materials and cup cutouts. Geometry comes from a legacy-shaped course
- * definition (src/courses) instead of the HTML's global HOLES array, and every
- * GPU resource created here is owned by the returned build and released by
- * its dispose().
+ * A port of the legacy buildAll(): same meshes, order, dimensions and cup
+ * cutouts. Geometry comes from a legacy-shaped course definition (src/courses)
+ * instead of the HTML's global HOLES array, and every GPU resource created
+ * here is owned by the returned build and released by its dispose().
+ *
+ * The library's style picks the look. 'legacy' keeps the legacy textured
+ * materials and landscape. 'toon' (V1a #58) uses flat palette colours, adds
+ * ink outlines and drops the landscape trees; object layout is unchanged.
  */
 
 import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
-import { displayColor, TELEPORTER_COLORS } from './materials.js';
+import { displayColor, TELEPORTER_COLORS, TOON_PALETTE } from './materials.js';
+import { addInk, createInkMaterial } from './outline.js';
 import { createWorldTransform, resolveRenderCourse } from './transform.js';
 
 /** Text sprite used for tee/cup markers and player names (legacy label()). */
@@ -40,21 +44,28 @@ function box(THREE, w, h, d, material, position, shadows) {
   return mesh;
 }
 
-/** World-space cup cutout on standard materials (legacy cutCup); returns the replaced material. */
+/**
+ * World-space cup cutout on standard and toon materials (legacy cutCup); returns the replaced
+ * material. A toon material's cel-shading patch runs first and the cutout chains onto it.
+ */
 function cutCup(THREE, mesh, course, origin) {
-  if (!mesh.isMesh || !mesh.material.isMeshStandardMaterial) return null;
+  if (!mesh.isMesh) return null;
+  const toon = !!mesh.material.userData.toon;
+  if (!mesh.material.isMeshStandardMaterial && !toon) return null;
   const replaced = mesh.material;
   const material = replaced.clone();
   mesh.material = material;
   const radius = cupOf(course);
-  material.onBeforeCompile = shader => {
+  const base = replaced.onBeforeCompile, baseKey = replaced.customProgramCacheKey;
+  material.onBeforeCompile = (shader, renderer) => {
+    if (toon) base.call(material, shader, renderer);
     shader.uniforms.cupCenter = { value: new THREE.Vector2(course.hole[0] + origin[0], course.hole[1] + origin[1]) };
     shader.vertexShader = 'varying vec3 cupWorld;\n' + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ncupWorld=(modelMatrix*vec4(position,1.)).xyz;');
     shader.fragmentShader = 'varying vec3 cupWorld;uniform vec2 cupCenter;\n' + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif(distance(cupWorld.xz,cupCenter)<' + radius.toFixed(1) + ')discard;');
   };
-  material.customProgramCacheKey = () => 'cup-cut-v5-' + radius;
+  material.customProgramCacheKey = () => 'cup-cut-v5-' + radius + (toon ? '|' + baseKey.call(material) : '');
   return replaced;
 }
 
@@ -74,28 +85,35 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const at = (x, y, h) => transform.local(x, y, h);
   const orphans = [];
   const flags = [], fans = [], vortices = [], movers = [], wallFade = [];
+  const toon = library.style === 'toon';
+  // Toon surfaces are one flat palette colour; the legacy style keeps its patterned textures.
+  const surface = (role, texture, repeatX, repeatY, overrides) => toon ? library.toon(TOON_PALETTE[role], overrides) : library.patterned(texture, repeatX, repeatY, overrides);
+  const solid = (role, params) => toon ? library.toon(TOON_PALETTE[role], params) : new THREE.MeshStandardMaterial(params);
+  // Meshes that get an ink outline once the cup cutouts are known.
+  const inked = [];
+  const ink = (mesh, options) => { if (toon) inked.push([mesh, options || {}]); return mesh; };
 
   const g = new THREE.Group();
   g.position.set(...transform.ground(0, 0, 0));
 
   for (const tile of hl.tiles) {
-    g.add(box(THREE, tile[2], 35, tile[3], library.patterned(T.brick, 3, 1), at(tile[0] + tile[2] / 2, tile[1] + tile[3] / 2, -25)));
-    const floor = box(THREE, tile[2], 10, tile[3], library.patterned(T.turf, tile[2] / 80, tile[3] / 80, { roughness: 0.9 }), at(tile[0] + tile[2] / 2, tile[1] + tile[3] / 2, -5));
+    g.add(ink(box(THREE, tile[2], 35, tile[3], surface('tile', T.brick, 3, 1), at(tile[0] + tile[2] / 2, tile[1] + tile[3] / 2, -25))));
+    const floor = box(THREE, tile[2], 10, tile[3], surface('turf', T.turf, tile[2] / 80, tile[3] / 80, { roughness: 0.9 }), at(tile[0] + tile[2] / 2, tile[1] + tile[3] / 2, -5));
     floor.receiveShadow = true;
-    g.add(floor);
+    g.add(ink(floor));
   }
-  for (const s of hl.sand) g.add(box(THREE, s[2], 1.5, s[3], library.patterned(T.sand, s[2] / 80, s[3] / 80, { roughness: 1 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8)));
-  for (const s of hl.ice) g.add(box(THREE, s[2], 1.5, s[3], library.patterned(T.ice, s[2] / 80, s[3] / 80, { roughness: 0.08, metalness: 0.25 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8)));
-  for (const s of hl.slime) g.add(box(THREE, s[2], 1.5, s[3], library.patterned(T.slime, s[2] / 80, s[3] / 80, { roughness: 0.35 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8)));
+  for (const s of hl.sand) g.add(ink(box(THREE, s[2], 1.5, s[3], surface('sand', T.sand, s[2] / 80, s[3] / 80, { roughness: 1 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8))));
+  for (const s of hl.ice) g.add(ink(box(THREE, s[2], 1.5, s[3], surface('ice', T.ice, s[2] / 80, s[3] / 80, { roughness: 0.08, metalness: 0.25 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8))));
+  for (const s of hl.slime) g.add(ink(box(THREE, s[2], 1.5, s[3], surface('slime', T.slime, s[2] / 80, s[3] / 80, { roughness: 0.35 }), at(s[0] + s[2] / 2, s[1] + s[3] / 2, 0.8))));
   for (const r of hl.w) {
-    const wall = box(THREE, r[2], WALL_HEIGHT, r[3], library.patterned(T.brick, Math.max(r[2], r[3]) / 90, 1, { transparent: true }), at(r[0] + r[2] / 2, r[1] + r[3] / 2, WALL_HEIGHT / 2), true);
+    const wall = box(THREE, r[2], WALL_HEIGHT, r[3], surface('wall', T.brick, Math.max(r[2], r[3]) / 90, 1, { transparent: true }), at(r[0] + r[2] / 2, r[1] + r[3] / 2, WALL_HEIGHT / 2), true);
     wall.userData.fade = true;
-    g.add(wall);
+    g.add(ink(wall));
   }
   for (const p of hl.pl) {
-    const platform = box(THREE, p[2], p[4] + 10, p[3], library.patterned(T.plat, p[2] / 90, p[3] / 90, { roughness: 0.4, transparent: true }), at(p[0] + p[2] / 2, p[1] + p[3] / 2, p[4] / 2 - 5), true);
+    const platform = box(THREE, p[2], p[4] + 10, p[3], surface('platform', T.plat, p[2] / 90, p[3] / 90, { roughness: 0.4, transparent: true }), at(p[0] + p[2] / 2, p[1] + p[3] / 2, p[4] / 2 - 5), true);
     platform.userData.fade = true;
-    g.add(platform);
+    g.add(ink(platform));
   }
   for (const r of hl.rp) {
     const geometry = new THREE.BufferGeometry(), verts = [], uv = [], N = 48;
@@ -111,21 +129,21 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     geometry.computeVertexNormals();
-    const ramp = new THREE.Mesh(geometry, library.patterned(T.ramp, 2, 2, { side: THREE.DoubleSide }));
+    const ramp = new THREE.Mesh(geometry, surface('ramp', T.ramp, 2, 2, { side: THREE.DoubleSide }));
     ramp.receiveShadow = ramp.castShadow = true;
-    g.add(ramp);
+    g.add(ink(ramp, { planar: true }));
   }
   for (const p of hl.pit) {
     const water = new THREE.Mesh(new THREE.PlaneGeometry(p[2], p[3]), library.water);
     water.rotation.x = -Math.PI / 2;
     water.position.set(...at(p[0] + p[2] / 2, p[1] + p[3] / 2, 1.2));
-    g.add(water);
+    g.add(ink(water, { planar: true, centred: true }));
   }
   for (const p of hl.pd) {
     const pad = new THREE.Mesh(new THREE.CircleGeometry(18, 32), library.pad);
     pad.rotation.x = -Math.PI / 2; pad.position.set(...at(p[0], p[1], 1.6)); g.add(pad);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(18, 2, 8, 32), new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xaa7700, metalness: 0.6, roughness: 0.3, envMap: environment, envMapIntensity: 1 }));
-    ring.rotation.x = Math.PI / 2; ring.position.set(...at(p[0], p[1], 2.5)); g.add(ring);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(18, 2, 8, 32), solid('padRing', { color: 0xffd23f, emissive: 0xaa7700, metalness: 0.6, roughness: 0.3, envMap: environment, envMapIntensity: 1 }));
+    ring.rotation.x = Math.PI / 2; ring.position.set(...at(p[0], p[1], 2.5)); g.add(ink(ring));
   }
   for (const t of hl.tp) for (let k = 0; k < 2; k++) {
     const x = k ? t[2] : t[0], y = k ? t[3] : t[1], color = TELEPORTER_COLORS[t[4] % 3];
@@ -139,11 +157,11 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     const fanGroup = new THREE.Group(), span = fa[4] ? fa[3] : fa[2];
     fanGroup.position.set(...at(fa[0] + fa[2] / 2 - fa[4] * fa[2] / 2, fa[1] + fa[3] / 2 - fa[5] * fa[3] / 2, 32));
     fanGroup.rotation.y = Math.atan2(fa[4], fa[5]);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.min(span, fa[4] ? fa[3] : fa[2]) / 2 * 0.9, 3, 10, 32), new THREE.MeshStandardMaterial({ color: 0x666a80, metalness: 0.8, roughness: 0.3, envMap: environment, envMapIntensity: 1 }));
-    ring.castShadow = true; fanGroup.add(ring);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.min(span, fa[4] ? fa[3] : fa[2]) / 2 * 0.9, 3, 10, 32), solid('fanRing', { color: 0x666a80, metalness: 0.8, roughness: 0.3, envMap: environment, envMapIntensity: 1 }));
+    ring.castShadow = true; fanGroup.add(ink(ring));
     const blades = new THREE.Group(), radius = Math.min(fa[2], fa[3]) * 0.42;
     for (let k = 0; k < 4; k++) {
-      const blade = box(THREE, radius, 6, 2, new THREE.MeshStandardMaterial({ color: 0xdde3ff, metalness: 0.7, roughness: 0.25 }), [radius / 2, 0, 0], true);
+      const blade = ink(box(THREE, radius, 6, 2, solid('fanBlade', { color: 0xdde3ff, metalness: 0.7, roughness: 0.25 }), [radius / 2, 0, 0], true));
       const pivot = new THREE.Group(); pivot.rotation.z = k * Math.PI / 2; pivot.add(blade); blades.add(pivot);
     }
     fanGroup.add(blades); g.add(fanGroup);
@@ -154,22 +172,23 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     fans.push({ blades, positions, geometry, fan: fa, count: N, phases: Array.from({ length: N }, () => random()) });
   }
 
-  g.traverse(mesh => { const replaced = cutCup(THREE, mesh, hl, transform.origin); if (replaced) orphans.push(replaced); });
+  const cut = new Set();
+  g.traverse(mesh => { const replaced = cutCup(THREE, mesh, hl, transform.origin); if (replaced) { orphans.push(replaced); cut.add(mesh); } });
   g.updateMatrixWorld(true);
   g.traverse(mesh => { if (mesh.userData.fade) wallFade.push({ mesh, alpha: 1, box: null }); });
 
   const cup = cupOf(hl);
   const holeHeight = surfaceHeight(hl, hl.hole[0], hl.hole[1]);
-  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(cup, cup, CUP_DEPTH, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x283c35, roughness: 0.85, side: THREE.BackSide }));
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(cup, cup, CUP_DEPTH, 64, 1, true), solid('cupSleeve', { color: 0x283c35, roughness: 0.85, side: THREE.BackSide }));
   sleeve.position.set(...at(hl.hole[0], hl.hole[1], holeHeight - CUP_DEPTH / 2)); g.add(sleeve);
   const bottom = new THREE.Mesh(new THREE.CircleGeometry(cup, 64), new THREE.MeshBasicMaterial({ color: 0 }));
   bottom.rotation.x = -Math.PI / 2; bottom.position.set(...at(hl.hole[0], hl.hole[1], holeHeight - CUP_DEPTH)); g.add(bottom);
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(cup + 0.7, 0.65, 8, 64), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }));
-  rim.rotation.x = Math.PI / 2; rim.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 0.2)); g.add(rim);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 60, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.5, roughness: 0.3, envMap: environment, envMapIntensity: 0.9 }));
-  pole.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 30)); pole.castShadow = true; g.add(pole);
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(26, 16, 12, 6), new THREE.MeshBasicMaterial({ color: 0xff4fb8, side: THREE.DoubleSide }));
-  flag.position.set(...at(hl.hole[0] + 13, hl.hole[1], holeHeight + 52)); g.add(flag); flags.push(flag);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(cup + 0.7, 0.65, 8, 64), solid('cupRim', { color: 0xffffff, roughness: 0.3 }));
+  rim.rotation.x = Math.PI / 2; rim.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 0.2)); g.add(ink(rim));
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 60, 8), solid('pole', { color: 0xffffff, metalness: 0.5, roughness: 0.3, envMap: environment, envMapIntensity: 0.9 }));
+  pole.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 30)); pole.castShadow = true; g.add(ink(pole));
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(26, 16, 12, 6), new THREE.MeshBasicMaterial({ color: toon ? TOON_PALETTE.flag : 0xff4fb8, side: THREE.DoubleSide }));
+  flag.position.set(...at(hl.hole[0] + 13, hl.hole[1], holeHeight + 52)); g.add(ink(flag, { planar: true, centred: true })); flags.push(flag);
 
   (course.putts || []).forEach((putt, k) => {
     if (k === puttIndex) return;
@@ -182,12 +201,12 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
 
   const powerBlocks = hl.q.map(q => {
     const block = box(THREE, 24, 24, 24, library.powerBlock(), at(q[0], q[1], surfaceHeight(hl, ...q) + 18), true);
-    g.add(block);
+    g.add(ink(block));
     return { mesh: block, at: q };
   });
 
-  // Deterministic landscape outside the playable rails.
-  for (let j = 0; j < 10; j++) {
+  // Deterministic landscape outside the playable rails. The toon style has none: V1b's sky world replaces it.
+  for (let j = 0; j < (toon ? 0 : 10); j++) {
     const tree = new THREE.Group();
     tree.position.set(...at(30 + j * 83, j % 2 ? -58 : 558, -5));
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(3, 6, 58, 8), new THREE.MeshStandardMaterial({ color: 0x665039, roughness: 1 }));
@@ -209,8 +228,17 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   }
   for (const h of hl.movers) {
     const mesh = box(THREE, h[2], WALL_HEIGHT, h[3], library.hazard(), at(h[0] + h[2] / 2, h[1] + h[3] / 2, surfaceHeight(hl, h[0], h[1]) + WALL_HEIGHT / 2), true);
-    g.add(mesh);
+    g.add(ink(mesh));
     movers.push({ mesh, mover: h });
+  }
+
+  // Ink hulls go on last, so the cup cutout traversal never sees them. Hulls of cut meshes
+  // (the turf and the tile under it) take the same cutout, or the hole would show black ink.
+  if (inked.length) {
+    const cupInk = cut.size ? createInkMaterial(THREE, library.inkUniforms, { cup: { center: [hl.hole[0] + transform.origin[0], hl.hole[1] + transform.origin[1]], radius: cup } }) : null;
+    for (const [mesh, { planar = false, centred = false }] of inked) {
+      addInk(THREE, mesh, planar ? library.ink.planar : cut.has(mesh) ? cupInk : library.ink.solid, { planar, centred });
+    }
   }
 
   let disposed = false;

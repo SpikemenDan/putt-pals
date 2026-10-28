@@ -145,7 +145,7 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
   const { definitions } = createCourseData();
   const canvas = w.document.getElementById('cv');
   const makeView = () => {
-    const renderer = render.createGameRenderer({ THREE, canvas, random: () => RANDOM, createWebGLRenderer: () => new THREE.WebGLRenderer() });
+    const renderer = render.createGameRenderer({ THREE, canvas, random: () => RANDOM, style: 'legacy', createWebGLRenderer: () => new THREE.WebGLRenderer() });
     return render.createGameView({ renderer });
   };
 

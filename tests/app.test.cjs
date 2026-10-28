@@ -401,7 +401,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     let builds = 0;
     for (let map = 0; map < definitions.length; map++) {
       const scenes = [THREE, embedded.THREE].map(T => {
-        const library = createMaterialLibrary({ THREE: T, createCanvas: canvas, random: () => 0.5 });
+        // V1a #58: the legacy style, as on r128; the toon layout is compared with it in render-modern.test.cjs.
+        const library = createMaterialLibrary({ THREE: T, createCanvas: canvas, random: () => 0.5, style: 'legacy' });
         const build = buildCourseScene({ library, course: definitions[map], puttIndex: 0 });
         const d = describe(build.group);
         build.dispose(); library.dispose();
