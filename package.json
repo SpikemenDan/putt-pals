@@ -11,7 +11,7 @@
     "build": "vite build && node scripts/check-build.cjs",
     "preview": "vite preview --host 127.0.0.1 --open /putt-pals.html",
     "check": "node --check tools.js && node --check tests/solver-baseline.cjs && node tools.js check",
-    "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:session && npm run test:network && npm run test:audio && npm run test:render && npm run test:input && npm run test:ui && npm run test:app && npm run test:courses && npm run test:cli && npm run test:physics && npm run test:smoke && npm run test:multiplayer",
+    "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:session && npm run test:network && npm run test:audio && npm run test:render && npm run test:input && npm run test:ui && npm run test:app && npm run test:courses && npm run test:cli && npm run test:physics && npm run test:integration && npm run test:smoke && npm run test:multiplayer",
     "test:contracts": "node tests/contracts.test.cjs",
     "test:simulation": "node tests/simulation.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
@@ -28,10 +28,14 @@
     "baseline:solver": "node tests/solver-baseline.cjs",
     "solve": "node tools.js solve",
     "rank": "node tools.js rank",
-    "test:cli": "node tests/cli.test.cjs"
+    "test:cli": "node tests/cli.test.cjs",
+    "test:integration": "node tests/integration/out-of-bounds.test.cjs",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "jsdom": "30.1.3",
+    "peer": "1.0.2",
     "vite": "8.3.5"
   },
   "dependencies": {

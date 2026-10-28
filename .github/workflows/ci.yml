@@ -58,7 +58,55 @@ jobs:
         run: npm run test:cli
       - name: Check physics and mechanics
         run: npm run test:physics
+      - name: Check ported legacy smoke assertions
+        run: npm run test:integration
       - name: Check solo and practice flows in jsdom
         run: npm run test:smoke
       - name: Check four clients over the fake transport
         run: npm run test:multiplayer
+
+  browser-ci:
+    name: browser-ci (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Check out the proposed changes
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up the verified Node version
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26.10.0'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install the Playwright browser and its system libraries
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      # GPU-less runners: headless Firefox gets no WebGL and Chromium's SwiftShader is too slow for the
+      # real-time putt timers, so both run headed on a virtual display with Mesa's software GL.
+      - name: Install a virtual display and software OpenGL
+        if: matrix.browser != 'webkit'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
+      - name: Run real-browser solo, input, practice, lifecycle and four-player WebRTC flows
+        run: |
+          if [ "${{ matrix.browser }}" != webkit ]; then
+            xvfb-run -a --server-args="-screen 0 1280x1024x24" npx playwright test --project=${{ matrix.browser }} --headed
+          else
+            npx playwright test --project=${{ matrix.browser }}
+          fi
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/browser/
+          retention-days: 7
