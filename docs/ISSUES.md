@@ -83,6 +83,14 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 | N2 | [#13](https://github.com/SpikemenDan/putt-pals/issues/13) | Guest recovery/interpolation |
 | N2b | [#47](https://github.com/SpikemenDan/putt-pals/issues/47) | Committed real-browser N2 specs |
 | N3 | [#14](https://github.com/SpikemenDan/putt-pals/issues/14) | Managed TURN |
+| N4 | [#65](https://github.com/SpikemenDan/putt-pals/issues/65) | Server-owned Cloudflare room migration parent |
+| N4a | [#66](https://github.com/SpikemenDan/putt-pals/issues/66) | Server-room contracts and lifecycle decisions |
+| N4b | [#68](https://github.com/SpikemenDan/putt-pals/issues/68) | Local Worker/Durable Object setup |
+| N4c | [#69](https://github.com/SpikemenDan/putt-pals/issues/69) | Backend room coordination |
+| N4d | [#70](https://github.com/SpikemenDan/putt-pals/issues/70) | Durable room/player recovery |
+| N4e | [#71](https://github.com/SpikemenDan/putt-pals/issues/71) | Browser WebSocket migration |
+| N4f | [#72](https://github.com/SpikemenDan/putt-pals/issues/72) | Server-room coverage and quota/performance checks |
+| N4g | [#73](https://github.com/SpikemenDan/putt-pals/issues/73) | Authorized Cloudflare preview setup and rollback |
 | T1 | [#15](https://github.com/SpikemenDan/putt-pals/issues/15) | Integration/browser coverage |
 | T1c | [#48](https://github.com/SpikemenDan/putt-pals/issues/48) | Chromium multiplayer join flake |
 | R2 | [#16](https://github.com/SpikemenDan/putt-pals/issues/16) | Three.js upgrade |
@@ -150,3 +158,8 @@ N2 #13 is merged through PR #43 (3f5d010) and closed. Its remaining real-browser
 ## Coordinator follow-up — 2026-10-28
 
 B4 (#4), I2b (#41), R2 (#16), S2 (#54), R2w (#52), T1c (#48) and N2b (#47) are closed after PR merges and verification. R2c #57 is ACTIVE with PR #63 open to restore effect-shader colours under the new colour pipeline. V1 #33 is an umbrella split into V1a–V1d (#58–#61); V1a is blocked by R2c, and V1b–V1d by V1a. The approved reference look is on branch `reference/v1-toon-sample`. G1 and K1 still come after Q1. P1 #17 is paused by the user. Q1 #18 waits only on N3 #14. PR #62 introduced `PP_TEST_PORT` and `PP_REUSE_SERVER` to run browser suites side by side. Local browser runs use Chromium only (`npx playwright test --project=chromium`), with CI covering Firefox and WebKit. Read live issues before acting; this snapshot does not assign or authorize another task.
+
+
+## N4 server-room decision — 2026-10-28
+
+The user selected server-owned Cloudflare rooms and requested backlog #65/#66/#68–#73. N3 #14 remains PAUSED; Q1 #18 now depends on #65 instead. N4a #66 delivers the proposed v2 contracts/design through PR #74. The user authorized committing/pushing/submitting that task and subsequently merging when ready. Accepted dependency availability takes effect only after current-head CI, merge and post-merge verification in #66; record the actual merge SHA in consumers. #68 then becomes eligible for coordinator-confirmed claim; no worker is automatically launched. Cloudflare account connection, publishing and paid provisioning retain separate authorization gates.

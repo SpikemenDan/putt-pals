@@ -4,7 +4,7 @@ Last updated: 2026-10-28.
 
 ## Current objective
 
-Accepted main (44c082a) contains the integrated modular app (I1 #12, PR #31) plus N2, T1, R2 (Three.js 0.186.1) and S2; the legacy page stays built until Q1 decides hosting. R2c #57 is active with PR #63 open; V1a waits on it and V1b–V1d on V1a; N3 waits on the provider/budget decision and Q1 only on N3; P1 is paused; G1 and K1 come after Q1. GitHub issues remain the live assignment source.
+Accepted main at this review base is 52abc2d, including the modular app and R2c shader-colour fix (PR #63). N4 #65 is the selected server-owned Cloudflare/WebSocket networking plan; N3 #14 is paused, and Q1 now depends on N4 rather than TURN. N4a #66 is delivered through PR #74, with acceptance effective only after green current-head CI, authorized merge and post-merge verification recorded in that issue. The browser still uses PeerJS until N4 implementation/adoption. V1a #58 is active separately in PR #67; its live issue controls ownership. P1 remains paused; G1 and K1 remain after Q1. GitHub issues remain the live assignment source.
 
 Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work; smooth flat-colour toon look without scenery clutter; per-putt walled islands with designed gaps; true portal pairs; stronger fans; Wind, Snow, Storm and Lightning as attack power-ups; visual-only ambient weather on Frost Hollow and Cyclone Ring.
 
@@ -244,3 +244,12 @@ P1 remains deferred by user request; its isolated experiment/evidence is preserv
 - Q1 #18 waits only on N3 #14 (TURN provider decision).
 - Local browser tests run Chromium only (`npx playwright test --project=chromium`), with CI browser-ci covering Firefox and WebKit.
 - Branch cleanup: deleted merged branches agent/n2b-network-browser-specs, agent/r2-three-upgrade, agent/s2-cup-capture and agent/t1c-diag, and superseded feature/d1-course-snapshot (tip ca68091).
+
+
+## N4a integration record — PR #74
+
+This record takes effect after PR #74 merges under the user's 2026-10-28 authorization, current-head CI passes and merged-main verification is recorded in #66. Until then #66 remains REVIEW. Contract implementation is 3e5985d plus this coordinator documentation follow-up; the actual accepted merge SHA is recorded in #66 and downstream issues after integration.
+
+Pure v2 wire validators/mocks live in src/network/contracts/, with policy and durable domain checkpoint/absolute-deadline contracts documented in docs/networking/SERVER_ROOMS.md. The user confirmed configurable defaults of immediate controller succession, 30-second reconnect grace and 15-minute empty-room retention; overrides affect new rooms. Existing PeerJS v1/solo gameplay and physics remain unchanged. The 15 new boundary scenarios and existing regression component suites passed locally; see PR #74 for the initial fingerprint-layout failure and corrected CLI rerun. Hosted checks and their final outcomes are recorded on the PR/issue, not presumed here.
+
+#68 (local Worker/SQLite Durable Object tooling) becomes eligible only after accepted #66 integration; #69–#73 retain their prerequisite chains. No Worker, client migration, actual persistence/recovery or deployment is implemented by these contracts. N3 stays paused with uncommitted work preserved. No automatic next-task launch, account connection or spending is authorized by this integration record.
