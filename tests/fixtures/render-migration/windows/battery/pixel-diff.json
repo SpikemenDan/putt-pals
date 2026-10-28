@@ -1,0 +1,362 @@
+{
+ "map-0-confetti": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.498,
+   "changedShare": 0.027
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.485,
+   "changedShare": 0.0268
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.086,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.075,
+   "changedShare": 0.0
+  }
+ },
+ "map-0-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.019,
+   "changedShare": 0.0308
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.991,
+   "changedShare": 0.0307
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.078,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.08,
+   "changedShare": 0.0
+  }
+ },
+ "map-0-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.738,
+   "changedShare": 0.0543
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.725,
+   "changedShare": 0.0543
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.052,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.061,
+   "changedShare": 0.0
+  }
+ },
+ "map-0-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.964,
+   "changedShare": 0.0429
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.96,
+   "changedShare": 0.0429
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.031,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.035,
+   "changedShare": 0.0
+  }
+ },
+ "map-0-trail": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.023,
+   "changedShare": 0.0288
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.004,
+   "changedShare": 0.0286
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.089,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.075,
+   "changedShare": 0.0
+  }
+ },
+ "map-19-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.454,
+   "changedShare": 0.0254
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.445,
+   "changedShare": 0.0259
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.08,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.101,
+   "changedShare": 0.0
+  }
+ },
+ "map-19-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.431,
+   "changedShare": 0.0548
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.407,
+   "changedShare": 0.0547
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.063,
+   "changedShare": 0.0003
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.086,
+   "changedShare": 0.0003
+  }
+ },
+ "map-19-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.832,
+   "changedShare": 0.0444
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.826,
+   "changedShare": 0.0444
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.035,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.043,
+   "changedShare": 0.0
+  }
+ },
+ "map-20-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.243,
+   "changedShare": 0.0166
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.174,
+   "changedShare": 0.0167
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.105,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.097,
+   "changedShare": 0.0
+  }
+ },
+ "map-20-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.266,
+   "changedShare": 0.0461
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.232,
+   "changedShare": 0.0459
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.062,
+   "changedShare": 0.0003
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.091,
+   "changedShare": 0.0003
+  }
+ },
+ "map-20-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.698,
+   "changedShare": 0.0388
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.684,
+   "changedShare": 0.0388
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.034,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.047,
+   "changedShare": 0.0
+  }
+ },
+ "map-21-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.441,
+   "changedShare": 0.0723
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.43,
+   "changedShare": 0.0727
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.082,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.111,
+   "changedShare": 0.0001
+  }
+ },
+ "map-21-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.812,
+   "changedShare": 0.0803
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.802,
+   "changedShare": 0.0803
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.056,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.063,
+   "changedShare": 0.0
+  }
+ },
+ "map-21-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.978,
+   "changedShare": 0.0462
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.973,
+   "changedShare": 0.0463
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.034,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.038,
+   "changedShare": 0.0
+  }
+ },
+ "map-5-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.419,
+   "changedShare": 0.0247
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.41,
+   "changedShare": 0.0249
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.086,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.11,
+   "changedShare": 0.0
+  }
+ },
+ "map-5-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.563,
+   "changedShare": 0.0562
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.544,
+   "changedShare": 0.0561
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.063,
+   "changedShare": 0.0003
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.08,
+   "changedShare": 0.0003
+  }
+ },
+ "map-5-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.672,
+   "changedShare": 0.0398
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.67,
+   "changedShare": 0.0399
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.033,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.037,
+   "changedShare": 0.0
+  }
+ },
+ "map-8-follow": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 6.136,
+   "changedShare": 0.0177
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 6.123,
+   "changedShare": 0.0179
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.086,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.114,
+   "changedShare": 0.0
+  }
+ },
+ "map-8-hole": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 8.128,
+   "changedShare": 0.0447
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 8.105,
+   "changedShare": 0.0445
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.062,
+   "changedShare": 0.0003
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.08,
+   "changedShare": 0.0003
+  }
+ },
+ "map-8-strategic": {
+  "r128_vs_r186_radeon": {
+   "meanAbs": 7.705,
+   "changedShare": 0.039
+  },
+  "r128_vs_r186_rtx": {
+   "meanAbs": 7.7,
+   "changedShare": 0.0391
+  },
+  "radeon_vs_rtx_r128": {
+   "meanAbs": 0.031,
+   "changedShare": 0.0
+  },
+  "radeon_vs_rtx_r186": {
+   "meanAbs": 0.036,
+   "changedShare": 0.0
+  }
+ }
+}
