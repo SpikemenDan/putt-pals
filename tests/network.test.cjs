@@ -238,6 +238,24 @@ const { EventEmitter } = require('node:events');
     assert.equal(FakePeer.peers.size, 0);
     for (const emitter of [...peers, ...links]) assert.equal(emitter.eventNames().length, 0);
   });
+  await run('PeerJS-shaped duplicate open (T1c): a second open event on the host link keeps the guest connected', async () => {
+    const clock = new SimulatedClock();
+    const options = { Peer: FakePeer, clock, now: () => clock.now(), hostId: 'host' };
+    const host = createPeerTransport({ ...options, peerId: 'host', sessionId: 'twice-session' });
+    const session = createRoomSession({ hostId: 'host', clock });
+    await host.connect(); const stop = bindRoomSession(host, session, { clock });
+    // As seen in real Chromium: the received channel fires `open` twice.
+    const hostPeer = FakePeer.peers.get('host');
+    hostPeer.once('connection', link => link.once('open', () => queueMicrotask(() => link.emit('open'))));
+    const guest = createPeerTransport({ ...options, peerId: 'guest' });
+    await guest.connect(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(guest.connectionState, 'connected');
+    assert.equal(guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Guest' } }), true);
+    assert.equal(session.getSnapshot().players.guest.connected, true);
+    assert.equal(hostPeer.links[0].open, true, 'the link stays open');
+    guest.close(); stop(); host.close(); session.dispose();
+    assert.equal(FakePeer.peers.size, 0);
+  });
   await run('PeerJS-shaped full room: the ninth guest receives room-full before the link closes', async () => {
     const clock = new SimulatedClock();
     const options = { Peer: FakePeer, clock, now: () => clock.now(), hostId: 'host' };
