@@ -84,6 +84,11 @@ This table links roadmap IDs to their issues; current state/ownership is always 
 | R2 | [#16](https://github.com/SpikemenDan/putt-pals/issues/16) | Three.js upgrade |
 | P1 | [#17](https://github.com/SpikemenDan/putt-pals/issues/17) | Optional Rapier experiment |
 | Q1 | [#18](https://github.com/SpikemenDan/putt-pals/issues/18) | Release readiness |
+| V1 | [#33](https://github.com/SpikemenDan/putt-pals/issues/33) | Comic art direction |
+| G1 | [#34](https://github.com/SpikemenDan/putt-pals/issues/34) | New course mechanics and power-ups |
+| K1 | [#35](https://github.com/SpikemenDan/putt-pals/issues/35) | Course redesign |
+| M1 | [#36](https://github.com/SpikemenDan/putt-pals/issues/36) | Menus, loading screen and feedback polish |
+| I2 | [#38](https://github.com/SpikemenDan/putt-pals/issues/38) | WebGL-unavailable message |
 
 ## Baseline at backlog setup
 
@@ -110,3 +115,7 @@ The follow-up delivery is https://github.com/SpikemenDan/putt-pals/pull/24. N1 i
 ## A1 delivery — PR #25
 
 A1 #10 is owned by Codex root on agent/a1-procedural-audio, based on 1387c22. Delivery: https://github.com/SpikemenDan/putt-pals/pull/25 . It is ACTIVE/REVIEW until green current-head CI, merge and merged-main verification; the coordinator then closes it and removes the status label. Nine instrumented-node audio scenarios cover all eleven legacy recipes and ownership/failure behavior; real-browser listening/autoplay and I1 adoption are separate gates. Exact results: docs/reviews/A1_AUDIO.md. The user requested completing this next eligible task in the established workflow; no other task, deployment or paid service is authorized.
+
+## New issues follow-up — 2026-10-27
+
+V1–M1 (#33–#36) record the user's chosen original comic art direction and the later gameplay/course/menu ideas from HANDOFF.md, which is the source of ideas, not a script. They are BLOCKED behind the modernization tasks (V1 on R2, G1 on Q1, K1 on G1 and P1, M1 on V1) and each must be split into reviewable sub-issues before implementation. I2 #38 comes from a T1 CI finding (blank page without WebGL) and is ACTIVE in a side session. T1 #15 is ACTIVE with partial delivery in draft PR #37; its legacy UI screenshot-parity test was dropped with user approval. Read live issues before acting; this snapshot does not assign or authorize another task.

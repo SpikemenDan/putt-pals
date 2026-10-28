@@ -186,3 +186,10 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - Both U1 findings are fixed in I1: the build no longer minifies CSS, so standard `backdrop-filter` survives (asserted by scripts/check-build.cjs), and `PLAYER_COLORS` is now the game palette.
 - Unblocked: N2 and R2 are READY; T1 stays READY and can now cover the integrated app. N3 stays BLOCKED on the provider/budget decision; Q1 stays BLOCKED on N2, N3, T1, R2 and B4.
 - Not verified: Firefox/WebKit, real GPUs and frame rate, WebRTC across separate networks/TURN, guest recovery and real-browser audio listening. Hosting index.html instead of the legacy page is a Q1 decision.
+
+## Art direction and T1 findings — 2026-10-27
+
+- The user chose an original comic art direction, tracked as V1 #33, G1 #34, K1 #35 and M1 #36. These are future work, blocked behind the modernization tasks. HANDOFF.md is the source of the ideas, not a script.
+- T1 #15 stays ACTIVE. Draft PR #37 adds Playwright solo, input, practice and multiplayer specs and a browser-ci job. On hosted CI, Firefox and WebKit pass on the current head (a3d972b, run 40609448113) and Chromium passed on an earlier head (7b42c7f, run 40605028753); the current-head Chromium job was still running at this snapshot. WebKit multiplayer is skipped until N3 #14 provides a TURN relay. The legacy UI screenshot-parity test was dropped (user-approved) because V1/M1 replace the pastel look; scripts/ui-visual-parity.cjs stays as a manual tool.
+- Findings: without WebGL the app shows a blank page, now I2 #38. A failed join (no WebRTC) gives no feedback, recorded on N2 #13 as part of its actionable connection errors.
+- The user confirmed the new app works in their desktop Firefox.
