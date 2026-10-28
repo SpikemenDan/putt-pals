@@ -5,7 +5,7 @@ const { JSDOM } = require('jsdom');
   const THREE = await import('three');
   const { createGameRenderer, createGameView } = await import('../src/render/index.js');
   const { createCourseData } = await import('../src/courses/index.js');
-  const { displayFragment } = await import('../src/render/materials.js');
+  const { displayColor, TELEPORTER_COLORS } = await import('../src/render/materials.js');
   const dom = new JSDOM('<canvas></canvas>');
   const canvas = dom.window.document.querySelector('canvas');
   const ctx = new Proxy({}, { get: (_, key) => key === 'measureText' ? () => ({width: 10}) : key === 'createRadialGradient' ? () => ({addColorStop() {}}) : () => {}, set: () => true });
@@ -25,6 +25,7 @@ const { JSDOM } = require('jsdom');
   assert.equal(targetDisposed, 0, 'environment stays alive until renderer disposal');
   const { definitions } = createCourseData();
   let builds = 0, patches = 0;
+  const beams = [];
   const created = new Set(), released = new Set();
   const track = obj => {
     for (const resource of [obj.isSprite ? null : obj.geometry, ...[obj.material].flat().filter(Boolean)]) {
@@ -40,6 +41,7 @@ const { JSDOM } = require('jsdom');
       const positions = o.geometry?.attributes.position;
       if (positions) assert.ok(Array.from(positions.array).every(Number.isFinite), 'finite vertices');
       const m = o.material;
+      if (m?.isMeshBasicMaterial && m.blending === THREE.AdditiveBlending) beams.push([m.color.r, m.color.g, m.color.b]);
       if (m?.onBeforeCompile && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
         const shader = { uniforms: {}, vertexShader: THREE.ShaderLib.standard.vertexShader, fragmentShader: THREE.ShaderLib.standard.fragmentShader };
         m.onBeforeCompile(shader); patches++;
@@ -51,10 +53,21 @@ const { JSDOM } = require('jsdom');
     for (const mode of ['play', 'sunk', 'play']) view.frame({now: builds * 1000, dt: 1/60, local: {x: c0.tee[0], y: c0.tee[1], z: 0, vx: 0, vy: 0, mode, moving: true, color: 0, effect: 'mag'}, remotes: [{id: 'guest', name: '<Guest>', x: 100, y: 100, z: 0, color: 1, effect: 'steady'}], aim: {charge: .5, angle: .2, aimAngle: .2, spread: .1}});
   }
   assert.equal(builds, 52); assert.ok(patches > 52);
-  const fragment = displayFragment(THREE, 'void main(){gl_FragColor=vec4(1.);}');
-  if (Number(THREE.REVISION) >= 154) for (const chunk of ['tonemapping_fragment', 'colorspace_fragment']) {
-    assert.ok(fragment.includes('#include <' + chunk + '>')); assert.ok(THREE.ShaderChunk[chunk]);
+  // R2c #57: effect shaders output display values as on r128, so no tone mapping or re-encoding.
+  const effects = [];
+  r.scene.traverse(o => { if (o.material?.isShaderMaterial) effects.push(o.material); });
+  assert.ok(effects.length >= 4, 'sky, trail, confetti and aura shaders in the scene');
+  for (const m of [...effects, r.library.water, r.library.pad, r.library.portal(0xb44cff), r.library.hazard(), r.library.vortex(), r.library.vortexParticles(), r.library.powerBlock()]) {
+    assert.ok(!/tonemapping_fragment|colorspace_fragment/.test(m.fragmentShader), 'effect shader keeps raw display output');
   }
+  const raw = hex => [hex >> 16 & 255, hex >> 8 & 255, hex & 255].map(v => v / 255);
+  const close = (color, hex) => raw(hex).forEach((v, i) => assert.ok(Math.abs([color.r, color.g, color.b][i] - v) < 1e-6, 'sRGB uniform component'));
+  close(r.library.portal(0xb44cff).uniforms.col.value, 0xb44cff);
+  close(displayColor(new THREE.Color(), '#ff4fb8'), 0xff4fb8);
+  const aura = effects.find(m => m.uniforms.kind);
+  close(aura.uniforms.col.value, 0x36cfff);
+  assert.ok(beams.length > 0, 'portal beams checked');
+  for (const color of beams) assert.ok(TELEPORTER_COLORS.some(hex => raw(hex).every((v, i) => Math.abs(color[i] - v) < 1e-6)), 'portal beam keeps the r128 sRGB components');
   const counters = r.diagnostics(); counters.textures = -1;
   assert.equal(r.diagnostics().textures, 3, 'detached diagnostics');
   view.dispose(); view.dispose();

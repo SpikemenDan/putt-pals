@@ -1,4 +1,4 @@
-import { displayFragment } from './materials.js';
+import { displayColor } from './materials.js';
 /**
  * Per-player scene actors: balls, contact shadows, effect auras, the ball
  * trail, sink confetti and the aim guide. Ported from the legacy renderer
@@ -53,7 +53,7 @@ export function placeAura(mesh, type, position, visible, time) {
   mesh.visible = !!(visible && EFFECT_COLORS[type]);
   if (!mesh.visible) return;
   mesh.position.copy(position);
-  mesh.material.uniforms.col.value.setHex(EFFECT_COLORS[type]);
+  displayColor(mesh.material.uniforms.col.value, EFFECT_COLORS[type]);
   mesh.material.uniforms.kind.value = EFFECT_KINDS.indexOf(type);
   mesh.scale.setScalar(1 + Math.sin(time * 5) * 0.1);
 }
@@ -64,7 +64,7 @@ export function createTrail(THREE) {
   let length = 0;
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('a', new THREE.BufferAttribute(alphas, 1));
-  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { col: { value: new THREE.Color(0xffffff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: displayFragment(THREE, 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}') }));
+  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { col: { value: displayColor(new THREE.Color(), 0xffffff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}' }));
   points.frustumCulled = false;
   return {
     points,
@@ -72,7 +72,7 @@ export function createTrail(THREE) {
     update(p, moving, visible, color) {
       points.visible = !!visible;
       if (!visible) { length = 0; return; }
-      points.material.uniforms.col.value.set(color);
+      displayColor(points.material.uniforms.col.value, color);
       if (moving) {
         if (length && Math.hypot(p.x - positions[0], p.y - positions[1], p.z - positions[2]) > 90) length = 0;
         positions.copyWithin(3, 0, (N - 1) * 3);
@@ -92,7 +92,7 @@ export function createConfetti(THREE, random) {
   let remaining = 0;
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('ccol', new THREE.BufferAttribute(colors, 3));
-  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { op: { value: 1 } }, transparent: true, depthWrite: false, vertexShader: 'attribute vec3 ccol;varying vec3 vc;void main(){vc=ccol;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=11.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: displayFragment(THREE, 'uniform float op;varying vec3 vc;void main(){vec2 q=abs(gl_PointCoord-.5)*2.;if(max(q.x,q.y)>.85)discard;gl_FragColor=vec4(vc,op);}') }));
+  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { op: { value: 1 } }, transparent: true, depthWrite: false, vertexShader: 'attribute vec3 ccol;varying vec3 vc;void main(){vc=ccol;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=11.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: 'uniform float op;varying vec3 vc;void main(){vec2 q=abs(gl_PointCoord-.5)*2.;if(max(q.x,q.y)>.85)discard;gl_FragColor=vec4(vc,op);}' }));
   points.frustumCulled = false;
   points.visible = false;
   const palette = [0xff7ac8, 0xffd23f, 0x7fe3ff, 0xb8f0a2, 0xc9a8ff, 0xffffff];
@@ -102,7 +102,7 @@ export function createConfetti(THREE, random) {
     burst(p) {
       const c = new THREE.Color();
       for (let i = 0; i < N; i++) {
-        c.set(palette[i % 6]);
+        displayColor(c, palette[i % 6]);
         colors.set([c.r, c.g, c.b], i * 3);
         positions.set([p.x, p.y + 8, p.z], i * 3);
         const a = random() * 6.283, speed = 40 + random() * 110;

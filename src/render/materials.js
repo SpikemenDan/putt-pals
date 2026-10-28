@@ -83,10 +83,9 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
   const sharedTextures = new Set(Object.values(textures));
 
   // Custom shaders must opt into the same display conversion as built-in materials.
-  const shader = fragment => displayFragment(THREE, fragment);
-  const skyMaterial = own(new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, vertexShader: SKY_VERTEX, fragmentShader: shader(SKY_FRAGMENT) }));
-  const water = own(new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(WATER_FRAGMENT) }));
-  const pad = own(new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(PAD_FRAGMENT) }));
+  const skyMaterial = own(new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, vertexShader: SKY_VERTEX, fragmentShader: SKY_FRAGMENT }));
+  const water = own(new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: WATER_FRAGMENT }));
+  const pad = own(new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: PAD_FRAGMENT }));
   water.userData.shared = pad.userData.shared = true;
 
   return {
@@ -110,13 +109,13 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
       return new THREE.MeshStandardMaterial(Object.assign({ map, bumpMap: map, bumpScale: 0.5, roughness: 0.55, metalness: 0.05 }, overrides || {}));
     },
     portal(color) {
-      return new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time, col: { value: new THREE.Color(color) } }, vertexShader: SHADER_VERTEX, fragmentShader: shader(PORTAL_FRAGMENT) });
+      return new THREE.ShaderMaterial({ transparent: true, uniforms: { t: time, col: { value: displayColor(new THREE.Color(), color) } }, vertexShader: SHADER_VERTEX, fragmentShader: PORTAL_FRAGMENT });
     },
-    powerBlock() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(POWER_BLOCK_FRAGMENT) }); },
-    vortex() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fragmentShader: shader(VORTEX_FRAGMENT) }); },
-    hazard() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: shader(HAZARD_FRAGMENT) }); },
-    vortexParticles() { return new THREE.ShaderMaterial({ uniforms: { t: time }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: PARTICLE_VERTEX, fragmentShader: shader(PARTICLE_FRAGMENT) }); },
-    aura() { return new THREE.ShaderMaterial({ uniforms: { t: time, col: { value: new THREE.Color(0xffffff) }, kind: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, vertexShader: AURA_VERTEX, fragmentShader: shader(AURA_FRAGMENT) }); },
+    powerBlock() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: POWER_BLOCK_FRAGMENT }); },
+    vortex() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fragmentShader: VORTEX_FRAGMENT }); },
+    hazard() { return new THREE.ShaderMaterial({ uniforms: { t: time }, vertexShader: SHADER_VERTEX, fragmentShader: HAZARD_FRAGMENT }); },
+    vortexParticles() { return new THREE.ShaderMaterial({ uniforms: { t: time }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: PARTICLE_VERTEX, fragmentShader: PARTICLE_FRAGMENT }); },
+    aura() { return new THREE.ShaderMaterial({ uniforms: { t: time, col: { value: displayColor(new THREE.Color(), 0xffffff) }, kind: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, vertexShader: AURA_VERTEX, fragmentShader: AURA_FRAGMENT }); },
     dispose() {
       for (const resource of owned) resource.dispose();
       owned.clear();
@@ -124,9 +123,13 @@ export function createMaterialLibrary({ THREE, createCanvas, random = Math.rando
   };
 }
 
-/** r154+ display output chunks. Render targets (PMREM) keep linear output automatically. */
-export function displayFragment(THREE, source) {
-  if (Number(THREE.REVISION) < 154) return source;
-  const end = source.lastIndexOf('}');
-  return source.slice(0, end) + '\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n' + source.slice(end);
+/**
+ * Effect shaders write display (sRGB) values straight to gl_FragColor, as on r128,
+ * so they take no tone-mapping or colour-space chunks. Their colour uniforms and
+ * attributes hold raw sRGB components too: setRGB() stores them unconverted, where
+ * r152+ set()/setHex() would linearise them.
+ */
+export function displayColor(target, color) {
+  const hex = typeof color === 'number' ? color : new target.constructor(color).getHex();
+  return target.setRGB((hex >> 16 & 255) / 255, (hex >> 8 & 255) / 255, (hex & 255) / 255);
 }
