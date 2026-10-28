@@ -6,7 +6,7 @@
 // covers the real drag path. window.__ppApp (enabled by __PP_APP_HOOK) is read for state and never
 // written.
 const { expect } = require('@playwright/test');
-const solver = require('../../fixtures/solver-baseline.json');
+const solver = require('../../fixtures/cup-capture/solutions.json');
 
 const PEER_PORT = 9310;
 const PEER_PATH = '/pp';
