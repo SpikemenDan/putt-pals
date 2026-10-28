@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH } from '../shared/constants.js';
+import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS } from '../shared/constants.js';
 import { GameModes } from '../shared/session.js';
 
 export const MAX_MESSAGE_BYTES = 65536;
@@ -52,11 +52,11 @@ export function validSnapshot(s) {
     || !Object.values(GameModes).includes(s.mode) || !validId(s.hostId)
     || !index(s.mapIndex, 22) || !index(s.puttIndex, 6) || !count(s.roundNumber)
     || !Number.isFinite(s.roundStartTime) || !Number.isFinite(s.votingDeadline)
-    || !record(s.players) || !Array.isArray(s.roster) || s.roster.length > 4
+    || !record(s.players) || !Array.isArray(s.roster) || s.roster.length > MAX_PLAYERS
     || new Set(s.roster).size !== s.roster.length) return false;
   const entries = Object.entries(s.players);
   // Disconnected historical participants can remain in L1; wire storage stays bounded.
-  if (entries.length > 128 || entries.filter(([, p]) => p?.connected).length > 4) return false;
+  if (entries.length > 128 || entries.filter(([, p]) => p?.connected).length > MAX_PLAYERS) return false;
   for (const [id, p] of entries) {
     if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores']) || p.id !== id || !name(p.name) || typeof p.connected !== 'boolean'
       || !count(p.strokes) || typeof p.done !== 'boolean' || typeof p.timedOut !== 'boolean'
@@ -68,18 +68,21 @@ export function validSnapshot(s) {
     'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence'])
     || !Number.isFinite(s.roundLimitSeconds) || s.roundLimitSeconds < 120 || s.roundLimitSeconds > 600
     || typeof s.isHost !== 'boolean' || !validState(s.state)
-    || (typeof s.state === 'string' ? s.state !== s.phase : !Object.hasOwn(s.state, s.phase)) || !record(s.votes) || Object.keys(s.votes).length > 4
+    || (typeof s.state === 'string' ? s.state !== s.phase : !Object.hasOwn(s.state, s.phase)) || !record(s.votes) || Object.keys(s.votes).length > MAX_PLAYERS
     || !Object.entries(s.votes).every(([id, vote]) => Object.hasOwn(s.players, id) && index(vote, 22))
     || !Array.isArray(s.completedMaps) || s.completedMaps.length > 9 || !s.completedMaps.every(n => index(n, 22))
     || !record(s.totals) || Object.keys(s.totals).length > 128
     || !Object.entries(s.totals).every(([id, t]) => validId(id) && record(t) && keys(t, ['name', 'total', 'wins']) && name(t.name) && count(t.total) && count(t.wins))) return false;
   if (s.last !== null && (!record(s.last) || !keys(s.last, ['mapIndex', 'scores', 'winners']) || !index(s.last.mapIndex, 22) || !record(s.last.scores)
-    || Object.keys(s.last.scores).length > 4 || !Object.entries(s.last.scores).every(([id, score]) => validId(id) && count(score))
+    || Object.keys(s.last.scores).length > MAX_PLAYERS || !Object.entries(s.last.scores).every(([id, score]) => validId(id) && count(score))
     || !Array.isArray(s.last.winners) || !s.last.winners.every(id => Object.hasOwn(s.last.scores, id)))) return false;
-  if (s.presence !== undefined && (!record(s.presence) || Object.keys(s.presence).length > 4
+  if (s.presence !== undefined && (!record(s.presence) || Object.keys(s.presence).length > MAX_PLAYERS
     || !Object.entries(s.presence).every(([id, p]) => Object.hasOwn(s.players, id) && s.players[id].connected && validPresence(p)))) return false;
   return Object.hasOwn(s.players, s.hostId) && s.roster.every(id => validId(id) && Object.hasOwn(s.players, id));
 }
+/** Why a host refused a guest; sent in a 'reject' frame just before the host closes that link. */
+export const REJECT_REASONS = Object.freeze(['room-full', 'identity-rejected']);
+export const validReject = p => record(p) && keys(p, ['reason']) && REJECT_REASONS.includes(p.reason);
 // JSON text is the only wire representation. Bound bytes before parsing and clone ownership.
 export function decode(raw) {
   if (typeof raw !== 'string' || raw.length > MAX_MESSAGE_BYTES || new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES) return null;
@@ -88,7 +91,7 @@ export function decode(raw) {
     if (!record(m) || !keys(m, ['version', 'sessionId', 'roundNumber', 'puttIndex', 'sequence', 'senderId', 'type', 'payload', 'now'])
       || m.version !== PROTOCOL_VERSION || !validId(m.sessionId) || !validId(m.senderId)
       || !count(m.sequence) || !count(m.roundNumber) || !index(m.puttIndex, 6) || !Number.isFinite(m.now)
-      || !['welcome', 'command', 'presence', 'snapshot'].includes(m.type)) return null;
+      || !['welcome', 'reject', 'command', 'presence', 'snapshot'].includes(m.type)) return null;
     return m;
   } catch { return null; }
 }

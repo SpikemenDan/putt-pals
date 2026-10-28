@@ -6,6 +6,7 @@ const { EventEmitter } = require('node:events');
   const { MemoryRoomHub, createSoloTransport, createPeerTransport, bindRoomSession } = await import('../src/network/index.js');
   const { isRoomTransport } = await import('../src/shared/transport.js');
   const { encode, decode, MAX_MESSAGE_BYTES } = await import('../src/network/protocol.js');
+  const { MAX_PLAYERS } = await import('../src/shared/constants.js');
   let passed = 0;
   const run = async (name, fn) => { await fn(); passed++; console.log('PASS:', name); };
   const fixture = async () => {
@@ -136,12 +137,21 @@ const { EventEmitter } = require('node:events');
   });
   await run('capacity, duplicate identities, disconnect membership, host loss, subscriptions and cleanup', async () => {
     const f = await fixture();
-    const extra = f.hub.create({ peerId: 'd', hostId: 'host' });
-    await assert.rejects(extra.connect(), /unavailable/);
+    assert.equal(MAX_PLAYERS, 8);
+    for (const id of ['d', 'e', 'f', 'g']) {
+      const guest = f.hub.create({ peerId: id, hostId: 'host' });
+      await guest.connect(); guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: id } }); f.guests.push(guest);
+    }
+    assert.equal(Object.values(f.session.getSnapshot().players).filter(p => p.connected).length, 8);
+    const extra = f.hub.create({ peerId: 'h', hostId: 'host' }), statuses = [];
+    extra.subscribeStatus(s => statuses.push(s));
+    await assert.rejects(extra.connect(), /room-full/);
+    assert.deepEqual(statuses.at(-1), { state: 'disconnected', reason: 'room-full' }, 'the ninth player is told why, not left to time out');
+    assert.equal(f.host.links.size, 7); assert.equal(f.hub.rooms.has('h'), false);
     const duplicate = f.hub.create({ peerId: 'a', hostId: 'host' });
     await assert.rejects(duplicate.connect(), /Duplicate/);
     f.guests[0].close(); assert.equal(f.session.getSnapshot().players.a.connected, false);
-    assert.equal(f.host.links.size, 2); assert.equal(f.guests[0].send({ type: 'command', payload: { type: 'LEAVE_ROOM' } }), false);
+    assert.equal(f.host.links.size, 6); assert.equal(f.guests[0].send({ type: 'command', payload: { type: 'LEAVE_ROOM' } }), false);
     let lost; f.guests[1].subscribeStatus(s => { lost = s; });
     f.host.close(); assert.deepEqual(lost, { state: 'disconnected', reason: 'host-lost' });
     f.close(); extra.close(); duplicate.close(); assert.equal(f.hub.rooms.size, 0);
@@ -189,6 +199,25 @@ const { EventEmitter } = require('node:events');
     assert.equal(FakePeer.peers.size, 0);
     for (const emitter of [...peers, ...links]) assert.equal(emitter.eventNames().length, 0);
   });
+  await run('PeerJS-shaped full room: the ninth guest receives room-full before the link closes', async () => {
+    const clock = new SimulatedClock();
+    const options = { Peer: FakePeer, clock, now: () => clock.now(), hostId: 'host' };
+    const host = createPeerTransport({ ...options, peerId: 'host', sessionId: 'full-session' });
+    const session = createRoomSession({ hostId: 'host', clock });
+    await host.connect(); const stop = bindRoomSession(host, session, { clock });
+    const guests = [];
+    for (let i = 0; i < MAX_PLAYERS - 1; i++) {
+      const g = createPeerTransport({ ...options, peerId: 'g' + i }); await g.connect();
+      g.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'G' + i } }); guests.push(g);
+    }
+    const late = createPeerTransport({ ...options, peerId: 'late' }), statuses = [];
+    late.subscribeStatus(st => statuses.push(st));
+    await assert.rejects(late.connect(), /room-full/);
+    assert.deepEqual(statuses.map(st => st.reason), [null, 'room-full'], 'connecting, then refused with the reason; no later host-lost');
+    assert.equal(host.links.size, MAX_PLAYERS - 1); assert.equal(Object.hasOwn(session.getSnapshot().players, 'late'), false);
+    late.close(); for (const g of guests) g.close(); stop(); host.close(); session.dispose();
+    assert.equal(FakePeer.peers.size, 0);
+  });
   await run('PeerJS timeout, startup failure and cancellation settle connect and dispose listeners', async () => {
     class SilentPeer extends EventEmitter { destroy() { this.destroyed = true; } }
     const clock = new SimulatedClock();
@@ -214,11 +243,12 @@ const { EventEmitter } = require('node:events');
     }
     const host = createPeerTransport({ Peer: PendingPeer, peerId: 'h', hostId: 'h', sessionId: 's', clock });
     await host.connect(); assert.equal(timers.size, 0);
-    const connections = Array.from({ length: 4 }, (_, i) => {
+    // Seven guest slots plus two links opened only to tell late guests the room is full.
+    const connections = Array.from({ length: MAX_PLAYERS + 2 }, (_, i) => {
       const c = new EventEmitter(); c.peer = `guest-${i}`; c.closed = 0; c.close = () => { c.closed++; }; return c;
     });
     for (const c of connections) peer.emit('connection', c);
-    assert.equal(connections[3].closed, 1); assert.equal(timers.size, 3);
+    assert.equal(connections[MAX_PLAYERS + 1].closed, 1); assert.equal(timers.size, MAX_PLAYERS + 1);
     host.close(); assert.equal(timers.size, 0);
     for (const c of connections) { assert.equal(c.closed, 1); assert.equal(c.eventNames().length, 0); }
     assert.equal(peer.eventNames().length, 0);

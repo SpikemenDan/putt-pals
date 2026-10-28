@@ -37,11 +37,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
     async function run(ms) { for (let t = 0; t < ms; t += 500) { await act(async () => { scheduler.advance(Math.min(500, ms - t)); }); await settle(); } }
     async function until(fn, ms = 60000, label = 'condition') { for (let t = 0; t <= ms; t += 100) { if (fn()) return; await run(100); } assert.fail('timed out waiting for ' + label); }
-    async function client(name, { url, createWebGLRenderer = renderers.factory } = {}) {
+    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true } = {}) {
       const win = createWindow(scheduler, { url });
       const audio = createAudioRecorder();
       let app;
-      await act(async () => { app = createApp({ root: win.w.document.getElementById('root'), THREE, window: win.w, random, createWebGLRenderer, createAudio: () => audio, createTransport: options => hub.create(options) }); });
+      await act(async () => { app = createApp({ root: win.w.document.getElementById('root'), THREE, window: win.w, random, createWebGLRenderer, createAudio: () => audio, createTransport: memoryTransport ? options => hub.create(options) : undefined }); });
       await settle();
       const doc = win.w.document;
       const shown = el => !!el && !el.closest('[hidden]');
@@ -427,6 +427,37 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(Boolean(ok.app.renderer), true);
     await c.dispose();
     await ok.dispose();
+  });
+
+  await scenario('capacity: eight clients fill a room and play; a ninth is told the room is full; no WebRTC is explained up front', async () => {
+    const W = world();
+    const names = ['Ana', 'Ben', 'Cy', 'Dee', 'Eve', 'Fin', 'Gus', 'Hal'];
+    const all = [];
+    for (const n of names) { const c = await W.client(n); await c.join('crowd'); all.push(c); }
+    await W.run(300);
+    assert.equal(all[0].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · You are the host');
+    assert.equal(all[7].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · Waiting for host');
+    const late = await W.client('Ivy');
+    const [n, r] = late.doc.querySelectorAll('[data-ui=landing] input');
+    await late.fill(n, 'Ivy'); await late.fill(r, 'crowd'); await late.click('Join room');
+    await W.run(200);
+    assert.equal(late.shown('[data-ui=landing]'), true, 'the ninth player stays on the start screen');
+    assert.equal(late.text('[data-ui=connect-error]'), 'That room is full (8 players). Ask someone to leave, or use a different room code.');
+    assert.equal(late.app.room, null);
+    assert.equal(late.button('Join room').disabled, false, 'the player can try again');
+    await all[0].click('Start Game');
+    await W.until(() => all.slice(1).every(c => c.shown('[data-ui=map-select]')), 3000, 'guests voting');
+    for (const c of all) await c.click(c.$('[data-ui=map-select] button[data-v]'));
+    await W.until(() => all.every(c => c.ready()), 10000, 'eight-player map start');
+    await W.run(500);
+    assert.equal([...all[3].$('[data-ui=scoreboard]').children].length, 9, 'eight players on the scoreboard');
+    assert.ok(all[0].app.renderer.remoteCount >= 7, 'the host renders seven guests');
+    const offline = await W.client('Joe', { memoryTransport: false });
+    const [n2, r2] = offline.doc.querySelectorAll('[data-ui=landing] input');
+    await offline.fill(n2, 'Joe'); await offline.fill(r2, 'crowd'); await offline.click('Join room');
+    assert.match(offline.text('[data-ui=connect-error]'), /WebRTC is unavailable/);
+    assert.equal(offline.shown('[data-ui=landing]'), true);
+    for (const c of [...all, late, offline]) await c.dispose();
   });
 
   await scenario('protocol: presence carries validated, optional aura and attack fields', async () => {

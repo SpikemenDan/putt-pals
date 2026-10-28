@@ -13,7 +13,7 @@ import { createInputAdapter } from '../input/index.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { BALL_RADIUS } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
-import { colorOf, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
+import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
 import { createPutt } from './putt.js';
 import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
@@ -59,7 +59,9 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     const request = parseJoinRequest({ multi, name, roomCode, iceText });
     if (!request.ok) { alert(request.message); return; }
     if (room) leave();
-    setLocal({ connecting: true });
+    // Online rooms run on WebRTC; say so up front instead of failing silently (the in-memory test transport needs none).
+    if (multi && !createTransport && typeof win.RTCPeerConnection !== 'function') { setLocal({ connectError: connectErrorMessage('no-webrtc') }); return; }
+    setLocal({ connecting: true, connectError: '' });
     try {
       const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, peerOptions: { ...peerServer, ...request.peerOptions }, Peer, clock, random, createTransport });
       if (disposed) { opened.close(); return; }
@@ -68,9 +70,8 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
       roomStops.push(room.onSnapshot(onSnapshot), room.onPresence(onPresence), room.onStatus(onStatus));
       if (room.isHost) publish(true);
-    } catch {
-      setLocal({ connecting: false });
-      alert(MESSAGES.connectFailed);
+    } catch (error) {
+      setLocal({ connecting: false, connectError: connectErrorMessage(error?.message) });
     }
   }
 

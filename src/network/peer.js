@@ -1,4 +1,8 @@
+import { MAX_PLAYERS } from '../shared/constants.js';
 import { RoomTransport } from './transport.js';
+
+/** Extra in-flight links a full host still opens, only to tell each guest the room is full. */
+const REJECT_SLOTS = 2;
 
 /** Inject the existing Peer constructor; no library upgrade or implicit global dependency. */
 export function createPeerTransport({ Peer, peerOptions = {}, clock = globalThis, timeoutMs = 10000, ...options } = {}) {
@@ -20,17 +24,19 @@ export function createPeerTransport({ Peer, peerOptions = {}, clock = globalThis
   };
   const fail = reason => {
     if (transport.connectionState === 'closed') return;
-    transport.status('disconnected', reason); cleanup();
-    rejectPending?.(new Error(reason)); rejectPending = undefined;
+    // A reason already reported (room-full from the host) wins over the link closing afterwards.
+    if (transport.connectionState !== 'disconnected') transport.status('disconnected', reason);
+    cleanup();
+    rejectPending?.(new Error(transport.reason || reason)); rejectPending = undefined;
   };
   const attach = connection => {
-    if (transport.isHost && connections.size >= 3) { connection.close(); return; }
+    if (transport.isHost && connections.size >= MAX_PLAYERS - 1 + REJECT_SLOTS) { connection.close(); return; }
     const scope = new Set(); let open = false, linkTimer, disposed = false;
-    const dispose = () => {
+    const dispose = flush => {
       if (disposed) return; disposed = true; connections.delete(dispose);
       clock.clearTimeout(linkTimer);
       for (const remove of [...scope]) { remove(); removers.delete(remove); }
-      connection.close();
+      if (flush) connection.close({ flush: true }); else connection.close();
     };
     connections.add(dispose);
     const on = (event, fn) => {
@@ -55,7 +61,8 @@ export function createPeerTransport({ Peer, peerOptions = {}, clock = globalThis
       rejectPending = reject;
       const stop = transport.subscribeStatus(({ state }) => {
         if (state === 'connected') { cancelTimer(); rejectPending = undefined; stop(); resolve(); }
-        else if (state === 'disconnected' || state === 'closed') stop();
+        else if (state === 'disconnected') { stop(); fail(transport.reason || 'connection-error'); }
+        else if (state === 'closed') stop();
       });
       timer = clock.setTimeout(() => fail('connection-timeout'), timeoutMs);
       try {
