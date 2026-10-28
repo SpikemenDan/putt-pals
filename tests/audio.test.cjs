@@ -156,7 +156,8 @@ class Gestures {
     const f = make(); await f.adapter.unlock();
     const simulation = new SimulationEngine(toSimulationCourses(createCourseDocument())[0]);
     simulation.addPlayer('local', 'Player');
-    const shot = simulation.launch('local', 31 * Math.PI / 180, .8);
+    // S2's separately measured cup-capture solution; legacy 31° now lips out.
+    const shot = simulation.launch('local', 32 * Math.PI / 180, .8);
     assert.equal(f.adapter.handleEvent(shot), true);
     let heardSink = false;
     for (let i = 0; i < 1000 && !heardSink; i++) for (const event of simulation.step().events) {

@@ -9,7 +9,7 @@ const { buildApp } = require('./support/build-ui.cjs');
 const { createScheduler, createStubRenderers, createAudioRecorder, createWindow } = require('./support/app-harness.cjs');
 
 const root = path.resolve(__dirname, '..');
-const solver = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/solver-baseline.json'), 'utf8'));
+const solver = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8'));
 const best = (map, putt) => solver.results.find(r => r.map === map && r.putt === putt).best;
 
 let passed = 0;

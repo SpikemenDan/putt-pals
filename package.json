@@ -13,7 +13,7 @@
     "check": "node --check tools.js && node --check tests/solver-baseline.cjs && node tools.js check",
     "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:session && npm run test:network && npm run test:audio && npm run test:render && npm run test:input && npm run test:ui && npm run test:app && npm run test:courses && npm run test:cli && npm run test:physics && npm run test:integration && npm run test:smoke && npm run test:multiplayer",
     "test:contracts": "node tests/contracts.test.cjs",
-    "test:simulation": "node tests/simulation.test.cjs",
+    "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
     "test:render": "node tests/render.test.cjs && node tests/render-modern.test.cjs",
     "test:input": "node tests/input.test.cjs",

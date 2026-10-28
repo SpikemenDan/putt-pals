@@ -39,7 +39,7 @@ async function run() {
   }
   console.log('PASS: launch initialization matches legacy at 9 angle/power combinations');
 
-  // 2. Bitwise Parity with 6 Source Inventory Baseline Traces
+  // 2. Preserve historical traces BEFORE cup interaction. S2 intentionally changes cup motion.
   const inv = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const references = inv.simulationReferences.shots;
 
@@ -54,8 +54,11 @@ async function run() {
     let sampleIdx = 0;
     let tick = 0;
 
+    let reachedCup = false;
     while (player.moving && player.mode !== 'sunk' && tick < 1000) {
-      if (sampleIdx < ref.samples.length && ref.samples[sampleIdx].tick === tick) {
+      const cupDistance = Math.hypot(player.x - engine.course.hole[0], player.y - engine.course.hole[1]);
+      reachedCup ||= cupDistance < sim.cupOf(engine.course) + shared.BALL_RADIUS + Math.hypot(player.vx, player.vy) / 240 + 1;
+      if (!reachedCup && sampleIdx < ref.samples.length && ref.samples[sampleIdx].tick === tick) {
         const expected = ref.samples[sampleIdx];
         assert.ok(
           Math.abs(player.x - expected.x) < 1e-6,
@@ -83,11 +86,11 @@ async function run() {
       tick++;
     }
 
-    const lastSample = ref.samples[ref.samples.length - 1];
-    assert.equal(tick, lastSample.tick, `Final tick mismatch for map ${ref.map}`);
-    assert.equal(player.mode, 'sunk', `Map ${ref.map} must sink at tick ${lastSample.tick}`);
+    assert(reachedCup, `Map ${ref.map}: historical trajectory reaches cup interaction`);
+    assert(sampleIdx >= 1, `Map ${ref.map}: pre-cup reference samples checked`);
     assert.equal(player.strokes, 1);
-    console.log(`PASS: Course index ${ref.map} trace bitwise matches reference fixture (sunk at tick ${tick})`);
+    engine.dispose();
+    console.log(`PASS: Course index ${ref.map} pre-cup reference samples preserved; S2 cup outcomes tested separately`);
   }
 
   // 3. Mechanic Chambers Parity (MECH arena data)
@@ -210,7 +213,7 @@ async function run() {
     console.log('PASS: SimulationEngine lifecycle, snapshots, settlement, and disposal guards');
   }
 
-  console.log('\nALL HEADLESS SIMULATION PARITY TESTS PASSED SUCCESSFULLY!');
+  console.log('\nALL SIMULATION TESTS PASSED (historical pre-cup parity; intentional S2 cup correction)');
 }
 
 run().catch(err => {
