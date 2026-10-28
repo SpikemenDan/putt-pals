@@ -193,3 +193,10 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - T1 #15 stays ACTIVE. Draft PR #37 adds Playwright solo, input, practice and multiplayer specs and a browser-ci job. On hosted CI, Firefox and WebKit pass on the current head (a3d972b, run 40609448113) and Chromium passed on an earlier head (7b42c7f, run 40605028753); the current-head Chromium job was still running at this snapshot. WebKit multiplayer is skipped until N3 #14 provides a TURN relay. The legacy UI screenshot-parity test was dropped (user-approved) because V1/M1 replace the pastel look; scripts/ui-visual-parity.cjs stays as a manual tool.
 - Findings: without WebGL the app shows a blank page, now I2 #38. A failed join (no WebRTC) gives no feedback, recorded on N2 #13 as part of its actionable connection errors.
 - The user confirmed the new app works in their desktop Firefox.
+
+## I2 integration — 2026-10-27
+
+- I2 #38 merged via PR #40 (b449379); current-head baseline-ci passed at cc57f15 and post-merge baseline-ci passed (run 40614037187). Without WebGL the start screen now renders with a text-only notice, and solo play starts without a renderer or page errors.
+- Verification: new jsdom scenario in `test:app` (App: 10 scenarios). Real browser, ad hoc and uncommitted: Chromium with `--disable-webgl` and with WebGL both passed. Firefox was not run, because Playwright's Firefox fails to launch on the Windows machine.
+- The PR also fixed two Windows-only test problems: built UI test modules are imported by file URL, and `.gitattributes` keeps `*.html` at LF so `putt-pals.html` matches its recorded hash.
+- Follow-up: I2b #41 adds a committed Chromium and Firefox spec once T1's harness (PR #37) is merged.
