@@ -1,0 +1,155 @@
+<!doctype html><html><head><meta charset="utf-8"><title>V1 toon sample</title>
+<style>body{margin:0;background:#111}canvas{display:block;width:1280px;height:800px}</style></head>
+<body><canvas></canvas><script type="module">
+// V1 look sample (scratch, not for merge). Builds a real course with the game renderer, then
+// restyles it through the createWebGLRenderer seam: 3-band cel shading, halftone in the shadow band,
+// boosted saturation and thick screen-space ink outlines (inverted hull on smoothed normals).
+import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { createGameRenderer, createGameView } from '/src/render/index.js';
+import { createCourseData } from '/src/courses/index.js';
+
+const params = new URLSearchParams(location.search);
+const STYLE = params.get('style') !== 'off';
+const INK = Number(params.get('ink') || 4);          // outline width in CSS px
+const SMOOTH = params.get('smooth') !== 'off';      // flat colours instead of image textures
+const CLEAN = params.get('clean') !== 'off';        // no trees or ground: the course floats in the sky
+const W = 1280, H = 800, DPR = 1;
+
+const ramp = new THREE.DataTexture(new Uint8Array([70, 160, 255]), 3, 1, THREE.RedFormat);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+ramp.needsUpdate = true;
+
+const outlineMaterial = new THREE.ShaderMaterial({
+  uniforms: { ink: { value: INK * DPR }, res: { value: new THREE.Vector2(W * DPR, H * DPR) } },
+  vertexShader: `uniform float ink; uniform vec2 res;
+    void main(){
+      vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      vec3 n = normalize(normalMatrix * normal);
+      vec2 dir = (projectionMatrix * vec4(n, 0.0)).xy;
+      float len = length(dir);
+      if (len > 1e-5) clip.xy += dir / len * ink * 2.0 / res * clip.w;
+      gl_Position = clip;
+    }`,
+  fragmentShader: `void main(){ gl_FragColor = vec4(0.04, 0.03, 0.06, 1.0); }`,
+  side: THREE.BackSide,
+});
+
+function punchy(color) {
+  const hsl = {};
+  color.getHSL(hsl);
+  // Comic palette: much more saturated and a little darker than the pastel original.
+  return new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.7 + 0.12), hsl.l * 0.86);
+}
+
+// Patch the game's own lit materials in place (keeps textures, opacity and wall fade working):
+// 3 flat light bands, halftone dots in the darker bands, and punchier colour.
+// Average colour of a texture, so a patterned surface (bricks, stripes) becomes one smooth colour.
+function averageColour(texture) {
+  const img = texture.image;
+  if (!img || !img.width) return null;
+  const c = document.createElement('canvas'); c.width = c.height = 1;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+}
+
+function toonify(mat) {
+  if (mat.userData.toon) return;
+  mat.userData.toon = true;
+  if (SMOOTH) {
+    for (const key of ['map', 'bumpMap', 'normalMap', 'roughnessMap']) {
+      if (!mat[key]) continue;
+      if (key === 'map') { const avg = averageColour(mat.map); if (avg && mat.color) mat.color.multiply(avg); }
+      mat[key] = null;
+    }
+  }
+  if (mat.color) mat.color.copy(punchy(mat.color));
+  if ('roughness' in mat) { mat.roughness = 1; mat.metalness = 0; }
+  if ('clearcoat' in mat) mat.clearcoat = 0;
+  // Chain onto the game's own patches (the turf's cup cutout lives in one) instead of replacing them.
+  const previous = mat.onBeforeCompile, previousKey = mat.customProgramCacheKey;
+  mat.customProgramCacheKey = () => (previousKey ? previousKey.call(mat) : '') + '|toon';
+  mat.onBeforeCompile = (shader, gl) => {
+    previous?.call(mat, shader, gl);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
+      {
+        // Posterize the real light level (it runs above 1.0 here) into flat steps, keeping shadows.
+        float base = max(max(diffuseColor.r, diffuseColor.g), max(diffuseColor.b, 1e-3));
+        float lit = max(max(outgoingLight.r, outgoingLight.g), outgoingLight.b) / base;
+        float band = max(floor(lit * 3.0 + 0.35) / 3.0, 0.34);
+        outgoingLight = diffuseColor.rgb * band;
+        float shade = clamp((1.0 - band) * 2.2, 0.0, 1.0);
+        vec2 cell = mod(gl_FragCoord.xy, 6.0) - 3.0;
+        float dotMask = 1.0 - smoothstep(0.0, 0.9, length(cell) - shade * 2.4);
+        outgoingLight *= 1.0 - 0.5 * dotMask * shade;
+      }
+      #include <opaque_fragment>`);
+  };
+  mat.needsUpdate = true;
+}
+
+const hulls = [];
+const styled = new WeakSet();
+function stylize(scene) {
+  const add = [];
+  scene.traverse(o => {
+    if (!o.isMesh || styled.has(o) || o.userData.outline) return;
+    styled.add(o);
+    if (CLEAN) {
+      // Hide the scenery: the landscape trees (trunk cylinder 3/6/58 and its crowns) and the ground plane.
+      const p = o.geometry?.parameters;
+      if (p && p.radiusTop === 3 && p.radiusBottom === 6 && p.height === 58 && o.parent) { o.parent.visible = false; return; }
+      if (p && p.width === 14000) { o.visible = false; return; }
+    }
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    if (!mats.every(m => m.isMeshStandardMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial)) return;
+    mats.forEach(toonify);
+    if (!o.geometry?.attributes?.position) return;
+    o.geometry.computeBoundingSphere();
+    if (o.geometry.boundingSphere.radius > 4000) return; // the huge ground plane
+    const g = o.geometry.clone();
+    for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name);
+    g.clearGroups();
+    const smooth = mergeVertices(g, 1e-3);
+    smooth.computeVertexNormals();
+    const hull = new THREE.Mesh(smooth, outlineMaterial);
+    hull.userData.outline = true;
+    hull.userData.owner = o;
+    add.push([o, hull]);
+  });
+  for (const [o, hull] of add) { o.add(hull); hulls.push(hull); }
+  // Faded walls lose their ink, so the ball stays readable behind them.
+  for (const hull of hulls) {
+    const m = hull.userData.owner.material;
+    hull.visible = (Array.isArray(m) ? m[0] : m).opacity > 0.5;
+  }
+}
+
+const renderer = createGameRenderer({
+  THREE, canvas: document.querySelector('canvas'), random: () => .37, devicePixelRatio: DPR,
+  createWebGLRenderer: (T, canvas) => {
+    const r = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+    const render = r.render.bind(r);
+    r.render = (scene, camera) => { window.__scene = scene; if (STYLE) stylize(scene); render(scene, camera); };
+    return r;
+  },
+});
+const view = createGameView({ renderer });
+const { definitions } = createCourseData();
+renderer.resize(W);
+let local, now = 0;
+function select(map, putt = 0) {
+  view.setCourse(definitions[map], putt);
+  const c = renderer.course.course;
+  local = { x: c.tee[0], y: c.tee[1], z: 0, vx: 0, vy: 0, moving: false, mode: 'play', color: 0, effect: null };
+}
+function frame() {
+  now += 1000 / 60;
+  view.frame({ now, dt: 1 / 60, hazardTime: now / 1000, local,
+    remotes: [1, 2, 3].map(i => ({ id: 'r' + i, name: 'Pal ' + i, x: local.x + i * 14 - 28, y: local.y + 30, z: 0, color: i, effect: null })),
+    aim: { charge: .6, angle: .5, aimAngle: .5, spread: .08, reverse: false } });
+}
+window.sample = { select, frame, cycle: () => view.rig.cycleView(), definitions };
+</script></body></html>
