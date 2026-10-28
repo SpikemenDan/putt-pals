@@ -207,3 +207,10 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - Current-head CI on 5331595: baseline-ci and browser-ci passed in Chromium, Firefox and WebKit (run 40615922756). WebKit multiplayer is skipped until N3 #14 provides a TURN relay. CI runners have no GPU, so Chromium and Firefox run headed under xvfb with Mesa software GL.
 - Known flake: the first Chromium attempt on 5331595 failed when one guest's join in the four-player spec did not reach the lobby within 15 s (empty page console); the rerun passed with no code change. The same code had passed on 56dedf6. Watch for repeats; a timing issue in the join path would fall under N2 #13.
 - Unblocked: I2b #41 can add its committed WebGL-fallback spec. Q1 still waits on N2, N3, R2 and B4.
+
+## N2 integration — 2026-10-27
+
+- N2 #13 merged via PR #43 (3f5d010): guest recovery, 8-player rooms, remote interpolation and actionable connection errors. Its PR ran only baseline-ci, because the branch predated browser-ci. Handoff: docs/reviews/N2_NETWORK.md.
+- Post-merge CI on 3f5d010 failed: browser-ci Chromium's four-player spec timed out when guest "Cy" did not reach the lobby within 15 s (run 40618503597; empty page console). baseline-ci, Firefox and WebKit passed. This is the second such Chromium join timeout in three runs (see the T1 entry), so it is a recurring flake, not a one-off; a fix is proposed but not yet started. CI on 734b3d1 was still running at this snapshot.
+- Not yet covered in a real browser: N2 in Firefox/WebKit, and committed specs for room-full, resume, reconnect and host loss.
+- Q1 now waits on N3, R2 and B4.

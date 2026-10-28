@@ -128,3 +128,7 @@ I2 #38 is merged through PR #40 (b449379) and closed. Its committed real-browser
 ## T1 integration follow-up — 2026-10-27
 
 T1 #15 is merged through PR #37 (26d1025) and closed, so the Playwright harness and browser-ci job are on main. I2b #41 is unblocked. N2 #13 is in review through PR #43. Q1 #18 still waits on N2, N3, R2 and B4. Read live issues before acting; this snapshot does not assign or authorize another task.
+
+## N2 integration follow-up — 2026-10-27
+
+N2 #13 is merged through PR #43 (3f5d010) and closed. Its remaining real-browser coverage (Firefox/WebKit and committed specs for room-full, resume, reconnect and host loss) can now use the T1 harness, but no issue tracks it yet. I2b #41 is ACTIVE with PR #45. Q1 #18 still waits on N3, R2 and B4. Read live issues before acting; this snapshot does not assign or authorize another task.
