@@ -27,3 +27,7 @@ The tool evaluates the trusted local Three.js bundle in an isolated VM to read i
 - PeerJS's embedded default configuration includes STUN and public TURN endpoint entries. With an empty lobby ICE array the application uses PeerJS defaults; a nonempty array replaces the ICE configuration. The project has not provisioned or verified a relay service, its credentials, availability or capacity. The embedded endpoint entries are not proof of working or guaranteed TURN connectivity.
 
 Keep procedural game meshes, shaders, textures, map definitions and WebAudio code separate from third-party dependencies when extracting modules. No external image, audio, font or model assets were introduced by B1.
+
+## Modular renderer upgrade (R2)
+
+The modular app's direct Three.js dependency is pinned to **0.186.1** in package.json/package-lock.json. The installed package declares MIT and supplies the complete license retained at [licenses/THREE.txt](licenses/THREE.txt). Upstream source: https://github.com/mrdoob/three.js/tree/r186 . This changes the npm renderer only; the embedded r128 inventory above and its source hashes remain historical/legacy evidence. See [R2 renderer review](reviews/R2_RENDERER.md) for migration checks and browser limits. Final hosted-distribution notices remain part of Q1's packaging review.

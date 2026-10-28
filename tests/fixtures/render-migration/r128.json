@@ -1,0 +1,188 @@
+{
+  "capturedAt": "2026-10-28T02:52:44.330Z",
+  "hardware": {
+    "revision": "128",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "dpr": 2,
+    "width": 2560,
+    "height": 1600
+  },
+  "workload": "1280x800 CSS / DPR 2, high quality, 7 remote actors, aim and auras, 60 warmup + 300 measured frames per starter",
+  "samples": [
+    {
+      "map": 0,
+      "name": "Switchback Garden",
+      "frameIntervalMs": {
+        "median": 8.300000000000182,
+        "p95": 8.699999999999818,
+        "max": 9.300000000000068
+      },
+      "renderSubmissionMs": {
+        "median": 0.6000000089406967,
+        "p95": 0.8999999910593033,
+        "max": 1.2000000029802322
+      }
+    },
+    {
+      "map": 8,
+      "name": "Dune Serpent",
+      "frameIntervalMs": {
+        "median": 8.300000000000182,
+        "p95": 9.099999999999454,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "median": 0.7000000029802322,
+        "p95": 0.7999999970197678,
+        "max": 1.0999999940395355
+      }
+    },
+    {
+      "map": 20,
+      "name": "Frost Hollow",
+      "frameIntervalMs": {
+        "median": 8.300000000001091,
+        "p95": 8.599999999998545,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "median": 0.699999988079071,
+        "p95": 0.800000011920929,
+        "max": 1
+      }
+    },
+    {
+      "map": 21,
+      "name": "Slime Springs",
+      "frameIntervalMs": {
+        "median": 8.300000000001091,
+        "p95": 9,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "median": 0.9000000059604645,
+        "p95": 1.199999988079071,
+        "max": 1.5
+      }
+    },
+    {
+      "map": 5,
+      "name": "Cyclone Ring",
+      "frameIntervalMs": {
+        "median": 8.300000000001091,
+        "p95": 9.200000000000728,
+        "max": 9.399999999999636
+      },
+      "renderSubmissionMs": {
+        "median": 0.9000000059604645,
+        "p95": 1.1000000089406967,
+        "max": 1.2999999970197678
+      }
+    },
+    {
+      "map": 19,
+      "name": "Grand Finale",
+      "frameIntervalMs": {
+        "median": 8.299999999999272,
+        "p95": 9.200000000000728,
+        "max": 9.399999999997817
+      },
+      "renderSubmissionMs": {
+        "median": 0.9000000059604645,
+        "p95": 3.4000000059604645,
+        "max": 5.199999988079071
+      }
+    }
+  ],
+  "resources": {
+    "builds": 52,
+    "memory": [
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      },
+      {
+        "geometries": 101,
+        "textures": 40,
+        "programs": 17,
+        "calls": 91,
+        "triangles": 21567
+      }
+    ]
+  },
+  "errors": []
+}

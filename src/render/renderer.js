@@ -29,7 +29,7 @@ export function smoothRemotePosition(previous, target) {
 
 /**
  * @param {object} options
- * @param {object} options.THREE Three.js r128 namespace
+ * @param {object} options.THREE Three.js namespace
  * @param {HTMLCanvasElement} options.canvas
  * @param {() => HTMLCanvasElement} [options.createCanvas] Defaults to document.createElement('canvas')
  * @param {() => number} [options.random=Math.random] Texture noise, fan particle phases and confetti
@@ -44,7 +44,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const renderer = createWebGLRenderer(THREE, canvas);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  // r152 replaced outputEncoding; keep r128 injection for the historical parity suite.
+  if (Number(THREE.REVISION) >= 152) renderer.outputColorSpace = THREE.SRGBColorSpace;
+  else renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MAX_PIXEL_RATIO));
@@ -56,8 +58,10 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const owned = new Set();
   const own = resource => { owned.add(resource); return resource; };
 
-  scene.add(new THREE.HemisphereLight(0xe2f0ff, 0xf2c9e8, 0.9));
-  const sun = new THREE.DirectionalLight(0xfff0cc, 1.5);
+  // r155 removed the implicit PI multiplier for hemisphere/directional lights.
+  const lightScale = Number(THREE.REVISION) >= 155 ? Math.PI : 1;
+  scene.add(new THREE.HemisphereLight(0xe2f0ff, 0xf2c9e8, 0.9 * lightScale));
+  const sun = new THREE.DirectionalLight(0xfff0cc, 1.5 * lightScale);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0004;
@@ -68,14 +72,20 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const sky = new THREE.Mesh(own(new THREE.SphereGeometry(6000, 24, 16)), library.skyMaterial);
   scene.add(sky);
   let environment = null;
+  let generator, envGeometry;
   try {
-    const generator = new THREE.PMREMGenerator(renderer), envScene = new THREE.Scene(), envGeometry = new THREE.SphereGeometry(50, 24, 16);
+    generator = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envGeometry = new THREE.SphereGeometry(50, 24, 16);
     envScene.add(new THREE.Mesh(envGeometry, library.skyMaterial));
-    environment = own(generator.fromScene(envScene, 0).texture);
-    generator.dispose();
-    envGeometry.dispose();
+    // Own the render target, not only its texture: it also owns GPU framebuffers.
+    const target = own(generator.fromScene(envScene, 0));
+    environment = target.texture;
   } catch {
     environment = null; // Same fallback as the legacy renderer when PMREM is unavailable.
+  } finally {
+    generator?.dispose();
+    envGeometry?.dispose();
   }
 
   const dreamBits = [];
@@ -150,6 +160,16 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     get course() { return build; },
     get localBall() { return localBall; },
     get remoteCount() { return remotes.size; },
+    /** Detached counters for profiling; no renderer or mutable GPU objects escape. */
+    diagnostics() {
+      return {
+        geometries: renderer.info?.memory.geometries ?? 0,
+        textures: renderer.info?.memory.textures ?? 0,
+        programs: renderer.info?.programs?.length ?? 0,
+        calls: renderer.info?.render.calls ?? 0,
+        triangles: renderer.info?.render.triangles ?? 0,
+      };
+    },
 
     /** Legacy resize(): fixed 1.6 aspect from the container width; no-op when unchanged. */
     resize(containerWidth) {
@@ -296,6 +316,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const object of ownedActors) { scene.remove(object); disposeObject(object); }
       for (const resource of owned) resource.dispose();
       owned.clear();
+      sun.shadow.dispose?.();
       library.dispose();
       renderer.dispose?.();
     },
