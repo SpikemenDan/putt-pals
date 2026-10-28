@@ -312,6 +312,35 @@ const { EventEmitter } = require('node:events');
     assert.equal(host.send({ type: 'ping' }), false, 'only guests ping');
     alive.close(); silent.close(); stop(); host.close(); session.dispose();
   });
+  await run('lost welcome (T1c): the host repeats the welcome each heartbeat until the guest answers, then stops', async () => {
+    const { HEARTBEAT_MS, LINK_TIMEOUT_MS } = await import('../src/network/protocol.js');
+    const { RoomTransport } = await import('../src/network/transport.js');
+    const clock = new SimulatedClock(), hub = new MemoryRoomHub();
+    const host = hub.create({ peerId: 'host', hostId: 'host', sessionId: 'greet', now: () => clock.now() });
+    const session = createRoomSession({ hostId: 'host', clock });
+    await host.connect(); const stop = bindRoomSession(host, session, { clock, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS });
+    const guest = new RoomTransport({ peerId: 'late', hostId: 'host', now: () => clock.now() });
+    const snapshots = []; guest.subscribe(m => { if (m.type === 'snapshot') snapshots.push(m.payload); });
+    // As seen in real Chromium: the welcome and first snapshot, written as the link opens, never arrive.
+    let dropped = 0, welcomes = 0;
+    guest.attach('host', raw => host.receive('late', raw), () => host.detach('late'));
+    host.attach('late', raw => {
+      if (decode(raw).type === 'welcome') welcomes++;
+      if (welcomes <= 1 && dropped < 2) { dropped++; return; }
+      guest.receive('host', raw);
+    }, () => guest.detach('host'));
+    assert.equal(dropped, 2); assert.notEqual(guest.connectionState, 'connected');
+    clock.increment(HEARTBEAT_MS);
+    assert.equal(welcomes, 2, 'one repeat after a heartbeat');
+    assert.equal(guest.connectionState, 'connected');
+    assert.ok(snapshots.length >= 1, 'and a snapshot the guest now accepts');
+    assert.equal(guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Late' } }), true);
+    assert.equal(session.getSnapshot().players.late.name, 'Late');
+    for (let ms = 0; ms < 3 * HEARTBEAT_MS; ms += HEARTBEAT_MS) { guest.send({ type: 'ping' }); clock.increment(HEARTBEAT_MS); }
+    assert.equal(welcomes, 2, 'no further welcomes once the guest has answered');
+    assert.equal(guest.greet(), false, 'only hosts greet');
+    guest.close(); stop(); host.close(); session.dispose();
+  });
   await run('measure: eight-player snapshots stay small and publish at about 14 Hz while everyone moves', async () => {
     const f = await fixture();
     try {

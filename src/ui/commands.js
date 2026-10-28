@@ -51,6 +51,7 @@ export const CONNECT_ERRORS = Object.freeze({
   'no-webrtc': "This browser can't make peer-to-peer connections (WebRTC is unavailable or blocked), so online rooms won't work here. Try another desktop browser, or play solo.",
   'connection-timeout': 'Could not reach the room in time. Check your internet connection, or add a TURN relay under Online connection settings, then try again.',
   'signaling-disconnected': 'Lost contact with the connection server. Check your internet connection and try again.',
+  'host-lost': 'The host closed the connection before you got into the room. Try joining again; if it keeps happening, ask the host to reopen the room.',
   'identity-rejected': 'The room did not accept this player identity. Reload the page and join again.',
 });
 export const connectErrorMessage = reason => CONNECT_ERRORS[reason] || MESSAGES.connectFailed;
