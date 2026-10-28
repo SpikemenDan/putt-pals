@@ -7,8 +7,12 @@ import { RECONNECT_GRACE_PERIOD_MS, SNAPSHOT_INTERVAL_MS } from '../shared/const
  * here on the host and is never broadcast. A link for that ID, now or later, must present the same
  * token before its commands or presence count, so another connection cannot claim the seat. A guest
  * whose link drops keeps its seat (still connected in the session) for `graceMs`, then leaves.
+ *
+ * Liveness (opt-in, the app turns it on): with `heartbeatMs` the host re-sends the snapshot at least
+ * that often, so guests can tell a quiet room from a dead host; with `linkTimeoutMs` a guest link that
+ * has been silent that long (guests ping) is dropped, which starts its grace period.
  */
-export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS } = {}) {
+export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0 } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
   const positions = new Map(); let dirty = false, stopped = false, timer;
   // The host's own commands arrive locally (no link), so the host is always verified.
@@ -57,7 +61,14 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     }
     if (['peer-open', 'peer-close', 'command'].includes(message.type)) publish();
   });
-  const tick = () => { if (stopped) return; if (dirty) publish(); timer = clock.setTimeout(tick, SNAPSHOT_INTERVAL_MS); };
+  let lastBeat = transport.localNow();
+  const tick = () => {
+    if (stopped) return;
+    const now = transport.localNow();
+    if (linkTimeoutMs > 0) for (const id of [...transport.links.keys()]) if (now - transport.lastSeen(id) > linkTimeoutMs) transport.detach(id);
+    if (dirty || (heartbeatMs > 0 && now - lastBeat >= heartbeatMs)) { lastBeat = now; publish(); }
+    timer = clock.setTimeout(tick, SNAPSHOT_INTERVAL_MS);
+  };
   const stopSession = session.subscribe(publish);
   timer = clock.setTimeout(tick, SNAPSHOT_INTERVAL_MS); publish();
   return () => {

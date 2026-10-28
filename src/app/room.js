@@ -12,7 +12,7 @@
  */
 
 import { bindRoomSession, createPeerTransport, createSoloTransport } from '../network/index.js';
-import { validResumeToken } from '../network/protocol.js';
+import { HEARTBEAT_MS, LINK_TIMEOUT_MS, validResumeToken } from '../network/protocol.js';
 import { createRoomSession } from '../session/index.js';
 import { RECONNECT_GRACE_PERIOD_MS } from '../shared/constants.js';
 import { hostIdFor, PRESENCE_INTERVAL_MS, SOLO_ID } from './rules.js';
@@ -87,7 +87,7 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
 
   if (transport.isHost) {
     session = createRoomSession({ hostId: transport.peerId, hostName: name, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
-    unbind = bindRoomSession(transport, session, { clock, graceMs });
+    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS });
     stops.push(session.subscribe(s => {
       last = s;
       for (const [id, v] of presence) if (v.roundNumber !== s.roundNumber || v.puttIndex !== s.puttIndex || !s.players[id]?.connected) presence.delete(id);
@@ -109,7 +109,7 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
     stops.push(transport.subscribeStatus(emitStatus));
   } else {
     // Guest: the transport is replaced on reconnect, so its subscriptions are made again each time.
-    let linkStops = [], retry = null;
+    let linkStops = [], retry = null, beat = null;
     const onMessage = message => {
       if (message.type !== 'snapshot') return;
       const { presence: positions = {}, ...snapshot } = message.payload;
@@ -119,7 +119,18 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
       for (const [id, payload] of Object.entries(positions)) presence.set(id, { payload });
       emitPresence();
     };
-    const unwire = () => { for (const stop of linkStops.splice(0)) stop(); };
+    const unwire = () => { for (const stop of linkStops.splice(0)) stop(); if (beat !== null) { clock.clearTimeout(beat); beat = null; } };
+    // Ping the host, and treat a host that has gone silent (crashed, network cut) like a dropped link.
+    const heartbeat = () => {
+      beat = clock.setTimeout(() => {
+        beat = null;
+        if (closed || transport.connectionState !== 'connected') return;
+        const seen = transport.lastSeen(hostId);
+        if (seen === null || transport.localNow() - seen > LINK_TIMEOUT_MS) { transport.detach(hostId); return; }
+        transport.send({ type: 'ping' });
+        heartbeat();
+      }, HEARTBEAT_MS);
+    };
     const reconnect = until => {
       retry = clock.setTimeout(async () => {
         retry = null;
@@ -144,6 +155,7 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
     function wire() {
       linkStops = [transport.subscribe(onMessage), transport.subscribeStatus(onLinkStatus)];
       transport.send({ type: 'command', payload: { type: 'JOIN_ROOM', name, resume: guest.token } });
+      heartbeat();
     }
     wire();
     stops.push(() => { unwire(); if (retry !== null) clock.clearTimeout(retry); });

@@ -293,6 +293,58 @@ const { EventEmitter } = require('node:events');
     assert.equal(peer.eventNames().length, 0);
     baseClock.increment(20000); assert.equal(host.connectionState, 'closed');
   });
+  await run('liveness: an idle host heartbeats, a pinging guest stays, a silent guest is dropped after 5 s into its grace period', async () => {
+    const { HEARTBEAT_MS, LINK_TIMEOUT_MS } = await import('../src/network/protocol.js');
+    const clock = new SimulatedClock(), hub = new MemoryRoomHub();
+    const host = hub.create({ peerId: 'host', hostId: 'host', sessionId: 'live', now: () => clock.now() });
+    const session = createRoomSession({ hostId: 'host', clock });
+    await host.connect(); const stop = bindRoomSession(host, session, { clock, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS });
+    const [alive, silent] = ['alive', 'silent'].map(id => hub.create({ peerId: id, hostId: 'host', now: () => clock.now() }));
+    let beats = 0; alive.subscribe(m => { if (m.type === 'snapshot') beats++; });
+    for (const g of [alive, silent]) { await g.connect(); g.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: g.peerId } }); }
+    beats = 0;
+    for (let ms = 0; ms < 6000; ms += HEARTBEAT_MS) { assert.equal(alive.send({ type: 'ping' }), true); clock.increment(HEARTBEAT_MS); }
+    assert.ok(beats >= 5 && beats <= 7, `idle lobby still gets ~1 snapshot/s (got ${beats})`);
+    assert.equal(host.links.has('alive'), true, 'a pinging guest keeps its link');
+    assert.equal(host.links.has('silent'), false, 'a guest silent for 5 s is dropped');
+    assert.equal(silent.connectionState, 'disconnected');
+    assert.equal(session.getSnapshot().players.silent.connected, true, 'and keeps its seat for the grace period');
+    assert.equal(host.send({ type: 'ping' }), false, 'only guests ping');
+    alive.close(); silent.close(); stop(); host.close(); session.dispose();
+  });
+  await run('measure: eight-player snapshots stay small and publish at about 14 Hz while everyone moves', async () => {
+    const f = await fixture();
+    try {
+      for (const id of ['d', 'e', 'f', 'g']) {
+        const guest = f.hub.create({ peerId: id, hostId: 'host', now: () => f.clock.now() - 100 });
+        guest.subscribe(m => { if (m.type === 'snapshot') f.snapshots.push(m); });
+        await guest.connect(); guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Player-' + id, resume: 'token-' + id.repeat(16) } }); f.guests.push(guest);
+      }
+      const everyone = [f.host, ...f.guests];
+      // Worst case for size: a 9-map tournament late in its first map, all eight scorecards filled.
+      f.command('SET_MODE', { mode: 'tournament_9' }); f.command('START_VOTING');
+      for (const t of everyone) f.command('CAST_VOTE', { mapIndex: 0 }, t);
+      for (let putt = 0; putt < 5; putt++) {
+        const st = f.session.getSnapshot(); f.clock.increment(Math.max(0, st.roundStartTime + 1500 - f.clock.now()));
+        for (const t of everyone) f.command('REPORT_SCORE', { roundNumber: st.roundNumber, puttIndex: st.puttIndex, strokes: 12345 }, t);
+      }
+      const st = f.session.getSnapshot(); f.clock.increment(Math.max(0, st.roundStartTime + 1500 - f.clock.now()));
+      assert.equal(st.puttIndex, 5); assert.equal(st.roster.length, 8);
+      const before = f.snapshots.length;
+      for (let ms = 0; ms < 1000; ms += 35) {
+        f.guests.forEach((g, i) => g.send({ type: 'presence', payload: { x: 123456.75 + ms, y: -98765.25 + i, z: 4321.5, mode: 'play', strokes: 12345, effect: 'zany', fx: { id: 999999, t: 'zany' } } }));
+        f.clock.increment(35);
+      }
+      // Guests each receive every snapshot the host sends; count one guest's copies.
+      const received = (f.snapshots.length - before) / 7;
+      const last = f.snapshots.at(-1);
+      assert.equal(Object.keys(last.payload.presence).length, 7, 'every moving guest is in the snapshot');
+      const bytes = new TextEncoder().encode(encode({ version: 1, sessionId: 'session-1', senderId: 'host', sequence: 1e9, roundNumber: last.payload.roundNumber, puttIndex: last.payload.puttIndex, now: 1e12, type: 'snapshot', payload: last.payload })).byteLength;
+      console.log(`  measured: 8-player snapshot ${bytes} bytes (limit ${MAX_MESSAGE_BYTES}); ${received} snapshots per guest in 1 s of play with all 7 guests moving`);
+      assert.ok(bytes < MAX_MESSAGE_BYTES / 4, `snapshot ${bytes} B leaves headroom under the ${MAX_MESSAGE_BYTES} B message limit`);
+      assert.ok(received >= 13 && received <= 16, `about one snapshot per 70 ms (got ${received})`);
+    } finally { f.close(); }
+  });
   await run('interpolation: remotes are drawn 100 ms behind between samples, snap on teleports, never extrapolate and are pruned', async () => {
     const { createRemoteInterpolator, INTERPOLATION_DELAY_MS, TELEPORT_DISTANCE } = await import('../src/network/interpolation.js');
     const r = createRemoteInterpolator();

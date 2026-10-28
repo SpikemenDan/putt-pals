@@ -1,5 +1,5 @@
 import { MAX_PLAYERS, PROTOCOL_VERSION } from '../shared/constants.js';
-import { validId, count, validCommand, validPresence, validReject, validSnapshot, encode, decode } from './protocol.js';
+import { validId, count, validCommand, validPing, validPresence, validReject, validSnapshot, encode, decode } from './protocol.js';
 
 /** Common boundary used by all adapters. Link identities come from the adapter, never payloads. */
 export class RoomTransport {
@@ -27,7 +27,7 @@ export class RoomTransport {
       try { if (raw) write(raw); } catch { /* the link is closing anyway */ }
       dispose(true); return false;
     }
-    this.links.set(id, { write, dispose, sequence: -1 });
+    this.links.set(id, { write, dispose, sequence: -1, seen: this.localNow() });
     if (this.isHost) this.write('welcome', {}, id);
     this.emit({ type: 'peer-open', senderId: id });
     return true;
@@ -38,6 +38,8 @@ export class RoomTransport {
     // Keep the first reason (e.g. room-full) rather than reporting every later close as host loss.
     if (!this.isHost && !['closed', 'disconnected'].includes(this.connectionState)) this.status('disconnected', 'host-lost');
   }
+  /** Local time anything valid last arrived on the link to `id` (null if there is no such link). */
+  lastSeen(id) { return this.links.get(id)?.seen ?? null; }
   /** Host: tells one guest why it is refused, then closes that link (flushing the message first). */
   reject(id, reason) {
     if (!this.isHost || !this.links.has(id) || !validReject({ reason })) return false;
@@ -64,7 +66,7 @@ export class RoomTransport {
     if (m.type === 'welcome') {
       if (this.isHost || id !== this.hostId || link.sequence >= 0 || (this.sessionId && m.sessionId !== this.sessionId)) return false;
       this.sessionId = m.sessionId; this.roundNumber = m.roundNumber; this.puttIndex = m.puttIndex;
-      this.offset = m.now - this.localNow(); link.sequence = m.sequence;
+      this.offset = m.now - this.localNow(); link.sequence = m.sequence; link.seen = this.localNow();
       this.status('connected'); return true;
     }
     if (m.type === 'reject') {
@@ -74,6 +76,10 @@ export class RoomTransport {
       this.status('disconnected', m.payload.reason); this.detach(id); return true;
     }
     if (m.sessionId !== this.sessionId) return false;
+    if (m.type === 'ping') {
+      if (!this.isHost || !validPing(m.payload)) return false;
+      link.sequence = m.sequence; link.seen = this.localNow(); return true;
+    }
     if (m.type === 'snapshot') {
       if (this.isHost || id !== this.hostId || !validSnapshot(m.payload) || m.payload.hostId !== id
         || m.payload.roundNumber !== m.roundNumber || m.payload.puttIndex !== m.puttIndex
@@ -85,11 +91,12 @@ export class RoomTransport {
       if (m.type === 'command' && ['REPORT_SCORE', 'UPDATE_STROKES'].includes(m.payload.type)
         && (m.payload.roundNumber !== this.roundNumber || m.payload.puttIndex !== this.puttIndex)) return false;
     }
-    link.sequence = m.sequence;
+    link.sequence = m.sequence; link.seen = this.localNow();
     this.emit({ type: m.type, senderId: id, payload: m.payload }); return true;
   }
   send({ type, payload } = {}) {
     if (this.connectionState !== 'connected') return false;
+    if (type === 'ping') return !this.isHost && this.write('ping', {}, this.hostId);
     if (type === 'snapshot') {
       if (!this.isHost) return false;
       if (!validSnapshot(payload) || payload.hostId !== this.peerId) { this.status(this.connectionState, 'snapshot-rejected'); return false; }

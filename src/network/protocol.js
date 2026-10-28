@@ -2,6 +2,10 @@ import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS } from '../shared
 import { GameModes } from '../shared/session.js';
 
 export const MAX_MESSAGE_BYTES = 65536;
+/** Liveness (N2): guests ping and hosts re-send a snapshot this often, so a silent link is noticed. */
+export const HEARTBEAT_MS = 1000;
+/** A link with nothing received for this long is treated as dropped (crash, network cut, closed lid). */
+export const LINK_TIMEOUT_MS = 5000;
 export const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
 export const count = n => Number.isSafeInteger(n) && n >= 0;
 /** Guest resume secret (N2): random, URL-safe, never broadcast by the host. */
@@ -85,6 +89,7 @@ export function validSnapshot(s) {
 /** Why a host refused a guest; sent in a 'reject' frame just before the host closes that link. */
 export const REJECT_REASONS = Object.freeze(['room-full', 'identity-rejected']);
 export const validReject = p => record(p) && keys(p, ['reason']) && REJECT_REASONS.includes(p.reason);
+export const validPing = p => record(p) && Object.keys(p).length === 0;
 // JSON text is the only wire representation. Bound bytes before parsing and clone ownership.
 export function decode(raw) {
   if (typeof raw !== 'string' || raw.length > MAX_MESSAGE_BYTES || new TextEncoder().encode(raw).byteLength > MAX_MESSAGE_BYTES) return null;
@@ -93,7 +98,7 @@ export function decode(raw) {
     if (!record(m) || !keys(m, ['version', 'sessionId', 'roundNumber', 'puttIndex', 'sequence', 'senderId', 'type', 'payload', 'now'])
       || m.version !== PROTOCOL_VERSION || !validId(m.sessionId) || !validId(m.senderId)
       || !count(m.sequence) || !count(m.roundNumber) || !index(m.puttIndex, 6) || !Number.isFinite(m.now)
-      || !['welcome', 'reject', 'command', 'presence', 'snapshot'].includes(m.type)) return null;
+      || !['welcome', 'reject', 'ping', 'command', 'presence', 'snapshot'].includes(m.type)) return null;
     return m;
   } catch { return null; }
 }
