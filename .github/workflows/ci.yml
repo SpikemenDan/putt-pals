@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium]
-        args: ['', '--disable-features=WebRtcHideLocalIpsWithMdns']
+        args: ['', '']
     steps:
       - name: Check out the proposed changes
         uses: actions/checkout@v7
@@ -51,7 +51,7 @@ jobs:
           fi
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
-          PP_PEER_DEBUG: '2'
+          PP_PEER_DEBUG: '3'
           PP_PEER_LOG: '1'
           PP_CHROMIUM_ARGS: ${{ matrix.args }}
       - name: Upload the Playwright report on failure

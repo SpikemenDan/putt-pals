@@ -20,6 +20,18 @@ function rtcProbe() {
       }
     });
     pc.addEventListener('connectionstatechange', () => log('pc' + id, 'conn', pc.connectionState));
+    const watch = (dc, how) => {
+      log('pc' + id, 'dc', how, dc.label, 'state', dc.readyState, 'ordered', dc.ordered, 'id', dc.id);
+      let rx = 0, tx = 0; const dec = new TextDecoder();
+      const peek = d => { try { return (typeof d === 'string' ? d : dec.decode(d)).slice(0, 90); } catch { return '?'; } };
+      for (const ev of ['open', 'close', 'closing', 'error']) dc.addEventListener(ev, e => log('pc' + id, 'dc', ev, e?.error?.message || '', 'sctp', pc.sctp?.state, 'buffered', dc.bufferedAmount));
+      dc.addEventListener('message', e => { if (++rx <= 4) log('pc' + id, 'dc rx', rx, peek(e.data)); });
+      const send = dc.send.bind(dc);
+      dc.send = d => { if (++tx <= 4) log('pc' + id, 'dc tx', tx, dc.readyState, peek(d)); return send(d); };
+    };
+    const create = pc.createDataChannel.bind(pc);
+    pc.createDataChannel = (...a) => { const dc = create(...a); watch(dc, 'created'); return dc; };
+    pc.addEventListener('datachannel', e => watch(e.channel, 'received'));
     const add = pc.addIceCandidate.bind(pc);
     pc.addIceCandidate = c => { log('pc' + id, 'remote', c?.candidate); return add(c).catch(e => { log('pc' + id, 'addIceCandidate failed', e.message); throw e; }); };
     return pc;
@@ -40,6 +52,7 @@ test('join repro', async ({ browser }, testInfo) => {
       try { await p.join(code); } finally { console.log(name, 'join ms', Date.now() - t0, JSON.stringify(await p.banners())); }
     }
     await expect(players[0].ui('room-lobby').locator('p').first()).toHaveText(`Room ${code} · 4 players · You are the host`, { timeout: 30_000 });
+    if (testInfo.repeatEachIndex === 0) for (const p of players) console.log('===== (pass) ' + p.name + ' console\n' + p.log.join('\n'));
   } catch (e) {
     for (const p of players) console.log('===== ' + p.name + ' console\n' + p.log.join('\n'));
     throw e;
