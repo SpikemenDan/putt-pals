@@ -2,17 +2,26 @@ import { displayColor } from './materials.js';
 /**
  * Per-player scene actors: balls, contact shadows, effect auras, the ball
  * trail, sink confetti and the aim guide. Ported from the legacy renderer
- * with identical geometry, materials and per-frame arithmetic.
+ * with identical geometry and per-frame arithmetic; in the toon style balls
+ * are flat and ink-outlined and the trail is hard-edged.
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
 import { EFFECT_COLORS, EFFECT_KINDS } from './materials.js';
+import { addInk } from './outline.js';
 
 const R = BALL_RADIUS;
 
-/** Legacy mkBall(): dimpled clear-coated sphere. Caller adds it to the scene. */
+/** Legacy mkBall(): dimpled clear-coated sphere, or a flat inked one in the toon style. Caller adds it to the scene. */
 export function createBall(library, color, opacity, environment) {
   const { THREE } = library;
+  if (library.style === 'toon') {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 20), library.toon(color, { transparent: opacity < 1, opacity }));
+    mesh.castShadow = true;
+    // A see-through remote ball draws its ink after itself, so the hull's inside never shows through it.
+    addInk(THREE, mesh, opacity < 1 ? library.ink.overlay : library.ink.ball);
+    return mesh;
+  }
   const map = library.textures.ball.clone();
   map.needsUpdate = true;
   map.repeat.set(4, 2);
@@ -58,13 +67,13 @@ export function placeAura(mesh, type, position, visible, time) {
   mesh.scale.setScalar(1 + Math.sin(time * 5) * 0.1);
 }
 
-/** Ball trail: additive soft points that fade along the path. */
-export function createTrail(THREE) {
+/** Ball trail: additive soft points that fade along the path (hard-edged dots in the toon style). */
+export function createTrail(THREE, { toon = false } = {}) {
   const N = 26, positions = new Float32Array(N * 3), alphas = new Float32Array(N), geometry = new THREE.BufferGeometry();
   let length = 0;
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('a', new THREE.BufferAttribute(alphas, 1));
-  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { col: { value: displayColor(new THREE.Color(), 0xffffff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}' }));
+  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { col: { value: displayColor(new THREE.Color(), 0xffffff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: toon ? 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>.55)discard;gl_FragColor=vec4(col,va*.5);}' : 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}' }));
   points.frustumCulled = false;
   return {
     points,
