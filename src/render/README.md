@@ -65,6 +65,15 @@ The second suite uses the installed Three.js package: all 52 putt builds, finite
 - The renderer keeps shared ink uniforms (width, resolution, halftone cell) in step with the drawing-buffer size each frame.
 - Effect shaders (water, pads, portals, power blocks, vortex, hazards, particles, auras, trail) have toon variants posterized into hard bands; they write display sRGB values directly as fixed by R2c #57. Portals draw their ink ring in the shader.
 
+## Sky world (V1b #59)
+
+- `src/render/sky-world.js` (`createSkyWorld({ THREE })`) is what the toon courses float in. It replaces the pastel sky dome in the toon style only; the legacy style is unchanged.
+- The dome is a banded comic gradient with a sun disc, halo and rays. The sun sits in the legacy sun direction. Sky and sun are one shader that writes display sRGB values directly (R2c #57).
+- Clouds are flat cel-shaded: white tops, a pale blue underside band, flat bases. Each layer is one merged non-indexed mesh, so the clouds cost two draw calls. The dome is one more, and the seven birds are 14 tiny wing meshes.
+- Layers: a horizon ring of large clouds (2000+ units from the camera) and seven gull silhouettes, both re-centred on the camera each frame, so nothing passes between the camera and the course; and a cloud deck at least 350 units below the courses, anchored in world space.
+- Everything ignores fog and lights, casts no shadow and is deterministic (seeded, no random input). `renderer.js` calls `update(t, camera.position)` each frame and `dispose()` releases the geometries and materials. The toon fog colour matches the sky horizon.
+- Layout of clouds, deck and birds is decoration only: it does not depend on course geometry, so K1's floating islands need no change here.
+
 ## Legacy behaviour preserved, and what was not ported
 
 - The legacy follow camera built a wall-collision raycast that filtered on a material named `'brick'`. No material ever had that name, so it never moved the camera. The no-op is documented in `src/camera/rig.js` rather than ported; the terrain floor clamp is ported.

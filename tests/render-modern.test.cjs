@@ -29,6 +29,7 @@ const { JSDOM } = require('jsdom');
   assert.equal(r.scene.children.filter(o => o.material?.isMeshStandardMaterial).length, 0, 'no floating dream shapes or other textured scenery');
   assert.deepEqual(Object.keys(r.library.textures).sort(), ['blob', 'soft'], 'no surface pattern textures');
   const { definitions } = createCourseData();
+  const skyResources = [], skyReleased = new Set();
   let builds = 0, patches = 0, inked = 0, cutInk = 0, trees = 0;
   const beams = [];
   const created = new Set(), released = new Set();
@@ -115,11 +116,36 @@ const { JSDOM } = require('jsdom');
   close(aura.uniforms.col.value, 0x36cfff);
   assert.ok(beams.length > 0, 'portal beams checked');
   for (const color of beams) assert.ok(TELEPORTER_COLORS.some(hex => raw(hex).every((v, i) => Math.abs(color[i] - v) < 1e-6)), 'portal beam keeps the r128 sRGB components');
+  // V1b #59: sky world. Decoration only, far from the playable area, released with the renderer.
+  {
+    const dome = r.scene.children.find(o => o.geometry?.parameters?.radius === 6000);
+    const sky = r.scene.children.find(o => o.isGroup && o.children.some(c => c.material?.vertexColors));
+    assert.ok(dome && sky, 'sky dome and cloud/bird layers in the toon scene');
+    assert.deepEqual(dome.position.toArray(), [100, 900, 100], 'dome follows the camera');
+    const [horizon, deck, flock] = sky.children;
+    assert.equal(horizon.children.length + 1, 2, 'horizon clouds are one merged mesh');
+    const radii = [], heights = [];
+    const pos = horizon.children[0].geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) radii.push(Math.hypot(pos.getX(i), pos.getZ(i)));
+    const deckPos = deck.geometry.attributes.position;
+    for (let i = 0; i < deckPos.count; i++) heights.push(deckPos.getY(i));
+    assert.ok(Math.min(...radii) > 1500, 'horizon clouds stay far from the camera');
+    assert.ok(Math.max(...heights) < -300, 'cloud deck sits well below the courses');
+    for (const object of [...horizon.children, deck, ...flock.children]) assert.equal(object.castShadow, false, 'sky decoration casts no shadow');
+    assert.equal(flock.children.length, 7, 'distant birds');
+    const before = flock.children[0].position.toArray();
+    r.render({ now: 5000, dt: 1, local: null, camera: { position: [100, 900, 100], look: [100, 0, 100], sunTarget: [100, 0, 100], fadeTarget: null, events: [] } });
+    assert.notDeepEqual(flock.children[0].position.toArray(), before, 'birds circle over time');
+    for (const bird of flock.children) assert.ok(Math.hypot(bird.position.x, bird.position.z) > 2000, 'birds stay in the distance');
+    skyResources.push(horizon.children[0].geometry, deck.geometry, dome.geometry, dome.material, horizon.children[0].material);
+    for (const resource of skyResources) resource.addEventListener('dispose', () => skyReleased.add(resource));
+  }
   const counters = r.diagnostics(); counters.textures = -1;
   assert.equal(r.diagnostics().textures, 3, 'detached diagnostics');
   view.dispose(); view.dispose();
   assert.equal(disposed, 1); assert.equal(targetDisposed, 0);
   assert.equal(released.size, created.size, 'every course geometry and material released');
+  assert.equal(skyReleased.size, skyResources.length, 'sky world geometry and materials released');
   assert.throws(() => view.setCourse(definitions[0]), /disposed/);
   let failedGeneratorReleased = 0, temporaryReleased = 0;
   const fallbackNamespace = { ...THREE,
