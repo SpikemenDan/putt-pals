@@ -1,6 +1,6 @@
 # N1 room transports
 
-This module implements the C1 transport shape for solo, deterministic in-memory links, and injected PeerJS data channels. The modular app currently uses PeerJS for online rooms. N4a's separate server-room v2 contracts are accepted on main at `b30552f` and documented in [SERVER_ROOMS.md](../../docs/networking/SERVER_ROOMS.md); they do not implement a Worker or replace this adapter. N4b–N4g track local setup, server/runtime recovery, client cutover and authorized deployment.
+This module implements the C1 transport shape for solo, deterministic in-memory links, and injected PeerJS data channels. The modular app currently uses PeerJS for online rooms. N4a's separate server-room v2 contracts are accepted on main at `b30552f` and documented in [SERVER_ROOMS.md](../../docs/networking/SERVER_ROOMS.md); N4b's local Worker/SQLite Durable Object routing scaffold is integrated at `be77190` with setup documented in [CLOUDFLARE_SETUP.md](../../docs/networking/CLOUDFLARE_SETUP.md). Neither implements the game protocol or replaces this adapter; N4c–N4g track room authority/recovery, browser cutover, verification and authorized deployment.
 
 ```js
 import { createPeerTransport, bindRoomSession } from './src/network/index.js';

@@ -253,19 +253,19 @@ The S2 DONE* row is effective only after green current-head CI, authorized merge
 - The conditional DONE* records for R2 (PR #53) and S2 (PR #55) earlier in this file are now accepted.
 
 
-## N4 server-room plan and N4a accepted integration — PR #74
+## N4 server-room plan and N4a/N4b accepted integrations — PRs #74/#75
 
-The user selected server-owned rooms on Cloudflare Workers + SQLite-backed Durable Objects over WebSockets. N4 #65 replaces N3 as Q1's networking prerequisite; N3 #14 stays PAUSED with its local changes preserved. This supersedes the earlier Q1/TURN-only snapshot. PR #74 merged to main as `b30552f` on 2026-10-28; the accepted contract implementation is `3e5985d` plus documentation follow-up `c4c7af5`. Current-head baseline-ci and browser-ci (Chromium, Firefox and WebKit) passed. The contract and lifecycle decisions in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md) are authoritative for N4 consumers; current gameplay still uses PeerJS.
+The user selected server-owned rooms on Cloudflare Workers + SQLite-backed Durable Objects over WebSockets. N4 #65 replaces N3 as Q1's networking prerequisite; N3 #14 stays PAUSED with its local changes preserved. This supersedes the earlier Q1/TURN-only snapshot. PR #74 merged to main as `b30552f`; its contract implementation is `3e5985d` plus documentation follow-up `c4c7af5`. N4b PR #75 merged to main as `be77190`. Both PRs passed current-head baseline-ci and browser-ci (Chromium, Firefox and WebKit). The contract and lifecycle decisions in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md) are authoritative for N4 consumers; setup instructions are in [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md). Current gameplay still uses PeerJS.
 
 | ID / issue | Current status | Scope / dependency |
 | --- | --- | --- |
 | N4 #65 | BLOCKED | Tracking parent for accepted server-room migration and hosted validation |
 | N4a #66 | DONE | Wire/checkpoint contracts, policy, mocks, tests and design; PR #74 merged as `b30552f` |
-| N4b #68 | READY for coordinator-confirmed claim on `b30552f` | Local Cloudflare Worker/SQLite Durable Object tooling, no account connection/deploy |
-| N4c #69 | BLOCKED on #66/#68 | Backend authority and room coordinator |
+| N4b #68 | DONE | Local Cloudflare Worker/SQLite Durable Object tooling integrated as `be77190`; no account connection/deploy |
+| N4c #69 | READY for coordinator-confirmed claim on `be77190` | Backend authority and room coordinator; admission, policy enforcement and gameplay rules |
 | N4d #70 | BLOCKED on #69 | Durable room restoration, deadlines, reconnect and controller recovery |
 | N4e #71 | BLOCKED on #66/#69/#70 | Browser WebSocket adoption; solo/local physics retained |
 | N4f #72 | BLOCKED on #68/#69/#70/#71 | Cross-browser/local-runtime verification and usage limits |
 | N4g #73 | BLOCKED on #68/#72 and deployment authorization | Cloudflare connection, authorized preview, actual separate-network acceptance and rollback |
 
-Downstream issues use accepted main contract revision `b30552f`; workers must not use an unmerged branch as accepted main. The contract's configurable defaults are immediate succession, 30-second grace and 15-minute empty retention, confirmed by the user. No Cloudflare runtime or recovery implementation, actual server connection, paid service or production deployment is completed by N4a.
+Downstream issues use accepted main revisions `b30552f` (N4a contract) and `be77190` (N4b local runtime); workers must not use unmerged branches as accepted main. The contract's configurable defaults are immediate succession, 30-second grace and 15-minute empty retention, confirmed by the user. N4b does not implement room protocol, persistence/recovery, actual browser connection, paid service or production deployment.
