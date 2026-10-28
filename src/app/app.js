@@ -10,6 +10,7 @@ import { createAudioAdapter } from '../audio/index.js';
 import { CAMERA_VIEW_LABELS } from '../camera/index.js';
 import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
+import { createRemoteInterpolator } from '../network/index.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { BALL_RADIUS } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
@@ -44,6 +45,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   let room = null, putt = null, activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
   let quality = true, leaving = false, disposed = false, frameId = null, lastFrame = 0, lastPresence = -Infinity, lastSound = null, lastLocal = '';
   const remoteSeen = new Map(); // id -> {strokes, done, fx}
+  const smooth = createRemoteInterpolator(); // remote balls are drawn slightly behind, between samples
   let presence = {};
   const roomStops = [];
   const aimListeners = new Set();
@@ -93,7 +95,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     for (const stop of roomStops.splice(0)) stop();
     room.close(); room = null;
     endPutt();
-    activeRound = null; lastPhase = null; presence = {}; remoteSeen.clear();
+    activeRound = null; lastPhase = null; presence = {}; remoteSeen.clear(); smooth.clear();
     audio.resetSession();
     setLocal({ active: false, connecting: false, connected: true, reconnecting: false, mode: 'lobby', strokes: 0, inventory: [] });
   }
@@ -123,6 +125,9 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
 
   function onPresence(map) {
     presence = map;
+    const t = win.performance.now();
+    for (const [id, p] of Object.entries(map)) smooth.push(id, t, p);
+    smooth.retain(Object.keys(map));
     const s = room?.snapshot;
     if (s) store.setRoom(uiSnapshot(s), room.now());
     remoteEffects();
@@ -153,6 +158,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   function startRound(s, spectate = false) {
     const previous = putt && activeRound !== null ? { mapIndex: putt.mapIndex, puttIndex: putt.puttIndex } : null;
     endPutt();
+    smooth.clear(); // new tee positions must not glide from the previous hole
     activeRound = s.roundNumber;
     const definition = data.definitions[s.mapIndex];
     const playing = !spectate && s.roster.includes(room.localId);
@@ -206,13 +212,14 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     }
   }
 
-  function remotesForRender() {
+  function remotesForRender(now) {
     const s = room?.snapshot;
     if (!s || !putt) return [];
     const out = [];
     for (const [id, p] of Object.entries(presence)) {
       if (id === room.localId || !s.players[id]?.connected || !s.roster.includes(id) || p.mode !== 'play') continue;
-      out.push({ id, name: s.players[id].name, x: p.x, y: p.y, z: p.z, color: colorOf(s, {}, id), effect: p.effect || '' });
+      const at = smooth.sample(id, now) || p;
+      out.push({ id, name: s.players[id].name, x: at.x, y: at.y, z: at.z, color: colorOf(s, {}, id), effect: p.effect || '' });
     }
     return out;
   }
@@ -256,7 +263,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       const result = view.frame({
         now: t, dt, hazardTime: putt.hazardTime(),
         local: { ...state, color },
-        remotes: remotesForRender(),
+        remotes: remotesForRender(t),
         aim: input.frameAim(t / 1000),
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
