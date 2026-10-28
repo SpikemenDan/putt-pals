@@ -124,3 +124,7 @@ V1–M1 (#33–#36) record the user's chosen original comic art direction and th
 ## I2 integration follow-up — 2026-10-27
 
 I2 #38 is merged through PR #40 (b449379) and closed. Its committed real-browser spec and the Firefox check are tracked in I2b #41, BLOCKED until T1's harness in PR #37 is on main. Read live issues before acting; this snapshot does not assign or authorize another task.
+
+## T1 integration follow-up — 2026-10-27
+
+T1 #15 is merged through PR #37 (26d1025) and closed, so the Playwright harness and browser-ci job are on main. I2b #41 is unblocked. N2 #13 is in review through PR #43. Q1 #18 still waits on N2, N3, R2 and B4. Read live issues before acting; this snapshot does not assign or authorize another task.
