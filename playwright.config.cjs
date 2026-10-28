@@ -28,7 +28,8 @@ module.exports = defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } } },
+    // GPU-less CI runners: Firefox blocklists software WebGL unless forced, and the app needs WebGL to start.
+    { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 }, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } } },
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } } },
   ],
   webServer: {
