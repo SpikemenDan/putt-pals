@@ -200,3 +200,10 @@ N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.
 - Verification: new jsdom scenario in `test:app` (App: 10 scenarios). Real browser, ad hoc and uncommitted: Chromium with `--disable-webgl` and with WebGL both passed. Firefox was not run, because Playwright's Firefox fails to launch on the Windows machine.
 - The PR also fixed two Windows-only test problems: built UI test modules are imported by file URL, and `.gitattributes` keeps `*.html` at LF so `putt-pals.html` matches its recorded hash.
 - Follow-up: I2b #41 adds a committed Chromium and Firefox spec once T1's harness (PR #37) is merged.
+
+## T1 integration — 2026-10-27
+
+- T1 #15 merged via PR #37 (26d1025). `npm run test:browser` runs Playwright solo, input, putt/course practice, lifecycle and four-player WebRTC specs against the built app; `tests/integration/out-of-bounds.test.cjs` joins `npm test`. Handoff: docs/reviews/T1_BROWSER.md.
+- Current-head CI on 5331595: baseline-ci and browser-ci passed in Chromium, Firefox and WebKit (run 40615922756). WebKit multiplayer is skipped until N3 #14 provides a TURN relay. CI runners have no GPU, so Chromium and Firefox run headed under xvfb with Mesa software GL.
+- Known flake: the first Chromium attempt on 5331595 failed when one guest's join in the four-player spec did not reach the lobby within 15 s (empty page console); the rerun passed with no code change. The same code had passed on 56dedf6. Watch for repeats; a timing issue in the join path would fall under N2 #13.
+- Unblocked: I2b #41 can add its committed WebGL-fallback spec. Q1 still waits on N2, N3, R2 and B4.
