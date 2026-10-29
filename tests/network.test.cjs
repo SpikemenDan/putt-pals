@@ -379,7 +379,7 @@ const { EventEmitter } = require('node:events');
       assert.equal(st.puttIndex, 5); assert.equal(st.roster.length, 8);
       const before = f.snapshots.length;
       for (let ms = 0; ms < 1000; ms += 35) {
-        f.guests.forEach((g, i) => g.send({ type: 'presence', payload: { x: 123456.75 + ms, y: -98765.25 + i, z: 4321.5, mode: 'play', strokes: 12345, effect: 'zany', fx: { id: 999999, t: 'zany' } } }));
+        f.guests.forEach((g, i) => g.send({ type: 'presence', payload: { x: 123456.75 + ms, y: -98765.25 + i, z: 4321.5, mode: 'play', strokes: 12345, effect: 'mag' } }));
         f.clock.increment(35);
       }
       // Guests each receive every snapshot the host sends; count one guest's copies.

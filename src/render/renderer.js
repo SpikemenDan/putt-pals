@@ -11,7 +11,7 @@ import { BALL_RADIUS } from '../shared/constants.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
 import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
-import { createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, placeAura, placeBlob } from './actors.js';
+import { createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
 import { createSkyWorld } from './sky-world.js';
@@ -147,6 +147,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   scene.add(localAura);
   const localBlob = actor(createBlob(library));
   scene.add(localBlob);
+  const turnRing = actor(createTurnRing(library));
+  scene.add(turnRing);
   const trail = createTrail(THREE, { toon });
   scene.add(actor(trail.points));
   const confetti = createConfetti(THREE, random);
@@ -245,7 +247,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
      * @param {number} [frame.hazardTime=0] Synchronized room seconds for moving hazards
      * @param {object|null} frame.local {x,y,z,vx,vy,moving,mode,color,effect,collected}
      * @param {object[]} [frame.remotes=[]] Players to show: {id,name,x,y,z,color,effect}
-     * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread,reverse} while charging
+     * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread} while charging
      * @param {object} frame.camera Pose from createCameraRig().update()
      */
     render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, camera: pose }) {
@@ -287,6 +289,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       if (me.moving) { localBall.rotation.x += me.vy * dt / R; localBall.rotation.z -= me.vx * dt / R; }
       const floor = surfaceHeight(course, me.x, me.y);
       placeBlob(localBlob, me.x + o[0], isFinite(floor) ? floor : me.z, me.z, me.y + o[1], localBall.visible);
+
+      placeTurnRing(turnRing, PLAYER_COLORS[me.color % 8], me.x + o[0], isFinite(floor) ? floor : me.z, me.y + o[1], me.mode === 'play' && !me.moving, t);
 
       for (const entry of remotes.values()) { entry.ball.visible = false; if (entry.label) entry.label.visible = false; if (entry.aura) entry.aura.visible = false; entry.blob.visible = false; }
       for (const p of shown) {

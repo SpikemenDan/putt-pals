@@ -37,11 +37,11 @@ export function sway(power, time) { return spread(power) * Math.sin(time * SWAY_
 
 /**
  * Direction the ball actually leaves in.
- * @param {{aimAngle:number, charge:number, time:number, reverse?:boolean, steady?:boolean}} input
+ * @param {{aimAngle:number, charge:number, time:number, steady?:boolean}} input
  *   time is the sway time last shown on screen, so what you see is what you shoot.
  */
-export function shotAngle({ aimAngle, charge, time, reverse = false, steady = false }) {
-  return aimAngle + (reverse ? Math.PI : 0) + (steady ? 0 : sway(charge, time));
+export function shotAngle({ aimAngle, charge, time, steady = false }) {
+  return aimAngle + (steady ? 0 : sway(charge, time));
 }
 
 /** Charge 0..1 from a pointer drag distance in CSS pixels. */

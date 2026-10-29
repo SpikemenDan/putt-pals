@@ -16,7 +16,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
   const toast = useView(v => v.toast);
   const ghost = buttons.ghost;
   return (
-    <div hidden={hidden} data-ui="game" className={backdrop ? hud.backdrop : undefined} aria-hidden={backdrop || undefined}>
+    <div hidden={hidden} data-ui={backdrop ? 'backdrop' : 'game'} className={backdrop ? hud.backdrop : undefined} aria-hidden={backdrop || undefined}>
       <div className={hud.stage}>
         <div className={hud.bar}>
           <span className={`${hud.info}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>

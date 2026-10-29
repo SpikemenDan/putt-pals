@@ -40,7 +40,6 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `rest.maxVertical` | 5 | 0 to 100 | Vertical speed below which a ball on flat ground stops. |
 | `rest.airTolerance` | 0.8 | 0 to 10 | Height above the surface still counted as rolling. |
 | `rest.groundTolerance` | 0.6 | 0 to 10 | Height above the surface still counted as grounded. |
-| `powerups.zanyMultiplier` | 1.6 | 0.1 to 10 | Zanyball multiplies the next shot speed. |
 | `powerups.magnetRange` | 90 | 0 to 1000 | Hole Magnet reach (full-size cup). |
 | `powerups.magnetPull` | 300 | 0 to 10000 | Hole Magnet pull acceleration (full-size cup). |
 | `hazards.padRadius` | 18 | 0 to 100 | Jump pad trigger radius. |

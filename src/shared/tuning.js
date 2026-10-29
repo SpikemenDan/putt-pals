@@ -51,7 +51,6 @@ export const TUNING_FIELDS = Object.freeze([
   ['rest.airTolerance', 0, 10, 'Height above the surface still counted as rolling.'],
   ['rest.groundTolerance', 0, 10, 'Height above the surface still counted as grounded.'],
 
-  ['powerups.zanyMultiplier', 0.1, 10, 'Zanyball multiplies the next shot speed.'],
   ['powerups.magnetRange', 0, 1000, 'Hole Magnet reach (full-size cup).'],
   ['powerups.magnetPull', 0, 10000, 'Hole Magnet pull acceleration (full-size cup).'],
 
@@ -93,7 +92,7 @@ export const DEFAULT_TUNING = {
   surfaceDragMultiplier: { turf: 1.0, sand: 3.5, ice: 0.15, slime: 6.0 },
   bounce: { wallRestitution: 1.82, ledgeDamping: 0.8, ledgeHeight: 5, landingRestitution: 0.25, landingSpeed: 180 },
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
-  powerups: { zanyMultiplier: 1.6, magnetRange: 90, magnetPull: 300 },
+  powerups: { magnetRange: 90, magnetPull: 300 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,

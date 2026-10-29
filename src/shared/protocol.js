@@ -39,7 +39,7 @@ export function validatePresence(d, maxMaps = 22) {
   if (d.fx != null) {
     if (typeof d.fx !== 'object') return false;
     if (!Number.isFinite(d.fx.id)) return false;
-    if (!['rev', 'zany', 'sink', 'shot'].includes(d.fx.t)) return false;
+    if (!['sink', 'shot'].includes(d.fx.t)) return false;
   }
 
   return true;

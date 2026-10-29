@@ -49,6 +49,27 @@ export function placeBlob(blob, worldX, floorZ, ballZ, worldZ, visible) {
   blob.material.opacity = 0.55 * (1 - up * 0.8);
 }
 
+/** Active-ball ring (M1a): a pulsing ring on the floor under the ball that may be putted. Hidden by default. Caller adds it to the scene. */
+export function createTurnRing(library) {
+  const { THREE } = library;
+  const ring = new THREE.Mesh(new THREE.RingGeometry(R * 2.1, R * 2.9, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, fog: false, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2;
+  ring.renderOrder = 3;
+  ring.visible = false;
+  return ring;
+}
+
+/** Shows the ring in the player's colour under the ball while it is the player's turn to putt; pulses with time (seconds). */
+export function placeTurnRing(ring, color, worldX, floorZ, worldZ, visible, time) {
+  ring.visible = !!visible;
+  if (!visible) return;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+  ring.position.set(worldX, floorZ + 1.1, worldZ);
+  ring.scale.setScalar(1 + pulse * 0.18);
+  ring.material.color.set(color);
+  ring.material.opacity = 0.55 + pulse * 0.4;
+}
+
 /** Legacy makeAura(): hidden by default. Caller adds it to the scene. */
 export function createAura(library) {
   const { THREE } = library;

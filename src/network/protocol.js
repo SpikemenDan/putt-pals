@@ -1,5 +1,7 @@
 import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS } from '../shared/constants.js';
 import { GameModes } from '../shared/session.js';
+import { auraIds } from '../gameplay/catalog.js';
+import { validEffectMessage } from '../gameplay/effects.js';
 
 export const MAX_MESSAGE_BYTES = 65536;
 /** Liveness (N2): guests ping and hosts re-send a snapshot this often, so a silent link is noticed. */
@@ -43,9 +45,8 @@ export function validCommand(e, isHost) {
   }
 }
 /** Power-up aura shown on a ball ('' for none) and attacks that affect other players (I1). */
-export const PRESENCE_EFFECTS = Object.freeze(['', 'mag', 'steady', 'rew', 'rev', 'zany']);
-export const PRESENCE_ATTACKS = Object.freeze(['rev', 'zany']);
-const validFx = fx => record(fx) && keys(fx, ['id', 't']) && count(fx.id) && PRESENCE_ATTACKS.includes(fx.t);
+export const PRESENCE_EFFECTS = Object.freeze(auraIds());
+const validFx = fx => record(fx) && keys(fx, ['id', 't']) && validEffectMessage(fx);
 export function validPresence(p) {
   return record(p) && keys(p, ['x', 'y', 'z', 'mode', 'strokes', 'effect', 'fx'])
     && [p.x, p.y, p.z].every(n => Number.isFinite(n) && Math.abs(n) <= 1000000)

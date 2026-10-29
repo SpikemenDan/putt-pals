@@ -96,15 +96,16 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const ana = await W.client('Ana');
     await W.run(1000);
     assert.ok(ana.app.renderer.course, 'a course is built for the panorama');
-    assert.ok(ana.shown('[data-ui=landing]') && ana.shown('[data-ui=game]'), 'the canvas stays visible behind the menu');
-    assert.equal(ana.$('[data-ui=game]').getAttribute('aria-hidden'), 'true');
+    assert.ok(ana.shown('[data-ui=landing]') && ana.shown('[data-ui=backdrop]'), 'the canvas stays visible behind the menu');
+    assert.ok(!ana.shown('[data-ui=game]'), 'the backdrop is not the game screen');
+    assert.equal(ana.$('[data-ui=backdrop]').getAttribute('aria-hidden'), 'true');
     const first = ana.app.renderer.camera.position.clone();
     await W.run(5000);
     assert.ok(ana.app.renderer.camera.position.distanceTo(first) > 1, 'the camera orbits');
     assert.equal(ana.app.putt, null, 'no putt or input is involved');
     await ana.solo();
     assert.ok(ana.shown('[data-ui=room-lobby]') && !ana.shown('[data-ui=landing]'), 'the menu is gone');
-    assert.ok(!ana.shown('[data-ui=game]'), 'the panorama backdrop is gone with the menu');
+    assert.ok(!ana.shown('[data-ui=backdrop]'), 'the panorama backdrop is gone with the menu');
   });
 
   await scenario('solo: a full six-putt map through the real UI scores six holes in one with transitions, banners and audio', async () => {
@@ -268,22 +269,16 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(ana.app.renderer.remoteCount >= 3, 'host renders the three guests');
     assert.ok(dee.app.renderer.remoteCount >= 3, 'guests render each other');
     assert.equal([...dee.$('[data-ui=scoreboard]').children].length, 5, 'four players on the scoreboard');
-    // Ben attacks everyone with a Zanyball.
-    ben.putt.player.inventory.push('zany');
+    // Ben arms Steady Aim from his inventory; the activation toast and aura show locally.
+    ben.putt.player.inventory.push('steady');
     await ben.useItem(0);
-    assert.equal(ben.text('[data-ui=game] [role=status]'), 'Zanyball sent to everyone else!');
-    await W.until(() => [ana, cy, dee].every(c => c.putt.player.pendingPowerups.zany === 1), 3000, 'attack delivered');
-    assert.equal(cy.text('[data-ui=game] [role=status]'), 'Ben used Zanyball on you!');
-    assert.equal(cy.putt.effect, 'zany');
+    assert.equal(ben.text('[data-ui=game] [role=status]'), 'Your next shot has no wobble.');
+    assert.equal(ben.putt.effect, 'steady');
+    assert.deepEqual(ben.putt.player.inventory, []);
     await W.run(200);
     assert.ok(ana.app.renderer.remoteCount >= 3);
-    for (const c of [ana, dee]) c.putt.player.pendingPowerups.zany = 0; // test setup: only Cy keeps the attack
-    // Map 1: Cy's boosted shot overshoots and times out; everyone else holes out.
-    const shot = best(0, 0);
-    await W.until(() => cy.ready(), 5000);
-    await cy.shoot(shot.deg, shot.power);
-    assert.ok(Math.abs(Math.hypot(cy.putt.player.vx, cy.putt.player.vy) - shot.power * 900 * 1.6) < 1e-9, 'Zanyball speeds the shot by 1.6');
-    await W.playPutt([ana, ben, dee]);
+    // Map 1: everyone holes out.
+    await W.playPutt(all);
     await W.until(() => ana.snapshot.puttIndex === 1, 160000, 'putt 2 after Cy finishes');
     assert.equal(ana.snapshot.players[cy.app.room.localId].scores[0].score >= 1, true);
     assert.ok(tracked(dee).includes('shot:remote'), 'remote shots are audible');
@@ -537,8 +532,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(validPresence(base), true, 'fields stay optional');
     for (const effect of PRESENCE_EFFECTS) assert.equal(validPresence({ ...base, effect }), true);
     assert.equal(validPresence({ ...base, effect: 'nuke' }), false);
-    assert.equal(validPresence({ ...base, fx: { id: 3, t: 'zany' } }), true);
-    for (const fx of [{ id: 3, t: 'mag' }, { id: -1, t: 'rev' }, { id: 1.5, t: 'rev' }, { id: 1, t: 'rev', extra: 1 }, 'rev', null]) assert.equal(validPresence({ ...base, fx }), false, JSON.stringify(fx));
+    for (const t of ['rev', 'zany', 'rew']) assert.equal(validPresence({ ...base, effect: t }), false, 'removed power-up ' + t);
+    for (const fx of [{ id: 3, t: 'zany' }, { id: 3, t: 'rev' }, { id: 3, t: 'mag' }, { id: -1, t: 'mag' }, { id: 1, t: 'steady', extra: 1 }, 'mag', null]) assert.equal(validPresence({ ...base, fx }), false, JSON.stringify(fx));
     assert.equal(validPresence({ ...base, colour: 1 }), false, 'unknown fields are still rejected');
   });
 

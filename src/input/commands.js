@@ -5,7 +5,7 @@
  * serves both keyboard shortcuts and clicks.
  */
 export const InputCommands = Object.freeze({
-  /** { type, angle, power } — release of a charged shot; angle includes reverse and sway. */
+  /** { type, angle, power } — release of a charged shot; angle includes sway. */
   SHOT: 'shot',
   /** { type } — Ball cam → Hole view → World view (C key or the View button). */
   CYCLE_CAMERA: 'cycle-camera',

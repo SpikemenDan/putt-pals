@@ -5,8 +5,7 @@
  * or network access.
  */
 
-import { BALL_RADIUS, SHOT_POWER } from '../shared/constants.js';
-import { TUNING } from '../shared/tuning.js';
+import { BALL_RADIUS } from '../shared/constants.js';
 import { inside, movingRect, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 
 /** Legacy multiplayer room namespace was "puttpals-circuit-v5-"; the modular protocol is incompatible, so it gets its own. */
@@ -20,26 +19,9 @@ export const SINK_WAIT_MS = 1200;
 export const PRESENCE_INTERVAL_MS = 70;
 /** HUD/room refresh interval (legacy setInterval(syncRoom/tick, 100)). */
 export const TICK_MS = 100;
-/** Zanyball multiplies the next shot's speed (legacy launch()). */
-export const ZANY_POWER = TUNING.powerups.zanyMultiplier;
-export const MAX_INVENTORY = 3;
-/** Power-ups in the order the legacy random pick indexes them. */
-export const ITEMS = Object.freeze(['mag', 'steady', 'rew', 'rev', 'zany']);
-export const ITEM_NAMES = Object.freeze({ mag: 'Hole Magnet', steady: 'Steady Aim', rew: 'Rewind', rev: 'Reversiball', zany: 'Zanyball' });
-export const ACTIVATION_BANNERS = Object.freeze({ mag: 'HOLE MAGNET', steady: 'STEADY AIM', rev: 'REVERSIBALL', zany: 'ZANYBALL' });
 export const EFFECT_FLASH_MS = 1800;
 
 export const hostIdFor = roomCode => ROOM_PREFIX + roomCode;
-
-/** Ball aura for a player (legacy effectOf()). */
-export function effectOf(player, now) {
-  if (player.pendingPowerups.rev) return 'rev';
-  if (player.pendingPowerups.zany) return 'zany';
-  if (player.armedPowerups.mag) return 'mag';
-  if (player.armedPowerups.steady) return 'steady';
-  if (player.flashUntil > now) return player.flashType || '';
-  return '';
-}
 
 /**
  * True when a resting ball sits inside a fan, tornado or the reach of a moving
@@ -88,6 +70,3 @@ export function frameSounds(prev, cur) {
   if (cur.mode === 'sunk' && prev.mode !== 'sunk') out.push({ event: { type: 'sink', timedOut: !!cur.over, position } });
   return out;
 }
-
-/** Shot speed multiplier for the local player's next launch. */
-export const shotPower = player => SHOT_POWER * (player.pendingPowerups.zany ? ZANY_POWER : 1);
