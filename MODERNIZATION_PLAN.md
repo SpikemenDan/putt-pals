@@ -16,7 +16,8 @@ Putt Pals is a fast, high-energy 3D multiplayer mini-golf game for the web. It m
 ### Courses
 
 - **True 3D verticality.** Curving ramps, multi-tier drops and pneumatic tubes that fling balls from island to island.
-- **Risk versus reward.** Guard walls keep ordinary shots in play; deliberate drop-offs tempt bold players into hard hole-in-one shortcuts. Hole-in-one difficulty follows the course rating.
+- **Risk versus reward.** Guard walls keep ordinary shots in play; deliberate drop-offs tempt bold players into risky shortcuts, which may include a hole-in-one on some putts. A hole-in-one is an optional reward, never a requirement.
+- **Par, not hole-in-one, defines a playable hole.** Every putt must be completable within its par; par is 2 to 6 strokes per putt. Courses can therefore be longer, multi-level and more complicated.
 - **Trick shots.** Corner bouncers and interactive surfaces reward bank shots and unexpected angles.
 
 ### Game modes
@@ -62,9 +63,16 @@ Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other th
 - **Skins are simply selectable** for now (no unlock progression); the choice is stored locally in the browser.
 - **Legacy power-ups retired:** Rewind, Reversiball and Zanyball are removed in favor of the catalog above.
 - **Solo pool** (Solo and Practice): the self-enhancing power-ups only: Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball, Tall Ball and Sticky Ball. Bumpers and the global weather items are excluded because they are course hazards that exist to affect other players.
-- **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Tasks that change course geometry or physics for every shot (G1g, K1) stay after Q1's fresh difficulty sweep unless the owner un-gates them.
+- **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Physics and course changes follow the course and physics rules below (S3, then SV1, then G1g and K1).
 
 Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slots, free-for-all simultaneous play, advancing together and the 3/6/9-level tournaments already exist. Two gaps remain, both in task C3: the N4 server-room contract is capped at 4 members and must be raised to 8, and ranking is by total strokes with hole-in-ones breaking ties. Because every player plays the same pars, that orders players the same as strokes minus par and the scorecard already shows the relative score, but results and tournament standings should lead with the relative-to-par figure computed from completed putts.
+
+### Course and physics rules (owner decisions, 2026-10-29)
+
+- **Par up to 6 per putt.** Every putt must be possible in par (2 to 6 strokes). The old rule that every putt has a robust single-shot hole-in-one is removed, in exchange for 3D courses and more complicated level design.
+- **Less strict physics.** The simulation should be more forgiving to play. Which parts feel too strict has not been specified yet; the candidates are the cup-capture window (tightened by S2), aim sway and spread, wall rebound energy, resting thresholds and the shot-accuracy margins the solver demands. A retune changes trajectories, so it ships as its own deliberate behavior change (S3) with the owner playtesting, and recorded difficulty is redone afterwards.
+- **Solver and acceptance change.** Course acceptance becomes "a robust route exists within par", proven by a multi-stroke solver (SV1) that replaces the single-shot hole-in-one search, the hit-count ladder and the hole-in-one-based par defaults. Mechanic test chambers (fan, portal, jump pad, tornado) may stay single-shot proofs of one element.
+- **Order:** S3 (forgiving physics), then SV1 (par solver and difficulty measure), then the course work (G1g, K1), which no longer waits for Q1 or N4. Q1 then verifies par-achievability under the final physics instead of hole-in-one robustness.
 
 ### Putt Pong
 
@@ -121,12 +129,12 @@ TypeScript, Zod, Vitest, ESLint and Prettier were considered and are not adopted
 | M4 Server-owned rooms (N4, #65): contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and an authorized preview deployment remain | In progress |
 | M5 Three.js upgrade and desktop rendering validation | Done |
 | Look and feel (V1a-V1d): toon style, sky world, palettes, ambient weather, comic HUD | Done |
-| M6 Release readiness (Q1 #18): fresh difficulty ladder, production-like preview, rollback, manual playtests | Blocked on N4 |
+| M6 Release readiness (Q1 #18): par-achievability check under final physics, production-like preview, rollback, manual playtests | Blocked on N4 |
 | Vision features (G1, K1, M1 and the new tasks in TASKS.md) | Not started; start order in the owner decisions above |
 
 M4 exit gate: four-player real-browser games across separate networks through an authorized deployed Worker; controller departure, guest recovery after hibernation or restart, forged, stale and versioned messages, bounded queues and quota failure all tested; deployment and rollback documented. Contracts and lifecycle defaults (immediate controller succession, 30-second reconnect grace, 15-minute empty retention) are in docs/networking/SERVER_ROOMS.md; local setup is in docs/networking/CLOUDFLARE_SETUP.md. The browser stays trusted for ball physics; the server owns room coordination. N3 (managed TURN) is paused as an alternative, not a prerequisite.
 
-M6 exit gate: a fresh checkout has documented setup, test and build commands; a production-like preview passes; release and rollback instructions are complete. Publishing to production and paid service provisioning need separate owner authorization. Because the shared cup rules changed (S2), Q1 must re-measure all 36 starter putts and review the five hard putts that no longer have a robust solution.
+M6 exit gate: a fresh checkout has documented setup, test and build commands; a production-like preview passes; release and rollback instructions are complete. Publishing to production and paid service provisioning need separate owner authorization. Because the physics will be retuned (S3) and acceptance changes from hole-in-one robustness to par achievability (SV1), Q1 verifies that every putt has a robust route within its par under the final physics, instead of refreshing the old hole-in-one counts.
 
 ## Working rules
 

@@ -15,12 +15,12 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | [N4f #72](https://github.com/SpikemenDan/putt-pals/issues/72) | BLOCKED | #68-#71 | Cross-browser server-room tests, quota and performance checks |
 | [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | BLOCKED | #68, #72 and owner authorization | Connect Cloudflare, deploy a preview, separate-network acceptance, rollback |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | PAUSED | n/a | Managed TURN; an alternative to N4, not a prerequisite |
-| [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: fresh difficulty sweep of all 36 starter putts (S2 narrowed five hard putts), production-like preview, rollback, manual playtests |
+| [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: verify a robust route within par on every putt under the final physics (replaces the hole-in-one refresh; scope to be updated on the issue), production-like preview, rollback, manual playtests |
 | [M1 #36](https://github.com/SpikemenDan/putt-pals/issues/36) | READY | V1 done | Menu panorama, loading screen with tips, active-ball ring, menu and turn-ready sounds; split into sub-issues first |
 | [G1 #34](https://github.com/SpikemenDan/putt-pals/issues/34) | BLOCKED | Q1 | Umbrella for gameplay mechanics and power-ups; split into G1a-G1g below |
 | [K1 #35](https://github.com/SpikemenDan/putt-pals/issues/35) | BLOCKED | G1, Q1 | Umbrella for course redesign; split into K1a-K1d below |
 
-G1 and K1 were gated behind Q1 by an earlier owner decision. On 2026-10-29 the owner left the order to the coordinator, so G1a-G1f, GM1, F1 and C3 may start now (they leave default trajectories unchanged); G1g and K1 change course geometry and physics and stay after Q1's fresh difficulty sweep unless the owner un-gates them.
+G1 and K1 were gated behind Q1 by an earlier owner decision. On 2026-10-29 the owner left the order to the coordinator and decided that holes need only be possible in par, not in one shot. New order: G1a-G1f, GM1, F1 and C3 may start now (they leave default trajectories unchanged); S3 (forgiving physics) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4.
 
 ## Vision backlog (PROPOSED)
 
@@ -28,6 +28,8 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
+| S3 Forgiving physics | none | Owner-playtested retune toward more forgiving play (candidates: cup-capture window, aim sway and spread, wall rebound energy, resting thresholds, solver accuracy margins). Deliberate behavior change in its own PR; updates parity fixtures only with owner approval; invalidates recorded difficulty. The owner must say which parts feel too strict before work starts |
+| SV1 Par-route solver | S3 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools.js` and `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Contract changes go through the integration owner |
 | C3 Eight-player server rooms and relative-to-par results | none | Align the N4 server-room contract (currently 4 members) with the 8-player cap used by the app, its validators and mocks; lead results, scorecard and tournament standings with strokes minus par computed from completed putts. Touches the accepted N4 contract and `src/shared`, so it goes through the integration owner |
 | G1a Power-up framework | none | Catalog data, 3-slot inventory with tournament carryover and single-play reset, stacking, hotkey and click activation, box spawn table, solo (self-enhancing) and No-Power-Ups filtering, validated effect messages, migrate Hole Magnet and Steady Aim, remove Rewind, Reversiball and Zanyball (including the `rev` and `zany` fx in the protocol and server-room contracts) |
 | G1b Self utility | G1a | Chip In (lofted shot), Ghost Ball, Small Ball and Tall Ball (per-ball radius), Sticky Ball |
@@ -35,13 +37,13 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | G1d Ball auras | G1a | Love Ball and Hate Ball, applied by each client to its own ball |
 | G1e Deployables | G1a | Bumper and Orbital Bumper (3 impacts, visible radius rings), synced objects |
 | G1f Global hazards | G1a | Rain, Snow, Wind, targeted Lightning, roaming Tornado and Hurricane driven by synced room time; keep distinct from the visual-only ambient weather |
-| G1g Course mechanics | Q1 sweep | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
+| G1g Course mechanics | SV1 | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
 | GM1 No Power-Ups mode | G1a | Pure Mini-Golf mode flag and mode selector; verify Practice and solo draw only self-enhancing power-ups |
 | GM2 Putt Pong | G1a, G1b (lofted shot) | Turn-based cup-rack mode per MODERNIZATION_PLAN.md: sides with racks and shooter rotation (1v1 first, then teams), 10-cup racks, bonus balls, redemption and rounds, multi-cup course support with elimination events, rack field and renderer effect, turn phase in the session machine and server-room contract, lobby entry. Free-for-all on a polygon field is a later option |
-| K1a Islands and walls | G1g, Q1 sweep | Per-putt floating islands with designed gaps, guard walls, declared open edges |
+| K1a Islands and walls | G1g, SV1 | Per-putt floating islands with designed gaps, guard walls, declared open edges |
 | K1b Ramps and drops | K1a | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | K1c Transport tubes | K1b | Enclosed tubes that carry and fling the ball between islands |
-| K1d Difficulty bands | K1a-K1c | Hole-in-one bands by map rating, re-solved starter maps, fresh sweep |
+| K1d Difficulty bands | K1a-K1c | Difficulty bands by map rating measured with SV1 (par-based, no hole-in-one requirement), optional hole-in-one shortcuts on some putts, re-solved starter maps, fresh sweep |
 | F1 Flair | none | Selectable ball skins, trail skins and hole-in-one celebrations; choice stored locally; validated cosmetic ids in presence |
 
 ## Delivered

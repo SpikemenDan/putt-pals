@@ -139,7 +139,7 @@ Design rules for the product vision in MODERNIZATION_PLAN.md. These are targets,
 
 ### Course elements
 
-New primitives (corner wedge, curved ramp, multi-tier drop, transport tube) need course schema records, simulation support, renderer meshes, solver support and a test chamber that proves a robust shot exists and fails without the element, as the existing mechanic chambers do. Tubes carry the ball along a path and release it with its exit velocity. Islands are per-putt geometry with visible gaps; guard walls bound normal routes and drop-offs are declared open edges. Any change to course geometry or physics requires re-solving affected putts and a fresh difficulty sweep; hole-in-one difficulty bands follow map rating.
+New primitives (corner wedge, curved ramp, multi-tier drop, transport tube) need course schema records, simulation support, renderer meshes, solver support and a test chamber that proves a robust shot exists and fails without the element, as the existing mechanic chambers do. Tubes carry the ball along a path and release it with its exit velocity. Islands are per-putt geometry with visible gaps; guard walls bound normal routes and drop-offs are declared open edges. Any change to course geometry or physics requires re-solving affected putts and a fresh difficulty sweep. A putt is accepted when a multi-stroke solver finds a robust route within its par (2 to 6); a single-shot hole-in-one is neither required nor guaranteed, and par defaults come from the shortest robust route.
 
 ### Game modes
 
