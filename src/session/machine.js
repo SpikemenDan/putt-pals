@@ -12,22 +12,25 @@ const own = (object, key) => typeof key === 'string' && Object.hasOwn(object, ke
 const practice = c => [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(c.mode);
 const replay = c => c.mode === GameModes.PUTT_PRACTICE;
 const ids = c => Object.keys(c.players).filter(id => c.players[id].connected);
-const active = c => c.roster.filter(id => own(c.players, id) && c.players[id].connected);
-const allDone = c => active(c).length > 0 && active(c).every(id => c.players[id].done);
 const validCount = n => Number.isSafeInteger(n) && n >= 0;
 const validIdentity = e => typeof e.playerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(e.playerId);
 const validName = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
 const seriesLength = mode => ({ tournament_3: 3, tournament_6: 6, tournament_9: 9 })[mode] ?? 1;
 
-/** Host-owned domain actor. Transport adapters must bind playerId to authenticated senders. */
-export function createRoomSession({ hostId, hostName = 'Host', clock, courses = createCourseDocument().courses } = {}) {
-  if (!validIdentity({ playerId: hostId }) || !validName(hostName)) throw new Error('Valid host identity and name required');
+/** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
+export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', serverOwned = false, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
+  const initialControllerId = serverOwned ? controllerId : hostId;
+  if (!validIdentity({ playerId: initialControllerId }) || !validName(hostName)) throw new Error('Valid room controller identity and name required');
+  if (typeof isReserved !== 'function') throw new Error('A reservation lookup is required');
   if (!clock || !['now', 'setTimeout', 'clearTimeout'].every(key => typeof clock[key] === 'function')) throw new Error('An explicit now/setTimeout/clearTimeout clock is required');
   const courseData = structuredClone(courses);
   const checked = validateCourseDocument({ schemaVersion: 1, courses: courseData });
   if (!checked.valid) throw new Error(`Invalid session courses: ${checked.errors.join('; ')}`);
+  const active = c => c.roster.filter(id => own(c.players, id) && (c.players[id].connected || (serverOwned && isReserved(id))));
+  const allDone = c => active(c).length > 0 && active(c).every(id => c.players[id].done);
+  const controller = c => serverOwned ? c.controllerId : c.hostId;
   const rule = c => courseData[c.mapIndex].putts[c.puttIndex];
-  const host = (c, e) => e.playerId === c.hostId && c.players[c.hostId]?.connected === true;
+  const host = (c, e) => e.playerId === controller(c) && c.players[controller(c)]?.connected === true;
   const member = (c, e) => own(c.players, e.playerId) && c.players[e.playerId].connected;
   const participant = (c, e) => member(c, e) && c.roster.includes(e.playerId);
   const validVote = (c, e) => member(c, e) && STARTER_COURSE_INDICES.includes(e.mapIndex);
@@ -44,7 +47,7 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
     players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
   });
   const recordPutt = c => replay(c) ? {} : { players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, {
-    ...p, scores: c.roster.includes(id) ? [...p.scores, p.connected ? { score: p.score ?? timeoutScore(c, p), timedOut: p.timedOut || !p.done, par: rule(c).par, penalty: rule(c).penalty } : null] : p.scores,
+    ...p, scores: c.roster.includes(id) ? [...p.scores, (p.connected || (serverOwned && isReserved(id))) ? { score: p.score ?? timeoutScore(c, p), timedOut: p.timedOut || !p.done, par: rule(c).par, penalty: rule(c).penalty } : null] : p.scores,
   }])) };
   const finishMap = c => {
     const scores = Object.fromEntries(active(c).map(id => [id, c.players[id].scores.reduce((sum, p) => sum + (p?.score ?? 0), 0)]));
@@ -75,14 +78,13 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
       host: ({ context: c, event: e }) => host(c, e),
       canJoin: ({ context: c, event: e }) => validIdentity(e) && validName(e.name) && !(own(c.players, e.playerId) && c.players[e.playerId].connected) && ids(c).length < MAX_PLAYERS && (!practice(c) || ids(c).length === 0),
       canLeave: ({ context: c, event: e }) => member(c, e),
-      hostLeaving: ({ context: c, event: e }) => host(c, e),
       mode: ({ context: c, event: e }) => host(c, e) && modes.includes(e.mode) && (![GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(e.mode) || ids(c).length === 1),
       vote: ({ context: c, event: e }) => validVote(c, e),
       practice: ({ context: c }) => c.mode === GameModes.PRACTICE,
       replay: ({ context: c }) => replay(c),
       everyoneVoted: ({ context: c }) => everyoneVoted(c),
       hasVotes: ({ context: c }) => hasVotes(c),
-      choosePutt: ({ context: c, event: e }) => host(c, e) && replay(c) && Number.isInteger(c.votes[c.hostId]) && Number.isInteger(e.puttIndex) && e.puttIndex >= 0 && e.puttIndex < courseData[c.votes[c.hostId]].putts.length,
+      choosePutt: ({ context: c, event: e }) => host(c, e) && replay(c) && Number.isInteger(c.votes[controller(c)]) && Number.isInteger(e.puttIndex) && e.puttIndex >= 0 && e.puttIndex < courseData[c.votes[controller(c)]].putts.length,
       score: ({ context: c, event: e }) => scoreEvent(c, e) && (e.timedOut === true || e.strokes > 0),
       strokes: ({ context: c, event: e }) => scoreEvent(c, e) && e.timedOut !== true,
       doneReplay: ({ context: c }) => replay(c) && allDone(c),
@@ -93,6 +95,8 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
       replayStep: ({ context: c, event: e }) => replay(c) && host(c, e) && [-1, 0, 1].includes(e.step),
       moreMaps: ({ context: c, event: e }) => host(c, e) && c.completedMaps.length < seriesLength(c.mode),
       practiceHost: ({ context: c, event: e }) => host(c, e) && practice(c),
+      canExpirePlayer: ({ context: c, event: e }) => serverOwned && typeof e.playerId === 'string' && own(c.players, e.playerId) && !c.players[e.playerId].connected,
+      canAbandonRoom: ({ context: c }) => serverOwned && active(c).length === 0,
     },
     actions: {
       join: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: own(c.players, e.playerId) ? { ...c.players[e.playerId], name: e.name, connected: true } : fresh(e.playerId, e.name) } })),
@@ -104,7 +108,7 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
       vote: assign(({ context: c, event: e }) => ({ votes: { ...c.votes, [e.playerId]: e.mapIndex } })),
       deadline: assign(({ context: c }) => ({ votingDeadline: practice(c) ? 0 : c.votingDeadline || clock.now() + VOTING_COUNTDOWN_SECONDS * 1000 })),
       votedMap: assign(({ context: c }) => round(c, resolveVote(c.votes, STARTER_COURSE_INDICES, { round: c.roundNumber, connectedIds: ids(c) }), 0, true)),
-      chosenPutt: assign(({ context: c, event: e }) => round(c, c.votes[c.hostId], e.puttIndex, true)),
+      chosenPutt: assign(({ context: c, event: e }) => round(c, c.votes[controller(c)], e.puttIndex, true)),
       strokes: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes } } })),
       score: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes, done: true, timedOut: e.timedOut === true, score: e.timedOut ? timeoutScore(c, { strokes: e.strokes }) : e.strokes } } })),
       forceTimeout: assign(({ context: c }) => ({ players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, active(c).includes(id) && !p.done ? { ...p, done: true, timedOut: true, score: timeoutScore(c, p) } : p])) })),
@@ -113,13 +117,31 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
       finish: assign(({ context: c }) => finishMap(c)),
       loop: assign(({ context: c }) => round(c, c.mapIndex, c.puttIndex, false)),
       step: assign(({ context: c, event: e }) => round(c, c.mapIndex, (c.puttIndex + e.step + courseData[c.mapIndex].putts.length) % courseData[c.mapIndex].putts.length, false)),
+      setController: assign(({ event: e }) => ({ controllerId: e.playerId })),
+      expirePlayer: assign(({ context: c, event: e }) => ({
+        roster: c.roster.filter(id => id !== e.playerId),
+        votes: Object.fromEntries(Object.entries(c.votes).filter(([id]) => id !== e.playerId)),
+      })),
+      abandon: assign(({ context: c }) => ({
+        mode: GameModes.STANDARD, votes: {}, votingDeadline: 0, roster: [],
+        roundNumber: c.roundNumber + 1, players: resetPlayers(c, false),
+      })),
     },
   }).createMachine({
     id: 'session', initial: 'lobby',
-    context: { ...createInitialSessionState(), hostId, players: { [hostId]: fresh(hostId, hostName) }, totals: {}, last: null },
+    context: {
+      ...createInitialSessionState(),
+      ...(serverOwned ? { controllerId: initialControllerId } : { hostId: initialControllerId }),
+      players: { [initialControllerId]: fresh(initialControllerId, hostName) }, totals: {}, last: null,
+    },
     on: {
       JOIN_ROOM: { guard: 'canJoin', actions: 'join' },
-      LEAVE_ROOM: [{ guard: 'hostLeaving', target: '.lobby', actions: ['leave', 'lobby'] }, { guard: 'canLeave', actions: 'leave' }],
+      LEAVE_ROOM: [{ guard: ({ context: c, event: e }) => !serverOwned && host(c, e), target: '.lobby', actions: ['leave', 'lobby'] }, { guard: 'canLeave', actions: 'leave' }],
+      ...(serverOwned ? {
+        SERVER_SET_CONTROLLER: { actions: 'setController' },
+        SERVER_EXPIRE_PLAYER: { guard: 'canExpirePlayer', actions: 'expirePlayer' },
+        SERVER_ABANDON_ROOM: { guard: 'canAbandonRoom', target: '#session.lobby', actions: 'abandon' },
+      } : {}),
     },
     states: {
       lobby: { on: { SET_MODE: { guard: 'mode', actions: 'mode' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
@@ -187,6 +209,26 @@ export function createRoomSession({ hostId, hostName = 'Host', clock, courses = 
       return before.context !== actor.getSnapshot().context;
     },
     subscribe(listener) { const subscription = actor.subscribe(value => listener(snapshot(value))); return () => subscription.unsubscribe(); },
+    ...(serverOwned ? {
+      setController(playerId) {
+        if (disposed || (playerId !== null && !validIdentity({ playerId }))) return false;
+        const before = actor.getSnapshot();
+        actor.send({ type: 'SERVER_SET_CONTROLLER', playerId });
+        return before.context !== actor.getSnapshot().context;
+      },
+      expirePlayer(playerId) {
+        if (disposed || !validIdentity({ playerId })) return false;
+        const before = actor.getSnapshot();
+        actor.send({ type: 'SERVER_EXPIRE_PLAYER', playerId });
+        return before.context !== actor.getSnapshot().context;
+      },
+      abandonRoom() {
+        if (disposed) return false;
+        const before = actor.getSnapshot();
+        actor.send({ type: 'SERVER_ABANDON_ROOM' });
+        return before.context !== actor.getSnapshot().context;
+      },
+    } : {}),
     dispose() { disposed = true; actor.stop(); },
   };
 }

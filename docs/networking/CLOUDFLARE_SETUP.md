@@ -1,6 +1,6 @@
 # Local Cloudflare Worker setup
 
-N4b adds a local-only development path for the accepted server-room contract in [SERVER_ROOMS.md](SERVER_ROOMS.md). It serves the normal Vite build from Cloudflare Static Assets and routes `/api/rooms/<roomCode>/socket` to a named SQLite-backed Durable Object. The Durable Object currently proves only local class binding, room/environment isolation and WebSocket upgrade routing; N4c/N4d own admission, protocol handling, game authority and recovery.
+N4b adds a local-only development path for the accepted server-room contract in [SERVER_ROOMS.md](SERVER_ROOMS.md). It serves the normal Vite build from Cloudflare Static Assets and routes `/api/rooms/<roomCode>/socket` to a named SQLite-backed Durable Object. N4c implements v2 admission, server-owned lifecycle coordination and local WebSocket gameplay. Durable checkpoint commits and restart recovery remain N4d work; local runtime success does not establish those guarantees.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ npm run test:rooms:local
 npx wrangler deploy --dry-run --env=""
 ```
 
-The first command builds the app and runs a bounded local runtime smoke test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, unknown and invalid routes, the WebSocket upgrade, repeatable room identity and distinct room/environment names. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
+The first command builds the app and runs a bounded local runtime test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, invalid routes, origin rejection, v2 handshake and input limits, room isolation/capacity, controller succession and resume, and four clients completing a six-putt game. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
 
 The dry run validates the pinned Worker/Static Assets/SQLite Durable Object bundle without publishing it. It is not a deployment or account-connection check. N4b does not configure remote bindings, routes, secrets, CI credentials, or account resources. Do not run `wrangler deploy` for this setup task.
 
@@ -34,7 +34,9 @@ The dry run validates the pinned Worker/Static Assets/SQLite Durable Object bund
 
 - `wrangler.jsonc` pins the Worker compatibility date and configures the SQLite Durable Object class through Wrangler's declarative `exports` configuration.
 - Room object names include environment, protocol v2 and the canonical room code; callers reject codes outside the accepted 1–12 lowercase ASCII letter/digit form.
-- The local WebSocket endpoint accepts the platform upgrade but intentionally does not implement the v2 hello/session protocol. A received frame closes with a transient-unavailable status until N4c integrates the server authority.
+- `ROOM_ALLOWED_ORIGINS` is an optional comma-separated exact-origin allowlist; configure it for non-local environments. Without it, only development loopback requests are accepted (same-origin when an `Origin` header is present).
+- `ROOM_POLICY` is an optional JSON object of validated new-room policy overrides (`reconnectGraceMs`, `controllerTransferDelayMs`, `emptyRoomTtlMs`). Invalid JSON, unknown fields or out-of-range values fail admission rather than silently falling back.
+- The room coordinator keeps current room state in the Durable Object instance and does not yet write/recover the N4a checkpoint. Do not treat this local runtime as a crash-recovery or production persistence check; N4d owns that boundary.
 - No remote account is selected and no preview/production route or custom domain is configured.
 - Before a preview can be deployed, N4g must obtain explicit authorization for the exact account, plan, resource names, origins, repository/token scopes and deploy action, then configure the route, secrets and rollback process. Never put tokens in source, client assets, logs or issue comments.
 
