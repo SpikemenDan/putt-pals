@@ -36,7 +36,8 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   const course = engine.course;
   const player = engine.addPlayer(id, name);
   player.mode = playing ? 'play' : 'spectator';
-  player.collectedPickups = {};
+  // No Power-Ups (GM1): every `?` block counts as already collected, so none is drawn or touchable.
+  player.collectedPickups = powerups.boxes === false ? Object.fromEntries((course.q || []).map((_, i) => [i, 1])) : {};
   player.inventory = inventory.slice();
   player.armedPowerups = armedState();
   player.pendingPowerups = pendingState();

@@ -20,12 +20,12 @@ const validState = s => s === 'lobby' || s === 'results' || (record(s) && Object
   && ((Object.hasOwn(s, 'select') && ['waiting', 'timing', 'choosingPutt'].includes(s.select))
     || (Object.hasOwn(s, 'play') && (s.play === 'starting' || (record(s.play) && Object.keys(s.play).length === 1
       && ['settling', 'running', 'replaying'].includes(s.play.active))))));
-const hostCommands = ['SET_MODE', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS'];
+const hostCommands = ['SET_MODE', 'SET_POWERUPS', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS'];
 export function validCommand(e, isHost) {
   if (!record(e) || typeof e.type !== 'string') return false;
   if (!isHost && hostCommands.includes(e.type)) return false;
   const fields = {
-    JOIN_ROOM: ['name', 'resume'], LEAVE_ROOM: [], SET_MODE: ['mode'], START_VOTING: [],
+    JOIN_ROOM: ['name', 'resume'], LEAVE_ROOM: [], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [],
     CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'], RETURN_TO_LOBBY: [],
     PRACTICE_STEP: ['step'], PRACTICE_MAPS: [],
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
@@ -35,6 +35,7 @@ export function validCommand(e, isHost) {
   switch (e.type) {
     case 'JOIN_ROOM': return name(e.name) && (e.resume === undefined || validResumeToken(e.resume));
     case 'SET_MODE': return Object.values(GameModes).includes(e.mode);
+    case 'SET_POWERUPS': return typeof e.enabled === 'boolean';
     case 'CAST_VOTE': return index(e.mapIndex, 22);
     case 'START_ROUND': return index(e.puttIndex, 6);
     case 'PRACTICE_STEP': return [-1, 0, 1].includes(e.step);
@@ -71,8 +72,9 @@ export function validSnapshot(s) {
       || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty']) && count(h.score) && typeof h.timedOut === 'boolean'
         && index(h.par, 11) && h.par > 0 && index(h.penalty, 11)))) return false;
   }
-  if (!keys(s, ['phase', 'mode', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
+  if (!keys(s, ['phase', 'mode', 'powerups', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
     'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence'])
+    || !(s.powerups === undefined || typeof s.powerups === 'boolean')
     || !Number.isFinite(s.roundLimitSeconds) || s.roundLimitSeconds < 120 || s.roundLimitSeconds > 600
     || typeof s.isHost !== 'boolean' || !validState(s.state)
     || (typeof s.state === 'string' ? s.state !== s.phase : !Object.hasOwn(s.state, s.phase)) || !record(s.votes) || Object.keys(s.votes).length > MAX_PLAYERS

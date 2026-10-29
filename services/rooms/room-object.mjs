@@ -8,7 +8,7 @@ import {
 
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
-  'mode', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
+  'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
   'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last',
 ];
 const commandRate = { burst: SERVER_ROOM_LIMITS.commandBurst, perSecond: SERVER_ROOM_LIMITS.commandsPerSecond };

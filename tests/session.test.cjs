@@ -46,6 +46,20 @@ const assert = require('node:assert/strict');
     assert.equal(f.session.send({ type: 'SET_MODE', playerId: 'host', mode: () => 1 }), false);
     f.session.dispose(); assert.equal(f.send('START_VOTING'), false);
   });
+  run('No Power-Ups (GM1): the host sets the room flag in the lobby only; it defaults on and survives starting', () => {
+    const f = make(['a']);
+    assert.equal(f.state().powerups, true, 'power-ups are on by default');
+    assert.equal(f.send('SET_POWERUPS', { enabled: false }, 'a'), false, 'guests cannot change it');
+    assert.equal(f.send('SET_POWERUPS', { enabled: 'no' }), false, 'must be a boolean');
+    assert.equal(f.send('SET_POWERUPS', {}), false, 'enabled is required');
+    assert.equal(f.state().powerups, true);
+    assert.equal(f.send('SET_POWERUPS', { enabled: false }), true);
+    assert.equal(f.state().powerups, false);
+    start(f, GameModes.TOURNAMENT_3);
+    assert.equal(f.state().powerups, false, 'the flag carries into the series');
+    assert.equal(f.send('SET_POWERUPS', { enabled: true }), false, 'not changeable once voting or play has started');
+    assert.equal(f.state().powerups, false);
+  });
   run('first vote starts 15 seconds; subsequent votes do not restart it; ties match legacy', () => {
     const f = make(['a', 'b']); f.send('START_VOTING'); f.clock.increment(30000);
     assert.equal(f.state().phase, 'select'); assert.equal(f.state().votingDeadline, 0);

@@ -43,14 +43,15 @@ export function createRoomPolicy(overrides = {}) {
   return Object.freeze(policy);
 }
 
-export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS']);
+export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'SET_POWERUPS', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS']);
 export function validServerCommand(c) {
   if (!object(c)) return false;
-  const fields = { LEAVE_ROOM: [], SET_MODE: ['mode'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
+  const fields = { LEAVE_ROOM: [], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
     RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'] }[c.type];
   if (!Array.isArray(fields) || !exact(c, ['type', ...fields])) return false;
   switch (c.type) {
     case 'SET_MODE': return modes.includes(c.mode);
+    case 'SET_POWERUPS': return typeof c.enabled === 'boolean';
     case 'CAST_VOTE': return [0, 8, 20, 21, 5, 19].includes(c.mapIndex);
     case 'START_ROUND': return index(c.puttIndex, 6);
     case 'PRACTICE_STEP': return [-1, 0, 1].includes(c.step);
@@ -83,8 +84,8 @@ const player = p => exact(p, ['id','name','connected','strokes','done','timedOut
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
 export function validSessionContext(c) {
-  if (!exact(c, ['mode','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'])
-    || !modes.includes(c.mode) || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
+  if (!exact(c, ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'])
+    || !modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > 4 || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))

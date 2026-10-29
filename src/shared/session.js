@@ -29,6 +29,7 @@ export const SessionCommands = Object.freeze({
   JOIN_ROOM: 'JOIN_ROOM',
   LEAVE_ROOM: 'LEAVE_ROOM',
   SET_MODE: 'SET_MODE',
+  SET_POWERUPS: 'SET_POWERUPS', // host: power-ups on or off for the room (GM1)
   START_VOTING: 'START_VOTING',
   CAST_VOTE: 'CAST_VOTE',
   START_ROUND: 'START_ROUND',
@@ -47,6 +48,7 @@ export function createInitialSessionState(options = {}) {
   return {
     phase: SessionPhases.LOBBY,
     mode: options.mode ?? GameModes.STANDARD,
+    powerups: options.powerups ?? true, // false = No Power-Ups: no boxes, no inventory (GM1)
     mapIndex: 0,
     puttIndex: 0,
     roundNumber: 0,
@@ -125,6 +127,7 @@ export function canExecuteCommand(phase, commandType, isHost) {
         SessionCommands.JOIN_ROOM,
         SessionCommands.LEAVE_ROOM,
         SessionCommands.SET_MODE,
+        SessionCommands.SET_POWERUPS,
         SessionCommands.START_VOTING,
       ].includes(commandType);
 

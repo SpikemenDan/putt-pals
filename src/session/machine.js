@@ -88,6 +88,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       host: ({ context: c, event: e }) => host(c, e),
       canJoin: ({ context: c, event: e }) => validIdentity(e) && validName(e.name) && !(own(c.players, e.playerId) && c.players[e.playerId].connected) && ids(c).length < MAX_PLAYERS && (!practice(c) || ids(c).length === 0),
       canLeave: ({ context: c, event: e }) => member(c, e),
+      powerups: ({ context: c, event: e }) => host(c, e) && typeof e.enabled === 'boolean',
       mode: ({ context: c, event: e }) => host(c, e) && modes.includes(e.mode) && (![GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(e.mode) || ids(c).length === 1),
       vote: ({ context: c, event: e }) => validVote(c, e),
       practice: ({ context: c }) => c.mode === GameModes.PRACTICE,
@@ -112,6 +113,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       join: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: own(c.players, e.playerId) ? { ...c.players[e.playerId], name: e.name, connected: true } : fresh(e.playerId, e.name) } })),
       leave: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], connected: false } }, votes: Object.fromEntries(Object.entries(c.votes).filter(([id]) => id !== e.playerId)) })),
       mode: assign(({ event: e }) => ({ mode: e.mode })),
+      powerups: assign(({ event: e }) => ({ powerups: e.enabled })),
       clearSeries: assign(({ context: c }) => clearSeries(c)),
       clearVotes: assign({ votes: () => ({}), votingDeadline: 0 }),
       lobby: assign(({ context: c }) => ({ ...clearSeries(c), mode: GameModes.STANDARD })),
@@ -156,7 +158,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       } : {}),
     },
     states: {
-      lobby: { on: { SET_MODE: { guard: 'mode', actions: 'mode' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
+      lobby: { on: { SET_MODE: { guard: 'mode', actions: 'mode' }, SET_POWERUPS: { guard: 'powerups', actions: 'powerups' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
       select: {
         initial: 'waiting',
         states: {
