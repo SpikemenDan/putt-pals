@@ -1,12 +1,12 @@
 # Project status
 
-Last updated: 2026-10-29. Accepted main: `333d06d` (N4c PR #81). Live ownership and blockers are in GitHub issues; the task graph is in TASKS.md and per-task evidence is in each PR and docs/reviews/.
+Last updated: 2026-10-29. Accepted main: `7b92fed` (CL1 PR #108). Live ownership and blockers are in GitHub issues; the task graph is in TASKS.md and per-task evidence is in each PR and docs/reviews/.
 
 ## Where the project stands
 
 The legacy single-file game has been rebuilt as a modular app (`index.html` and `src/`): headless shared simulation, validated course data, XState room lifecycle, React UI, Three.js 0.186.1 toon renderer with sky world, palettes, ambient weather and comic HUD, procedural audio, and PeerJS rooms with guest recovery and interpolation. `putt-pals.html` is kept as a separate build input and parity reference. The migration to server-owned Cloudflare rooms (N4) is under way: contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and a preview deployment are not. Online play in the browser still uses PeerJS.
 
-The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, T2, U2, CL1, CL2, G1a-G1f, GM1 and F1 may start now; T2 then S3 then SV1 come before G1g and K1, and the volumetric model K0 (true 3D levels, then water W2 and wind W3) before K1a.
+The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Merged from the vision backlog so far: T2 (one validated gameplay tuning module, `src/shared/tuning.js`, fields in docs/TUNING.md; PR #109, issue #83 closed), U2 (proportional aim arrow; PR #107, issue #84 stays open until the owner has judged the drag feel by hand) and CL1 (static geometry integrity validator over all 22 maps; PR #108, issue #102 stays open because two mover findings, Hourglass and Elevator Alley, are waived pending owner approval). Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, CL2, G1a-G1f, GM1 and F1 may start now; S3 (unblocked by T2) then SV1 come before G1g and K1, and the volumetric model K0 (true 3D levels, then water W2 and wind W3) before K1a.
 
 ## Confirmed owner decisions
 
