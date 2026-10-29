@@ -6,7 +6,7 @@ Last updated: 2026-10-29. Accepted main: `333d06d` (N4c PR #81). Live ownership 
 
 The legacy single-file game has been rebuilt as a modular app (`index.html` and `src/`): headless shared simulation, validated course data, XState room lifecycle, React UI, Three.js 0.186.1 toon renderer with sky world, palettes, ambient weather and comic HUD, procedural audio, and PeerJS rooms with guest recovery and interpolation. `putt-pals.html` is kept as a separate build input and parity reference. The migration to server-owned Cloudflare rooms (N4) is under way: contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and a preview deployment are not. Online play in the browser still uses PeerJS.
 
-The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; G1 and K1 wait on Q1 unless the owner un-gates them.
+The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, G1a-G1f, GM1 and F1 may start now; G1g and K1 wait on Q1's difficulty sweep.
 
 ## Confirmed owner decisions
 
@@ -15,7 +15,7 @@ The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No
 - Server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets. Defaults: immediate controller succession, 30-second reconnect grace, 15-minute empty-room retention. N3 TURN stays paused.
 - Original comic art direction: smooth flat colour, ink outlines, no scenery clutter. Ambient weather on Frost Hollow and Cyclone Ring is visual only.
 - Course direction: per-putt walled islands with designed gaps, true portal pairs, stronger fans.
-- Product vision as recorded in MODERNIZATION_PLAN.md, with decisions still open listed there.
+- Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 10 players, 3 inventory slots, everyone putts at once and advances together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
 - Approval is required before commits and remote writes (AGENTS.md).
 
 ## Known issues and gaps

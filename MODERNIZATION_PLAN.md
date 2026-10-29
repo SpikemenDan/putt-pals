@@ -50,18 +50,29 @@ Collectible ball skins and trail skins (speed lines, elemental auras, comic spar
 
 ## What exists today
 
-Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding the legacy power-ups Hole Magnet, Steady Aim, Rewind, Reversiball and Zanyball, `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms still use PeerJS; the server-owned room migration (N4) is in progress.
+Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding Hole Magnet and Steady Aim plus the legacy Rewind, Reversiball and Zanyball (retired by decision), `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms still use PeerJS; the server-owned room migration (N4) is in progress.
 
 Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other than Hole Magnet and Steady Aim, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers, skins and ace celebrations. The task breakdown is in TASKS.md.
 
-### Decisions needed from the owner
+### Room and scoring rules (owner decisions, 2026-10-29)
 
-1. **Legacy power-ups.** Rewind, Reversiball and Zanyball exist in the game but are not in the vision. Retire them, keep them, or fold them into the new catalog?
-2. **Solo pool.** The vision names Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball and Tall Ball for solo play. Should Sticky Ball, the bumpers and the global weather items also be allowed there?
-3. **Weather naming.** An earlier decision named Wind, Snow, Storm and Lightning as attack power-ups; the vision lists Rain, Snow, Wind, Lightning, Tornado and Hurricane. This plan follows the vision and treats Storm as Rain plus Lightning.
-4. **Skins.** Are skins unlocked through play or simply selectable? "Collectible" implies progression, and there are no accounts, so progress would live in the browser unless accounts are added.
-5. **Putt Pong rules.** Players per match, rack size, turn order, rebuttal or redemption rules and the winning condition.
-6. **Sequencing.** G1 and K1 are gated behind Q1 (release readiness). The power-up framework touches only simulation and app code, so it could start earlier; say if you want that.
+- Up to **10 players** per room, **3 inventory slots**.
+- **Everyone plays at once.** All players putt simultaneously on each putt, and the room moves to the next putt only when every player has finished (sunk or timed out).
+- **Win condition:** strokes minus par. The player with the lowest total relative to par after the 6 putts of a level wins. A casual game is one level; a tournament runs 3, 6 or 9 levels and the lowest total across them wins.
+- **Skins are simply selectable** for now (no unlock progression); the choice is stored locally in the browser.
+- **Legacy power-ups retired:** Rewind, Reversiball and Zanyball are removed in favor of the catalog above.
+- **Solo pool** (Solo and Practice): the self-enhancing power-ups only: Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball, Tall Ball and Sticky Ball. Bumpers and the global weather items are excluded because they are course hazards that exist to affect other players.
+- **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Tasks that change course geometry or physics for every shot (G1g, K1) stay after Q1's fresh difficulty sweep unless the owner un-gates them.
+
+Code today versus these rules: the app caps rooms at 8 players (`MAX_PLAYERS`), the player colour palette has 8 colours, hardcoded as `% 8` in the scorecard, HUD and renderer, and the N4 server-room contract is capped at 4 members, so raising the cap is task C3. Everyone-plays-at-once, advancing together, the 3 slots and the 3/6/9-level tournaments already exist. Ranking is by total strokes with hole-in-ones breaking ties; because every player has the same par this orders players the same as strokes minus par, and the scorecard already shows the relative score, but the results and tournament standings should lead with the relative-to-par figure and compute it from completed putts (C3).
+
+### Putt Pong (working defaults; the owner can change them when GM2 is specified)
+
+Teams of one or two (2-10 players split into two sides). Each side owns a rack of 6 cups. Both sides putt at the same time each round, using the same putt, and the round ends when everyone has finished. Each sunk putt eliminates one cup from the opposing rack (the shooter picks the cup); a side that eliminates the whole opposing rack first wins, and if the rack counts are level after a set number of rounds, fewer strokes over par breaks the tie. No power-ups by default.
+
+### Still open
+
+Whether tournament skins and cosmetics should one day unlock through play or an account (not needed now).
 
 ## Technology
 
@@ -91,7 +102,7 @@ TypeScript, Zod, Vitest, ESLint and Prettier were considered and are not adopted
 | M5 Three.js upgrade and desktop rendering validation | Done |
 | Look and feel (V1a-V1d): toon style, sky world, palettes, ambient weather, comic HUD | Done |
 | M6 Release readiness (Q1 #18): fresh difficulty ladder, production-like preview, rollback, manual playtests | Blocked on N4 |
-| Vision features (G1, K1, M1 and the new tasks in TASKS.md) | Not started; see Decisions needed |
+| Vision features (G1, K1, M1 and the new tasks in TASKS.md) | Not started; start order in the owner decisions above |
 
 M4 exit gate: four-player real-browser games across separate networks through an authorized deployed Worker; controller departure, guest recovery after hibernation or restart, forged, stale and versioned messages, bounded queues and quota failure all tested; deployment and rollback documented. Contracts and lifecycle defaults (immediate controller succession, 30-second reconnect grace, 15-minute empty retention) are in docs/networking/SERVER_ROOMS.md; local setup is in docs/networking/CLOUDFLARE_SETUP.md. The browser stays trusted for ball physics; the server owns room coordination. N3 (managed TURN) is paused as an alternative, not a prerequisite.
 

@@ -20,28 +20,29 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | [G1 #34](https://github.com/SpikemenDan/putt-pals/issues/34) | BLOCKED | Q1 | Umbrella for gameplay mechanics and power-ups; split into G1a-G1g below |
 | [K1 #35](https://github.com/SpikemenDan/putt-pals/issues/35) | BLOCKED | G1, Q1 | Umbrella for course redesign; split into K1a-K1d below |
 
-G1 and K1 are gated behind Q1 by an earlier owner decision. The power-up framework does not touch networking, so the owner may choose to start it earlier (MODERNIZATION_PLAN.md, decision 6).
+G1 and K1 were gated behind Q1 by an earlier owner decision. On 2026-10-29 the owner left the order to the coordinator, so G1a-G1f, GM1, F1 and C3 may start now (they leave default trajectories unchanged); G1g and K1 change course geometry and physics and stay after Q1's fresh difficulty sweep unless the owner un-gates them.
 
 ## Vision backlog (PROPOSED)
 
-Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). Create GitHub issues with the Agent task form after the owner settles the decisions listed in the plan; native dependencies below become blocked-by links. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
+Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). Create GitHub issues with the Agent task form; native dependencies below become blocked-by links. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
-| G1a Power-up framework | decisions 1-3 | Catalog data, 3-slot inventory with tournament carryover and single-play reset, stacking, hotkey and click activation, box spawn table, solo and No-Power-Ups filtering, validated effect messages, migrate Hole Magnet and Steady Aim, decide the fate of Rewind, Reversiball and Zanyball |
+| C3 Ten-player rooms and relative-to-par results | none | Raise the player cap to 10 across `MAX_PLAYERS`, protocol validators, session, UI and the N4 server-room contract (currently 4 members); extend the player palette to 10 colours and remove the hardcoded `% 8`; lead results, scorecard and tournament standings with strokes minus par computed from completed putts. Touches `src/shared` and the accepted N4 contract, so it goes through the integration owner |
+| G1a Power-up framework | none | Catalog data, 3-slot inventory with tournament carryover and single-play reset, stacking, hotkey and click activation, box spawn table, solo (self-enhancing) and No-Power-Ups filtering, validated effect messages, migrate Hole Magnet and Steady Aim, remove Rewind, Reversiball and Zanyball (including the `rev` and `zany` fx in the protocol and server-room contracts) |
 | G1b Self utility | G1a | Chip In (lofted shot), Ghost Ball, Small Ball and Tall Ball (per-ball radius), Sticky Ball |
 | G1c Aim sabotage | G1a | 360° Aim and 180° Aim as aim-indicator modes applied to opponents |
 | G1d Ball auras | G1a | Love Ball and Hate Ball, applied by each client to its own ball |
 | G1e Deployables | G1a | Bumper and Orbital Bumper (3 impacts, visible radius rings), synced objects |
 | G1f Global hazards | G1a | Rain, Snow, Wind, targeted Lightning, roaming Tornado and Hurricane driven by synced room time; keep distinct from the visual-only ambient weather |
-| G1g Course mechanics | none | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
+| G1g Course mechanics | Q1 sweep | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
 | GM1 No Power-Ups mode | G1a | Pure Mini-Golf mode flag and mode selector; verify Practice and solo draw only self-enhancing power-ups |
-| GM2 Putt Pong | decision 5 | Cup-rack mode: rules and elimination events in the session module, rack scene, scoring, lobby entry |
-| K1a Islands and walls | G1g | Per-putt floating islands with designed gaps, guard walls, declared open edges |
+| GM2 Putt Pong | C3, G1a | Cup-rack mode using the working defaults in MODERNIZATION_PLAN.md: rules and elimination events in the session module, rack scene, scoring, lobby entry |
+| K1a Islands and walls | G1g, Q1 sweep | Per-putt floating islands with designed gaps, guard walls, declared open edges |
 | K1b Ramps and drops | K1a | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | K1c Transport tubes | K1b | Enclosed tubes that carry and fling the ball between islands |
 | K1d Difficulty bands | K1a-K1c | Hole-in-one bands by map rating, re-solved starter maps, fresh sweep |
-| F1 Flair | decision 4 | Ball skins, trail skins and hole-in-one celebrations; local persistence; validated cosmetic ids in presence |
+| F1 Flair | C3 (palette) | Selectable ball skins, trail skins and hole-in-one celebrations; choice stored locally; validated cosmetic ids in presence |
 
 ## Delivered
 
