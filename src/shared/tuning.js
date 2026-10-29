@@ -67,6 +67,7 @@ export const TUNING_FIELDS = Object.freeze([
   ['aim.spreadExponent', 0.1, 10, 'How sharply spread grows with power.'],
   ['aim.fullPullPx', 10, 5000, 'Drag distance (CSS px) for full power.'],
   ['aim.canvasPullFraction', 0.01, 1, 'Full pull is also capped at this fraction of canvas width.'],
+  ['aim.arrowMaxLength', 1, 2000, 'World-unit length of the aim arrow at full power (no minimum).'],
   ['aim.dragRadiansPerPx', 0, 1, 'Aim rotation per pixel of orbit-less drag.'],
   ['aim.keyStep', 0, 1, 'Aim rotation per arrow-key press (radians).'],
   ['aim.guideMinCharge', 0, 1, 'Below this charge no aim guide is drawn.'],
@@ -96,7 +97,7 @@ export const DEFAULT_TUNING = {
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
-    fullPullPx: 260, canvasPullFraction: 0.36, dragRadiansPerPx: 0.006, keyStep: 0.06,
+    fullPullPx: 380, canvasPullFraction: 0.6, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
     guideMinCharge: 0.015, shotMinCharge: 0.025,
   },
 };

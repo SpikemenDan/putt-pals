@@ -52,8 +52,9 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `aim.spreadBase` | 0.002 | 0 to 1 | Angular spread (radians) at zero power. |
 | `aim.spreadGain` | 0.14 | 0 to 3 | Added spread (radians) at full power. |
 | `aim.spreadExponent` | 2.6 | 0.1 to 10 | How sharply spread grows with power. |
-| `aim.fullPullPx` | 260 | 10 to 5000 | Drag distance (CSS px) for full power. |
-| `aim.canvasPullFraction` | 0.36 | 0.01 to 1 | Full pull is also capped at this fraction of canvas width. |
+| `aim.fullPullPx` | 380 | 10 to 5000 | Drag distance (CSS px) for full power. |
+| `aim.canvasPullFraction` | 0.6 | 0.01 to 1 | Full pull is also capped at this fraction of canvas width. |
+| `aim.arrowMaxLength` | 300 | 1 to 2000 | World-unit length of the aim arrow at full power (no minimum). |
 | `aim.dragRadiansPerPx` | 0.006 | 0 to 1 | Aim rotation per pixel of orbit-less drag. |
 | `aim.keyStep` | 0.06 | 0 to 1 | Aim rotation per arrow-key press (radians). |
 | `aim.guideMinCharge` | 0.015 | 0 to 1 | Below this charge no aim guide is drawn. |

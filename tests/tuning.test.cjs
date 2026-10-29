@@ -27,13 +27,13 @@ async function run() {
   assert.deepEqual([TUNING.cup.sinkMargin, TUNING.cup.lipRestitutionBase, TUNING.cup.lipRestitutionGain], [1.5, 1.15, 0.6]);
   assert.equal(rules.ZANY_POWER, 1.6);
   assert.equal(aim.SWAY_PERIOD, 1.4);
-  assert.equal(aim.FULL_PULL_PX, 260);
+  assert.equal(aim.FULL_PULL_PX, 380);
   assert.equal(aim.AIM_STEP, 0.06);
   assert.equal(aim.DRAG_RADIANS_PER_PX, 0.006);
   assert.equal(aim.GUIDE_MIN_CHARGE, 0.015);
   assert.equal(aim.SHOT_MIN_CHARGE, 0.025);
   for (const p of [0, 0.25, 0.5, 1]) assert.equal(aim.spread(p), 0.002 + 0.14 * Math.pow(p, 2.6));
-  assert.equal(aim.chargeFromDrag(300, 0, 1000), Math.min(1, 300 / Math.min(260, 1000 * 0.36)));
+  assert.equal(aim.chargeFromDrag(300, 0, 1000), Math.min(1, 300 / Math.min(380, 1000 * 0.6)));
 
   // Frozen, and every field is documented and validated.
   assert.ok(Object.isFrozen(TUNING) && Object.isFrozen(TUNING.surface.turf));

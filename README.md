@@ -1,64 +1,66 @@
 # Putt Pals
 
-Desktop browser mini-golf with solo practice, private friend rooms and tournaments. The application is being modernized incrementally; the original game remains in `putt-pals.html`.
+A fast-paced 3D multiplayer mini-golf game for desktop browsers. It blends arcade party chaos (power-ups, hazards, trick shots) with skill-based putting: easy to jump into with friends, with real depth for competitive players. Modes today: solo practice, single-putt replay, private friend rooms, and 3-, 6- and 9-map tournaments. Planned: Putt Pong, a No Power-Ups mode, a full power-up and hazard catalog, vertical courses and cosmetics. See [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) for the vision and plan.
+
+The modular app (`index.html` and `src/`) is the game. The original single-file version, `putt-pals.html`, is kept as a parity reference.
 
 ## Setup
 
-Use Node.js 22.22.2+ on the 22.x line, 24.15.0+ on the 24.x line, or 26+. These match the pinned jsdom runtime requirements. Development was verified with Node 26.10.0 and npm 11.19.1. Install the exact dependency tree from the committed lockfile:
+Use Node.js 22.22.2+ on the 22.x line, 24.15.0+ on the 24.x line, or 26+ (the pinned jsdom runtime requires these). Install the exact dependency tree from the lockfile:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/putt-pals.html` (or the port Vite prints). The dev command also opens that page in your browser. Keep the `/putt-pals.html` path during this baseline stage; a root index entry will be introduced during module extraction.
-
-Three.js and PeerJS remain embedded at their existing versions. Vite 8.3.5 and jsdom 30.1.3 are pinned development dependencies. XState 5.33.3 powers the extracted headless session module. Shared contracts, simulation and course/CLI modules are available, and N1 adds transport adapters through PR #24 and A1 adds the [procedural audio adapter](src/audio/README.md) through PR #25; the shipped browser still uses its legacy embedded game. TypeScript, React and lint/format tooling remain planned; there is no type-check or lint script yet.
+Vite prints the local URL (normally `http://127.0.0.1:5173/`). The modular app is served at the root path; the legacy game is at `/putt-pals.html`, which is the page the `dev` and `preview` scripts open by default. Use solo mode to develop without any online service.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
 | `npm run check` | Legacy tooling syntax, game syntax and course metadata checks |
-| `npm run test:contracts` | Canonical shared contract, rule, schema and mock tests |
-| `npm run test:simulation` | Extracted headless simulation parity and lifecycle tests |
-| `npm run test:session` | Fourteen fake-clock room lifecycle, voting and scoring scenarios |
-| `npm run test:network` | Nine transport/protocol scenarios, including four fake clients and PeerJS-shaped channels |
-| `npm run test:audio` | Nine procedural-recipe, domain-event and WebAudio resource/lifecycle scenarios |
-| `npm run test:cli` | Imported course/solver/arena commands, parity, file inputs and failure paths |
-| `npm run test:courses` | Validate all 22 courses and detect stale inventory/source hashes |
-| `npm run test:physics` | Surface/timer, cup and mechanic checks; may take around a minute |
-| `npm run test:smoke` | Solo, tournament, practice, scorecard and camera behavior in jsdom |
-| `npm run test:multiplayer` | Four jsdom clients using an in-memory PeerJS substitute |
-| `npm test` | All of the above checks, sequentially; allow several minutes |
-| `npm run baseline:solver` | Check launch parity, solve 36 starter putts and overwrite the measured baseline fixture; allow several minutes |
-| `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; use `--full` for an expensive exhaustive search |
-| `npm run rank` | Inspect historical difficulty counts; these are stale and do not certify current difficulty |
-| `npm run build` | Produce `dist/putt-pals.html` and verify that all three runtime scripts are preserved exactly |
-| `npm run preview` | Serve the built game locally, normally at `http://127.0.0.1:4173/putt-pals.html` |
+| `npm run test:contracts` | Shared contracts, rules, schemas, mocks and server-room contracts |
+| `npm run test:simulation` | Headless simulation parity and cup-capture tests |
+| `npm run test:session` | Fake-clock room lifecycle, voting and scoring scenarios |
+| `npm run test:network` | Transport and protocol scenarios, including fake multi-client rooms |
+| `npm run test:audio` | Procedural audio recipes, event mapping and resource lifecycle |
+| `npm run test:render` | Renderer and camera parity, toon style, palettes and weather |
+| `npm run test:input` | Desktop input parity |
+| `npm run test:ui` | React screens, UI store and cleanup |
+| `npm run test:app` | Composed app flows, four clients and cleanup |
+| `npm run test:courses` | Validate all 22 courses and detect stale inventory hashes |
+| `npm run test:cli` | Course, solver and arena commands, file inputs and failure paths |
+| `npm run test:physics` | Legacy surface, cup and mechanic checks; may take around a minute |
+| `npm run test:integration` | Integration checks such as out-of-bounds handling |
+| `npm run test:smoke` | Legacy solo, tournament, practice, scorecard and camera flows in jsdom |
+| `npm run test:multiplayer` | Legacy four-client flow over an in-memory PeerJS substitute |
+| `npm run test:browser` | Playwright real-browser suites (`npx playwright test --project=chromium` for Chromium only) |
+| `npm run test:rooms:local` | Build, then check the local Cloudflare Worker and Durable Object runtime |
+| `npm test` | The main suites above, sequentially; allow several minutes |
+| `npm run build` | Build `dist/` and verify that the legacy page's scripts are preserved exactly |
+| `npm run preview` | Serve the built game locally, normally at `http://127.0.0.1:4173/` |
+| `npm run rooms:dev` | Run the local Worker room runtime (see [Cloudflare setup](docs/networking/CLOUDFLARE_SETUP.md)) |
+| `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; add `--full` for an exhaustive search |
+| `npm run rank` | Print recorded difficulty counts; these are stale and do not certify current difficulty |
+| `npm run baseline:solver` | Regenerate the solver baseline fixture (several minutes; overwrites it) |
 
-jsdom now installs in this project; no temporary directory or NODE_PATH configuration is necessary. Smoke tests stub WebGL, canvas and audio. Multiplayer smoke tests simulate networking. These tests do not prove real rendering, audio quality, WebRTC connectivity or TURN behavior.
+jsdom suites stub WebGL, canvas and audio and use fake networks. They do not prove real rendering, audio quality or WebRTC connectivity; use the Playwright suites and manual playtests for those. Exhaustive difficulty sweeps run separately from pull-request checks. Solver and fixture details are in [docs/BASELINE.md](docs/BASELINE.md) and [docs/reviews/B4_DIFFICULTY.md](docs/reviews/B4_DIFFICULTY.md).
 
-The solver fixture at `tests/fixtures/solver-baseline.json` records the first robust shot per putt, source hashes and robustness offsets. Regeneration intentionally changes that fixture when the solver or game changes. Exhaustive difficulty rankings require a separate full sweep.
+## Online rooms
+
+Browser rooms currently use PeerJS (client-trusted physics, host-owned room flow). The selected replacement is server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets: the contract is in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md) and the local runtime in [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md). Browser adoption and deployment are future work.
 
 ## Build and hosting
 
-Vite currently processes the existing HTML without extracting or upgrading its embedded runtime scripts. The build check protects that baseline; it does not certify rendering. Deploy only the generated `dist/` directory to static HTTPS hosting, with `/putt-pals.html` as the game URL. Development and preview servers bind to loopback by default; they are not production hosts. Hosting setup and deployment are not part of this baseline task.
-
-The current online-room implementation still uses PeerJS signaling and exposes manual ICE settings. N1 provides [modular PeerJS adapters](src/network/README.md); the modular app's online rooms currently use that path. The selected next architecture is server-owned Cloudflare Durable Object rooms over WebSockets. N4a's contract is accepted at `b30552f` and documented in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md); N4b's local Worker/SQLite Durable Object routing scaffold is accepted through PR #75 at `be77190`, with setup in [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md). Gameplay protocol/authority, browser cutover and deployment remain future work; N3/TURN is paused rather than a fallback. Use solo mode to develop without online services.
+Deploy only the generated `dist/` directory to static HTTPS hosting. Development and preview servers bind to loopback and are not production hosts. Production deployment is a Q1 task and needs the owner's authorization.
 
 ## Contributing and agent coordination
 
-Start with [AGENTS.md](AGENTS.md), [the issue discovery/claim guide](docs/ISSUES.md) and [the GitHub workflow](docs/GITHUB_WORKFLOW.md). The [GitHub agent backlog](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task) is now the live work queue. Agents asked to pick up work inspect ready issues, comments, native dependencies and existing claims before choosing a task. Each worker uses a confirmed issue, isolated branch/worktree and linked PR. [TASKS.md](TASKS.md) remains the coordinator's roadmap snapshot; [PROJECT_STATUS.md](PROJECT_STATUS.md) records integration evidence.
+Start with [AGENTS.md](AGENTS.md), [docs/ISSUES.md](docs/ISSUES.md) and [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md). The [GitHub agent backlog](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task) is the live work queue; each worker uses a confirmed issue, an isolated branch and a linked PR.
 
 ```sh
 gh issue list --repo SpikemenDan/putt-pals --state open --label agent-task --label status:ready --search 'no:assignee'
 ```
 
-An empty assignee field does not rule out a claim in the issue body/comments. Confirm one worker/session with the coordinator before editing, and report progress on the issue rather than making every worker edit shared status files.
-
-Local templates live in `.github/ISSUE_TEMPLATE/agent-task.yml` and `.github/pull_request_template.md`. `.github/workflows/ci.yml` defines the `baseline-ci` job: install, syntax/data checks, build, physics and both jsdom smoke suites. Its [first hosted run passed](https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160) for b333495. Real task issues, workflow labels and native prerequisite links are now set up; branch protection and agent runners remain separate setup. The workflow explicitly runs contract, simulation, session, network, audio, course and CLI suites as well. N1 current-head CI and acceptance evidence are recorded in [PR #24](https://github.com/SpikemenDan/putt-pals/pull/24); local checks alone do not establish hosted acceptance. T1 still owns further integration/browser coverage. No typecheck, lint, real-browser or deployment automation is claimed.
-
-The migration reference inventory and manual Chrome captures are described in [docs/BASELINE.md](docs/BASELINE.md). Run `node scripts/inventory-baseline.cjs --check` to verify the source inventory and representative headless traces; `--write` intentionally regenerates it. Embedded library evidence and provenance limits are in [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
-
-[ARCHITECTURE.md](ARCHITECTURE.md) and [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) describe the migration. [HANDOFF.md](HANDOFF.md) retains historical requirements and feature logs, including stale architecture details.
+An empty assignee field does not rule out a claim in the issue body or comments, so confirm one worker per issue with the coordinator before editing. Documents: [ARCHITECTURE.md](ARCHITECTURE.md) (modules, contracts, gameplay systems design), [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) (vision, technology, stages), [TASKS.md](TASKS.md) (roadmap), [PROJECT_STATUS.md](PROJECT_STATUS.md) (accepted state and known issues), [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md) (embedded library provenance) and [docs/reviews/](docs/reviews/) (per-task handoffs). Issue and PR templates and the CI workflow are in `.github/`.

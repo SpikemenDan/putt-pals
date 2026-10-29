@@ -132,6 +132,10 @@ function firstDifference(a, b, at = '$') {
 }
 const same = (actual, expected, label) => { const d = firstDifference(actual, expected); assert.equal(d, null, `${label}: ${d}`); };
 
+// U2: the legacy spread cone (3 vertices) and twelve guide dots are replaced by one arrow (9 vertices);
+// static-scene parity comparisons exclude the guide on both sides (the arrow has its own test).
+const isAimGuide = c => c.geometry?.parameters?.radius === 2.8 || (c.isMesh && c.geometry?.type === 'BufferGeometry' && [3, 9].includes(c.geometry.attributes.position?.count) && c.material?.side === 2);
+
 const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.children.length > 20 && c.children.some(x => x.userData.fade || x.geometry?.type === 'BoxGeometry'));
 
 (async () => {
@@ -170,7 +174,7 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     const view = makeView();
     view.setCourse(definitions[0], 0);
     const mine = view.renderer.scene;
-    const strip = scene => scene.children.filter(c => c !== legacyCourseGroup(scene) && c !== view.renderer.course?.group).map(c => node(c, { skipChildren: true }));
+    const strip = scene => scene.children.filter(c => c !== legacyCourseGroup(scene) && c !== view.renderer.course?.group && !isAimGuide(c)).map(c => node(c, { skipChildren: true }));
     // Legacy draw() has run, so compare only construction-time state of the per-frame objects.
     const L = strip(legacy), M = strip(mine);
     assert.equal(M.length, L.length, 'same number of static scene children');
@@ -223,7 +227,7 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     same([...mineCam.position.toArray(), ...mineCam.quaternion.toArray()], [...legacyCam.position.toArray(), ...legacyCam.quaternion.toArray()], `${label} camera @${now}`);
     const ls = P().ball.parent, ms = view.renderer.scene;
     assert.notEqual(ls, ms, "comparing two different scenes");
-    const pick = scene => scene.children.filter(c => !c.isGroup || c === legacyCourseGroup(scene) || c === view.renderer.course.group);
+    const pick = scene => scene.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === legacyCourseGroup(scene) || c === view.renderer.course.group));
     const L = pick(ls).map(c => node(c)), M = pick(ms).map(c => node(c));
     same(M, L, `${label} full scene @${now}`);
   }
@@ -240,7 +244,7 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     // Dream shapes and the ball spin a little every frame since boot; the legacy game has drawn more
     // frames than this new view, so copy those accumulated rotations once. Everything else is compared.
     {
-      const legacyScene = P().ball.parent, statics = scene => scene.children.filter(c => !c.isGroup);
+      const legacyScene = P().ball.parent, statics = scene => scene.children.filter(c => !c.isGroup && !isAimGuide(c));
       const L = statics(legacyScene), M = statics(view.renderer.scene);
       assert.equal(M.length, L.length);
       L.forEach((o, i) => M[i].rotation.copy(o.rotation));
@@ -376,16 +380,28 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     view.dispose();
   });
 
-  await scenario('aim guide: cone and dots follow the legacy aim geometry', async () => {
+  await scenario('aim guide: one arrow, length proportional to pull, along the swayed direction, no cone', async () => {
     const guide = (await import('../src/render/actors.js')).createAimGuide(THREE);
+    assert.equal(guide.cone, undefined, 'spread cone removed');
+    assert.equal(guide.dots, undefined, 'dots removed');
     const bp = new THREE.Vector3(100, 5, 200);
-    guide.show(bp, { charge: 0.6, angle: 0.4, aimAngle: 0.35, spread: 0.05, reverse: true });
-    const L = 50 + 0.6 * 250, pos = guide.cone.geometry.attributes.position;
-    assert.deepEqual(Array.from(pos.array), [100, 5, 200, 100 + Math.cos(0.35 + Math.PI - 0.05) * L, 5, 200 + Math.sin(0.35 + Math.PI - 0.05) * L, 100 + Math.cos(0.35 + Math.PI + 0.05) * L, 5, 200 + Math.sin(0.35 + Math.PI + 0.05) * L].map(Math.fround));
-    guide.dots.forEach((d, i) => { const r = (i + 1) * L / 12; assert.deepEqual(Array.from(d.position.toArray()), [100 + Math.cos(0.4) * r, 5, 200 + Math.sin(0.4) * r]); assert.equal(d.visible, true); });
-    assert.equal(guide.dots[0].material.color.getHex(), new THREE.Color().setHSL((120 - 0.6 * 120) / 360, 0.85, 0.6).getHex());
+    const tip = (charge, angle) => {
+      guide.show(bp, { charge, angle, aimAngle: 0, spread: 0.05, length: charge * 300 });
+      const p = guide.arrow.geometry.attributes.position;
+      return { x: p.getX(7), y: p.getY(7), z: p.getZ(7) };
+    };
+    for (const c of [0.02, 0.1, 0.5, 1]) {
+      const t = tip(c, 0.4);
+      assert.ok(Math.abs(Math.hypot(t.x - 100, t.z - 200) - c * 300) < 1e-3, `length at charge ${c}`);
+      assert.ok(Math.abs(Math.atan2(t.z - 200, t.x - 100) - 0.4) < 1e-5, 'points along the swayed angle');
+      assert.equal(t.y, 5);
+    }
+    assert.ok(guide.arrow.visible);
+    const p = guide.arrow.geometry.attributes.position;
+    for (let i = 0; i < 9; i++) assert.ok(Number.isFinite(p.getX(i) + p.getY(i) + p.getZ(i)));
+    assert.equal(guide.arrow.material.color.getHex(), new THREE.Color().setHSL((120 - 1 * 120) / 360, 0.85, 0.6).getHex());
     guide.hide();
-    assert.ok(guide.dots.every(d => !d.visible) && !guide.cone.visible);
+    assert.ok(!guide.arrow.visible);
   });
 
   await scenario('ownership: course swaps release every course resource and keep shared ones', async () => {

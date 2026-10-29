@@ -32,7 +32,7 @@ Raw messages use JSON strings, 64 KiB per envelope, strict version/session/round
 
 Real-browser gameplay, actual WebRTC, restrictive/separate networks, TURN, reconnect, latency/interpolation and deployed-origin behavior have not been run. PR #24 triggers hosted baseline-ci; its current-head CI and merge evidence are recorded there. Post-merge checks are recorded in issue #11; no hosted result is inferred from local checks. Existing source/VM migration reference paths remain untouched. N1 local results do not complete I1, N2, N3, T1, D1's browser adoption, or release gates.
 
-The user-requested documentation follow-up updates README.md, ARCHITECTURE.md, MODERNIZATION_PLAN.md, HANDOFF.md pointers, PROJECT_STATUS.md, TASKS.md, docs/ISSUES.md, docs/GITHUB_WORKFLOW.md and this review handoff. ARCHITECTURE.md is normalized to LF under .gitattributes while correcting current module/scoring descriptions. Historical feature decisions and verification logs are preserved; branch work is explicitly distinguished from accepted main. No product, source, dependency or test implementation changes are made by the documentation follow-up.
+The user-requested documentation follow-up updates README.md, ARCHITECTURE.md, MODERNIZATION_PLAN.md, PROJECT_STATUS.md, TASKS.md, docs/ISSUES.md, docs/GITHUB_WORKFLOW.md and this review handoff. ARCHITECTURE.md is normalized to LF under .gitattributes while correcting current module/scoring descriptions. Historical feature decisions and verification logs are preserved; branch work is explicitly distinguished from accepted main. No product, source, dependency or test implementation changes are made by the documentation follow-up.
 
 ## Coordinator review and completion
 
