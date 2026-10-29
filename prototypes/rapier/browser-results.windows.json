@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-10-29T01:51:24.460Z",
+  "browser": "156.0.8078.48",
+  "headless": true,
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "results": [
+    {
+      "ready": true,
+      "scene": "flat",
+      "elapsed": 2.004166666666661,
+      "position": [
+        1079.5263290405273,
+        0,
+        -0.08989751338958768
+      ],
+      "frameCount": 302,
+      "initializationMs": 28.69999999552965,
+      "colliders": 4
+    },
+    {
+      "ready": true,
+      "scene": "ramp",
+      "elapsed": 2.004166666666661,
+      "position": [
+        606.9993495941162,
+        -0.16097085317596793,
+        59.9559736251831
+      ],
+      "frameCount": 596,
+      "initializationMs": 28.69999999552965,
+      "colliders": 6
+    },
+    {
+      "ready": true,
+      "scene": "drop",
+      "elapsed": 2.004166666666661,
+      "position": [
+        1134.6955299377441,
+        0,
+        -0.09295225143432645
+      ],
+      "frameCount": 890,
+      "initializationMs": 28.69999999552965,
+      "colliders": 5
+    },
+    {
+      "ready": true,
+      "scene": "tube",
+      "elapsed": 2.004166666666661,
+      "position": [
+        1286.3868713378906,
+        -0.30299921054393053,
+        -0.08924372494220761
+      ],
+      "frameCount": 1184,
+      "initializationMs": 28.69999999552965,
+      "colliders": 5
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "limitations": "Real browser production-bundle smoke, not a human feel/listening or full-game test."
+}
