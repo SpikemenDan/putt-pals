@@ -10,7 +10,7 @@ import { calculateTimeoutScore } from '../shared/scoring.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { outOfBounds, sinkBall, surfaceHeight } from '../simulation/physics.js';
 import { SimulationEngine } from '../simulation/index.js';
-import { activatePowerup, addToInventory, armedState, auraOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
+import { activatePowerup, addToInventory, armedState, auraOf, ballRadiusOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
 import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
@@ -66,7 +66,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
     aimAngle: () => aimAtHole(course, player),
     /** Ball state the renderer and presence use. */
     view(now) {
-      return { x: player.x, y: player.y, z: player.z, vx: player.vx, vy: player.vy, moving: player.moving, mode: player.mode === 'sunk' && now >= waitUntil ? 'wait' : player.mode, effect: auraOf(player, now), collected: { ...player.collectedPickups } };
+      return { x: player.x, y: player.y, z: player.z, vx: player.vx, vy: player.vy, moving: player.moving, mode: player.mode === 'sunk' && now >= waitUntil ? 'wait' : player.mode, effect: auraOf(player, now), radius: ballRadiusOf(player), collected: { ...player.collectedPickups } };
     },
     get mode() { return player.mode === 'sunk' && localNow() >= waitUntil ? 'wait' : player.mode; },
 

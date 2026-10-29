@@ -3,4 +3,4 @@ export {
   isOpponentPowerup, powerupName, auraIds, spawnPool, rollPowerup,
 } from './catalog.js';
 export { MAX_INVENTORY, powerupPolicy, startingInventory, addToInventory, takeFromInventory } from './inventory.js';
-export { armedState, pendingState, activatePowerup, clearAtLaunch, receiveEffect, auraOf, validEffectMessage } from './effects.js';
+export { armedState, pendingState, activatePowerup, clearAtLaunch, clearAtRest, ballRadiusOf, receiveEffect, auraOf, validEffectMessage } from './effects.js';

@@ -42,6 +42,9 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `rest.groundTolerance` | 0.6 | 0 to 10 | Height above the surface still counted as grounded. |
 | `powerups.magnetRange` | 90 | 0 to 1000 | Hole Magnet reach (full-size cup). |
 | `powerups.magnetPull` | 300 | 0 to 10000 | Hole Magnet pull acceleration (full-size cup). |
+| `powerups.chipLaunch` | 300 | 0 to 5000 | Chip In vertical launch speed added to the shot. |
+| `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
+| `powerups.tallBallScale` | 1.5 | 1 to 1.6 | Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup). |
 | `hazards.padRadius` | 18 | 0 to 100 | Jump pad trigger radius. |
 | `hazards.padLaunch` | 400 | 0 to 5000 | Jump pad launch speed (vertical). |
 | `hazards.padCooldown` | 0.6 | 0 to 10 | Seconds before a pad can fire again. |
