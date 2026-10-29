@@ -6,7 +6,7 @@ Last updated: 2026-10-29. Accepted main: `333d06d` (N4c PR #81). Live ownership 
 
 The legacy single-file game has been rebuilt as a modular app (`index.html` and `src/`): headless shared simulation, validated course data, XState room lifecycle, React UI, Three.js 0.186.1 toon renderer with sky world, palettes, ambient weather and comic HUD, procedural audio, and PeerJS rooms with guest recovery and interpolation. `putt-pals.html` is kept as a separate build input and parity reference. The migration to server-owned Cloudflare rooms (N4) is under way: contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and a preview deployment are not. Online play in the browser still uses PeerJS.
 
-The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, G1a-G1f, GM1 and F1 may start now; S3 then SV1 come before G1g and K1.
+The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, U2, G1a-G1f, GM1 and F1 may start now; S3 then SV1 come before G1g and K1.
 
 ## Confirmed owner decisions
 

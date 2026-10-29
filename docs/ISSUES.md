@@ -111,7 +111,7 @@ This table links roadmap IDs to their issues; current state and ownership are al
 
 ## Vision backlog
 
-The product vision in MODERNIZATION_PLAN.md is broken into proposed tasks (C3, S3, SV1, G1a-G1g, GM1, GM2, K1a-K1d, F1) in TASKS.md. They have no GitHub issues yet. The owner has settled the decisions the plan listed; the coordinator opens each issue with the Agent task form, links native blocked-by dependencies and splits the G1, K1 and M1 umbrellas. A proposed task is not authorized work until it has an issue and a confirmed claim.
+The product vision in MODERNIZATION_PLAN.md is broken into proposed tasks (C3, S3, U2, SV1, G1a-G1g, GM1, GM2, K1a-K1d, F1) in TASKS.md. They have no GitHub issues yet. The owner has settled the decisions the plan listed; the coordinator opens each issue with the Agent task form, links native blocked-by dependencies and splits the G1, K1 and M1 umbrellas. A proposed task is not authorized work until it has an issue and a confirmed claim.
 
 ## Superseded and historical notes
 
