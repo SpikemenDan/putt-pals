@@ -111,7 +111,29 @@ This table links roadmap IDs to their issues; current state and ownership are al
 
 ## Vision backlog
 
-The product vision in MODERNIZATION_PLAN.md is broken into proposed tasks (C3, T2, S3, U2, SV1, G1a-G1g, GM1, GM2, K1a-K1d, F1) in TASKS.md. They have no GitHub issues yet. The owner has settled the decisions the plan listed; the coordinator opens each issue with the Agent task form, links native blocked-by dependencies and splits the G1, K1 and M1 umbrellas. A proposed task is not authorized work until it has an issue and a confirmed claim.
+Issues for the product vision in MODERNIZATION_PLAN.md were opened on 2026-10-29 with native blocked-by links; the owner has settled the decisions the plan listed. T2, U2, C3, G1a and F1 are `status:ready`; the others are `status:blocked` by the issues in the Depends on column of TASKS.md. G1 (#34) and K1 (#35) are umbrellas for G1a-G1g and K1a-K1d; M1 (#36) still needs splitting. An issue is not authorized work until the coordinator confirms a claim. Labels: `vision`, `area:physics|gameplay|courses|ui|network`, and `needs:integration-owner` for tasks that touch `src/shared`, package files or CI.
+
+| ID | Issue | Title |
+| --- | --- | --- |
+| T2 | [#83](https://github.com/SpikemenDan/putt-pals/issues/83) | One gameplay tuning file |
+| U2 | [#84](https://github.com/SpikemenDan/putt-pals/issues/84) | Proportional aim arrow |
+| C3 | [#85](https://github.com/SpikemenDan/putt-pals/issues/85) | Eight-player server rooms and relative-to-par results |
+| S3 | [#86](https://github.com/SpikemenDan/putt-pals/issues/86) | Forgiving physics: smooth surfaces and cup fillet |
+| SV1 | [#87](https://github.com/SpikemenDan/putt-pals/issues/87) | Par-route solver |
+| G1a | [#88](https://github.com/SpikemenDan/putt-pals/issues/88) | Power-up framework |
+| G1b | [#89](https://github.com/SpikemenDan/putt-pals/issues/89) | Self utility power-ups |
+| G1c | [#90](https://github.com/SpikemenDan/putt-pals/issues/90) | Aim sabotage power-ups |
+| G1d | [#91](https://github.com/SpikemenDan/putt-pals/issues/91) | Ball aura power-ups |
+| G1e | [#92](https://github.com/SpikemenDan/putt-pals/issues/92) | Deployables |
+| G1f | [#93](https://github.com/SpikemenDan/putt-pals/issues/93) | Global hazards |
+| G1g | [#94](https://github.com/SpikemenDan/putt-pals/issues/94) | Course mechanics |
+| GM1 | [#95](https://github.com/SpikemenDan/putt-pals/issues/95) | No Power-Ups mode |
+| GM2 | [#96](https://github.com/SpikemenDan/putt-pals/issues/96) | Putt Pong (1v1) |
+| K1a | [#97](https://github.com/SpikemenDan/putt-pals/issues/97) | Islands and walls |
+| K1b | [#98](https://github.com/SpikemenDan/putt-pals/issues/98) | Ramps and drops |
+| K1c | [#99](https://github.com/SpikemenDan/putt-pals/issues/99) | Transport tubes |
+| K1d | [#100](https://github.com/SpikemenDan/putt-pals/issues/100) | Difficulty bands and starter maps |
+| F1 | [#101](https://github.com/SpikemenDan/putt-pals/issues/101) | Flair: skins, trails, celebrations |
 
 ## Superseded and historical notes
 

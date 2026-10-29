@@ -7,11 +7,11 @@
 3. docs/ISSUES.md and the live GitHub issue and linked PR: eligible work, ownership, allowed paths, dependencies and authorization. GitHub issues are the live queue; do not pick work from a stale local list.
 4. PROJECT_STATUS.md: accepted state of main, confirmed owner decisions and known issues.
 5. ARCHITECTURE.md: module boundaries, shared contracts and the design for power-ups, hazards, modes and cosmetics.
-6. TASKS.md: roadmap IDs, dependency graph and the proposed vision backlog.
+6. TASKS.md: roadmap IDs, dependency graph and the vision backlog.
 
 ## Scope and authority
 
-GitHub issues track work, claims, blockers and acceptance. When told to work on the next task, discover and claim an eligible issue using docs/ISSUES.md and the coordinator process; do not invent a task or duplicate another worker. A roadmap entry or a ready label alone does not authorize the whole backlog. Vision tasks marked PROPOSED in TASKS.md need a GitHub issue, settled owner decisions (listed in MODERNIZATION_PLAN.md) and a coordinator-confirmed claim before implementation.
+GitHub issues track work, claims, blockers and acceptance. When told to work on the next task, discover and claim an eligible issue using docs/ISSUES.md and the coordinator process; do not invent a task or duplicate another worker. A roadmap entry or a ready label alone does not authorize the whole backlog. Vision tasks in TASKS.md have GitHub issues (labels `vision`, `area:*`); each still needs a coordinator-confirmed claim, and tasks labelled `needs:integration-owner` go through the integration owner for `src/shared` and package changes.
 
 Obtain user approval before commits under the current preference. Remote writes (push, issue or PR creation, comments), merges, deployments and paid provisioning require applicable user authorization; document bounded delegated actions in an assignment and do not ask again for what is already authorized. These workflow files do not grant authorization or launch agents.
 
