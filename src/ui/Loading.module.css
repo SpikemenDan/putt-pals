@@ -1,0 +1,10 @@
+
+/* Loading screen (M1c): covers the start screen while a room opens. */
+.loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background-color:var(--sky);background-image:radial-gradient(rgba(255,255,255,.25) 2px,transparent 2.6px);background-size:18px 18px;text-align:center}
+.loadingTitle{margin:0;font:900 34px/1.1 var(--font);text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
+.bar{width:min(80vw,360px);height:20px;border:var(--line) solid var(--ink);border-radius:10px;background:#fff;overflow:hidden;box-shadow:var(--shadow)}
+.bar i{display:block;height:100%;width:40%;background:var(--pink);border-right:var(--line) solid var(--ink);animation:slide 1.2s ease-in-out infinite alternate}
+.tip{max-width:min(90vw,520px);margin:0;padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font-size:17px;font-weight:700}
+.tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:900 12px var(--font);letter-spacing:2px}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(150%)}}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}

@@ -11,6 +11,11 @@ export function createRecipes({ tone, puff, random }) {
   splash:(c,t,o)=>{puff(c,o,'lowpass',3000,300,t,.5,1);tone(c,o,'sine',300,100,t,.2,.3);},
   teleport:(c,t,o)=>{tone(c,o,'sine',300,1500,t,.3,.4);tone(c,o,'sine',306,1520,t,.3,.3);},
   warp:(c,t,o)=>{tone(c,o,'sine',200,900,t,.6,.4);tone(c,o,'sine',203,910,t,.6,.3);puff(c,o,'bandpass',800,2500,t,.6,.2);},
-  boing:(c,t,o)=>{tone(c,o,'sine',180,700,t,.22,.6);tone(c,o,'square',180,700,t,.15,.08);}
+  boing:(c,t,o)=>{tone(c,o,'sine',180,700,t,.22,.6);tone(c,o,'square',180,700,t,.15,.08);},
+  // M1d: menu and turn feedback. New cues only; the legacy recipes above are unchanged.
+  menu_hover:(c,t,o)=>{tone(c,o,'sine',880,1040,t,.05,.15);},
+  menu_click:(c,t,o)=>{tone(c,o,'triangle',520,780,t,.09,.3);puff(c,o,'highpass',3000,3000,t,.02,.15);},
+  ready:(c,t,o)=>{tone(c,o,'sine',523,523,t,.16,.3);tone(c,o,'sine',784,784,t+.09,.22,.3);},
+  ring:(c,t,o)=>{tone(c,o,'sine',440,660,t,.18,.12);}
   });
 }

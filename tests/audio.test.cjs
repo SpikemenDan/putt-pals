@@ -94,6 +94,22 @@ class Gestures {
       await f.adapter.dispose(); assert.equal(f.c.closeCalls, 1);
     }
   });
+  await run('menu, turn-ready and ring cues (M1d) play as short voices and route through handleEvent', async () => {
+    for (const [name, event] of [['menu_hover', { type: 'ui', kind: 'hover' }], ['menu_click', { type: 'ui', kind: 'click' }], ['ready', { type: 'turn_ready' }], ['ring', { type: 'ring' }]]) {
+      const f = make(); await f.adapter.unlock();
+      assert.equal(f.adapter.play(name), true, name + ' recipe exists');
+      assert.ok(f.adapter.getStatus().activeVoices >= 1, name + ' builds a voice');
+      f.c.endAll(); assert.equal(f.adapter.getStatus().activeVoices, 0, name + ' voice ends');
+      assert.equal(f.adapter.handleEvent(event), true, name + ' event routes');
+      f.c.endAll();
+      assert.equal(f.adapter.handleEvent(event, { remote: true }), false, 'remote players never trigger local feedback');
+      f.adapter.setMuted(true); assert.equal(f.adapter.handleEvent(event), false, 'muted is silent');
+      await f.adapter.dispose();
+    }
+    const f = make(); await f.adapter.unlock();
+    assert.equal(f.adapter.handleEvent({ type: 'ui', kind: 'drag' }), false, 'unknown ui kinds are ignored');
+    await f.adapter.dispose();
+  });
   await run('gesture unlock is lazy, duplicate bindings/resume are shared, and dispose removes listeners', async () => {
     const f = make({}, { resume: 'pending' }), target = new Gestures();
     assert.equal(f.adapter.play('putt'), false); assert.equal(f.contexts.length, 0);

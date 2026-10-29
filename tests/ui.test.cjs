@@ -160,6 +160,25 @@ function fakeClock() {
   });
 
   // ------------------------------------------------------------------ Part B: flows through the real session
+  await scenario('loading screen: shown with a tip only while connecting; tips are short, unique and rotate in range', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    assert.equal(t.within('[data-ui=loading]'), null, 'nothing to load, no loading screen');
+    await act(async () => t.store.setLocal({ connecting: true }));
+    const loading = t.within('[data-ui=loading]');
+    assert.ok(loading && shown(loading));
+    assert.equal(loading.getAttribute('role'), 'status');
+    const tip = loading.querySelector('[data-ui=loading-tip]').textContent.replace(/^TIP\s*/, '');
+    assert.ok(ui.TIPS.includes(tip), 'shows one of the tips');
+    await act(async () => t.store.setLocal({ connecting: false }));
+    assert.equal(t.within('[data-ui=loading]'), null, 'gone once connected or failed');
+    assert.ok(ui.TIPS.length >= 8 && new Set(ui.TIPS).size === ui.TIPS.length, 'enough distinct tips');
+    assert.ok(ui.TIPS.every(x => typeof x === 'string' && x.length > 20 && x.length <= 110), 'tips are short text');
+    for (const [start, step] of [[0, 0], [3, 100], [13, 1], [0, -1]]) assert.ok(ui.tipAt(start, step) >= 0 && ui.tipAt(start, step) < ui.TIPS.length);
+    assert.equal(ui.tipAt(0, ui.TIPS.length), 0, 'wraps around');
+    await t.teardown();
+  });
+
   await scenario('landing: join needs a room code, both buttons dispatch, connecting disables them; join validation matches legacy', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));

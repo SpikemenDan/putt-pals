@@ -67,6 +67,8 @@ export function frameSounds(prev, cur) {
   else if (prev.moving && cur.moving && jump > 70) out.push({ event: { type: 'hazard', hazardType: 'teleporter', position } });
   else if (cur.moving && cur.vz - prev.vz > 180) out.push({ event: { type: 'hazard', hazardType: 'pad', position } });
   else if (prev.moving && cur.moving && psp > 40 && sp > 20 && (cur.vx * prev.vx + cur.vy * prev.vy) / (sp * psp) < 0.75) out.push({ event: { type: 'bounce', position }, speed: sp });
+  // The ball came to rest and may be putted again: the active-ball ring pulse cue (M1d).
+  if (prev.moving && !cur.moving && cur.mode === 'play' && jump <= 70) out.push({ event: { type: 'ring', position } });
   if (cur.mode === 'sunk' && prev.mode !== 'sunk') out.push({ event: { type: 'sink', timedOut: !!cur.over, position } });
   return out;
 }
