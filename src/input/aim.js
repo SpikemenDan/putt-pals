@@ -1,3 +1,7 @@
+import { TUNING } from '../shared/tuning.js';
+
+const AIM = TUNING.aim;
+
 /**
  * Shot aiming rules, ported verbatim from the legacy game.
  *
@@ -7,20 +11,20 @@
  */
 
 /** Seconds per sway cycle. */
-export const SWAY_PERIOD = 1.4;
+export const SWAY_PERIOD = AIM.swayPeriod;
 export const SWAY_W = 2 * Math.PI / SWAY_PERIOD;
 /** Below this charge no aim guide is drawn (and the sway time is not refreshed). */
-export const GUIDE_MIN_CHARGE = 0.015;
+export const GUIDE_MIN_CHARGE = AIM.guideMinCharge;
 /** Below this charge a release cancels instead of shooting. */
-export const SHOT_MIN_CHARGE = 0.025;
+export const SHOT_MIN_CHARGE = AIM.shotMinCharge;
 /** Pull distance (CSS px) for full power, capped by 36% of the canvas width. */
-export const FULL_PULL_PX = 260;
+export const FULL_PULL_PX = AIM.fullPullPx;
 /** Arrow keys and non-orbit drags rotate aim by this many radians per step/pixel factor. */
-export const AIM_STEP = 0.06;
-export const DRAG_RADIANS_PER_PX = 0.006;
+export const AIM_STEP = AIM.keyStep;
+export const DRAG_RADIANS_PER_PX = AIM.dragRadiansPerPx;
 
 /** Angular spread (radians) at a power 0..1. */
-export function spread(power) { return 0.002 + 0.14 * Math.pow(power, 2.6); }
+export function spread(power) { return AIM.spreadBase + AIM.spreadGain * Math.pow(power, AIM.spreadExponent); }
 
 /** Sway offset (radians) at a power and a time in seconds. */
 export function sway(power, time) { return spread(power) * Math.sin(time * SWAY_W); }
@@ -36,7 +40,7 @@ export function shotAngle({ aimAngle, charge, time, reverse = false, steady = fa
 
 /** Charge 0..1 from a pointer drag distance in CSS pixels. */
 export function chargeFromDrag(dx, dy, canvasWidth) {
-  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * 0.36));
+  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * AIM.canvasPullFraction));
 }
 
 /** The power meter caption. */

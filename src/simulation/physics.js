@@ -12,12 +12,15 @@ import {
   TURF_FRICTION,
   FIXED_TIMESTEP,
 } from '../shared/constants.js';
+import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 
-export const GRAVITY = 700;
-export const WALL_HEIGHT = 28;
-export const CUP_DEPTH = 36;
+export const GRAVITY = TUNING.gravity;
+export const WALL_HEIGHT = TUNING.wallHeight;
+export const CUP_DEPTH = TUNING.cup.depth;
+
+const { surface: SURF, bounce: BOUNCE, rest: REST, hazards: HAZ, powerups: POW, cup: CUPT } = TUNING;
 
 /**
  * Checks if 2D point (x, y) is inside rectangle r: [x, y, w, h].
@@ -172,8 +175,8 @@ export function bounce(player, r, ballRadius = BALL_RADIUS) {
   player.y += ny * pen;
   const vn = player.vx * nx + player.vy * ny;
   if (vn < 0) {
-    player.vx -= 1.82 * vn * nx;
-    player.vy -= 1.82 * vn * ny;
+    player.vx -= BOUNCE.wallRestitution * vn * nx;
+    player.vy -= BOUNCE.wallRestitution * vn * ny;
   }
   return true;
 }
@@ -198,8 +201,8 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
   const d = Math.hypot(dx, dy);
   const center = player.z + BALL_RADIUS;
 
-  if (player.armedPowerups?.mag && d > C && d < 90 * sc && Math.abs(player.z - top) < 5) {
-    const gp = 300 * sc * sc;
+  if (player.armedPowerups?.mag && d > C && d < POW.magnetRange * sc && Math.abs(player.z - top) < 5) {
+    const gp = POW.magnetPull * sc * sc;
     player.vx -= (dx / d) * gp * dt;
     player.vy -= (dy / d) * gp * dt;
   }
@@ -213,7 +216,7 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
       player.y = course.hole[1] + ny * limit;
       const vn = player.vx * nx + player.vy * ny;
       if (vn > 0) {
-        const e = 1.15 + 0.6 * lip;
+        const e = CUPT.lipRestitutionBase + CUPT.lipRestitutionGain * lip;
         player.vx -= e * vn * nx;
         player.vy -= e * vn * ny;
         events.push({
@@ -224,7 +227,7 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
       }
     }
     // Score only after the whole ball physically drops below the putting surface.
-    if (player.z + 2 * BALL_RADIUS < top - 1.5) {
+    if (player.z + 2 * BALL_RADIUS < top - CUPT.sinkMargin) {
       sinkBall(player, course, false, events);
       return true;
     }
@@ -354,7 +357,7 @@ function stepBallTick(player, course, dt, hazardTime) {
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
-  const air = player.z > f + (overCup ? 1e-6 : 0.8) || (player.vz > 5 && player.padCooldown > 0);
+  const air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0);
 
   if (air) {
     player.vz -= GRAVITY * dt;
@@ -364,38 +367,38 @@ function stepBallTick(player, course, dt, hazardTime) {
     if (course.sand) {
       for (const s of course.sand) {
         if (player.x > s[0] && player.x < s[0] + s[2] && player.y > s[1] && player.y < s[1] + s[3]) {
-          k = 3.2;
+          k = SURF.sand.friction;
         }
       }
     }
     if (course.pl) {
       for (const p of course.pl) {
         if (player.x > p[0] && player.x < p[0] + p[2] && player.y > p[1] && player.y < p[1] + p[3]) {
-          k = TURF_FRICTION + 0.05;
+          k = TURF_FRICTION + SURF.padFrictionBonus;
         }
       }
     }
-    let cd = 30; // Coulomb constant drag
+    let cd = SURF.turf.drag; // Coulomb constant drag
     if (course.ice) {
       for (const s of course.ice) {
         if (player.x > s[0] && player.x < s[0] + s[2] && player.y > s[1] && player.y < s[1] + s[3]) {
-          k = 0.12;
-          cd = 4;
+          k = SURF.ice.friction;
+          cd = SURF.ice.drag;
         }
       }
     }
     if (course.slime) {
       for (const s of course.slime) {
         if (player.x > s[0] && player.x < s[0] + s[2] && player.y > s[1] && player.y < s[1] + s[3]) {
-          k = 5.5;
-          cd = 45;
+          k = SURF.slime.friction;
+          cd = SURF.slime.drag;
         }
       }
     }
 
     // Velocity-dependent friction
     const v = Math.hypot(player.vx, player.vy);
-    const k_eff = k * (1 + 0.15 * Math.min(1, v / 200));
+    const k_eff = k * (1 + SURF.speedFrictionGain * Math.min(1, v / SURF.speedFrictionRef));
     const decay = Math.exp(-k_eff * dt);
     player.vx *= decay;
     player.vy *= decay;
@@ -483,16 +486,16 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   // Step X and check terrain ledge collision
   const nx = player.x + player.vx * dt;
-  if (contactHeight(course, nx, player.y) > player.z + 5) {
-    player.vx *= -0.8;
+  if (contactHeight(course, nx, player.y) > player.z + BOUNCE.ledgeHeight) {
+    player.vx *= -BOUNCE.ledgeDamping;
   } else {
     player.x = nx;
   }
 
   // Step Y and check terrain ledge collision
   const ny = player.y + player.vy * dt;
-  if (contactHeight(course, player.x, ny) > player.z + 5) {
-    player.vy *= -0.8;
+  if (contactHeight(course, player.x, ny) > player.z + BOUNCE.ledgeHeight) {
+    player.vy *= -BOUNCE.ledgeDamping;
   } else {
     player.y = ny;
   }
@@ -532,8 +535,8 @@ function stepBallTick(player, course, dt, hazardTime) {
       0.2;
     const tangent = Math.abs(gx) < 3 && Math.abs(gy) < 3 ? gx * player.vx + gy * player.vy : 0;
     player.vz =
-      air && player.vz - tangent < -180
-        ? tangent - (player.vz - tangent) * 0.25
+      air && player.vz - tangent < -BOUNCE.landingSpeed
+        ? tangent - (player.vz - tangent) * BOUNCE.landingRestitution
         : tangent;
     player.z = f;
   }
@@ -556,17 +559,17 @@ function stepBallTick(player, course, dt, hazardTime) {
     return events;
   }
 
-  const gnd = player.z <= f + 0.6;
+  const gnd = player.z <= f + REST.groundTolerance;
 
   // Jump pads
   if (player.padCooldown > 0) {
     player.padCooldown -= dt;
   } else if (gnd && course.pd) {
     for (const p of course.pd) {
-      if (Math.hypot(player.x - p[0], player.y - p[1]) < 18) {
-        player.vz = 400;
+      if (Math.hypot(player.x - p[0], player.y - p[1]) < HAZ.padRadius) {
+        player.vz = HAZ.padLaunch;
         player.z = f + 1;
-        player.padCooldown = 0.6;
+        player.padCooldown = HAZ.padCooldown;
         events.push({
           type: SimulationEventTypes.HAZARD,
           hazardType: 'pad',
@@ -585,11 +588,11 @@ function stepBallTick(player, course, dt, hazardTime) {
       for (let k = 0; k < 2; k++) {
         const a = k ? [t[2], t[3]] : [t[0], t[1]];
         const b = k ? [t[0], t[1]] : [t[2], t[3]];
-        if (Math.hypot(player.x - a[0], player.y - a[1]) < 16) {
+        if (Math.hypot(player.x - a[0], player.y - a[1]) < HAZ.teleporterRadius) {
           player.x = b[0];
           player.y = b[1];
           player.z = surfaceHeight(course, b[0], b[1]);
-          player.teleporterCooldown = 0.8;
+          player.teleporterCooldown = HAZ.teleporterCooldown;
           events.push({
             type: SimulationEventTypes.HAZARD,
             hazardType: 'teleporter',
@@ -610,10 +613,10 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   if (
     gnd &&
-    slope < 0.015 &&
+    slope < REST.maxSlope &&
     Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) &&
-    Math.hypot(player.vx, player.vy) < 6 &&
-    Math.abs(player.vz) < 5
+    Math.hypot(player.vx, player.vy) < REST.maxSpeed &&
+    Math.abs(player.vz) < REST.maxVertical
   ) {
     stopBall(player, events);
   }

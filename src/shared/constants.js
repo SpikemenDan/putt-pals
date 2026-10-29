@@ -3,20 +3,22 @@
  * Shared across headless simulation, session management, networking, rendering, and CLI tools.
  */
 
-// --- Ball & Cup Physics Constants (P32 baseline) ---
-export const BALL_RADIUS = 5;
+import { TUNING } from './tuning.js';
+
+// --- Ball & Cup Physics Constants (P32 baseline; values live in ./tuning.js) ---
+export const BALL_RADIUS = TUNING.ball.radius;
 export const R = BALL_RADIUS;
 
-export const DEFAULT_CUP_RADIUS = 15;
+export const DEFAULT_CUP_RADIUS = TUNING.cup.defaultRadius;
 export const CUP = DEFAULT_CUP_RADIUS;
 
-export const MIN_CUP_RADIUS = 8;
+export const MIN_CUP_RADIUS = TUNING.cup.minRadius;
 export const CUP_MIN = MIN_CUP_RADIUS;
 
-export const TURF_FRICTION = 0.75;
+export const TURF_FRICTION = TUNING.surface.turf.friction;
 export const K_TURF = TURF_FRICTION;
 
-export const SHOT_POWER = 900;
+export const SHOT_POWER = TUNING.shotPower;
 export const POWER = SHOT_POWER;
 
 // Simulation timestep (240 Hz fixed tick)
@@ -24,12 +26,7 @@ export const FIXED_TIMESTEP = 1 / 240;
 export const DT = FIXED_TIMESTEP;
 
 // Surface drag multipliers
-export const SURFACE_DRAG = Object.freeze({
-  turf: 1.0,
-  sand: 3.5,
-  ice: 0.15,
-  slime: 6.0,
-});
+export const SURFACE_DRAG = Object.freeze({ ...TUNING.surfaceDragMultiplier });
 
 // Deprecated compatibility export: scores have no gameplay cap. Bound wire counts to exact integers.
 export const MAX_SCORE = Number.MAX_SAFE_INTEGER;

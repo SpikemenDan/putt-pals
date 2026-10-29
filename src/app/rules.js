@@ -6,6 +6,7 @@
  */
 
 import { BALL_RADIUS, SHOT_POWER } from '../shared/constants.js';
+import { TUNING } from '../shared/tuning.js';
 import { inside, movingRect, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 
 /** Legacy multiplayer room namespace was "puttpals-circuit-v5-"; the modular protocol is incompatible, so it gets its own. */
@@ -20,7 +21,7 @@ export const PRESENCE_INTERVAL_MS = 70;
 /** HUD/room refresh interval (legacy setInterval(syncRoom/tick, 100)). */
 export const TICK_MS = 100;
 /** Zanyball multiplies the next shot's speed (legacy launch()). */
-export const ZANY_POWER = 1.6;
+export const ZANY_POWER = TUNING.powerups.zanyMultiplier;
 export const MAX_INVENTORY = 3;
 /** Power-ups in the order the legacy random pick indexes them. */
 export const ITEMS = Object.freeze(['mag', 'steady', 'rew', 'rev', 'zany']);

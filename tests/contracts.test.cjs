@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
+require('./tuning.test.cjs');
 
 // Test runner using dynamic import for ES modules
 async function run() {

@@ -5,6 +5,7 @@
  */
 
 export * from './constants.js';
+export * from './tuning.js';
 export * from './coords.js';
 export * from './scoring.js';
 export * from './courses.js';
