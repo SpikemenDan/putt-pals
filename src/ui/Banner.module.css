@@ -1,10 +1,9 @@
-/* Announcement banner (legacy #banner). */
-.banner{position:fixed;left:50%;top:15%;transform:translate(-50%,-26px);opacity:0;pointer-events:none;z-index:50;padding:16px 52px;text-align:center;border-radius:16px;background:linear-gradient(100deg,rgba(255,255,255,.18),rgba(255,255,255,.05));backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.28);transition:opacity .35s,transform .35s}
-.banner.show{opacity:1;transform:translate(-50%,0)}
-.banner b{display:block;font-size:34px;letter-spacing:7px;font-weight:900;color:#fff;text-shadow:0 2px 14px #0008}
-.banner i{display:block;font-style:normal;letter-spacing:4px;font-size:13px;opacity:.9;margin-top:4px}
-.banner.hio{border-color:#ffd23f;box-shadow:0 0 70px #ffd23f99}.banner.hio b{color:#ffd23f}
-.banner.power{border-color:#36cfff;box-shadow:0 0 50px #36cfff77}.banner.power b{color:#7fe3ff}
-@media (prefers-reduced-motion:reduce){.banner{transition:opacity .01s;transform:translate(-50%,0)}}
-@media (max-width:640px){.banner b{font-size:22px;letter-spacing:3px}}
+/* Announcement banner (legacy #banner): a comic caption panel, tilted, with a hard shadow. */
+.banner{position:fixed;left:50%;top:15%;transform:translate(-50%,-26px) rotate(-2deg);opacity:0;pointer-events:none;z-index:50;padding:14px 48px;text-align:center;border-radius:8px;background:var(--yellow);color:var(--ink);border:4px solid var(--ink);box-shadow:8px 8px 0 var(--ink);transition:opacity .35s,transform .35s}
+.banner.show{opacity:1;transform:translate(-50%,0) rotate(-2deg)}
+.banner b{display:block;font:900 36px/1.1 var(--font);letter-spacing:5px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 #fff}
+.banner i{display:block;font:900 13px var(--font);font-style:normal;letter-spacing:3px;margin-top:6px;color:var(--ink)}
+.banner.hio{background:var(--pink)}
+.banner.power{background:var(--cyan)}
+@media (prefers-reduced-motion:reduce){.banner{transition:opacity .01s;transform:translate(-50%,0) rotate(-2deg)}}
 @media (max-width:640px){.banner{max-width:92vw;padding:12px 20px}.banner b{font-size:22px;letter-spacing:3px}}

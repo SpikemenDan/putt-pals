@@ -10,11 +10,11 @@ const rects = (list, fill) => list.map((r, k) => <rect key={fill + k} x={r[0]} y
 export function CoursePreview({ preview: p }) {
   return (
     <svg viewBox="0 0 800 500" aria-hidden="true">
-      {rects(p.tiles, '#528864')}{rects(p.pl, '#a9c78c')}{rects(p.rp, '#b8a56e')}{rects(p.w, '#d3b58e')}{rects(p.pit, '#246e93')}
-      {p.tp.map((t, k) => [<circle key={'a' + k} cx={t[0]} cy={t[1]} r="16" fill="#c681ff" />, <circle key={'b' + k} cx={t[2]} cy={t[3]} r="16" fill="#c681ff" />])}
-      {p.tornado.map((t, k) => <circle key={'t' + k} cx={t[0]} cy={t[1]} r={t[2]} fill="#d5f8ff" opacity=".2" />)}
+      {rects(p.tiles, '#2fbf5b')}{rects(p.pl, '#ffa726')}{rects(p.rp, '#ffd640')}{rects(p.w, '#ff3d6e')}{rects(p.pit, '#2b9bff')}
+      {p.tp.map((t, k) => [<circle key={'a' + k} cx={t[0]} cy={t[1]} r="16" fill="#8a2be2" />, <circle key={'b' + k} cx={t[2]} cy={t[3]} r="16" fill="#8a2be2" />])}
+      {p.tornado.map((t, k) => <circle key={'t' + k} cx={t[0]} cy={t[1]} r={t[2]} fill="#ffffff" opacity=".45" />)}
       <circle cx={p.tee[0]} cy={p.tee[1]} r="12" fill="white" />
-      <circle cx={p.hole[0]} cy={p.hole[1]} r="15" fill="#15242a" />
+      <circle cx={p.hole[0]} cy={p.hole[1]} r="15" fill="#14102a" />
     </svg>
   );
 }

@@ -33,7 +33,8 @@ try {
     const asset = href => path.join(root, 'dist', href.replace(/^\//, ''));
     assert.ok(fs.existsSync(asset(script.getAttribute('src'))), 'app script asset exists');
     const css = [...doc.querySelectorAll('link[rel="stylesheet"]')].map(l => fs.readFileSync(asset(l.getAttribute('href')), 'utf8')).join('\n');
-    assert.ok(/(^|[^-])backdrop-filter:/.test(css), 'app CSS keeps standard backdrop-filter');
+    // V1d: the comic theme has no glass panels, so the I1 backdrop-filter guard no longer applies. The app CSS must still be present.
+    assert.ok(css.length > 0, 'app page links built CSS');
     assert.ok(!fs.readFileSync(asset(script.getAttribute('src')), 'utf8').includes('<script id="game">'), 'app bundle does not embed the legacy game');
   } finally {
     app.window.close();

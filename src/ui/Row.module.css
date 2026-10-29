@@ -1,11 +1,11 @@
-/* Player rows shared by the lobby roster and the in-game scoreboard (legacy .row). */
-.row{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--bd);font-size:14px}
+/* Player rows shared by the lobby roster and the in-game scoreboard (legacy .row), in the comic theme. */
+.row{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:2px solid rgba(20,16,42,.25);font-size:14px;font-weight:700;color:var(--ink)}
 .row:last-child{border-bottom:0}
-.row.hd{background:var(--ac);color:#fff;font-weight:700;letter-spacing:1px}
-.row i{width:14px;height:14px;border-radius:50%;border:2px solid #0006;flex:none}
+.row.hd{background:var(--ink);color:var(--yellow);font-family:var(--font);font-weight:900;letter-spacing:1px}
+.row i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);flex:none}
 .row b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row span{color:var(--mut);min-width:70px;text-align:right}
+.row.hd span{color:var(--yellow)}
 .row.inRoster{padding:14px 0}
-.row.inSb{background:transparent;border-color:rgba(255,255,255,.1)}.row.inSb.hd{background:rgba(222,152,96,.85)}
 .row.inSb span{min-width:48px}
 .row.inSb b{min-width:0}
