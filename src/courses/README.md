@@ -47,3 +47,7 @@ Use `--courses <file.json>` before or after the command to supply a schema-versi
 All supplied documents are parsed and validated before use. Stored IDs and display-name edits survive listing/re-export; shots/solutions consume the loaded geometry/rules, and solver provenance hashes the loaded course. Default shots and solver commands also use `toSimulationCourses()` on the normalized document. Both default and file-backed modes remain headless.
 
 Missing/malformed files, unsupported schemas, duplicate/missing options, unsupported commands and incorrect argument counts exit 1 with a handled error. `validate` is the source/inventory audit, `rank` is the historical ladder audit, and `arena` uses named chamber specifications; they reject `--courses` rather than silently ignore it. No supplied file is modified.
+
+## Geometry integrity
+
+`check` and document validation also run the CL1 geometry integrity rules (interpenetrating solids, wall/spawn/cup clearances, ramp seams) with errors naming map, putt and element ids. See "Course geometry integrity" in ARCHITECTURE.md. This supersedes the earlier note that `check` does not examine wall clearance; it still does not certify connectivity or reachability.

@@ -1,5 +1,6 @@
 import { createCourseData, validateCourseGeometry } from './catalog.js';
 import { validatePuttPositions } from './validation.js';
+import { checkGeometryIntegrity, formatIntegrityViolation } from './integrity.js';
 import { validateCourse } from '../shared/courses.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 
@@ -41,7 +42,13 @@ export function validateCourseDocument(document) {
     if (typeof course.description !== 'string') errors.push(`Course ${index}: description must be text`);
     try { errors.push(...validateCourse(course).errors.map(error => `Course ${index}: ${error}`)); }
     catch { errors.push(`Course ${index}: malformed rule values`); }
-    errors.push(...validateCourseGeometry(course.geometry).errors.map(error => `Course ${index}: ${error}`));
+    const shape = validateCourseGeometry(course.geometry).errors;
+    errors.push(...shape.map(error => `Course ${index}: ${error}`));
+    if (!shape.length && Array.isArray(course.putts)) {
+      const putts = Array.from(course.putts).filter(record).map(p => ({ tee: p.tee, hole: p.hole, cupRadius: p.cupRadius }));
+      const integrity = checkGeometryIntegrity({ id: validId(course.id) ? course.id : undefined, name: course.name, index, geometry: course.geometry, putts });
+      errors.push(...integrity.violations.map(v => `Course ${index}: ${formatIntegrityViolation(v)}`));
+    }
     if (Array.isArray(course.putts)) Array.from(course.putts).forEach((putt, pi) => {
       if (!record(putt)) { errors.push(`Course ${index} putt ${pi} must be an object`); return; }
       errors.push(...validatePuttPositions(course.geometry, putt).map(error => `Course ${index} putt ${pi}: ${error}`));

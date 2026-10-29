@@ -1,5 +1,6 @@
 import { validateCourseGeometry } from './catalog.js';
 import { buildCourseCatalog } from './legacy.js';
+import { checkGeometryIntegrity, formatIntegrityViolation } from './integrity.js';
 import { MIN_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS, DEFAULT_PENALTY, MIN_CUP_RADIUS, DEFAULT_CUP_RADIUS } from '../shared/constants.js';
 
 const point = value => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
@@ -40,6 +41,7 @@ export function validateCourseDefinitions(definitions, rules) {
     const putts = course.putts == null ? [course] : course.putts;
     if (!Array.isArray(putts) || !putts.length) { errors.push(`${label}: invalid putts`); return; }
     if (putts.length !== rule.putts.length) errors.push(`${label}: geometry/rule putt counts differ`);
+    const integrityPutts = [];
     putts.forEach((putt, pi) => {
       if (!putt || typeof putt !== 'object') { errors.push(`${label} putt ${pi}: invalid definition`); return; }
       const active = { ...course, ...putt, tee: putt.tee, hole: putt.hole };
@@ -49,10 +51,16 @@ export function validateCourseDefinitions(definitions, rules) {
       const limitSeconds = validLimit(putt.limit) ? putt.limit : validLimit(course.limit) ? course.limit : Math.min(300, MIN_TIMEOUT_SECONDS * Math.max(1, par / 2));
       const cupRadius = Number.isFinite(active.cup) ? Math.max(MIN_CUP_RADIUS, Math.min(DEFAULT_CUP_RADIUS, active.cup)) : DEFAULT_CUP_RADIUS;
       const resolved = { tee: active.tee, hole: active.hole, par, penalty, limitSeconds, cupRadius };
+      integrityPutts[pi] = { tee: active.tee, hole: active.hole, cupRadius };
       for (const [field, value] of Object.entries(resolved)) {
         if (JSON.stringify(value) !== JSON.stringify(rule.putts[pi]?.[field])) errors.push(`${label} putt ${pi}: ${field} differs between geometry and rules`);
       }
     });
+    // CL1: interpenetration and clearance rules (shape errors above are reported first).
+    if (!validateCourseGeometry(course).errors.length) {
+      const integrity = checkGeometryIntegrity({ name: course.name, index, geometry: course, putts: integrityPutts });
+      errors.push(...integrity.violations.map(v => `${label}: ${formatIntegrityViolation(v)}`));
+    }
     if (rule.starter && course.par !== rule.putts.reduce((sum, p) => sum + p.par, 0)) errors.push(`${label}: map par differs from putt total`);
   });
   return { valid: errors.length === 0, errors };

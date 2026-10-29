@@ -153,3 +153,12 @@ Rapier requires its own evaluated physics migration. Colyseus or another authori
 ## Modular application (I1)
 
 `index.html` loads `src/app/main.js`, which composes all modules through `createApp()` (src/app/README.md). The app owns one animation-frame loop, one 100 ms HUD tick and explicit disposal. Three.js 0.128.0 and PeerJS 1.5.4 are npm dependencies at the versions the legacy page embeds. `putt-pals.html` remains a separate, unchanged build input. Contract changes made as integration owner: `PLAYER_COLORS` is now the game's eight-colour palette (shared by renderer and UI), and presence accepts optional validated `effect` and `fx` fields. Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs guards the legacy CSS.
+
+
+## Course geometry integrity (CL1)
+
+Every course, shipped or new, must pass `checkGeometryIntegrity` (`src/courses/integrity.js`, helpers in `src/courses/geometry.js`). It runs inside `validateCourseDefinitions`, `validateCourseDocument`, and therefore `node tools/cli/main.mjs check`, `parseCourseDocument` and `npm run test:courses`. Each violation names the map, the putt (or "all" for map-level elements) and the element ids (`w[3]`, `rp[0]`, `movers[1]`, `tee`, `hole`).
+
+Rejected: walls through ramps or platforms; ramps/platforms through each other (unless coplanar platforms), over pits, or off the floor tiles; mover travel through walls, over pits or off the floor; bumper, pad and teleporter anchors off the floor or within `HAZARD_WALL_CLEARANCE` of a wall; tees within `SPAWN_WALL_CLEARANCE` and cups within cup radius + `CUP_WALL_MARGIN` of a wall; tees and cups straddling a platform ledge; ramp ends whose neighbouring surface differs by more than `RAMP_SEAM_STEP_MAX` (a gap or a step the physics ledge bounce would snag on). Launch-ramp high ends, edge-of-world drops and points inside walls are not seams. Touching faces are fine; overlap must exceed `OVERLAP_TOLERANCE` on both axes.
+
+All clearances are named exported constants in `integrity.js`. A reviewed, deliberate overlap goes in the named allow-list `GEOMETRY_INTEGRITY_EXCEPTIONS` with course id, rule, exact element ids and a reason; exceptions need owner approval and are reported in the PR. The check is static: it does not prove reachability, difficulty or dynamic hazard behaviour.
