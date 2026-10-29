@@ -1,0 +1,1075 @@
+{
+  "generatedAt": "2026-10-29T01:51:02.940Z",
+  "node": "v24.21.0",
+  "platform": "win32",
+  "arch": "x64",
+  "cpu": "AMD Ryzen AI 7 350 w/ Radeon 860M",
+  "rapier": "0.21.0",
+  "setup": {
+    "speedsUnitsPerSecond": [
+      40,
+      60,
+      80,
+      100,
+      150,
+      200,
+      300,
+      400,
+      600,
+      900
+    ],
+    "offsetsUnits": [
+      0,
+      3,
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "radiiUnits": [
+      15,
+      8
+    ],
+    "startGapUnitsOutsideLip": 10,
+    "endUnits": 60,
+    "maxTicks": 1200,
+    "custom": "src/simulation stepBall on a flat tile with the cup, S2 capture rules, fixed 1/240 s step",
+    "rapier": "trimesh floor with a circular hole, open sleeve and bottom (36 units deep), friction 0.18, restitution 0.25, CCD, no drag, fixed 1/240 s step; sunk = ball fully below floor level inside the hole"
+  },
+  "columns": "offset 0 3 6 9 12 15 18 (game units); rows are launch speeds",
+  "summary": [
+    {
+      "radius": 15,
+      "trials": 70,
+      "bothSink": 18,
+      "bothMiss": 40,
+      "customOnly": 2,
+      "rapierOnly": 10,
+      "customSinks": 20,
+      "rapierSinks": 28,
+      "fastestCentredSinkCustom": 200,
+      "fastestCentredSinkRapier": 150
+    },
+    {
+      "radius": 8,
+      "trials": 70,
+      "bothSink": 4,
+      "bothMiss": 59,
+      "customOnly": 0,
+      "rapierOnly": 7,
+      "customSinks": 4,
+      "rapierSinks": 11,
+      "fastestCentredSinkCustom": 100,
+      "fastestCentredSinkRapier": 100
+    }
+  ],
+  "grid": {
+    "8": [
+      " 40: B R R . . . .",
+      " 60: B R R . . . .",
+      " 80: B R R . . . .",
+      "100: B R . . . . .",
+      "150: . . . . . . .",
+      "200: . . . . . . .",
+      "300: . . . . . . .",
+      "400: . . . . . . .",
+      "600: . . . . . . .",
+      "900: . . . . . . ."
+    ],
+    "15": [
+      " 40: B B B B R R .",
+      " 60: B B B B R R .",
+      " 80: B B B B R R .",
+      "100: B B B B R . .",
+      "150: B B R R R . .",
+      "200: C C . . . . .",
+      "300: . . . . . . .",
+      "400: . . . . . . .",
+      "600: . . . . . . .",
+      "900: . . . . . . ."
+    ]
+  },
+  "results": [
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 3,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 6,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 9,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 12,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 15,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 40,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 3,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 6,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 9,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 12,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 15,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 60,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 3,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 6,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 9,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 12,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 15,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 80,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 3,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 6,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 9,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 12,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 100,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 3,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 6,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 9,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 12,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 150,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 0,
+      "custom": true,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 3,
+      "custom": true,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 200,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 300,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 400,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 600,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 15,
+      "speed": 900,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 3,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 6,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 40,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 3,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 6,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 60,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 3,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 6,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 80,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 0,
+      "custom": true,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 3,
+      "custom": false,
+      "rapier": true
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 100,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 150,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 200,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 300,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 400,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 600,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 0,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 3,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 6,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 9,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 12,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 15,
+      "custom": false,
+      "rapier": false
+    },
+    {
+      "radius": 8,
+      "speed": 900,
+      "offset": 18,
+      "custom": false,
+      "rapier": false
+    }
+  ]
+}

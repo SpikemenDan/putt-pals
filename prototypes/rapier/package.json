@@ -6,7 +6,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "measure": "node measure.mjs",
-    "test:browser": "node browser-check.mjs"
+    "test:browser": "node browser-check.mjs",
+    "measure:cup": "node cup.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
