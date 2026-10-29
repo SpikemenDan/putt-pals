@@ -7,6 +7,8 @@
  * applies (`receiveEffect`).
  */
 
+import { BALL_RADIUS } from '../shared/constants.js';
+import { TUNING } from '../shared/tuning.js';
 import { DurationKinds, getPowerup, isOpponentPowerup, POWERUP_CATALOG, PowerupTargets, powerupIds } from './catalog.js';
 
 const count = n => Number.isSafeInteger(n) && n >= 0;
@@ -58,3 +60,16 @@ export function auraOf(player, now, catalog = POWERUP_CATALOG) {
  */
 export const validEffectMessage = (m, catalog = POWERUP_CATALOG) => !!m && typeof m === 'object' && !Array.isArray(m)
   && Object.keys(m).length === 2 && count(m.id) && isOpponentPowerup(m.t, catalog);
+
+/** Rest hook: clears armed effects that last for the stroke (called when the ball rests, sinks or is reset). */
+export function clearAtRest(player, catalog = POWERUP_CATALOG) {
+  if (!player.armedPowerups) return;
+  for (const e of catalog) if (e.duration.kind === DurationKinds.STROKE && e.id in player.armedPowerups) player.armedPowerups[e.id] = 0;
+}
+
+/** Radius hook: the ball radius for the armed effects (exactly BALL_RADIUS when none apply). Small and Tall Ball stack multiplicatively. */
+export function ballRadiusOf(player) {
+  const armed = player.armedPowerups;
+  if (!armed || !(armed.small || armed.tall)) return BALL_RADIUS;
+  return BALL_RADIUS * (armed.small ? TUNING.powerups.smallBallScale : 1) * (armed.tall ? TUNING.powerups.tallBallScale : 1);
+}
