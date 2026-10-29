@@ -12,7 +12,7 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/index.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
-import { powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -224,7 +224,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     for (const [id, p] of Object.entries(presence)) {
       if (id === room.localId || !s.players[id]?.connected || !s.roster.includes(id) || p.mode !== 'play') continue;
       const at = smooth.sample(id, now) || p;
-      out.push({ id, name: s.players[id].name, x: at.x, y: at.y, z: at.z, color: colorOf(s, {}, id), effect: p.effect || '' });
+      out.push({ id, name: s.players[id].name, x: at.x, y: at.y, z: at.z, color: colorOf(s, {}, id), effect: p.effect || '', radius: ballRadiusOf({ armedPowerups: { [p.effect]: 1 } }) });
     }
     return out;
   }

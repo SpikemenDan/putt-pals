@@ -285,7 +285,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       const me = local || { x: 0, y: 0, z: 0, vx: 0, vy: 0, moving: false, mode: 'lobby', color: 0 };
       localBall.visible = me.mode === 'play' || me.mode === 'sunk';
       localBall.material.color.set(PLAYER_COLORS[me.color % 8]);
-      localBall.position.set(me.x + o[0], me.z + R, me.y + o[1]);
+      const meScale = me.radius > 0 ? me.radius / R : 1; // Small/Tall Ball (per-ball radius); 1 when no effect is armed
+      localBall.scale.setScalar(meScale);
+      localBall.position.set(me.x + o[0], me.z + R * meScale, me.y + o[1]);
       if (me.moving) { localBall.rotation.x += me.vy * dt / R; localBall.rotation.z -= me.vx * dt / R; }
       const floor = surfaceHeight(course, me.x, me.y);
       placeBlob(localBlob, me.x + o[0], isFinite(floor) ? floor : me.z, me.z, me.y + o[1], localBall.visible);
@@ -304,17 +306,20 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         }
         const d = entry.shown = smoothRemotePosition(entry.shown, { x: +p.x || 0, y: +p.y || 0, z: +p.z || 0 });
         entry.ball.material.color.set(PLAYER_COLORS[(+p.color || 0) % 8]);
-        entry.ball.position.set(d.x + o[0], d.z + R, d.y + o[1]);
+        const scale = p.radius > 0 ? p.radius / R : 1;
+        entry.ball.scale.setScalar(scale);
+        entry.ball.userData.scale = scale;
+        entry.ball.position.set(d.x + o[0], d.z + R * scale, d.y + o[1]);
         entry.label.position.set(d.x + o[0], d.z + 34, d.y + o[1]);
         entry.ball.visible = entry.label.visible = true;
         const remoteFloor = surfaceHeight(course, d.x, d.y);
         placeBlob(entry.blob, d.x + o[0], isFinite(remoteFloor) ? remoteFloor : d.z, d.z, d.y + o[1], true);
       }
-      placeAura(localAura, me.effect, localBall.position, me.mode === 'play', t);
+      placeAura(localAura, me.effect, localBall.position, me.mode === 'play', t, meScale);
       for (const p of shown) {
         const entry = remotes.get(p.id);
         if (!entry.aura) { entry.aura = createAura(library); scene.add(entry.aura); }
-        placeAura(entry.aura, p.effect, entry.ball.position, true, t);
+        placeAura(entry.aura, p.effect, entry.ball.position, true, t, entry.ball.userData.scale || 1);
       }
       trail.update(localBall.position, me.moving, localBall.visible && me.mode === 'play', PLAYER_COLORS[me.color % 8]);
       if (me.mode === 'sunk' && lastMode !== 'sunk') confetti.burst(localBall.position);

@@ -21,7 +21,7 @@
 
 export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent' });
 export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke' });
-export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway' });
+export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius' });
 
 const deepFreeze = value => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -41,6 +41,31 @@ export const POWERUP_CATALOG = deepFreeze([
     id: 'steady', name: 'Steady Aim', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
     duration: { kind: DurationKinds.NEXT_SHOT }, hook: PowerupHooks.AIM_SWAY,
     banner: 'STEADY AIM', toast: 'Your next shot has no wobble.',
+  },
+  {
+    id: 'chip', name: 'Chip In', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
+    duration: { kind: DurationKinds.NEXT_SHOT }, hook: PowerupHooks.LAUNCH,
+    banner: 'CHIP IN', toast: 'Your next shot is lofted.',
+  },
+  {
+    id: 'ghost', name: 'Ghost Ball', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.COLLISION,
+    banner: 'GHOST BALL', toast: 'Your next shot passes through walls and obstacles.',
+  },
+  {
+    id: 'small', name: 'Small Ball', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.RADIUS,
+    banner: 'SMALL BALL', toast: 'Your ball is smaller for this shot.',
+  },
+  {
+    id: 'tall', name: 'Tall Ball', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.RADIUS,
+    banner: 'TALL BALL', toast: 'Your ball is bigger for this shot.',
+  },
+  {
+    id: 'sticky', name: 'Sticky Ball', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.COLLISION,
+    banner: 'STICKY BALL', toast: 'Your ball will not rebound on this shot.',
   },
 ]);
 

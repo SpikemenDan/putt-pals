@@ -15,6 +15,7 @@ import {
 import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
+import { ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
 
 export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;
@@ -175,8 +176,9 @@ export function bounce(player, r, ballRadius = BALL_RADIUS) {
   player.y += ny * pen;
   const vn = player.vx * nx + player.vy * ny;
   if (vn < 0) {
-    player.vx -= BOUNCE.wallRestitution * vn * nx;
-    player.vy -= BOUNCE.wallRestitution * vn * ny;
+    const e = player.armedPowerups?.sticky ? 1 : BOUNCE.wallRestitution; // Sticky Ball keeps only the tangential speed
+    player.vx -= e * vn * nx;
+    player.vy -= e * vn * ny;
   }
   return true;
 }
@@ -199,7 +201,8 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
   const dx = player.x - course.hole[0];
   const dy = player.y - course.hole[1];
   const d = Math.hypot(dx, dy);
-  const center = player.z + BALL_RADIUS;
+  const R = ballRadiusOf(player);
+  const center = player.z + R;
 
   if (player.armedPowerups?.mag && d > C && d < POW.magnetRange * sc && Math.abs(player.z - top) < 5) {
     const gp = POW.magnetPull * sc * sc;
@@ -207,8 +210,8 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
     player.vy -= (dy / d) * gp * dt;
   }
 
-  if (center < top && d < C + BALL_RADIUS) {
-    const limit = C - BALL_RADIUS;
+  if (center < top && d < C + R) {
+    const limit = Math.max(0, C - R);
     if (d > limit) {
       const nx = dx / d;
       const ny = dy / d;
@@ -227,7 +230,7 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
       }
     }
     // Score only after the whole ball physically drops below the putting surface.
-    if (player.z + 2 * BALL_RADIUS < top - CUPT.sinkMargin) {
+    if (player.z + 2 * R < top - CUPT.sinkMargin) {
       sinkBall(player, course, false, events);
       return true;
     }
@@ -259,7 +262,7 @@ export function sinkBall(player, course, over = false, events = []) {
   player.scores = [score];
   player.mode = 'sunk';
   player.over = !!over;
-  if (player.armedPowerups) player.armedPowerups.mag = 0;
+  clearAtRest(player);
 
   events.push({
     type: SimulationEventTypes.SINK,
@@ -287,7 +290,7 @@ export function outOfBounds(player, course, events = []) {
   player.vy = 0;
   player.vz = 0;
   player.moving = false;
-  if (player.armedPowerups) player.armedPowerups.mag = 0;
+  clearAtRest(player);
   player.prevPosition = null;
 
   events.push({
@@ -308,7 +311,7 @@ export function stopBall(player, events = []) {
   player.vy = 0;
   player.vz = 0;
   player.moving = false;
-  if (player.armedPowerups) player.armedPowerups.mag = 0;
+  clearAtRest(player);
 
   events.push({
     type: SimulationEventTypes.REST,
@@ -329,6 +332,7 @@ export function stopBall(player, events = []) {
  */
 export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
   if (!player.moving || player.mode !== 'play') return [];
+  const R = ballRadiusOf(player);
   // Resolve fast cup crossings spatially instead of depending on tick alignment.
   // Ordinary terrain keeps its original single-step path. The cap bounds work
   // for pathological velocities; normal shots and tested impulses (<=9000) need <=15.
@@ -338,9 +342,9 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
   const t = distance2 > 0 ? Math.max(0, Math.min(1,
     ((course.hole[0] - player.x) * dx + (course.hole[1] - player.y) * dy) / distance2)) : 0;
   const crossesCup = Math.hypot(player.x + t * dx - course.hole[0],
-    player.y + t * dy - course.hole[1]) < cupOf(course) + BALL_RADIUS;
+    player.y + t * dy - course.hole[1]) < cupOf(course) + R;
   const steps = crossesCup ? Math.min(128, Math.max(1,
-    Math.ceil(Math.sqrt(distance2) / (BALL_RADIUS / 2)))) : 1;
+    Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
   if (steps === 1) return stepBallTick(player, course, dt, hazardTime);
   const events = [];
   for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
@@ -353,7 +357,9 @@ function stepBallTick(player, course, dt, hazardTime) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
-  let f = contactHeight(course, player.x, player.y);
+  const R = ballRadiusOf(player);
+  const ghost = !!player.armedPowerups?.ghost; // Ghost Ball skips wall and obstacle bounces
+  let f = contactHeight(course, player.x, player.y, R);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
@@ -471,9 +477,9 @@ function stepBallTick(player, course, dt, hazardTime) {
   // Moving obstacles
   if (course.movers) {
     for (const h of course.movers) {
-      if (player.z < surfaceHeight(course, h[0], h[1]) + WALL_HEIGHT) {
+      if (!ghost && player.z < surfaceHeight(course, h[0], h[1]) + WALL_HEIGHT) {
         const r = movingRect(h, hazardTime);
-        if (bounce(player, r)) {
+        if (bounce(player, r, R)) {
           events.push({
             type: SimulationEventTypes.BOUNCE,
             target: 'mover',
@@ -486,24 +492,24 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   // Step X and check terrain ledge collision
   const nx = player.x + player.vx * dt;
-  if (contactHeight(course, nx, player.y) > player.z + BOUNCE.ledgeHeight) {
-    player.vx *= -BOUNCE.ledgeDamping;
+  if (contactHeight(course, nx, player.y, R) > player.z + BOUNCE.ledgeHeight) {
+    player.vx = player.armedPowerups?.sticky ? 0 : player.vx * -BOUNCE.ledgeDamping;
   } else {
     player.x = nx;
   }
 
   // Step Y and check terrain ledge collision
   const ny = player.y + player.vy * dt;
-  if (contactHeight(course, player.x, ny) > player.z + BOUNCE.ledgeHeight) {
-    player.vy *= -BOUNCE.ledgeDamping;
+  if (contactHeight(course, player.x, ny, R) > player.z + BOUNCE.ledgeHeight) {
+    player.vy = player.armedPowerups?.sticky ? 0 : player.vy * -BOUNCE.ledgeDamping;
   } else {
     player.y = ny;
   }
 
   // Walls
-  if (player.z < WALL_HEIGHT && course.w) {
+  if (!ghost && player.z < WALL_HEIGHT && course.w) {
     for (const r of course.w) {
-      if (bounce(player, r)) {
+      if (bounce(player, r, R)) {
         events.push({
           type: SimulationEventTypes.BOUNCE,
           target: 'wall',
@@ -523,7 +529,7 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   if (player.mode !== 'play') return events;
 
-  f = contactHeight(course, player.x, player.y);
+  f = contactHeight(course, player.x, player.y, R);
   if (player.z <= f) {
     const gx =
       (surfaceHeight(course, player.x + 0.1, player.y) -
@@ -535,7 +541,7 @@ function stepBallTick(player, course, dt, hazardTime) {
       0.2;
     const tangent = Math.abs(gx) < 3 && Math.abs(gy) < 3 ? gx * player.vx + gy * player.vy : 0;
     player.vz =
-      air && player.vz - tangent < -BOUNCE.landingSpeed
+      air && !player.armedPowerups?.sticky && player.vz - tangent < -BOUNCE.landingSpeed
         ? tangent - (player.vz - tangent) * BOUNCE.landingRestitution
         : tangent;
     player.z = f;
