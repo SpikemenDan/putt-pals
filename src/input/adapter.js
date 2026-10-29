@@ -8,7 +8,7 @@
  */
 
 import { InputCommands } from './commands.js';
-import { AIM_STEP, DRAG_RADIANS_PER_PX, GUIDE_MIN_CHARGE, SHOT_MIN_CHARGE, chargeFromDrag, shotAngle, spread } from './aim.js';
+import { AIM_ARROW_MAX_LENGTH, AIM_STEP, DRAG_RADIANS_PER_PX, GUIDE_MIN_CHARGE, SHOT_MIN_CHARGE, chargeFromDrag, shotAngle, spread } from './aim.js';
 
 const isTextEntry = target => !!(target && target.matches && target.matches('input,textarea'));
 
@@ -142,7 +142,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
       const s = getState();
       if (!(s.mode === 'play' && !s.moving && charging && charge > GUIDE_MIN_CHARGE)) return null;
       swayTime = time;
-      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, reverse: !!s.reverse, steady: !!s.steady }), spread: s.steady ? 0 : spread(charge), reverse: !!s.reverse };
+      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, reverse: !!s.reverse, steady: !!s.steady }), spread: s.steady ? 0 : spread(charge), reverse: !!s.reverse, length: charge * AIM_ARROW_MAX_LENGTH };
     },
     /** Power meter updates (charging, charge) on pointer changes; keeps per-frame values out of React state. */
     subscribeAim(listener) { aimListeners.add(listener); listener(charging, charge); return () => aimListeners.delete(listener); },

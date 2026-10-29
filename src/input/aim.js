@@ -13,8 +13,14 @@ export const SWAY_W = 2 * Math.PI / SWAY_PERIOD;
 export const GUIDE_MIN_CHARGE = 0.015;
 /** Below this charge a release cancels instead of shooting. */
 export const SHOT_MIN_CHARGE = 0.025;
-/** Pull distance (CSS px) for full power, capped by 36% of the canvas width. */
-export const FULL_PULL_PX = 260;
+/**
+ * Pull distance (CSS px) for full power, capped by FULL_PULL_CANVAS_FRACTION of the canvas width.
+ * Power is linear in the pull from zero (U2): twice the pull, twice the arrow, twice the power.
+ */
+export const FULL_PULL_PX = 380;
+export const FULL_PULL_CANVAS_FRACTION = 0.6;
+/** World-unit length of the aim arrow at full power; the arrow is charge * this, with no minimum. */
+export const AIM_ARROW_MAX_LENGTH = 300;
 /** Arrow keys and non-orbit drags rotate aim by this many radians per step/pixel factor. */
 export const AIM_STEP = 0.06;
 export const DRAG_RADIANS_PER_PX = 0.006;
@@ -36,7 +42,7 @@ export function shotAngle({ aimAngle, charge, time, reverse = false, steady = fa
 
 /** Charge 0..1 from a pointer drag distance in CSS pixels. */
 export function chargeFromDrag(dx, dy, canvasWidth) {
-  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * 0.36));
+  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * FULL_PULL_CANVAS_FRACTION));
 }
 
 /** The power meter caption. */

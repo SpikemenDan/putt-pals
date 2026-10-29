@@ -1,43 +1,20 @@
 # Architecture reference
 
-## Server-room migration decision (N4, 2026-10-28)
+## Current state
 
-The user selected Cloudflare Workers + SQLite-backed Durable Objects and WebSockets for future server-owned rooms (#65). The additive N4a contract (#66) is specified in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md), with validators/mocks in `src/network/contracts/server-room.js` and `server-room-mocks.js`. It separates backend authority from a player controller, versions the wire protocol independently from existing PeerJS v1, and defines durable domain checkpoints plus absolute deadlines. User-confirmed configurable defaults are immediate controller succession, 30-second reconnect grace and 15-minute empty-room retention.
+`index.html` loads `src/app/main.js`, which composes the modules below through `createApp()` (src/app/README.md). The app owns one animation-frame loop, one 100 ms HUD tick and explicit disposal. `putt-pals.html` is the original single-file game, kept runnable as a separate build input and parity reference; do not extend it.
 
-The contract is accepted on main at `b30552f` through [PR #74](https://github.com/SpikemenDan/putt-pals/pull/74); its source implementation is `3e5985d`. N4b's local Worker, SQLite-backed Durable Object binding and Static Assets/WebSocket routing scaffold is integrated through [PR #75](https://github.com/SpikemenDan/putt-pals/pull/75) at `be77190`. This is local tooling and routing only: room admission, gameplay authority, persistence/recovery and browser cutover are not implemented. Online browser gameplay still uses PeerJS; solo and browser physics remain local. N4c #69 is eligible for coordinator-confirmed claim; #70–#73 retain their dependent implementation and acceptance gates. N3 TURN #14 stays paused; Q1 #18 depends on N4 instead. The historical architecture descriptions below describe earlier integration cutoffs and do not override this selected target or current code.
+- **Simulation** (`src/simulation/`): headless, deterministic fixed-step physics at 240 Hz with explicit hazard time, domain events and no DOM, Three.js, React, PeerJS or WebAudio imports. Browser, CLI and solver share it. Simulation coordinates use x/y for the ground plane and z for height; Three.js uses y for height, so only render adapters swap axes.
+- **Courses** (`src/courses/`): validated named records for all 22 courses (six starters, six putts each), legacy adapters, per-map palettes. `tools/cli/` imports this and the simulation for check, solve, rank and arena commands. The legacy `tools.js` still extracts code from the HTML for parity checks and physics regression tests.
+- **Session** (`src/session/`): XState room lifecycle (lobby, voting, play, results), scoring, timers, practice and replay. Scoring rules are pure functions in `src/shared/scoring.js`.
+- **Network** (`src/network/`): solo, in-memory and PeerJS transports behind one room-transport contract; validated envelopes with version, session, round, sequence and sender binding; guest recovery and remote interpolation. The browser is trusted for its own ball; the host owns room transitions. `src/network/contracts/` and `services/rooms/` hold the server-room (N4) wire contract and local Cloudflare Worker and Durable Object runtime, which are not yet connected to the browser. See docs/networking/SERVER_ROOMS.md.
+- **Render and camera** (`src/render/`, `src/camera/`): Three.js 0.186.1 toon renderer with ink outlines, sky world, palettes and ambient weather. Weather runs in vertex shaders from a shared clock and lightning is a pure function of time, so every player sees the same flashes. Visual only; nothing reads or writes simulation state.
+- **UI and input** (`src/ui/`, `src/input/`): React 19 screens and HUD with CSS Modules; pointer and keyboard commands in their own adapter. React never drives physics ticks or mesh transforms.
+- **Audio** (`src/audio/`): procedural WebAudio adapter with injected context, storage and randomness; one context per app, gesture unlock, persistent mute, bounded voices and explicit teardown. It consumes simulation events and world-space listener positions.
 
-Status: accepted modules and the legacy browser are distinguished below. N1 delivery is PR #24 (72b7498 plus review fixes), accepted when current-head CI passes and the PR merges; target-only modules remain proposals.
+Physics advances through a requestAnimationFrame accumulator. Online rooms still use PeerJS with a code-derived host; host loss has no migration path until N4 lands.
 
-## Current implementation
-
-- putt-pals.html: styles, screen markup, embedded Three.js r128 and PeerJS, and an application IIFE. Approximately 790 KB. The embedded browser runtime remains in place while extracted modules await adoption.
-- tools.js: Node CLI for validation, map generation, physics solving, surface/cup/mechanic checks and jsdom/fake-network smoke tests.
-- HANDOFF.md: historical roadmap and logs. Several architectural details are stale; verify against code rather than copying its constants.
-- package.json / package-lock.json: pinned Vite 8.3.5 and jsdom 30.1.3 development dependencies, with npm commands for development, build, preview and existing checks. vite.config.mjs builds the legacy HTML to dist/putt-pals.html. scripts/check-build.cjs verifies preservation of all three embedded scripts. XState 5.33.3 is installed for the headless session actor. TypeScript and React are not installed yet.
-
-The game has 22 maps and six starter courses with six putts each. Physics advances at 1/240 second, with a requestAnimationFrame accumulator. Simulation coordinates use x/y as the ground plane and z for height. Three.js uses y for height, so rendering swaps axes.
-
-The embedded browser simulation still closes over mutable global player/course state and UI/publication functions. Accepted src/simulation/ exposes a headless engine with fixture parity; src/courses/ and tools/cli/ import validated geometry and the shared simulation. Legacy tools.js and migration reference exporters retain marker/VM extraction during parity and browser migration; normal modern CLI commands do not execute legacy source.
-
-The embedded browser uses a code-derived PeerJS peer ID to select a host. An unavailable ID causes the joining browser to connect as a guest. Host snapshots are broadcast about every 70 ms. The host owns voting and room transitions; each browser simulates its own ball and reports positions, strokes and completion. This is a star topology with client-trusted gameplay, not authoritative server simulation. Signaling requires a service; some networks require TURN. Current host loss has no migration path.
-
-## Extracted modules and N1 delivery
-
-- Accepted main: src/shared/ contracts/mocks, src/simulation/ headless physics, src/courses/ normalized catalog and validation, tools/cli/ course/solver/arena commands, and src/session/ XState room lifecycle. A1 audio delivery is PR #25, effective after green CI, merge and verification. See src/session/README.md and docs/reviews/D1_DATA_CLI.md.
-- N1 delivery (PR #24): src/network/ provides solo/in-memory/PeerJS adapters, validated JSON envelopes, sender binding and the host-to-session bridge. See src/network/README.md and docs/reviews/N1_TRANSPORTS.md. Nine network scenarios, full local tests/build and baseline inventory passed; no actual WebRTC or browser adoption result is claimed.
-- N1 envelopes carry version/session/round/putt/sequence/sender/time fields, reject stale/duplicate/malformed/oversized data, and cap UTF-8 messages at 64 KiB. Commands bind playerId from the link. Current actor snapshots publish immediately; active-participant movement is batched at 70 ms. Names stay text values. This preserves client-trusted physics, without anti-cheat/accounts/host migration.
-- N1 uses the existing C1/L1 four-member bound and safe-integer score counts, not a gameplay stroke cap. Pending links consume capacity; close/dispose cleans listeners and timers. The Peer constructor and signaling/ICE options are injected; no runtime library upgrade is introduced.
-- Browser entry/composition (I1), render/camera (R1), React/input (U1), recovery/interpolation (N2), TURN (N3) and full browser coverage (T1) remain separate tasks. No N1 commit implies their acceptance. The build still preserves embedded scripts.
-
-## Procedural audio boundary (A1, PR #25)
-
-src/audio/ exports createAudioAdapter with injected context factory, storage, randomness and diagnostics. Construction creates no AudioContext; gesture unlock creates/resumes one context reused across rooms. play consumes known cues, handleEvent translates S1/application events, updateListener accepts world-space camera arrays, and simToWorld converts event positions. The legacy eleven recipes, spatial model, master gain and mute key are preserved. No physics callback, DOM lookup, Three.js import or audio-file dependency is added.
-
-resetSession releases room voices without making another context. dispose removes explicit gesture bindings, stops/disconnects owned sources/filters/gains/panners, drops the noise buffer and awaits context close. Ended sources release their voice graphs. Concurrent unlock and failed partial initialization are coordinated; denied storage/resume cannot break gameplay. Nine instrumented-node scenarios compare all recipes against the legacy signatures and exercise actual simulation events, old/new WebAudio APIs, resource limits and repeated room cleanup. See src/audio/README.md and docs/reviews/A1_AUDIO.md.
-
-PR #25 records acceptance only after green current-head CI, merge and post-merge checks; the embedded browser audio remains unchanged until I1. The app owns event deduplication, bounce significance filtering, banners, camera updates and cleanup. Real-browser listening/autoplay/spatial balance remain separate acceptance gates.
-
-## Target layout
+## Layout
 
 ```text
 src/
@@ -46,7 +23,7 @@ src/
   simulation/     state, shot application, fixed steps, collisions, events
   courses/        validated definitions, legacy adapters, generated data
   session/        XState lifecycle, voting, scoring, timers, practice
-  network/        room interface, solo adapter, PeerJS adapter, interpolation
+  network/        room interface, solo/in-memory/PeerJS adapters, interpolation, server-room contracts
   render/         Three.js scene, meshes, effects, resource ownership
   camera/         camera modes, input-independent camera state
   input/          pointer and keyboard commands
@@ -63,7 +40,7 @@ services/
   turn-credentials/  paused alternative; only if N3 is explicitly resumed
 ```
 
-Use a single npm project initially. Add workspaces only if the credential service's deployment/runtime requires a separate package; this does not justify a monorepo toolchain.
+The repo is a single npm project; the Worker runtime in `services/rooms/` is built through the same toolchain. Add workspaces only if a deployable needs its own package.
 
 ## Dependency direction
 
@@ -71,9 +48,9 @@ UI/input -> application commands -> session/simulation. Render and audio consume
 
 The application owns exactly one simulation scheduler and one rendering loop per session. Adapters have explicit start/dispose lifecycles. Events such as shot, bounce, sink, timeout and putt change drive sound/UI without callbacks from physics into browser APIs.
 
-## Contracts to agree before implementation
+## Contract principles
 
-These are design requirements, not existing API declarations:
+The concrete contracts are in the next section; these principles govern changes to them:
 
 - Simulation: create state; apply a validated shot; advance a fixed tick using explicit simulation time; return domain events. Configuration and course data are explicit dependencies. Mutating internal state is acceptable for performance; public snapshots have clear ownership.
 - Time/randomness: distinguish monotonic local time, synchronized room time and simulation ticks. Solver and tests supply deterministic hazard times and seeded randomness. Do not promise cross-browser bitwise equivalence for the custom engine.
@@ -92,7 +69,7 @@ The contracts below are implemented in `src/shared/` and verified by `tests/cont
 - Physics: `BALL_RADIUS = 5`, `DEFAULT_CUP_RADIUS = 15`, `MIN_CUP_RADIUS = 8`, `SHOT_POWER = 900`, `FIXED_TIMESTEP = 1 / 240`, `TURF_FRICTION = 0.75`.
 - Surface drag multipliers: `turf: 1.0`, `sand: 3.5`, `ice: 0.15`, `slime: 6.0`.
 - Limits & Rules: `MIN_TIMEOUT_SECONDS = 120`, `MAX_TIMEOUT_SECONDS = 600`, `DEFAULT_PAR = 2`, `DEFAULT_PENALTY = 3`, `STARTER_COURSE_INDICES = [0, 8, 20, 21, 5, 19]`.
-- Network & Protocol: `PROTOCOL_VERSION = 1`, `MAX_PLAYERS = 4`, `SNAPSHOT_INTERVAL_MS = 70`, `VOTING_COUNTDOWN_SECONDS = 15`, `RECONNECT_GRACE_PERIOD_MS = 30000`, `MAX_PLAYER_NAME_LENGTH = 14`.
+- Network & Protocol: `PROTOCOL_VERSION = 1`, `MAX_PLAYERS = 8`, `SNAPSHOT_INTERVAL_MS = 70`, `VOTING_COUNTDOWN_SECONDS = 15`, `RECONNECT_GRACE_PERIOD_MS = 30000`, `MAX_PLAYER_NAME_LENGTH = 14`.
 
 ### 2. Coordinate transformations (`src/shared/coords.js`)
 - Simulation: horizontal plane `[x, y]`, vertical elevation `z`.
@@ -146,9 +123,37 @@ The contracts below are implemented in `src/shared/` and verified by `tests/cont
 
 Changing an agreed signature requires updating `src/shared/`, `tests/contracts.test.cjs`, and notifying affected task owners.
 
+## Gameplay systems design (power-ups, hazards, modes, cosmetics)
+
+Design rules for the product vision in MODERNIZATION_PLAN.md. These are targets, not existing APIs. Agree contracts and get integration-owner approval before changing `src/shared/`.
+
+### Power-up framework
+
+- **Catalog as data.** Each power-up is a plain record: id, name, group, whether it targets self, an opponent or the course, whether it is allowed in solo, spawn weight, duration (next shot, next turn, N impacts or seconds) and the hook it uses. The catalog is the single source for the UI, protocol validation, spawn table and solo filtering. Solo and Practice draw only from entries marked self-only.
+- **Inventory.** Three slots, activated by click or keys 1-3 before a stroke. Activation arms an effect; several armed effects stack on one shot. Tournaments keep inventory across putts and rounds; other modes reset it. The pool is chosen by mode: the No Power-Ups mode spawns no boxes at all.
+- **Effect hooks.** Effects change simulation inputs, not rendering. Hooks run at defined points of the fixed step: shot launch (Chip In adds vertical velocity; Steady Aim zeroes sway), per-tick forces (Hole Magnet, Love and Hate auras, vortices, wind), collision resolution (Ghost Ball skips wall and obstacle bounces; Sticky Ball zeroes the rebound), per-ball radius (Small and Tall Ball; the current code uses one global ball radius, so radius must become per-ball state) and global surface modifiers (rain and snow scale friction). With no effect armed, results must stay bit-identical to the current parity fixtures.
+- **Determinism.** Randomness (box contents, Lightning direction) is injected and seeded; roaming Tornado and Hurricane paths are pure functions of synchronized room time so every client agrees without streaming positions.
+- **Authority.** Physics stays client-trusted. An opponent-targeted effect travels as a validated effect message bound to the sender's connection and is applied by the target's own client; aura effects (Love, Hate) are applied by each client to its own ball while an opposing aura is active, because remote balls are non-colliding ghosts. Deployed objects (bumpers, vortices) are part of the synced room snapshot with an owner, an expiry and an impact count. Under N4 the server also validates the catalog id, inventory ownership and rate limits.
+- **Aim effects.** 360° and 180° Aim are input-layer modes of the aim indicator (continuous spin, sweep); they never alter the launch maths beyond what the indicator shows.
+- **Presentation.** Each power-up needs an icon, an activation banner, a ball aura or world indicator (the Orbital Bumper shows radius rings) and audio cues in the existing synthesis style, driven by domain events.
+
+### Course elements
+
+The current course model is a heightfield (`surfaceHeight(course, x, y)` returns one floor per point), which cannot express an overpass or interior. The volumetric model (K0) adds multiple surfaces at different heights over one footprint, vertical walls and ceilings, and picks the floor under the ball by its height; existing 2D courses must stay bit-identical. Water bodies (splash and reset, shallow drag, currents) and wind zones (direction and strength fields, steady, gusting from synced room time, and updrafts) are course records read by the simulation and drawn by the renderer; their numbers live in the tuning file. A geometry-integrity validator (CL1) rejects interpenetrating solids and insufficient clearances, and is a gate for every new element.
+
+New primitives (corner wedge, curved ramp, multi-tier drop, transport tube) need course schema records, simulation support, renderer meshes, solver support and a test chamber that proves a robust shot exists and fails without the element, as the existing mechanic chambers do. Tubes carry the ball along a path and release it with its exit velocity. Islands are per-putt geometry with visible gaps; guard walls bound normal routes and drop-offs are declared open edges. Any change to course geometry or physics requires re-solving affected putts and a fresh difficulty sweep. A putt is accepted when a multi-stroke solver finds a robust route within its par (2 to 6); a single-shot hole-in-one is neither required nor guaranteed, and par defaults come from the shortest robust route.
+
+### Game modes
+
+A mode is session configuration: whether power-ups are on, scoring rules, inventory carryover and win condition. Pure Mini-Golf is a flag on the existing lifecycle. Putt Pong is turn-based and 1v1 only for now, unlike the simultaneous main game, so it needs its own session rules in `src/session/` (shooter turns, bonus balls, redemption, rounds), course support for many cups with per-cup state and elimination events in the simulation, a rack scene in the renderer and its own scoring. Its base shot is the lofted chip. Larger player counts are deferred; avoid hard-coding exactly two players where that costs nothing.
+
+### Cosmetics
+
+Ball skins, trail skins and ace celebrations are data records applied by the renderer and HUD (trail colour and shape, ball material or texture, banner and fanfare). They never affect physics. A chosen cosmetic travels in presence as a validated catalog id, never as raw peer-supplied content. Persistence is local to the browser until the owner decides on unlock progression or accounts.
+
 ## Deferred architecture changes
 
-Rapier requires its own evaluated physics migration. Colyseus or another authoritative game server is unnecessary for the confirmed initial private-room scope. Host migration, public matchmaking, accounts, persistence, native packaging and offline packaging remain deferred.
+Rapier was evaluated and production adoption is deferred (docs/reviews/P1_RAPIER.md); revisit only if the ramp, drop and tube work in K1 proves the custom physics inadequate, and treat it as a separate physics migration that re-solves every course. A general authoritative game server is unnecessary: N4 keeps ball physics in the browser and gives the server room coordination only. Public matchmaking, accounts, native packaging and offline packaging remain out of scope.
 
 ## Modular application (I1)
 

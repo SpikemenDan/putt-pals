@@ -55,7 +55,7 @@ Starter order and current data:
 | 5 | Cyclone Ring | 6 | 23 | 210 |
 | 19 | Grand Finale | 6 | 24 | 240 |
 
-Constants observed: R=5, CUP=15, CUP_MIN=8, K_TURF=0.75, POWER=900. Historical difficulty counts and some HANDOFF.md constants are stale. This task does not retune maps or certify those rankings.
+Constants observed: R=5, CUP=15, CUP_MIN=8, K_TURF=0.75, POWER=900. Historical difficulty counts and the constants in the removed legacy handoff notes are stale. This task does not retune maps or certify those rankings.
 
 ## Chrome capture procedure and observations
 
@@ -85,7 +85,7 @@ These are visual references for review, not pixel-diff goldens: color selection,
 
 - Landing says “20 MAPS” while source data has 22. Record this existing text discrepancy; do not silently mix its fix into extraction.
 - At the captured desktop size the side scoreboard truncates “SCOREBOARD” and the synthetic player's name. This is existing layout behavior, visible in the references.
-- The pastel/high-exposure appearance is the current baseline. The future comic art direction in HANDOFF.md is a separate change.
+- The pastel/high-exposure appearance is the current baseline. The comic art direction is a separate change; it has since landed in V1a-V1d.
 - After restoring quality/sound and attempting a reload, Chrome showed a blank content area. The server still returned HTTP 200 and the game script. A later native capture attempt failed with ScreenCaptureKit error -3812 (“invalid parameter”). No browser-console evidence was available to attribute the blank view to game code versus browser/capture infrastructure. Do not mark reload as passing or file a confirmed product regression from this observation alone.
 - Firefox access initially failed; the user requested Chrome. Chrome permission prompts interrupted early attempts, then allowed the captures above. No Firefox/Safari cross-browser coverage is claimed.
 - Real-browser practice/replay, completing a full six-putt game, results, tournament completion, timeouts, reconnects, real WebRTC and forced TURN remain broader browser/network acceptance work. Existing jsdom results cover several of these flows but are not substitutes for real-browser evidence.
