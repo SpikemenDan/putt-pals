@@ -91,6 +91,22 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const tracked = c => c.audio.log.map(e => e.type + (e.kind ? ':' + e.kind : '') + (e.hazardType ? ':' + e.hazardType : '') + (e.remote ? ':remote' : ''));
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('feedback cues: a resting ball pulses the ring cue; disabled buttons and sinks stay silent', async () => {
+    const { frameSounds } = await import('../src/app/rules.js');
+    const state = o => ({ round: 1, strokes: 1, mode: 'play', moving: false, x: 10, y: 10, z: 0, vx: 0, vy: 0, vz: 0, over: false, ...o });
+    const types = (prev, cur) => frameSounds(prev, cur).map(e => e.event.type);
+    assert.ok(types(state({ moving: true, vx: 20 }), state()).includes('ring'), 'ball came to rest');
+    assert.ok(!types(state(), state()).includes('ring'), 'still resting: no repeat');
+    assert.ok(!types(state({ moving: true }), state({ mode: 'sunk' })).includes('ring'), 'a sunk ball is not ready');
+    assert.ok(!types(state({ moving: true }), state({ x: 200 })).includes('ring'), 'a teleport or reset is not a rest');
+    const W = world();
+    const ana = await W.client('Ana');
+    const before = ana.audio.log.length;
+    ana.button('Join room').disabled = true;
+    await ana.click(ana.button('Join room'));
+    assert.ok(!tracked(ana).slice(before).includes('ui:click'), 'a disabled button is silent');
+  });
+
   await scenario('solo: a full six-putt map through the real UI scores six holes in one with transitions, banners and audio', async () => {
     const W = world();
     const ana = await W.client('Ana');
@@ -133,6 +149,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const count = t => sounds.filter(s => s === t).length;
     assert.equal(count('shot'), 6); assert.equal(count('sink'), 6); assert.equal(count('putt_change'), 5);
     assert.equal(count('banner:hio'), 6, 'hole-in-one fanfare per putt');
+    assert.ok(count('ui:click') >= 3, 'menu buttons click');
+    assert.equal(count('turn_ready'), 1, 'one your-turn cue at the start of the map, none between its putts');
     assert.ok(count('banner:event') >= 7, 'putt banners and the map winner banner');
     assert.ok(W.renderers.instances[0].renders > 100, 'frames rendered');
     await ana.click('Back to lobby');

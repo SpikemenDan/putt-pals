@@ -180,6 +180,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
         audio.handleEvent({ type: 'putt_change' });
       }
     }
+    if (playing && !(previous && previous.mapIndex === s.mapIndex)) audio.handleEvent({ type: 'turn_ready' });
     input?.setAimAngle(putt.aimAngle());
     setLocalIfChanged({ mode: putt.mode, strokes: 0, inventory: [...putt.player.inventory] });
     publish(true);
@@ -385,6 +386,13 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   }
 
   const startCode = initialRoomCode(win.location?.hash || '', random);
+  // Menu feedback (M1d): a soft tick when the pointer enters an enabled button and a click cue when one is pressed.
+  let hovered = null;
+  const buttonOf = event => { const b = event.target?.closest?.('button'); return b && !b.disabled ? b : null; };
+  const onHover = event => { const b = buttonOf(event); if (b === hovered) return; hovered = b; if (b) audio.handleEvent({ type: 'ui', kind: 'hover' }); };
+  const onPress = event => { if (buttonOf(event)) audio.handleEvent({ type: 'ui', kind: 'click' }); };
+  root.addEventListener('pointerover', onHover);
+  root.addEventListener('click', onPress);
   const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '' });
 
   return {
@@ -407,6 +415,8 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       unsubscribeInputAim?.();
       input?.dispose();
       view?.dispose();
+      root.removeEventListener('pointerover', onHover);
+      root.removeEventListener('click', onPress);
       unmount();
       store.dispose();
       unbindGestures();

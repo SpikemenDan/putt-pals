@@ -40,6 +40,9 @@ Each voice owns its oscillator/buffer sources, filters, gains and optional panne
 | hazard: pad / teleporter | boing / teleport, volume 0.8 |
 | banner: hio / power / event | Matching nonspatial cue at 0.9 |
 | putt_change | warp, except when `initial:true` |
+| ui: `kind` hover / click (M1d) | menu_hover (0.5) / menu_click (0.8); ignores other kinds |
+| turn_ready (M1d) | ready, the your-turn sting at the start of a map |
+| ring (M1d) | ring, a soft pulse when the ball comes to rest and may be putted again |
 | rest / cup_lip / surface_change / unknown | Silent |
 
 `options.remote:true` admits only shot/sink/timeout, preserving the legacy remote-audio policy. Network snapshots are not themselves an event stream: I1 must derive each remote stroke/completion once and not replay it every snapshot. Consume either timeout or timed-out sink for one completion. A hole-in-one sink emits the sink cue only; the application emits one separate hio banner event, matching the original banner-triggered fanfare. Power/banner/putt-change are explicit application events, not additions to simulation contracts. No new turn-ready or menu-hover sounds are added by this extraction.
@@ -48,7 +51,7 @@ The old browser inferred local bounce/hazard sounds from frame snapshots. The ad
 
 ## Verification and limits
 
-`npm run test:audio` has nine instrumented-node scenarios. Every recipe's waveform, frequency/filter automation, gains and start/stop times are compared against the legacy source using a migration-only reference harness. Production audio never reads/evaluates legacy source. Tests additionally cover actual SimulationEngine shot/sink events, coordinate conversion, modern/legacy listener/panner APIs, lazy/concurrent unlock, denied storage/resume, mute preview, partial initialization/voice failures, source-ended cleanup, twenty room reset cycles, capacity and disposal during resume.
+`npm run test:audio` has ten instrumented-node scenarios. Every recipe's waveform, frequency/filter automation, gains and start/stop times are compared against the legacy source using a migration-only reference harness. Production audio never reads/evaluates legacy source. Tests additionally cover actual SimulationEngine shot/sink events, coordinate conversion, modern/legacy listener/panner APIs, lazy/concurrent unlock, denied storage/resume, mute preview, partial initialization/voice failures, source-ended cleanup, twenty room reset cycles, capacity and disposal during resume.
 
 These are deterministic node/API checks, not listening or autoplay acceptance in a real browser. Real-browser sound quality, spatial balance, gesture/autoplay behavior and repeated integrated joins/leaves remain I1/T1/manual release checks. A1 preserves synthesis and adapter ownership; it does not certify the future integrated browser.
 
