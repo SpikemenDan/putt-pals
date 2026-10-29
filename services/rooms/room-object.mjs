@@ -14,6 +14,9 @@ const CONTEXT_FIELDS = [
 const commandRate = { burst: SERVER_ROOM_LIMITS.commandBurst, perSecond: SERVER_ROOM_LIMITS.commandsPerSecond };
 const presenceRate = { burst: SERVER_ROOM_LIMITS.presenceBurst, perSecond: SERVER_ROOM_LIMITS.presencePerSecond };
 const pingRate = { burst: 5, perSecond: 1 };
+// Bound retained input before asynchronous admission or command processing.
+const incomingQueueFrames = 64;
+const incomingQueueBytes = SERVER_ROOM_LIMITS.outgoingQueueBytes;
 // Reserve enough wire space for six maximum-width scores and final-map summaries per seat.
 const futureScoreReservePerSeat = 6 * 80 + 160;
 const futureSnapshotReserveBytes = 512;
@@ -94,6 +97,8 @@ export class RoomDurableObject {
     this.pending = new Set();
     this.runtime = null;
     this.serial = Promise.resolve();
+    this.queuedFrames = 0;
+    this.queuedBytes = 0;
   }
 
   fetch(request) {
@@ -125,10 +130,15 @@ export class RoomDurableObject {
     server.accept();
     this.pending.add(connection);
     server.addEventListener('message', event => {
-      this.enqueue(() => this.receive(connection, event.data));
+      this.enqueueMessage(connection, event.data);
     });
-    server.addEventListener('close', () => this.enqueue(() => this.disconnected(connection)));
-    server.addEventListener('error', () => this.enqueue(() => this.disconnected(connection)));
+    const disconnect = () => {
+      if (connection.cleanupQueued) return;
+      connection.cleanupQueued = true;
+      this.enqueue(() => this.disconnected(connection));
+    };
+    server.addEventListener('close', disconnect);
+    server.addEventListener('error', disconnect);
     connection.handshakeTimer = setTimeout(() => {
       this.enqueue(() => {
         if (!connection.identity) this.reject(connection, 'invalid-message', 1008, 'Handshake timeout');
@@ -151,6 +161,32 @@ export class RoomDurableObject {
     } catch {
       return false;
     }
+  }
+
+  enqueueMessage(connection, raw) {
+    if (connection.closed || connection.rejected) return;
+    if (typeof raw !== 'string') return this.reject(connection, 'invalid-message', 1003, 'Text frames required');
+    // Check UTF-16 length first to avoid allocating an encoding for oversized input.
+    if (raw.length > SERVER_ROOM_LIMITS.messageBytes) {
+      return this.reject(connection, 'invalid-message', 1009, 'Frame too large');
+    }
+    const bytes = new TextEncoder().encode(raw).byteLength;
+    if (bytes > SERVER_ROOM_LIMITS.messageBytes) {
+      return this.reject(connection, 'invalid-message', 1009, 'Frame too large');
+    }
+    if (this.queuedFrames >= incomingQueueFrames || this.queuedBytes + bytes > incomingQueueBytes) {
+      return this.reject(connection, 'rate-limited', 1013, 'Room input queue is full');
+    }
+    this.queuedFrames++;
+    this.queuedBytes += bytes;
+    return this.enqueue(async () => {
+      try {
+        if (!connection.closed && !connection.rejected) await this.receive(connection, raw);
+      } finally {
+        this.queuedFrames--;
+        this.queuedBytes -= bytes;
+      }
+    });
   }
 
   enqueue(operation) {
@@ -427,7 +463,8 @@ export class RoomDurableObject {
   }
 
   reject(connection, code, closeCode = 1008, reason = 'Room protocol rejected') {
-    if (connection.closed) return;
+    if (connection.closed || connection.rejected) return;
+    connection.rejected = true;
     if (this.pending.has(connection)) this.pending.delete(connection);
     try {
       if (connection.socket.readyState === 1) {

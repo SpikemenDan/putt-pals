@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './inbound-queue.test.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import http from 'node:http';
