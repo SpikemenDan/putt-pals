@@ -152,8 +152,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const confetti = createConfetti(THREE, random);
   scene.add(actor(confetti.points));
   const aimGuide = createAimGuide(THREE);
-  scene.add(actor(aimGuide.cone));
-  for (const dot of aimGuide.dots) scene.add(actor(dot));
+  scene.add(actor(aimGuide.arrow));
 
   const remotes = new Map();
   const updateWallFade = createWallFade(THREE);

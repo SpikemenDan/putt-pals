@@ -12,7 +12,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const legacy = await bootLegacy();
   const { w, P } = legacy;
   const THREE = w.THREE;
-  const [{ createInputAdapter, InputCommands, spread, sway, shotAngle, accuracyText, chargeFromDrag }, { createCameraRig }] = await Promise.all([
+  const [{ createInputAdapter, InputCommands, spread, sway, shotAngle, accuracyText, chargeFromDrag, FULL_PULL_PX, FULL_PULL_CANVAS_FRACTION, AIM_ARROW_MAX_LENGTH }, { createCameraRig }] = await Promise.all([
     import('../src/input/index.js'), import('../src/camera/index.js'),
   ]);
   await legacy.play(0, 0, 'standard');
@@ -79,8 +79,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       for (const t of [0, 0.35, 0.7, 1.05, 1.4, 3.3, 12.345]) assert.equal(sway(p, t), P().sway(p, t));
     }
     assert.ok([0, 0.7, 1.4].every(t => Math.abs(sway(1, t)) < 1e-9), 'zero crossings give a straight shot (legacy smoke tolerance)');
-    assert.equal(chargeFromDrag(100, 0, 800), 100 / 260);
-    assert.equal(chargeFromDrag(0, 500, 400), 1);
+    assert.equal(chargeFromDrag(100, 0, 1600), 100 / FULL_PULL_PX);
+    assert.equal(chargeFromDrag(0, 500, 400), 1, 'capped at full power');
+    assert.equal(chargeFromDrag(0, 0, 800), 0, 'no pull, no power');
+    assert.equal(chargeFromDrag(60, 80, 1600) * 2, chargeFromDrag(120, 160, 1600), 'linear in the pull');
+    assert.equal(chargeFromDrag(100, 0, 400), 100 / (400 * FULL_PULL_CANVAS_FRACTION), 'small canvases scale by width');
     assert.equal(accuracyText(false, 0.5), 'Pull to set power');
     assert.equal(accuracyText(true, 0.5), '50% power · ±' + (spread(0.5) * 180 / Math.PI).toFixed(1) + '° spread');
   });
@@ -99,9 +102,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       const r = shot(c);
       assert.equal(r.moving, true, 'legacy launched');
       assert.ok(r.command, 'adapter dispatched a shot');
-      const v = r.command.power * 900;
-      assert.equal(Math.cos(r.command.angle) * v, r.vx, `vx for ${JSON.stringify(c)}`);
-      assert.equal(Math.sin(r.command.angle) * v, r.vy, `vy for ${JSON.stringify(c)}`);
+      // U2 intentionally changed the drag-to-power mapping (FULL_PULL_PX), so the legacy launch speed and sway
+      // phase no longer match bit for bit. Launch scaling, the aim direction and the sway maths still do.
+      assert.equal(r.command.power, r.guide.charge, `power is the shown charge for ${JSON.stringify(c)}`);
+      assert.ok(r.command.power > 0 && r.command.power <= 1);
+      assert.ok(r.guide.charge <= Math.min(1, Math.hypot(c.to[0] - 400, c.to[1] - 250) / 260), 'no more sensitive than the legacy pull (260 px)');
       assert.equal(r.command.angle, shotAngle({ aimAngle: r.guide.aimAngle, charge: r.guide.charge, time: c.frameAt / 1000, reverse: !!c.rev, steady: !!c.steady }));
     }
   });
@@ -116,9 +121,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const dots = [];
     P().ball.parent.traverse(o => { if (o.isMesh && o.geometry.type === 'SphereGeometry' && o.geometry.parameters.radius === 2.8 && o.visible) dots.push(o); });
     assert.equal(dots.length, 12, 'legacy shows twelve guide dots');
-    const ball = P().ball.position, L = 50 + guide.charge * 250;
-    assert.ok(Math.abs(dots[0].position.x - (ball.x + Math.cos(guide.angle) * L / 12)) < 1e-9, 'first dot x');
-    assert.ok(Math.abs(dots[0].position.z - (ball.z + Math.sin(guide.angle) * L / 12)) < 1e-9, 'first dot z');
+    const ball = P().ball.position, lc = Math.min(1, Math.hypot(120, 130) / 260), L = 50 + lc * 250, la = shotAngle({ aimAngle: guide.aimAngle, charge: lc, time: t / 1000 });
+    // U2: the legacy guide used the legacy 260 px charge, so it is recomputed with that charge; the aim direction is shared.
+    assert.equal(guide.angle, shotAngle({ aimAngle: guide.aimAngle, charge: guide.charge, time: t / 1000 }));
+    assert.ok(Math.abs(dots[0].position.x - (ball.x + Math.cos(la) * L / 12)) < 1e-9, 'first dot x');
+    assert.ok(Math.abs(dots[0].position.z - (ball.z + Math.sin(la) * L / 12)) < 1e-9, 'first dot z');
     assert.equal(guide.spread, spread(guide.charge));
     // Release later without a new frame: legacy and adapter both reuse the last shown sway time.
     now += 300;
@@ -126,14 +133,14 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     pointer(canvas, 'pointerup', { clientX: 280, clientY: 380 });
     pointer(legacyCanvas, 'pointerup', { clientX: 280, clientY: 380 });
     assert.equal(commands[0].angle, guide.angle);
-    assert.equal(Math.cos(commands[0].angle) * (commands[0].power * 900), P().me.vx);
+    assert.equal(commands[0].power, guide.charge, 'release uses the charge shown (U2 mapping; legacy launch speed differs)');
   });
 
   await scenario('cancel: small pulls, Escape, pointer cancel, lost capture and blur never shoot', async () => {
     const attempts = [
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 403, clientY: 252 }); legacy.frame(now += 16); input.frameAim(now / 1000); both('pointerup', { clientX: 403, clientY: 252 }); },
-      // Between the guide threshold (0.015) and the shot threshold (0.025): guide shown, release cancels.
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 405, clientY: 252 }); legacy.frame(now += 16); assert.ok(input.frameAim(now / 1000), 'guide shown'); both('pointerup', { clientX: 405, clientY: 252 }); },
+      // Between the guide threshold (0.015) and the shot threshold (0.025): guide shown, release cancels. // U2: slightly longer pull on the adapter canvas to clear the guide threshold under the gentler mapping.
+      () => { both('pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 407, clientY: 252 }); pointer(legacyCanvas, 'pointermove', { clientX: 405, clientY: 252 }); legacy.frame(now += 16); assert.ok(input.frameAim(now / 1000), 'guide shown'); pointer(canvas, 'pointerup', { clientX: 407, clientY: 252 }); pointer(legacyCanvas, 'pointerup', { clientX: 405, clientY: 252 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); key('keydown', 'Escape'); key('keyup', 'Escape'); both('pointerup', { clientX: 300, clientY: 330 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('pointercancel', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('lostpointercapture', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
@@ -267,6 +274,18 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.deepEqual(seen.map(s => s[0]), [false, true, true, false]);
     assert.equal(seen[2][1], chargeFromDrag(70, 50, 800));
     assert.equal(input.frameAim(1), null, 'no guide when not charging');
+  });
+
+  await scenario('aim arrow: guide length is proportional to charge and sway keeps the legacy maths', async () => {
+    resetBall();
+    pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 });
+    pointer(canvas, 'pointermove', { clientX: 400, clientY: 250 + 190 });
+    const g = input.frameAim(0.35);
+    assert.equal(g.length, g.charge * AIM_ARROW_MAX_LENGTH);
+    assert.equal(g.angle, shotAngle({ aimAngle: g.aimAngle, charge: g.charge, time: 0.35, reverse: g.reverse }));
+    const z = input.frameAim(0.7);
+    assert.ok(Math.abs(z.angle - z.aimAngle - (g.reverse ? Math.PI : 0)) < 1e-9, 'dead straight at a sway zero crossing');
+    pointer(canvas, 'pointercancel', {});
   });
 
   await scenario('ownership: dispose() removes every listener it added and is idempotent', async () => {
