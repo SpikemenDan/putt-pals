@@ -5,3 +5,5 @@ export * from './arena.js';
 export * from './validation.js';
 export * from './document.js';
 export * from './palettes.js';
+export * from './geometry.js';
+export * from './integrity.js';
