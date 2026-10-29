@@ -1,7 +1,7 @@
 /**
  * The local player's putt: the shared simulation plus the legacy rules the old
  * page applied around it each frame (idle hazards waking the ball, the stall
- * limit, `?` block pickups, timeouts, sunk → waiting, power-ups and attacks).
+ * limit, `?` block pickups, timeouts, sunk → waiting, power-ups and opponent effects).
  * One instance per round; the app discards it when the room moves on.
  */
 
@@ -10,7 +10,8 @@ import { calculateTimeoutScore } from '../shared/scoring.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { outOfBounds, sinkBall, surfaceHeight } from '../simulation/physics.js';
 import { SimulationEngine } from '../simulation/index.js';
-import { ACTIVATION_BANNERS, aimAtHole, EFFECT_FLASH_MS, effectOf, environmentAwake, ITEMS, ITEM_NAMES, MAX_INVENTORY, shotPower, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
+import { activatePowerup, addToInventory, armedState, auraOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
+import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
  * @param {object} options
@@ -25,15 +26,20 @@ import { ACTIVATION_BANNERS, aimAtHole, EFFECT_FLASH_MS, effectOf, environmentAw
  * @param {number} options.limitSeconds
  * @param {() => number} options.roomNow
  * @param {() => number} [options.random=Math.random] Power-up rolls
+ * @param {string[]} [options.inventory=[]] Power-ups carried into this putt (see gameplay powerupPolicy / startingInventory)
+ * @param {{spawn:boolean, pool:object[]}} [options.powerups] Box rules from gameplay powerupPolicy; omitted: boxes award nothing
  * @param {() => number} [options.now] Local monotonic ms (effect flashes, sunk → waiting)
  */
-export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, now: localNow = () => performance.now() }) {
+export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now() }) {
   const hazardTime = () => Math.max(0, (roomNow() - roundStartTime) / 1000);
   const engine = new SimulationEngine(definition, puttIndex, { hazardTime });
   const course = engine.course;
   const player = engine.addPlayer(id, name);
   player.mode = playing ? 'play' : 'spectator';
   player.collectedPickups = {};
+  player.inventory = inventory.slice();
+  player.armedPowerups = armedState();
+  player.pendingPowerups = pendingState();
   player.flashUntil = 0; player.flashType = '';
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
 
@@ -53,23 +59,22 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
     course,
     definition,
     get completion() { return completion; },
-    get effect() { return effectOf(player, localNow()); },
+    get effect() { return auraOf(player, localNow()); },
     get fx() { return fx; },
     hazardTime,
     /** Aim straight at the hole from the ball (start of the putt and after the ball stops). */
     aimAngle: () => aimAtHole(course, player),
     /** Ball state the renderer and presence use. */
     view(now) {
-      return { x: player.x, y: player.y, z: player.z, vx: player.vx, vy: player.vy, moving: player.moving, mode: player.mode === 'sunk' && now >= waitUntil ? 'wait' : player.mode, effect: effectOf(player, now), collected: { ...player.collectedPickups } };
+      return { x: player.x, y: player.y, z: player.z, vx: player.vx, vy: player.vy, moving: player.moving, mode: player.mode === 'sunk' && now >= waitUntil ? 'wait' : player.mode, effect: auraOf(player, now), collected: { ...player.collectedPickups } };
     },
     get mode() { return player.mode === 'sunk' && localNow() >= waitUntil ? 'wait' : player.mode; },
 
-    /** Legacy launch(): Zanyball speeds the shot, then pending/armed one-shot effects clear. */
+    /** Legacy launch(); one-shot effects clear at launch. */
     shoot(angle, power) {
       if (disposed || player.mode !== 'play' || player.moving) return null;
-      const event = engine.launch(id, angle, power, shotPower(player));
-      player.pendingPowerups.rev = player.pendingPowerups.zany = 0;
-      player.armedPowerups.steady = 0;
+      const event = engine.launch(id, angle, power);
+      clearAtLaunch(player);
       stall = 0; accumulator = 0;
       return event;
     },
@@ -100,13 +105,11 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
             out.aim = aimAtHole(course, player);
           }
         }
-        if (player.mode === 'play') for (const k of touchedBlocks(course, player)) {
+        if (player.mode === 'play' && powerups.spawn) for (const k of touchedBlocks(course, player)) {
           player.collectedPickups[k] = 1;
-          if (player.inventory.length < MAX_INVENTORY) {
-            const item = ITEMS[Math.floor(random() * ITEMS.length)];
-            player.inventory.push(item);
-            out.toasts.push('Got ' + ITEM_NAMES[item] + '!');
-          } else out.toasts.push('Inventory full. Power-up lost.');
+          const item = rollPowerup(powerups.pool, random);
+          if (item && addToInventory(player.inventory, item)) out.toasts.push('Got ' + powerupName(item) + '!');
+          else out.toasts.push('Inventory full. Power-up lost.');
         }
         if (player.mode === 'play' && timed && roomNow() - roundStartTime > limitSeconds * 1000) {
           const events = [];
@@ -117,31 +120,25 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       return out;
     },
 
-    /** Legacy useItem(): returns the toast/banner it produces; attacks become presence fx. */
+    /** Activates the power-up in a slot (keys 1–3 or click): arms a self effect or sends an opponent effect as presence fx. */
     useItem(index, now) {
       const out = result();
       const item = player.inventory[index];
       if (disposed || !item || player.mode !== 'play') return out;
-      if (ACTIVATION_BANNERS[item]) out.banners.push([name, ACTIVATION_BANNERS[item] + ' ACTIVATED', 'power']);
-      if (item === 'rew') {
-        if (player.moving || !player.prevPosition) { out.toasts.push('Nothing to rewind right now.'); return out; }
-        [player.x, player.y, player.z] = player.prevPosition;
-        player.strokes = Math.max(0, player.strokes - 1);
-        player.prevPosition = null;
-        out.toasts.push('Rewound your last stroke.');
-      } else if (item === 'mag') { player.armedPowerups.mag = 1; out.toasts.push('Hole Magnet armed for this shot.'); }
-      else if (item === 'steady') { player.armedPowerups.steady = 1; out.toasts.push('Your next shot has no wobble.'); }
-      else { fx = { id: ++fxCount, t: item }; out.toasts.push(ITEM_NAMES[item] + ' sent to everyone else!'); }
+      const activation = activatePowerup(player, item, fxCount + 1);
+      if (activation.toast) out.toasts.push(activation.toast);
+      if (!activation.ok) return out;
+      out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power']);
+      if (activation.message) { fx = activation.message; fxCount = fx.id; }
       player.flashType = item; player.flashUntil = now + EFFECT_FLASH_MS;
-      player.inventory.splice(index, 1);
+      takeFromInventory(player.inventory, index);
       return out;
     },
 
-    /** Another player's Reversiball/Zanyball lands on this player (legacy applyFx()). */
+    /** Another player's opponent-targeted effect message lands on this player; returns the toast, or null when it cannot. */
     receiveAttack(type, from) {
-      if (disposed || player.mode !== 'play' || (type !== 'rev' && type !== 'zany')) return null;
-      player.pendingPowerups[type] = 1;
-      return String(from || 'Someone').slice(0, 14) + ' used ' + ITEM_NAMES[type] + ' on you!';
+      if (disposed || !receiveEffect(player, type)) return null;
+      return String(from || 'Someone').slice(0, 14) + ' used ' + powerupName(type) + ' on you!';
     },
 
     /** Ball centre height of the tee/cup for transitions. */

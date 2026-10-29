@@ -8,11 +8,13 @@
  * clock (the same time base as roundStartTime and votingDeadline).
  */
 
+import { isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
 
-export const ITEM_NAMES = Object.freeze({ mag: 'Hole Magnet', steady: 'Steady Aim', rew: 'Rewind', rev: 'Reversiball', zany: 'Zanyball' });
+/** HUD names by power-up id, from the gameplay catalog. */
+export const ITEM_NAMES = Object.freeze(Object.fromEntries(POWERUP_CATALOG.map(e => [e.id, e.name])));
 
 const isTournament = mode => typeof mode === 'string' && mode.startsWith('tournament_');
 /** Maps in the series: 3/6/9 for tournaments, otherwise 1. */
@@ -159,7 +161,7 @@ export function hudView(room, local, now, courses) {
   }));
   const inventory = [0, 1, 2].map(i => {
     const item = (local.inventory || [])[i];
-    return { index: i, label: item ? (i + 1) + '. ' + ITEM_NAMES[item] : (i + 1) + '. empty', kind: !item ? 'empty' : (item === 'rev' || item === 'zany') ? 'attack' : 'item' };
+    return { index: i, label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
   });
   return {
     info,

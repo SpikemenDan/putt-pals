@@ -9,7 +9,7 @@ const input = createInputAdapter({
   canvas,                       // pointer, wheel and context-menu target
   camera: rig,                  // createCameraRig() from src/camera
   pickGround: (x, y) => worldPointOnBallPlane(x, y),   // legacy planePoint(): {x, z} or null
-  getState: () => ({ active, mode, moving, connected, transitioning: rig.transitioning, reverse, steady }),
+  getState: () => ({ active, mode, moving, connected, transitioning: rig.transitioning, steady }),
   dispatch,                     // same dispatcher the UI uses (createUiDispatcher)
 });
 input.setAimAngle(angleToHole);               // start of each putt (legacy aim())
@@ -21,7 +21,7 @@ input.dispose();                              // removes every listener
 
 | Command | Source |
 | --- | --- |
-| `{ type: 'shot', angle, power }` | Release after a pull with charge > 0.025 while playing, not moving, connected and not transitioning. `angle` already includes Reversiball and the sway shown on the last drawn frame. |
+| `{ type: 'shot', angle, power }` | Release after a pull with charge > 0.025 while playing, not moving, connected and not transitioning. `angle` already includes the sway shown on the last drawn frame. |
 | `cycle-camera`, `toggle-card`, `close-card`, `use-item` (`index`), `toggle-sound` | C, K, Escape, 1–3, M (ignored while typing in text fields) |
 | `user-gesture` | Any pointer, key, click or touch, so the audio adapter can unlock |
 
@@ -29,4 +29,4 @@ Preserved details: short pulls, Escape, pointer cancel, lost capture and window 
 
 `subscribeAim()` reports charge changes for the power meter so per-frame values stay out of React state. `aim.js` holds the shared aim rules (`spread`, `sway`, `shotAngle`, `chargeFromDrag`, `accuracyText`).
 
-`npm run test:input` runs the legacy game and this adapter in one jsdom window, sending identical pointer events to each canvas and shared keyboard events. Seven drags covering power, direction, sway phase, Reversiball and Steady Aim produce shots identical to legacy launches bit for bit. The guide direction matches the legacy guide dots, and camera angles track the legacy camera. The test also covers cancel and guard paths, shortcuts, text-field filtering, free roam and removal of every listener on dispose. Real-browser input is not claimed by this suite.
+`npm run test:input` runs the legacy game and this adapter in one jsdom window, sending identical pointer events to each canvas and shared keyboard events. Seven drags covering power, direction, sway phase and Steady Aim produce shots identical to legacy launches bit for bit. The guide direction matches the legacy guide dots, and camera angles track the legacy camera. The test also covers cancel and guard paths, shortcuts, text-field filtering, free roam and removal of every listener on dispose. Real-browser input is not claimed by this suite.

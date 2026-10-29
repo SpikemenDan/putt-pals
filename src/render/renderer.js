@@ -247,7 +247,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
      * @param {number} [frame.hazardTime=0] Synchronized room seconds for moving hazards
      * @param {object|null} frame.local {x,y,z,vx,vy,moving,mode,color,effect,collected}
      * @param {object[]} [frame.remotes=[]] Players to show: {id,name,x,y,z,color,effect}
-     * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread,reverse} while charging
+     * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread} while charging
      * @param {object} frame.camera Pose from createCameraRig().update()
      */
     render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, camera: pose }) {

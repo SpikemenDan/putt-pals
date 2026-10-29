@@ -5,7 +5,6 @@ async function run() {
   const shared = await import('../src/shared/index.js');
   const physics = await import('../src/simulation/physics.js');
   const aim = await import('../src/input/aim.js');
-  const rules = await import('../src/app/rules.js');
 
   // Defaults equal the numbers the game shipped with before T2.
   assert.equal(shared.BALL_RADIUS, 5);
@@ -22,10 +21,10 @@ async function run() {
     [0.75, 30, 3.2, 0.12, 4, 5.5, 45, 0.05]);
   assert.deepEqual([TUNING.bounce.wallRestitution, TUNING.bounce.ledgeDamping, TUNING.bounce.ledgeHeight, TUNING.bounce.landingRestitution, TUNING.bounce.landingSpeed], [1.82, 0.8, 5, 0.25, 180]);
   assert.deepEqual([TUNING.rest.maxSlope, TUNING.rest.maxSpeed, TUNING.rest.maxVertical, TUNING.rest.airTolerance, TUNING.rest.groundTolerance], [0.015, 6, 5, 0.8, 0.6]);
-  assert.deepEqual([TUNING.powerups.zanyMultiplier, TUNING.powerups.magnetRange, TUNING.powerups.magnetPull], [1.6, 90, 300]);
+  assert.deepEqual([TUNING.powerups.magnetRange, TUNING.powerups.magnetPull], [90, 300]);
   assert.deepEqual([TUNING.hazards.padRadius, TUNING.hazards.padLaunch, TUNING.hazards.padCooldown, TUNING.hazards.teleporterRadius, TUNING.hazards.teleporterCooldown], [18, 400, 0.6, 16, 0.8]);
   assert.deepEqual([TUNING.cup.sinkMargin, TUNING.cup.lipRestitutionBase, TUNING.cup.lipRestitutionGain], [1.5, 1.15, 0.6]);
-  assert.equal(rules.ZANY_POWER, 1.6);
+  assert.equal(TUNING.powerups.zanyMultiplier, undefined, 'Zanyball is gone');
   assert.equal(aim.SWAY_PERIOD, 1.4);
   assert.equal(aim.FULL_PULL_PX, 380);
   assert.equal(aim.AIM_STEP, 0.06);
