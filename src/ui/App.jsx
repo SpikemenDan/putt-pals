@@ -2,6 +2,7 @@ import { UiContext, useView } from './context.js';
 import { Banner } from './Banner.jsx';
 import { GameScreen } from './GameScreen.jsx';
 import { Landing } from './Landing.jsx';
+import { Loading } from './Loading.jsx';
 import { MapSelect } from './MapSelect.jsx';
 import { Results } from './Results.jsx';
 import { RoomLobby } from './RoomLobby.jsx';
@@ -13,10 +14,12 @@ import './global.css';
 function Screens({ onCanvas, initialName, initialRoomCode }) {
   const screens = useView(v => v.screens);
   const webglUnavailable = useView(v => v.webglUnavailable);
+  const connecting = useView(v => v.landing).connecting;
   return (
     <div className={app.app}>
       <div className={app.netnotice} hidden={!webglUnavailable} role="status" data-ui="webgl-notice">{webglUnavailable ? MESSAGES.webglUnavailable : ''}</div>
       <Landing hidden={!screens.landing} initialName={initialName} initialRoomCode={initialRoomCode} />
+      {connecting && <Loading />}
       <RoomLobby hidden={!screens.lobby} />
       <MapSelect hidden={!screens.voting} />
       <div className={app.netnotice} hidden={!screens.netNotice} role="alert">{screens.netNotice ? (screens.reconnecting ? MESSAGES.reconnecting : MESSAGES.connectionLost) : ''}</div>
