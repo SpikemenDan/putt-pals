@@ -1,6 +1,6 @@
 {
   "mode": "fast: first robust shot, not exhaustive difficulty counts",
-  "htmlSha256": "e5b5a6746bcc409902978a0ef469b5bff63fff4359157d6a62dd4713db8b4e75",
+  "htmlSha256": "0d15cd86e26978942bdd39c2269b731f4110d46ef6d7882376a4662255a0cbab",
   "toolsSha256": "5531b117fde01f4e3234c9c3e11084d7197eb6a07adb58e621ec020ba275d4fd",
   "power": 900,
   "robustness": {
