@@ -111,7 +111,7 @@ This table links roadmap IDs to their issues; current state and ownership are al
 
 ## Vision backlog
 
-Issues for the product vision in MODERNIZATION_PLAN.md were opened on 2026-10-29 with native blocked-by links; the owner has settled the decisions the plan listed. T2, U2, C3, G1a and F1 are `status:ready`; the others are `status:blocked` by the issues in the Depends on column of TASKS.md. G1 (#34) and K1 (#35) are umbrellas for G1a-G1g and K1a-K1d; M1 (#36) still needs splitting. An issue is not authorized work until the coordinator confirms a claim. Labels: `vision`, `area:physics|gameplay|courses|ui|network`, and `needs:integration-owner` for tasks that touch `src/shared`, package files or CI.
+Issues for the product vision in MODERNIZATION_PLAN.md were opened on 2026-10-29 with native blocked-by links; the owner has settled the decisions the plan listed. T2, U2, C3, G1a, F1, CL1 and CL2 are `status:ready`; the others are `status:blocked` by the issues in the Depends on column of TASKS.md. G1 (#34) and K1 (#35) are umbrellas for G1a-G1g and K1a-K1d; M1 (#36) still needs splitting. An issue is not authorized work until the coordinator confirms a claim. Labels: `vision`, `area:physics|gameplay|courses|ui|network`, and `needs:integration-owner` for tasks that touch `src/shared`, package files or CI.
 
 | ID | Issue | Title |
 | --- | --- | --- |
@@ -134,6 +134,11 @@ Issues for the product vision in MODERNIZATION_PLAN.md were opened on 2026-10-29
 | K1c | [#99](https://github.com/SpikemenDan/putt-pals/issues/99) | Transport tubes |
 | K1d | [#100](https://github.com/SpikemenDan/putt-pals/issues/100) | Difficulty bands and starter maps |
 | F1 | [#101](https://github.com/SpikemenDan/putt-pals/issues/101) | Flair: skins, trails, celebrations |
+| CL1 | [#102](https://github.com/SpikemenDan/putt-pals/issues/102) | Geometry integrity validator |
+| CL2 | [#103](https://github.com/SpikemenDan/putt-pals/issues/103) | Render clipping fixes |
+| K0 | [#104](https://github.com/SpikemenDan/putt-pals/issues/104) | Volumetric 3D course model |
+| W2 | [#105](https://github.com/SpikemenDan/putt-pals/issues/105) | Water in levels |
+| W3 | [#106](https://github.com/SpikemenDan/putt-pals/issues/106) | Wind zones in levels |
 
 ## Superseded and historical notes
 

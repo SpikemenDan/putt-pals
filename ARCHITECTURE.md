@@ -139,6 +139,8 @@ Design rules for the product vision in MODERNIZATION_PLAN.md. These are targets,
 
 ### Course elements
 
+The current course model is a heightfield (`surfaceHeight(course, x, y)` returns one floor per point), which cannot express an overpass or interior. The volumetric model (K0) adds multiple surfaces at different heights over one footprint, vertical walls and ceilings, and picks the floor under the ball by its height; existing 2D courses must stay bit-identical. Water bodies (splash and reset, shallow drag, currents) and wind zones (direction and strength fields, steady, gusting from synced room time, and updrafts) are course records read by the simulation and drawn by the renderer; their numbers live in the tuning file. A geometry-integrity validator (CL1) rejects interpenetrating solids and insufficient clearances, and is a gate for every new element.
+
 New primitives (corner wedge, curved ramp, multi-tier drop, transport tube) need course schema records, simulation support, renderer meshes, solver support and a test chamber that proves a robust shot exists and fails without the element, as the existing mechanic chambers do. Tubes carry the ball along a path and release it with its exit velocity. Islands are per-putt geometry with visible gaps; guard walls bound normal routes and drop-offs are declared open edges. Any change to course geometry or physics requires re-solving affected putts and a fresh difficulty sweep. A putt is accepted when a multi-stroke solver finds a robust route within its par (2 to 6); a single-shot hole-in-one is neither required nor guaranteed, and par defaults come from the shortest robust route.
 
 ### Game modes

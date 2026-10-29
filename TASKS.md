@@ -24,7 +24,7 @@ G1 and K1 were gated behind Q1 by an earlier owner decision. On 2026-10-29 the o
 
 ## Vision backlog
 
-Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links; T2, U2, C3, G1a and F1 are READY, the rest BLOCKED by the issues named in the Depends on column. #34 (G1) and #35 (K1) are now umbrellas for G1a-G1g and K1a-K1d. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
+Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links; T2, U2, C3, G1a, F1, CL1 and CL2 are READY, the rest BLOCKED by the issues named in the Depends on column. #34 (G1) and #35 (K1) are now umbrellas for G1a-G1g and K1a-K1d. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
@@ -42,11 +42,16 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | [G1g #94](https://github.com/SpikemenDan/putt-pals/issues/94) Course mechanics | #87 | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
 | [GM1 #95](https://github.com/SpikemenDan/putt-pals/issues/95) No Power-Ups mode | #88 | Pure Mini-Golf mode flag and mode selector; verify Practice and solo draw only self-enhancing power-ups |
 | [GM2 #96](https://github.com/SpikemenDan/putt-pals/issues/96) Putt Pong | #88, #89 (lofted shot) | Turn-based 1v1 cup-rack mode per MODERNIZATION_PLAN.md: 10-cup racks, bonus balls, redemption and rounds, multi-cup course support with elimination events, rack field and renderer effect, turn phase in the session machine and server-room contract, lobby entry. More than two players is deferred by the owner |
-| [K1a #97](https://github.com/SpikemenDan/putt-pals/issues/97) Islands and walls | #94, #87 | Per-putt floating islands with designed gaps, guard walls, declared open edges |
+| [K1a #97](https://github.com/SpikemenDan/putt-pals/issues/97) Islands and walls | #94, #87, #104 | Per-putt floating islands with designed gaps, guard walls, declared open edges |
 | [K1b #98](https://github.com/SpikemenDan/putt-pals/issues/98) Ramps and drops | #97 | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | [K1c #99](https://github.com/SpikemenDan/putt-pals/issues/99) Transport tubes | #98 | Enclosed tubes that carry and fling the ball between islands |
 | [K1d #100](https://github.com/SpikemenDan/putt-pals/issues/100) Difficulty bands | #97-#99 | Difficulty bands by map rating measured with SV1 (par-based, no hole-in-one requirement), optional hole-in-one shortcuts on some putts, re-solved starter maps, fresh sweep |
 | [F1 #101](https://github.com/SpikemenDan/putt-pals/issues/101) Flair | none | Selectable ball skins, trail skins and hole-in-one celebrations; choice stored locally; validated cosmetic ids in presence |
+| [CL1 #102](https://github.com/SpikemenDan/putt-pals/issues/102) | none | Geometry integrity validator: reject interpenetrating solids and tight clearances on every course, fix violations on the 22 shipped maps, and gate all new elements on it |
+| [CL2 #103](https://github.com/SpikemenDan/putt-pals/issues/103) | none | Render clipping fixes: z-fighting, ball, trail and arrow poke-through, collision-aware camera; verified in real-browser screenshots |
+| [K0 #104](https://github.com/SpikemenDan/putt-pals/issues/104) | #86, #102 | Volumetric 3D course model: stacked and overlapping surfaces, walls and ceilings over one footprint, solver support; existing courses stay bit-identical |
+| [W2 #105](https://github.com/SpikemenDan/putt-pals/issues/105) | #104, #83 | Water in levels: splash and reset, shallow water, currents, toon water visuals, solver hazard handling |
+| [W3 #106](https://github.com/SpikemenDan/putt-pals/issues/106) | #104, #83 | Wind zones in levels: steady, gusting and updraft fields, airborne-weighted push, visible streamlines; distinct from fans and the G1f Wind hazard |
 
 ## Delivered
 
