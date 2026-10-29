@@ -25,7 +25,7 @@ Putt Pals is a fast, high-energy 3D multiplayer mini-golf game for the web. It m
 | Mode | Rules |
 | --- | --- |
 | Party Circuit and Tournaments | Group matches against the clock with unlimited strokes, live scorecards and a crowned champion. Tournaments run 3, 6 or 9 maps. |
-| Putt Pong | Turn-based cup pong with chip shots: 1v1 by default, a 10-cup rack at each end, bonus balls and a redemption shot. Details below. |
+| Putt Pong | Turn-based 1v1 cup pong with chip shots: a 10-cup rack at each end, bonus balls and a redemption shot. Details below. |
 | No Power-Ups (Pure Mini-Golf) | Competitive mode with no power-ups: line, angle and touch only. |
 | Practice Suite | Relaxed solo play: explore any course or drill one hole repeatedly. |
 
@@ -78,7 +78,7 @@ Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slo
 
 Putt Pong is not played like the main game. It is turn-based and works like cup pong, played with chip shots.
 
-**Default: 1v1.** The field has a rack of **10 cups** (four tiers: 4, 3, 2, 1) at each end, one rack per player. The first player chips toward the opposing end, then the other player takes a turn, and turns keep alternating.
+**1v1 only.** The field has a rack of **10 cups** (four tiers: 4, 3, 2, 1) at each end, one rack per player. The first player chips toward the opposing end, then the other player takes a turn, and turns keep alternating.
 
 - **Eliminating cups.** A ball that lands in a cup eliminates that cup; which cup is decided by where the ball lands.
 - **Bonus balls.** A turn is two balls. Sinking two in a row earns two extra balls, and the shooter keeps going.
@@ -88,13 +88,7 @@ Putt Pong is not played like the main game. It is turn-based and works like cup 
 
 Assumptions to confirm: "the other person" in the redemption rule means the player who lost all their cups (as in cup pong); two balls per normal turn; the starting player alternates each round.
 
-**More than two players (design options, in order of recommendation).**
-
-1. **Teams, 2v2 up to 4v4 (recommended).** Same field, one rack per side. Players on a side take turns in a fixed rotation (A1, B1, A2, B2, ...), bonus balls and redemption are taken by the next shooter in the rotation. This keeps the rules, the field and the camera exactly as in 1v1 and scales to the 8-player cap.
-2. **Free-for-all on a polygon field, 3 or 4 players.** One rack per player on the sides of a triangle or square arena. On a turn you choose which opponent's rack to shoot at; a player whose rack is empty is out, and the last player standing wins. Redemption against several finishers needs its own rule, and the arena only reads well up to four sides.
-3. **Mixed lobbies.** Odd counts fall back to the closest team split or to option 2 with up to four players.
-
-Both options generalize the session model from "two players" to "sides", each with a rack and a rotation of shooters, so build that model first and treat 1v1 as two sides of one player.
+**More than two players is deferred.** The owner will brainstorm it later, once the game is fully developed. Do not build team or free-for-all variants now; only avoid hard-coding "exactly two" into the session model where that costs nothing.
 
 **Engineering consequences.** Putt Pong needs: a lofted chip shot as its base shot (the Chip In mechanic, G1b); courses with many cups (the current course schema and cup physics handle one hole per putt, so cups become a list with per-cup enabled state, elimination events and a renderer cover or removal effect); a turn-based phase in the session machine and server contract, where main-game rooms are simultaneous; and a field layout with rack geometry at each end. No power-ups by default.
 
