@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 (async () => {
+  await import('./rooms/session-recovery.test.mjs');
   const { SimulatedClock } = await import('xstate');
   const { createRoomSession } = await import('../src/session/index.js');
   const { createCourseDocument } = await import('../src/courses/index.js');
