@@ -214,6 +214,48 @@ const assert = require('node:assert/strict');
     assert.deepEqual(session.getSnapshot().totals, {});
     assert.equal(session.getSnapshot().last, null);
   });
+  run('server-owned reservations remain on the next map roster through reconnect grace', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ controllerId: 'owner', serverOwned: true, isReserved: id => id === 'owner', clock, courses });
+    sessions.push(session);
+    session.send({ type: 'JOIN_ROOM', playerId: 'guest', name: 'Guest' });
+    session.send({ type: 'SET_MODE', playerId: 'owner', mode: GameModes.TOURNAMENT_3 });
+    session.send({ type: 'START_VOTING', playerId: 'owner' });
+    session.send({ type: 'CAST_VOTE', playerId: 'owner', mapIndex: 0 });
+    session.send({ type: 'CAST_VOTE', playerId: 'guest', mapIndex: 0 });
+    clock.increment(2500);
+    for (let putt = 0; putt < 6; putt++) {
+      clock.increment(1500);
+      for (const id of ['owner', 'guest']) {
+        const state = session.getSnapshot();
+        assert.equal(session.send({ type: 'REPORT_SCORE', playerId: id, roundNumber: state.roundNumber, puttIndex: state.puttIndex, strokes: 1 }), true);
+      }
+      if (putt < 5) clock.increment(2500);
+    }
+    assert.equal(session.getSnapshot().phase, 'results');
+    session.send({ type: 'LEAVE_ROOM', playerId: 'owner' });
+    session.setController('guest');
+    session.send({ type: 'RETURN_TO_LOBBY', playerId: 'guest' });
+    session.send({ type: 'CAST_VOTE', playerId: 'guest', mapIndex: 0 });
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.deepEqual(session.getSnapshot().roster, ['owner', 'guest']);
+    assert.equal(session.getSnapshot().players.owner.connected, false);
+  });
+  run('scores and automatic timeouts keep map and tournament totals in safe integer range', () => {
+    const f = make(); start(f); f.clock.increment(1500);
+    assert.equal(score(f, 'host', Number.MAX_SAFE_INTEGER), true);
+    for (let putt = 1; putt < 6; putt++) {
+      f.clock.increment(2500);
+      const state = f.state();
+      assert.equal(f.send('UPDATE_STROKES', { roundNumber: state.roundNumber, puttIndex: state.puttIndex, strokes: 1 }), false);
+      assert.equal(score(f, 'host', 1), false);
+      f.clock.increment(1500);
+      f.clock.increment(122500);
+    }
+    assert.equal(f.state().phase, 'results');
+    assert.equal(f.state().last.scores.host, Number.MAX_SAFE_INTEGER);
+    assert.equal(f.state().totals.host.total, Number.MAX_SAFE_INTEGER);
+  });
   run('server-owned replay putt selection follows the current controller identity', () => {
     const clock = new SimulatedClock();
     const session = createRoomSession({ controllerId: 'owner', serverOwned: true, clock, courses });

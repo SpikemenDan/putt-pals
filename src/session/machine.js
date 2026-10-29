@@ -16,6 +16,7 @@ const validCount = n => Number.isSafeInteger(n) && n >= 0;
 const validIdentity = e => typeof e.playerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(e.playerId);
 const validName = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
 const seriesLength = mode => ({ tournament_3: 3, tournament_6: 6, tournament_9: 9 })[mode] ?? 1;
+const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
 export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', serverOwned = false, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
@@ -37,13 +38,21 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   const hasVotes = c => ids(c).some(id => Number.isInteger(c.votes[id]));
   const everyoneVoted = c => ids(c).length > 0 && ids(c).every(id => Number.isInteger(c.votes[id]));
   const timeoutScore = (c, p) => Math.max(p.strokes, calculateTimeoutScore(p.strokes, rule(c).par, rule(c).penalty));
+  const scoreTotal = (c, id) => BigInt(c.totals[id]?.total ?? 0)
+    + c.players[id].scores.reduce((total, entry) => total + BigInt(entry?.score ?? 0), 0n);
+  const remainingScoreCapacity = (c, id) => Number(maxSafeTotal - scoreTotal(c, id));
+  const scoreFitsTotal = (c, id, score) => BigInt(score) <= maxSafeTotal - scoreTotal(c, id);
+  const newMapRoster = c => [...new Set([
+    ...(serverOwned ? c.roster.filter(id => isReserved(id)) : []),
+    ...ids(c),
+  ])];
   const fresh = (id, name) => ({ id, name, connected: true, strokes: 0, done: false, timedOut: false, score: null, scores: [] });
   const resetPlayers = (c, clearScores) => Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, { ...p, strokes: 0, done: false, timedOut: false, score: null, scores: clearScores ? [] : p.scores }]));
   const round = (c, mapIndex, puttIndex, newMap) => ({
     mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
     roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
     roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
-    roster: newMap ? ids(c) : c.roster,
+    roster: newMap ? newMapRoster(c) : c.roster,
     players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
   });
   const recordPutt = c => replay(c) ? {} : { players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, {
@@ -63,6 +72,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   const scoreEvent = (c, e) => participant(c, e) && e.roundNumber === c.roundNumber && e.puttIndex === c.puttIndex
     && clock.now() >= c.roundStartTime && !c.players[e.playerId].done && validCount(e.strokes)
     && e.strokes >= c.players[e.playerId].strokes && (e.timedOut === undefined || typeof e.timedOut === 'boolean')
+    && scoreFitsTotal(c, e.playerId, e.timedOut === true ? timeoutScore(c, { strokes: e.strokes }) : e.strokes)
     && (!e.timedOut || (!replay(c) && clock.now() >= c.roundStartTime + c.roundLimitSeconds * 1000));
   const clearSeries = c => ({ votes: {}, votingDeadline: 0, totals: {}, completedMaps: [], last: null, roster: [], players: resetPlayers(c, true) });
 
@@ -111,7 +121,9 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       chosenPutt: assign(({ context: c, event: e }) => round(c, c.votes[controller(c)], e.puttIndex, true)),
       strokes: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes } } })),
       score: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes, done: true, timedOut: e.timedOut === true, score: e.timedOut ? timeoutScore(c, { strokes: e.strokes }) : e.strokes } } })),
-      forceTimeout: assign(({ context: c }) => ({ players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, active(c).includes(id) && !p.done ? { ...p, done: true, timedOut: true, score: timeoutScore(c, p) } : p])) })),
+      forceTimeout: assign(({ context: c }) => ({ players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, active(c).includes(id) && !p.done ? {
+        ...p, done: true, timedOut: true, score: Math.min(timeoutScore(c, p), remainingScoreCapacity(c, id)),
+      } : p])) })),
       record: assign(({ context: c }) => recordPutt(c)),
       next: assign(({ context: c }) => round(c, c.mapIndex, c.puttIndex + 1, false)),
       finish: assign(({ context: c }) => finishMap(c)),
