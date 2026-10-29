@@ -435,13 +435,13 @@ function fakeClock() {
     await t.send({ type: 'START_VOTING', playerId: 'host' });
     await click(t.within('[data-ui=map-select] button[data-v]'));
     await t.step(2600);
-    await act(async () => t.store.setLocal({ mode: 'play', inventory: ['mag', 'zany'], soundOn: false, qualityHigh: false, viewLabel: 'Hole view' }));
+    await act(async () => t.store.setLocal({ mode: 'play', inventory: ['mag', 'steady'], soundOn: false, qualityHigh: false, viewLabel: 'Hole view' }));
     const inv = [...t.within('[data-ui=game]').querySelectorAll('canvas ~ div')].find(d => d.textContent.includes('empty'));
     const slots = [...inv.children];
-    assert.deepEqual(slots.map(b => b.textContent), ['1. Hole Magnet', '2. Zanyball', '3. empty']);
+    assert.deepEqual(slots.map(b => b.textContent), ['1. Hole Magnet', '2. Steady Aim', '3. empty']);
     const ghostClass = button('Card').className;
     assert.equal(slots[2].className, ghostClass, 'empty slot uses the ghost style');
-    assert.notEqual(slots[1].className, ghostClass); assert.notEqual(slots[1].className, slots[0].className, 'attack items use the attack style');
+    assert.notEqual(slots[1].className, ghostClass); assert.equal(slots[1].className, slots[0].className, 'self power-ups share the item style');
     assert.ok(button('View: Hole view') && button('Sound: Off') && button('Quality: Low'));
     t.commands.length = 0;
     for (const b of [slots[1], button('View: Hole view'), button('Sound: Off'), button('Quality: Low'), button('Invite')]) await click(b);

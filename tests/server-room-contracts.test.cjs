@@ -64,11 +64,11 @@ const assert = require('node:assert/strict');
     const oversized=copy(snapshot);for(let i=3;i<=5;i++){oversized.seats.push({playerId:'p'+i,joinOrder:i,connectedSince:0,resumeUntil:null});oversized.session.context.players['p'+i]={...copy(snapshot.session.context.players.p1),id:'p'+i};}assert.equal(c.validRoomSnapshot(oversized),false);
   });
   await test('presence is finite and roster scoped, supports current effect messages',()=>{
-    const p={x:0,y:1,z:2,mode:'play',strokes:1,effect:'rev',fx:{id:1,t:'rev'}};
+    const p={x:0,y:1,z:2,mode:'play',strokes:1,effect:'mag'};
     const frame={...command(),type:'presence',payload:p};
     assert.equal(c.authorizeRoomFrame(frame,binding,snapshot,snapshot.serverTime),'unauthorized');
     const play=copy(snapshot);play.session.node='play.active.running';play.session.context.roster=['p1','p2'];assert.equal(c.authorizeRoomFrame(frame,binding,play,play.serverTime),null);
-    for(const patch of [{x:Infinity},{x:1000001},{strokes:-1},{effect:'unknown'},{fx:{id:1,t:'rev',playerId:'p2'}}]) assert.equal(c.validServerPresence({...p,...patch}),false);
+    for(const patch of [{x:Infinity},{x:1000001},{strokes:-1},{effect:'unknown'},{effect:'rev'},{fx:{id:1,t:'rev'}},{fx:{id:1,t:'mag'}},{fx:{id:1,t:'zany',playerId:'p2'}}]) assert.equal(c.validServerPresence({...p,...patch}),false);
   });
   await test('complete checkpoint differs from public snapshot and rejects incompatible versions',()=>{
     const cp=createServerCheckpointFixture();assert.ok(c.decodeRoomCheckpoint(JSON.stringify(cp)));

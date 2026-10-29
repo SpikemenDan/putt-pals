@@ -321,7 +321,7 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     for (let i = 0; i < 5; i++) stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost appears' });
     ghost.x += 60; ghost.y += 20; ghost.z = 12;
     for (let i = 0; i < 6; i++) stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost eases' });
-    ghost.x += 400; ghost.n = 'Renamed'; ghost.effect = 'zany';
+    ghost.x += 400; ghost.n = 'Renamed'; ghost.effect = 'steady';
     for (let i = 0; i < 3; i++) stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost teleports and renames' });
     R.peers = own;
     stepBoth(view, now += 16.7, { remotes: [], label: 'ghost leaves' });

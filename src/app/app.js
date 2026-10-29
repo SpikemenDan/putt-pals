@@ -12,6 +12,7 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/index.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
+import { powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -42,7 +43,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   const store = createUiStore({ courses, clock });
   const audio = createAudio();
   const unbindGestures = audio.bindGestures(win);
-  let room = null, putt = null, activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
+  let room = null, putt = null, puttPolicy = null, carriedInventory = [], activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
   let quality = true, leaving = false, disposed = false, frameId = null, lastFrame = 0, lastPresence = -Infinity, lastSound = null, lastLocal = '';
   const remoteSeen = new Map(); // id -> {strokes, done, fx}
   const smooth = createRemoteInterpolator(); // remote balls are drawn slightly behind, between samples
@@ -78,7 +79,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       if (disposed) { opened.close(); return; }
       if (opened.identity) resume.write(request.roomCode, { ...opened.identity, name: request.name });
       room = opened; leaving = false;
-      remoteSeen.clear(); presence = {}; activeRound = null; lastPhase = null;
+      remoteSeen.clear(); presence = {}; activeRound = null; lastPhase = null; carriedInventory = [];
       setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
       roomStops.push(room.onSnapshot(onSnapshot), room.onPresence(onPresence), room.onStatus(onStatus));
       if (room.isHost) publish(true);
@@ -94,7 +95,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     leaving = true;
     for (const stop of roomStops.splice(0)) stop();
     room.close(); room = null;
-    endPutt();
+    endPutt(); carriedInventory = [];
     activeRound = null; lastPhase = null; presence = {}; remoteSeen.clear(); smooth.clear();
     audio.resetSession();
     setLocal({ active: false, connecting: false, connected: true, reconnecting: false, mode: 'lobby', strokes: 0, inventory: [] });
@@ -135,6 +136,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
 
   // ---------------------------------------------------------------- rounds
   function endPutt() {
+    if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
     input?.cancel();
     lastSound = null;
@@ -145,7 +147,8 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     const now = room.now();
     if (s.phase === SessionPhases.LOBBY || s.phase === SessionPhases.SELECT) {
       if (putt || activeRound !== null) { endPutt(); activeRound = null; }
-      setLocalIfChanged({ mode: 'lobby', strokes: 0, inventory: [] });
+      if (s.phase === SessionPhases.LOBBY) carriedInventory = []; // a tournament keeps its inventory through map selection only
+      setLocalIfChanged({ mode: 'lobby', strokes: 0, inventory: s.phase === SessionPhases.SELECT ? [...carriedInventory] : [] });
     } else if (s.phase === SessionPhases.PLAY && now >= s.roundStartTime && activeRound !== s.roundNumber) {
       startRound(s);
     } else if (s.phase === SessionPhases.RESULTS && lastPhase !== SessionPhases.RESULTS) {
@@ -162,9 +165,11 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     activeRound = s.roundNumber;
     const definition = data.definitions[s.mapIndex];
     const playing = !spectate && s.roster.includes(room.localId);
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length });
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
+      inventory: startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
     });
     putt.mapIndex = s.mapIndex; putt.puttIndex = s.puttIndex;
     if (view) {
@@ -176,7 +181,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       }
     }
     input?.setAimAngle(putt.aimAngle());
-    setLocalIfChanged({ mode: putt.mode, strokes: 0, inventory: [] });
+    setLocalIfChanged({ mode: putt.mode, strokes: 0, inventory: [...putt.player.inventory] });
     publish(true);
   }
 
@@ -370,7 +375,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       },
       getState: () => ({
         active: !!room, mode: putt ? putt.mode : 'lobby', moving: !!putt?.player.moving, connected: !!room?.connected,
-        transitioning: view.rig.transitioning, reverse: !!putt?.player.pendingPowerups.rev, steady: !!putt?.player.armedPowerups.steady,
+        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady,
       }),
     });
     unsubscribeInputAim = input.subscribeAim((charging, charge) => { for (const l of [...aimListeners]) l(charging, charge); });

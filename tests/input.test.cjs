@@ -30,7 +30,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   let active = true, connected = true, forceTransition = false;
   const getState = () => {
     const me = P().me;
-    return { active, mode: me.mode, moving: me.moving, connected, transitioning: forceTransition || P().trans, reverse: !!me.pend.rev, steady: !!me.arm.steady };
+    return { active, mode: me.mode, moving: me.moving, connected, transitioning: forceTransition || P().trans, steady: !!me.arm.steady };
   };
   const commands = [];
   const dispatch = c => commands.push(c);
@@ -88,15 +88,15 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(accuracyText(true, 0.5), '50% power · ±' + (spread(0.5) * 180 / Math.PI).toFixed(1) + '° spread');
   });
 
-  await scenario('shots: drag direction, power, sway phase, reverse and steady match legacy launches bit for bit', async () => {
+  await scenario('shots: drag direction, power, sway phase and steady match legacy launches bit for bit', async () => {
     const cases = [
       { to: [300, 330], frameAt: now += 16 },
       { to: [520, 120], frameAt: now += 517 },
       { to: [410, 255], frameAt: now += 233 },
       { to: [100, 480], frameAt: now += 701 },
-      { to: [330, 260], frameAt: now += 350, rev: true },
+      { to: [330, 260], frameAt: now += 350 },
       { to: [610, 400], frameAt: now += 90, steady: true },
-      { to: [250, 90], frameAt: now += 1400, rev: true, steady: true },
+      { to: [250, 90], frameAt: now += 1400, steady: true },
     ];
     for (const c of cases) {
       const r = shot(c);
@@ -107,7 +107,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       assert.equal(r.command.power, r.guide.charge, `power is the shown charge for ${JSON.stringify(c)}`);
       assert.ok(r.command.power > 0 && r.command.power <= 1);
       assert.ok(r.guide.charge <= Math.min(1, Math.hypot(c.to[0] - 400, c.to[1] - 250) / 260), 'no more sensitive than the legacy pull (260 px)');
-      assert.equal(r.command.angle, shotAngle({ aimAngle: r.guide.aimAngle, charge: r.guide.charge, time: c.frameAt / 1000, reverse: !!c.rev, steady: !!c.steady }));
+      assert.equal(r.command.angle, shotAngle({ aimAngle: r.guide.aimAngle, charge: r.guide.charge, time: c.frameAt / 1000, steady: !!c.steady }));
     }
   });
 
@@ -282,9 +282,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     pointer(canvas, 'pointermove', { clientX: 400, clientY: 250 + 190 });
     const g = input.frameAim(0.35);
     assert.equal(g.length, g.charge * AIM_ARROW_MAX_LENGTH);
-    assert.equal(g.angle, shotAngle({ aimAngle: g.aimAngle, charge: g.charge, time: 0.35, reverse: g.reverse }));
+    assert.equal(g.angle, shotAngle({ aimAngle: g.aimAngle, charge: g.charge, time: 0.35 }));
     const z = input.frameAim(0.7);
-    assert.ok(Math.abs(z.angle - z.aimAngle - (g.reverse ? Math.PI : 0)) < 1e-9, 'dead straight at a sway zero crossing');
+    assert.ok(Math.abs(z.angle - z.aimAngle) < 1e-9, 'dead straight at a sway zero crossing');
     pointer(canvas, 'pointercancel', {});
   });
 

@@ -51,7 +51,7 @@ export function createPlayerState(name, colorIndex = 0, options = {}) {
     inventory: [],
     collectedPickups: {},
     armedPowerups: { mag: 0, steady: 0 },
-    pendingPowerups: { rev: 0, zany: 0 },
+    pendingPowerups: {},
     puttStartMs: 0,
     mode: 'play', // 'play' | 'sunk' | 'timeout' | 'spectator'
     waitFrames: 0,

@@ -1,5 +1,7 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
 import { GameModes } from '../../shared/session.js';
+import { auraIds } from '../../gameplay/catalog.js';
+import { validEffectMessage } from '../../gameplay/effects.js';
 
 export const SERVER_ROOM_VERSION = 2;
 export const CHECKPOINT_VERSION = 1;
@@ -60,8 +62,8 @@ export function validServerCommand(c) {
 export function validServerPresence(p) {
   return allowed(p, ['x', 'y', 'z', 'mode', 'strokes', 'effect', 'fx']) && ['x','y','z'].every(k => Number.isFinite(p[k]) && Math.abs(p[k]) <= 1000000)
     && ['play', 'sunk', 'timeout', 'spectator'].includes(p.mode) && count(p.strokes)
-    && (p.effect === undefined || ['', 'mag', 'steady', 'rew', 'rev', 'zany'].includes(p.effect))
-    && (p.fx === undefined || (exact(p.fx, ['id','t']) && count(p.fx.id) && ['rev','zany'].includes(p.fx.t)));
+    && (p.effect === undefined || auraIds().includes(p.effect))
+    && (p.fx === undefined || (exact(p.fx, ['id','t']) && validEffectMessage(p.fx)));
 }
 const validResume = r => exact(r, ['sessionId', 'playerId', 'token']) && validRoomId(r.sessionId) && validRoomId(r.playerId) && validRoomSecret(r.token);
 export function validClientFrame(m) {
