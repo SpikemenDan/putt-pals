@@ -15,6 +15,8 @@ import { createAimGuide, createAura, createBall, createBlob, createConfetti, cre
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
 import { createSkyWorld } from './sky-world.js';
+import { createWeather } from './weather.js';
+import { paletteForCourse } from '../courses/palettes.js';
 
 const R = BALL_RADIUS;
 /** Legacy canvas aspect: height is 0.625 of the width. */
@@ -82,6 +84,10 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const sky = skyWorld ? skyWorld.dome : new THREE.Mesh(own(new THREE.SphereGeometry(6000, 24, 16)), library.skyMaterial);
   scene.add(sky);
   if (skyWorld) scene.add(skyWorld.group);
+  // Ambient weather (V1c): snow on Frost Hollow, rain and lightning on Cyclone Ring. Visual only.
+  const weather = toon ? createWeather({ THREE, resolution: library.inkUniforms.res }) : null;
+  if (weather) scene.add(weather.group);
+  let weatherEnabled = true, currentWeather = null;
   let environment = null;
   let generator, envGeometry;
   // Flat toon materials take no reflections, so only the legacy style needs an environment map.
@@ -204,6 +210,12 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       width = 0;
     },
 
+    /** Turns the ambient weather (snow, rain, lightning) on or off. On by default; the choice survives course swaps. */
+    setWeather(enabled) {
+      weatherEnabled = !!enabled;
+      weather?.setKind(weatherEnabled ? currentWeather : null);
+    },
+
     /**
      * Replaces the course scene. The previous build's resources are released first.
      * @param {object} course Legacy-shaped course definition (src/courses definitions)
@@ -212,8 +224,16 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     setCourse(course, puttIndex = 0) {
       if (disposed) throw new Error('Renderer has been disposed');
       build?.dispose();
-      build = buildCourseScene({ library, course, puttIndex, environment });
+      const palette = paletteForCourse(course);
+      build = buildCourseScene({ library, course, puttIndex, environment, palette });
       scene.add(build.group);
+      if (skyWorld) {
+        // Per-map sky: band colours, sun and cloud tint; the fog follows the horizon band.
+        skyWorld.setMood(palette.sky);
+        scene.fog.color.set(palette.sky.up[0]);
+        currentWeather = palette.weather;
+        weather.setKind(weatherEnabled ? currentWeather : null);
+      }
       return build;
     },
 
@@ -257,7 +277,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
           f.positions[i * 3 + 1] = 6 + f.phases[(i * 5) % f.count] * 40;
           f.positions[i * 3 + 2] = fa[5] ? fa[1] + (fa[5] > 0 ? ph : 1 - ph) * fa[3] : sy;
         }
-        f.geometry.attributes.position.needsUpdate = true;
+        if (f.wind) f.wind.write(f.positions, fa[4], fa[5], f.lengths, 3.6);
+        else f.geometry.attributes.position.needsUpdate = true;
       }
 
       const me = local || { x: 0, y: 0, z: 0, vx: 0, vy: 0, moving: false, mode: 'lobby', color: 0 };
@@ -317,6 +338,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       camera.lookAt(new V(...pose.look));
       sky.position.copy(camera.position);
       skyWorld?.update(t, camera.position);
+      if (weather) skyWorld.setFlash(weather.update(t, camera.position));
       sun.target.position.set(...pose.sunTarget);
       sun.position.set(pose.sunTarget[0] + 250, pose.sunTarget[1] + 700, pose.sunTarget[2] + 350);
       updateWallFade(build.wallFade, dt, camera.position, pose.fadeTarget ? new V(...pose.fadeTarget) : null);
@@ -339,6 +361,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const object of ownedActors) { scene.remove(object); disposeObject(object); }
       for (const resource of owned) resource.dispose();
       owned.clear();
+      weather?.dispose();
       skyWorld?.dispose();
       sun.shadow.dispose?.();
       library.dispose();

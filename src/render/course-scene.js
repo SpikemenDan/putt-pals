@@ -12,7 +12,9 @@
  */
 
 import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
-import { displayColor, TELEPORTER_COLORS, TOON_PALETTE } from './materials.js';
+import { displayColor, TELEPORTER_COLORS } from './materials.js';
+import { createWindStreaks } from './weather.js';
+import { DEFAULT_PALETTE } from '../courses/palettes.js';
 import { addInk, createInkMaterial } from './outline.js';
 import { createWorldTransform, resolveRenderCourse } from './transform.js';
 
@@ -76,8 +78,9 @@ function cutCup(THREE, mesh, course, origin) {
  * @param {number} [options.puttIndex=0]
  * @param {object} [options.environment=null] Environment map texture (owned by the caller)
  * @param {[number, number]} [options.origin=[0, 0]]
+ * @param {object} [options.palette] Per-map toon palette (src/courses/palettes.js); the toon style only
  */
-export function buildCourseScene({ library, course, puttIndex = 0, environment = null, origin = [0, 0] }) {
+export function buildCourseScene({ library, course, puttIndex = 0, environment = null, origin = [0, 0], palette = DEFAULT_PALETTE }) {
   const { THREE, textures: T } = library;
   const random = library.random;
   const hl = resolveRenderCourse(course, puttIndex);
@@ -87,8 +90,8 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const flags = [], fans = [], vortices = [], movers = [], wallFade = [];
   const toon = library.style === 'toon';
   // Toon surfaces are one flat palette colour; the legacy style keeps its patterned textures.
-  const surface = (role, texture, repeatX, repeatY, overrides) => toon ? library.toon(TOON_PALETTE[role], overrides) : library.patterned(texture, repeatX, repeatY, overrides);
-  const solid = (role, params) => toon ? library.toon(TOON_PALETTE[role], params) : new THREE.MeshStandardMaterial(params);
+  const surface = (role, texture, repeatX, repeatY, overrides) => toon ? library.toon(palette.surfaces[role], overrides) : library.patterned(texture, repeatX, repeatY, overrides);
+  const solid = (role, params) => toon ? library.toon(palette.surfaces[role], params) : new THREE.MeshStandardMaterial(params);
   // Meshes that get an ink outline once the cup cutouts are known.
   const inked = [];
   const ink = (mesh, options) => { if (toon) inked.push([mesh, options || {}]); return mesh; };
@@ -165,11 +168,19 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
       const pivot = new THREE.Group(); pivot.rotation.z = k * Math.PI / 2; pivot.add(blade); blades.add(pivot);
     }
     fanGroup.add(blades); g.add(fanGroup);
-    const N = 36, positions = new Float32Array(N * 3), geometry = new THREE.BufferGeometry();
+    const N = 36, positions = new Float32Array(N * 3), phases = Array.from({ length: N }, () => random());
+    if (toon) {
+      // Wind streaks in the palette's wind colour, blown along the fan's direction (V1c).
+      const wind = createWindStreaks({ THREE, count: N, color: palette.surfaces.wind });
+      wind.mesh.renderOrder = 1; wind.mesh.userData.windStreaks = true; g.add(wind.mesh);
+      fans.push({ blades, positions, geometry: wind.geometry, wind, fan: fa, count: N, phases, lengths: phases.map(p => 22 + p * 34) });
+      continue;
+    }
+    const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const points = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xffffff, size: 7, map: T.soft, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }));
     points.frustumCulled = false; g.add(points);
-    fans.push({ blades, positions, geometry, fan: fa, count: N, phases: Array.from({ length: N }, () => random()) });
+    fans.push({ blades, positions, geometry, fan: fa, count: N, phases });
   }
 
   const cut = new Set();
@@ -187,7 +198,7 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   rim.rotation.x = Math.PI / 2; rim.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 0.2)); g.add(ink(rim));
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 60, 8), solid('pole', { color: 0xffffff, metalness: 0.5, roughness: 0.3, envMap: environment, envMapIntensity: 0.9 }));
   pole.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 30)); pole.castShadow = true; g.add(ink(pole));
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(26, 16, 12, 6), new THREE.MeshBasicMaterial({ color: toon ? TOON_PALETTE.flag : 0xff4fb8, side: THREE.DoubleSide }));
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(26, 16, 12, 6), new THREE.MeshBasicMaterial({ color: toon ? palette.surfaces.flag : 0xff4fb8, side: THREE.DoubleSide }));
   flag.position.set(...at(hl.hole[0] + 13, hl.hole[1], holeHeight + 52)); g.add(ink(flag, { planar: true, centred: true })); flags.push(flag);
 
   (course.putts || []).forEach((putt, k) => {
