@@ -176,6 +176,98 @@ const assert = require('node:assert/strict');
     const g = make(['a']); g.send('START_VOTING'); g.send('CAST_VOTE', { mapIndex: 0 });
     const before = g.state(); g.session.dispose(); g.clock.increment(1000000); assert.deepEqual(g.state(), before);
   });
+  run('server-owned controller changes preserve disconnected seats and keep the round alive', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ controllerId: 'owner', serverOwned: true, isReserved: id => id === 'owner', clock, courses });
+    sessions.push(session);
+    assert.equal(session.send({ type: 'JOIN_ROOM', playerId: 'guest', name: 'Guest' }), true);
+    assert.equal(session.getSnapshot().hostId, undefined);
+    assert.equal(session.getSnapshot().controllerId, 'owner');
+    assert.equal(session.send({ type: 'START_VOTING', playerId: 'guest' }), false);
+    assert.equal(session.send({ type: 'START_VOTING', playerId: 'owner' }), true);
+    assert.equal(session.send({ type: 'CAST_VOTE', playerId: 'owner', mapIndex: 0 }), true);
+    assert.equal(session.send({ type: 'CAST_VOTE', playerId: 'guest', mapIndex: 0 }), true);
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.equal(session.send({ type: 'LEAVE_ROOM', playerId: 'owner' }), true);
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.equal(session.getSnapshot().players.owner.connected, false);
+    assert.equal(session.setController('guest'), true);
+    assert.equal(session.getSnapshot().controllerId, 'guest');
+    assert.equal(session.send({ type: 'RETURN_TO_LOBBY', playerId: 'guest' }), false);
+    clock.increment(2500);
+    assert.equal(session.send({ type: 'REPORT_SCORE', playerId: 'guest', roundNumber: session.getSnapshot().roundNumber, puttIndex: 0, strokes: 1 }), true);
+    assert.equal(session.getSnapshot().roster.includes('owner'), true);
+  });
+  run('server abandonment invalidates an empty unfinished round without recording results', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ controllerId: 'owner', serverOwned: true, clock, courses });
+    sessions.push(session);
+    session.send({ type: 'START_VOTING', playerId: 'owner' });
+    session.send({ type: 'CAST_VOTE', playerId: 'owner', mapIndex: 0 });
+    clock.increment(4000);
+    const roundNumber = session.getSnapshot().roundNumber;
+    session.send({ type: 'LEAVE_ROOM', playerId: 'owner' });
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.equal(session.abandonRoom(), true);
+    assert.equal(session.getSnapshot().phase, 'lobby');
+    assert.equal(session.getSnapshot().roundNumber, roundNumber + 1);
+    assert.deepEqual(session.getSnapshot().totals, {});
+    assert.equal(session.getSnapshot().last, null);
+  });
+  run('server-owned reservations remain on the next map roster through reconnect grace', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ controllerId: 'owner', serverOwned: true, isReserved: id => id === 'owner', clock, courses });
+    sessions.push(session);
+    session.send({ type: 'JOIN_ROOM', playerId: 'guest', name: 'Guest' });
+    session.send({ type: 'SET_MODE', playerId: 'owner', mode: GameModes.TOURNAMENT_3 });
+    session.send({ type: 'START_VOTING', playerId: 'owner' });
+    session.send({ type: 'CAST_VOTE', playerId: 'owner', mapIndex: 0 });
+    session.send({ type: 'CAST_VOTE', playerId: 'guest', mapIndex: 0 });
+    clock.increment(2500);
+    for (let putt = 0; putt < 6; putt++) {
+      clock.increment(1500);
+      for (const id of ['owner', 'guest']) {
+        const state = session.getSnapshot();
+        assert.equal(session.send({ type: 'REPORT_SCORE', playerId: id, roundNumber: state.roundNumber, puttIndex: state.puttIndex, strokes: 1 }), true);
+      }
+      if (putt < 5) clock.increment(2500);
+    }
+    assert.equal(session.getSnapshot().phase, 'results');
+    session.send({ type: 'LEAVE_ROOM', playerId: 'owner' });
+    session.setController('guest');
+    session.send({ type: 'RETURN_TO_LOBBY', playerId: 'guest' });
+    session.send({ type: 'CAST_VOTE', playerId: 'guest', mapIndex: 0 });
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.deepEqual(session.getSnapshot().roster, ['owner', 'guest']);
+    assert.equal(session.getSnapshot().players.owner.connected, false);
+  });
+  run('scores and automatic timeouts keep map and tournament totals in safe integer range', () => {
+    const f = make(); start(f); f.clock.increment(1500);
+    assert.equal(score(f, 'host', Number.MAX_SAFE_INTEGER), true);
+    for (let putt = 1; putt < 6; putt++) {
+      f.clock.increment(2500);
+      const state = f.state();
+      assert.equal(f.send('UPDATE_STROKES', { roundNumber: state.roundNumber, puttIndex: state.puttIndex, strokes: 1 }), false);
+      assert.equal(score(f, 'host', 1), false);
+      f.clock.increment(1500);
+      f.clock.increment(122500);
+    }
+    assert.equal(f.state().phase, 'results');
+    assert.equal(f.state().last.scores.host, Number.MAX_SAFE_INTEGER);
+    assert.equal(f.state().totals.host.total, Number.MAX_SAFE_INTEGER);
+  });
+  run('server-owned replay putt selection follows the current controller identity', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ controllerId: 'owner', serverOwned: true, clock, courses });
+    sessions.push(session);
+    session.send({ type: 'SET_MODE', playerId: 'owner', mode: GameModes.PUTT_PRACTICE });
+    session.send({ type: 'START_VOTING', playerId: 'owner' });
+    session.send({ type: 'CAST_VOTE', playerId: 'owner', mapIndex: 0 });
+    assert.equal(session.getSnapshot().state.select, 'choosingPutt');
+    assert.equal(session.send({ type: 'START_ROUND', playerId: 'owner', puttIndex: 2 }), true);
+    assert.equal(session.getSnapshot().phase, 'play');
+    assert.equal(session.getSnapshot().puttIndex, 2);
+  });
   for (const session of sessions) session.dispose();
   if (failed) process.exitCode = 1;
   else console.log('ALL SESSION LIFECYCLE TESTS PASSED');
