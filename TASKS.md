@@ -37,7 +37,7 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | G1f Global hazards | G1a | Rain, Snow, Wind, targeted Lightning, roaming Tornado and Hurricane driven by synced room time; keep distinct from the visual-only ambient weather |
 | G1g Course mechanics | Q1 sweep | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
 | GM1 No Power-Ups mode | G1a | Pure Mini-Golf mode flag and mode selector; verify Practice and solo draw only self-enhancing power-ups |
-| GM2 Putt Pong | G1a | Team cup-rack mode using the working defaults in MODERNIZATION_PLAN.md: rack state and elimination events in the session module, rack scene, scoring, lobby entry |
+| GM2 Putt Pong | G1a, G1b (lofted shot) | Turn-based cup-rack mode per MODERNIZATION_PLAN.md: sides with racks and shooter rotation (1v1 first, then teams), 10-cup racks, bonus balls, redemption and rounds, multi-cup course support with elimination events, rack field and renderer effect, turn phase in the session machine and server-room contract, lobby entry. Free-for-all on a polygon field is a later option |
 | K1a Islands and walls | G1g, Q1 sweep | Per-putt floating islands with designed gaps, guard walls, declared open edges |
 | K1b Ramps and drops | K1a | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | K1c Transport tubes | K1b | Enclosed tubes that carry and fling the ball between islands |
