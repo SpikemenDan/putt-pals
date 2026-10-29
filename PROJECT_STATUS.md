@@ -1,259 +1,35 @@
 # Project status
 
-Last updated: 2026-10-28.
+Last updated: 2026-10-29. Accepted main: `333d06d` (N4c PR #81). Live ownership and blockers are in GitHub issues; the task graph is in TASKS.md and per-task evidence is in each PR and docs/reviews/.
 
-## Current objective
+## Where the project stands
 
-Accepted main is `c331833`, including N4a's server-room contract (PR #74, `b30552f`) and N4b's local Worker/SQLite Durable Object and asset/WebSocket routing scaffold (PR #75, `be77190`). PR #75 baseline-ci and Chromium/Firefox/WebKit browser-ci all passed. The local Worker does not implement room protocol, lifecycle authority, durable recovery or deployment; browser gameplay still uses PeerJS until later N4 tasks are integrated. N4c #69 is ready for coordinator-confirmed claim; later N4 tasks remain blocked by their native prerequisites. N3 #14 is paused and Q1 depends on N4 #65, not TURN. V1a #58 and V1b #59 are integrated through PRs #67 and #76; remaining V1 issue state is tracked live. P1 remains paused; G1 and K1 remain after Q1. GitHub issues remain the live assignment source.
+The legacy single-file game has been rebuilt as a modular app (`index.html` and `src/`): headless shared simulation, validated course data, XState room lifecycle, React UI, Three.js 0.186.1 toon renderer with sky world, palettes, ambient weather and comic HUD, procedural audio, and PeerJS rooms with guest recovery and interpolation. `putt-pals.html` is kept as a separate build input and parity reference. The migration to server-owned Cloudflare rooms (N4) is under way: contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and a preview deployment are not. Online play in the browser still uses PeerJS.
 
-Confirmed user decisions: private friend rooms; desktop browsers; no requirement for a single offline HTML; prefer established libraries; support concurrent agent work; smooth flat-colour toon look without scenery clutter; per-putt walled islands with designed gaps; true portal pairs; stronger fans; Wind, Snow, Storm and Lightning as attack power-ups; visual-only ambient weather on Frost Hollow and Cyclone Ring.
+The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No Power-Ups mode, most power-ups, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers and cosmetics. Its task breakdown is in TASKS.md. Next work: finish N4, then Q1 (release readiness); M1 (menus and feedback) is ready; C3, T2, U2, CL1, CL2, G1a-G1f, GM1 and F1 may start now; T2 then S3 then SV1 come before G1g and K1, and the volumetric model K0 (true 3D levels, then water W2 and wind W3) before K1a.
 
-## Repository baseline
+## Confirmed owner decisions
 
-- Three original files: putt-pals.html, tools.js, HANDOFF.md.
-- No package.json, lockfile, standard build, or CI configuration found in the initial review.
-- HTML contains Three.js r128 and PeerJS plus application code.
-- Historical roadmap says P1–P32 done; P33–P61 unfinished. This is historical status, not fresh verification.
-- 22 maps in the actual code; six starters and 36 starter putts.
+- Private friend rooms, desktop browsers, normal hosted build; no offline single file or native packaging.
+- Prefer established libraries; keep the custom physics. Rapier is deferred after evaluation.
+- Server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets. Defaults: immediate controller succession, 30-second reconnect grace, 15-minute empty-room retention. N3 TURN stays paused.
+- Original comic art direction: smooth flat colour, ink outlines, no scenery clutter. Ambient weather on Frost Hollow and Cyclone Ring is visual only.
+- Course direction: per-putt walled islands with designed gaps, true portal pairs, stronger fans, 3D courses and more complicated level design. Every putt must be possible in par (2 to 6); hole-in-one guarantees are removed; physics should be more forgiving.
+- Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 8 players, 3 inventory slots, free-for-all on the same hole with everyone putting at once and advancing together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
+- Approval is required before commits and remote writes (AGENTS.md).
 
-## Initial review verification (historical)
+## Known issues and gaps
 
-| Command | Result |
-| --- | --- |
-| node --check tools.js | Passed |
-| node tools.js check | Passed: syntax, 22 maps, no empty slots, starter par/penalty/time metadata |
-| node tools.js surfaces | Passed: all 19 surface/timer checks |
+1. **Difficulty is not certified, and the acceptance rule is changing.** The solver, `rank` ladder and par defaults all assume every putt has a robust single-shot hole-in-one, and S2's cup-capture change already left five hard putts (Cyclone Ring putts 3 and 5, Grand Finale putts 1, 3 and 5) without one. The owner has dropped that requirement: every putt must instead be completable in par (2 to 6). S3 (forgiving physics) and SV1 (par solver) replace the old measures; until then recorded counts are stale. Details: docs/reviews/S2_CUP_CAPTURE.md and B4_DIFFICULTY.md.
+2. **Client-trusted gameplay.** Each browser simulates its own ball; there is no anti-cheat. PeerJS host loss has no migration path until N4 lands; relay configuration is manual.
+3. **Real-world validation gaps.** Real WebRTC across separate networks, guest recovery on real networks, actual audio listening and a deployed preview have not been verified. The WebKit multiplayer browser spec is skipped in CI because it needs a relay.
+4. **Legacy tooling.** `tools.js` and the migration exporters still extract code from the legacy HTML; modern CLI commands import the shared simulation directly.
+5. **Renderer evidence.** Frame times were measured on a Mac M1 Pro probe and validated on two Windows laptop GPUs (docs/reviews/R2_WINDOWS_GPU.md); there is no broader hardware matrix.
 
-Not run during this review: cups, mechanics, full/fast solver suites, rank, jsdom smoke, multiplayer smoke, real browser rendering, audio, real-network multiplayer. Historical pass counts in HANDOFF.md are not new results.
+## Verification
 
-## Known issues and evidence
+CI runs `baseline-ci` (install from lockfile, syntax and course metadata checks, build, contract, simulation, session, network, audio, course, CLI, physics and jsdom smoke suites) and `browser-ci` (Playwright in Chromium, Firefox and WebKit). Use the commands in README.md and read the current CI result for a revision instead of relying on any pass count written in a document. jsdom suites stub WebGL, canvas and audio and use fake networks; they do not prove real rendering, audio quality or WebRTC.
 
-1. Fixed in B2: tools.js solve() previously initialized velocity with pw * 820 while game launch() used POWER=900. It now delegates to the same launch function. Exhaustive difficulty measurements still need recomputing.
-2. LADDER contains recorded counts; rank checks those historical counts rather than recomputing current physics difficulty.
-3. Legacy reference tools/exporters still couple to HTML source markers. Modern CLI commands now import course data/simulation directly; browser migration remains pending.
-4. Historical architecture notes contain old constants such as R=6 and MAXS=8. Current game has R=5 and unlimited strokes within the timer, with timeout rules. Prefer current code and validated behavior.
-5. Multiplayer clients report gameplay state; host coordination does not provide anti-cheat. Host migration is absent, and relay configuration is currently manual.
+## Updating this file
 
-## Next implementation action
-
-Use the live issue queue and confirm ownership before implementation. N1 #11 is delivered through PR #24; do not duplicate its adapters or score-contract fixes. See docs/reviews/N1_TRANSPORTS.md. Browser adoption and real-WebRTC validation remain downstream gates, not claims made by N1. A1 is owned by Codex root and delivered through PR #25; do not claim duplicate audio work. I1 is integrated (PR #31) and D1 closes with it. N2, R2 and T1 are eligible subject to live claims; N3 and Q1 remain blocked. No new task is launched by this status update.
-
-## B2 verification — 2026-10-25
-
-- node --check tools.js and node --check tests/solver-baseline.cjs: passed.
-- node tools.js check: passed, 22 maps and 36 starter putts.
-- node tools.js surfaces: 19/19 checks passed.
-- node tools.js cups: 7/7 checks passed.
-- node tools.js mechanics: 8/8 checks passed with the corrected solver.
-- node tests/solver-baseline.cjs: launch initialization passed at nine angle/power combinations; solver delegation passed for the candidate and nine robustness trials; all 36 starter putts have robust shots at POWER=900.
-- Measured solutions: tests/fixtures/solver-baseline.json includes source hashes, robustness offsets and zero-based map/putt indices. Regenerate with node tests/solver-baseline.cjs; it deliberately overwrites the measured fixture. These are first-robust-shot results, not full difficulty counts.
-- Gameplay HTML and physics remained unchanged. Browser/jsdom/multiplayer checks were not run for B2. B2 installed no dependencies; it was subsequently committed as 3bfaebd at the user's request.
-
-## B3 verification — 2026-10-25
-
-- Installed exact Vite 8.3.5 and jsdom 30.1.3 development dependencies and recorded the dependency tree in package-lock.json. Node engine requirements match jsdom; verified on Node 26.10.0 and npm 11.19.1.
-- npm ci --cache /private/tmp/putt-pals-npm-cache --offline: passed, proving reinstall from the lockfile with the populated cache. Initial downloads required network approval. The temporary cache path is only a local verification detail; normal setup is npm ci.
-- npm run build: passed; outputs dist/putt-pals.html. The build check compares embedded library/game script content exactly and verifies key UI elements.
-- npm run check: passed, 22 maps and 36 starter putts. node --check scripts/check-build.cjs and node --check vite.config.mjs also passed.
-- npm run test:smoke: SMOKE PASSED, with no runtime errors.
-- npm run test:multiplayer: MULTI SMOKE PASSED, including four fake-network clients, voting, scoring, timeouts and disconnect handling.
-- npm run test:physics: all 19 surface/timer, seven cup and eight mechanic checks passed. The npm test component commands were run individually; the full aggregate was not repeated.
-- Vite createServer()/preview() HTTP checks: both returned the game successfully on temporary loopback ports; servers closed afterward. Sandbox loopback restrictions required approval for this verification.
-- Game HTML hash still matches the B2 fixture. No runtime dependency upgrade or behavior change. jsdom uses stubbed graphics/audio and a fake network; real browsers and real WebRTC remain B1/later acceptance work.
-- TypeScript, lint/format configuration, module extraction and CI are not added by B3. README.md documents the available commands and the temporary /putt-pals.html entry URL.
-- B3 is committed as 216cd75. Temporary verification servers have been stopped.
-
-## B1 pause and W1 handoff — 2026-10-25
-
-- B1 is PAUSED, not complete: user held it to define the GitHub workflow. No browser reference screenshots or maintained inventory artifacts were created.
-- Source inspection found Three.js r128/MIT and PeerJS 1.5.4/MIT metadata. This does not constitute browser verification.
-- Browser inventory had native Firefox available, but selecting it returned “Computer Use permissions are not granted.” No permission changes were made. The local Vite server started for B1 was stopped after the user held the task.
-- W1 adds docs/GITHUB_WORKFLOW.md, GitHub Agent task and PR templates, and a baseline-ci workflow. The workflow uses the already-existing npm commands; no application/dependency changes are part of W1.
-- GitHub issues become the live owner/status record once created. TASKS.md is a coordinator-maintained roadmap/history snapshot; PROJECT_STATUS.md records accepted integration state. This avoids competing edits by workers.
-- User approved committing and pushing W1's files. Hosted CI acceptance remains pending. Branch protection, task issue creation and agent dispatch are separate setup steps and have not been performed. This explicit bootstrap approval covers a direct push; subsequent tasks follow the PR workflow.
-- Local W1 verification: YAML syntax parsed for both YAML files; CI job name, unique form field IDs and npm script references checked. npm run check, npm run build and git diff --check passed. These checks do not establish GitHub schema acceptance or a hosted runner result; physics/smoke implementations were unchanged and their suites were not repeated.
-
-## B1 review handoff — 2026-10-25/26
-
-- User resumed B1 and explicitly requested Chrome after Firefox access problems. Seven unedited Chrome screenshots are saved under tests/fixtures/browser-baseline/ with a manifest containing source hashes, dimensions, capture context and limitations.
-- Real UI evidence: landing, solo lobby, six starter cards, actual rendered Switchback Garden, Ball/Hole/World cameras, one pointer-driven stroke, live scorecard, Escape close and sound/quality control labels. Sound and quality were restored to On/High. No successful sink or full browser game completion is claimed.
-- docs/BASELINE.md inventories implemented behavior with source/jsdom/Chrome evidence separated. docs/THIRD_PARTY.md records Three.js r128 (0.128.0 inferred)/MIT and PeerJS 1.5.4/MIT source metadata and attribution limits.
-- scripts/inventory-baseline.cjs generates/checks tests/fixtures/source-inventory.json: source/library hashes, all 22 course definitions' rule/geometry inventory and six representative one-stroke traces using real launch/step functions. Headless trace conditions are explicit and not a real input replay.
-- Commands: node scripts/inventory-baseline.cjs --write; node scripts/inventory-baseline.cjs --check; node --check scripts/inventory-baseline.cjs; git diff --check. Passed. No dependency or game/tool changes required.
-- Chrome showed blank content after reload; HTTP still served the game, and a later native capture failed with ScreenCaptureKit -3812. Root cause unresolved. Practice/results/tournament completion, console audit, audio quality, actual performance and real WebRTC/TURN are not browser-verified by B1.
-- Hosted Baseline CI run 40247672160 succeeded for b333495: https://github.com/SpikemenDan/putt-pals/actions/runs/40247672160. This verifies W1's existing headless/build workflow on GitHub, not the new B1 artifacts.
-- Status: REVIEW, not DONE; user approved the B1 commit and branch push. PR creation, integration and merge approval remain pending. No GitHub issues/PRs/settings changes or agent dispatch performed for B1.
-
-## Update format for future owners
-
-Append the date, task ID, concrete changes, exact verification commands/results, known failures and next dependency. Keep planned work distinct from completed/verified behavior. Do not include credentials or private relay tokens.
-
-## C1 verification — 2026-10-25
-
-- Implemented pure shared contracts and mocks in `src/shared/`:
-  - `constants.js`: physics constants ($R=5$, $CUP=15/8$, $POWER=900$, $\Delta t=1/240$, drag coefficients), course limits, tournament starters, protocol version ($1$), player colors.
-  - `coords.js`: bidirectionally tested transforms between simulation ground plane ($[x,y,z]$) and Three.js 3D world space ($[x, y+R, z]$).
-  - `scoring.js`: pure calculation for timeout scoring ($Math.max(strokes, par + penalty)$), scorecard summaries, and tournament rankings with tie-breaking.
-  - `courses.js`: schemas and validation for putts and courses, enforcing starter course constraints and time limits ($120..600$s).
-  - `protocol.js`: message schemas and boundary validators for player presence, room snapshots, and guest votes.
-  - `simulation.js`: pure player simulation state record factory, $applyShot$ launch physics, and typed domain events.
-  - `session.js`: session phases, game modes, commands, and deterministic voting resolution with tie-breaking.
-  - `transport.js`: connection states and room transport contract interface.
-  - `render.js`: camera modes, immutable render snapshot factory, and AABB sightline obstruction raycasting for wall fading.
-  - `mocks.js`: high-fidelity `MockSimulation`, `MockTransportHub`, and `MockTransport` for parallel consumer testing.
-- `src/package.json`: configured `{"type": "module"}` to ensure seamless ES module imports without Node typeless warnings or impacting root CommonJS tools.
-- `tests/contracts.test.cjs`: 9 test suites covering all modules, roundtrip transforms, scoring rules, schemas, and mocks. Passed 9/9.
-- `package.json`: added `test:contracts` script and integrated it into `npm test`.
-- `ARCHITECTURE.md`: updated with full contract specifications.
-- Regression verification: `npm run check`, `npm run build`, `npm run test:physics`, `npm run test:smoke`, `npm run test:multiplayer`, and `npm test` all passed with zero errors.
-
-## S1 verification — 2026-10-25
-
-- Extracted headless simulation engine in `src/simulation/`:
-  - `physics.js`: pure math and dynamics functions without global closures or browser APIs.
-  - `engine.js`: `SimulationEngine` managing step loops, domain events, snapshots, and player states.
-  - `index.js`: unified module interface.
-- Bitwise parity verified against legacy fixtures:
-  - All 6 starter reference traces from `tests/fixtures/source-inventory.json` matched at every recorded tick ($t=0, 240, 480$) and identical sink ticks ($562, 350, 555, 498, 217, 222$).
-  - All 4 mechanic arena chambers (fan, teleporter, jump pad, tornado) verified to sink when active and fail when stripped.
-  - All surface drag roll distances matched legacy values exactly ($turf=261.1, sand=75.0, ice=1699.7, slime=43.8$).
-- Added `tests/simulation.test.cjs` and `npm run test:simulation`.
-- All checks (`npm run check`, `npm run build`, `npm run test:contracts`, `npm run test:simulation`) pass with zero errors.
-
-## Issue/backlog reconciliation — 2026-10-26
-
-- GitHub backlog created with agent-task, status:ready/status:active/status:blocked/status:review and optional labels, plus native blocked-by links. See docs/ISSUES.md for every issue URL. Seventeen issues exist; C1 #3 and S1 #5 are closed after integration, while D1 #8 remains active and incomplete.
-- 4327196: canonical shared scoring keeps a zero penalty, and voting matches legacy round-rotating tie-breaking with invalid/disconnected filtering. C1 issue notes were updated; these fixes supersede the original contract snapshot.
-- 543c383: actual committed catalog files are root index.js, legacy.js, legacy-adapter.cjs and courses.test.cjs; the intended src/courses/ and tools/ directories are absent. node courses.test.cjs exits 1 (cannot resolve ../tools/legacy-adapter.cjs). The issue records path repair, runnable test wiring and remaining CLI/consumer work. The commit message alone is not passing-test evidence.
-- Root contracts.test.cjs, scoring.js and session.js copies from 4327196 are tracked separately by C2 #19. This cleanup has disjoint root-file ownership from D1; canonical src/shared/ is integration-owner controlled.
-- Verified on current main: npm run test:contracts, npm run test:simulation and npm run check passed. The failed course entry point was explicitly reproduced. No source, dependency, gameplay or CI implementation was changed by this coordination task.
-- T1 #15 records that the current workflow lists legacy steps explicitly and does not yet run new contract/simulation scripts merely because npm test includes them. Q1 #18 additionally waits for B4/C2 completion. Native prerequisite links and human decision gates both matter.
-- Agent guide, README, issue template, GitHub workflow, issue index and roadmap now tell workers to select/claim issues, inspect existing claims/dependencies, and report progress on their issue/PR. Branch protection and agent dispatch were not changed.
-
-- Reconciliation cutoff extended to 9cdd12e (stale course metadata detection). The follow-up changes root courses.test.cjs/index.js/legacy-adapter.cjs and adds root stale.js; intended module placement is still not repaired. Re-running node courses.test.cjs still exits 1 with the adapter import error. D1 issue updated; no implementation changes made by this coordinator.
-
-## C2 and scoped D1 layout cleanup — 2026-10-26
-
-- Worker/integration owner: Codex root. User confirmed no other agents are working and authorized committing this bounded cleanup directly on main; no PR merge or history rewrite is claimed.
-- Moved index.js/legacy.js/stale.js into src/courses/, legacy-adapter.cjs into tools/ and courses.test.cjs into tests/, preserving file content. Removed only byte-identical root scoring.js/session.js/contracts.test.cjs copies after auditing imports; canonical src/shared/ and tests/ implementations are unchanged.
-- Added npm run test:courses to npm test and explicit contract/simulation/course steps to CI. No new dependencies or gameplay/physics changes.
-- D1 remains partial: the adapter still uses legacy VM/source extraction; full geometry, shared consumers and CLI migration remain required. T1 real-browser/integration coverage is also unfinished. Hosted CI and real-browser/network validation are not claimed by local checks.
-- Verification: npm test passed end-to-end (check, contracts, simulation, courses, physics, solo/practice/tournament smoke and four-client fake-network smoke); npm run build passed with embedded scripts preserved; node scripts/inventory-baseline.cjs --check passed. All 10 catalog checks passed. CI YAML parsing/script-reference checks, byte-for-byte relocation checks and git -c core.whitespace=cr-at-eol diff --check passed.
-
-## Accepted D1/L1 integration — 2026-10-26
-
-- D1 data/CLI: PR #22 merged as 8dcf760; docs/reviews/D1_DATA_CLI.md records geometry, normalized schema/IDs, CLI file inputs, solver/arena parity, provenance and remaining browser gates. D1 #8 remains open; do not repeat the delivered ports.
-- L1: PR #23 merged with user approval as adf2045, including 448f44f and ebab634. Pinned XState 5.33.3; explicit clocks/host guards; voting, synchronized starts, six-putt cards, uncapped scoring, 3/6/9-map totals, spectators/disconnects and practice/replay. test:session is wired into npm test and CI.
-- Latest PR-head CI passed: https://github.com/SpikemenDan/putt-pals/actions/runs/40355229967 . Full local npm test/build and inventory/export checks passed before merge. On merged main, locked offline npm ci, npm run test:session (14 scenarios), npm run test:contracts and npm run build passed. No new browser/real-network adoption validation is claimed.
-- Post-merge baseline-ci passed on adf2045: https://github.com/SpikemenDan/putt-pals/actions/runs/40356477704 .
-- L1 #9 is closed after accepted integration; N1 #11 is ready for coordinator-confirmed claim. N1 must preserve identity binding and reconcile the shared protocol/helper's 99-score limit before networking L1. The module preserves larger stroke counts locally; shared contracts were not silently changed.
-- I1/browser integration, real networking/recovery/TURN and B4 fresh difficulty measurements remain unfinished. No downstream module or production rollout is completed by this integration.
-- This coordinator edit writes PROJECT_STATUS.md and TASKS.md with LF as required by .gitattributes. Unrelated ARCHITECTURE.md line-ending artifacts are excluded.
-
-## N1 branch handoff — 2026-10-26
-
-- Implementation commit 72b7498, branch agent/n1-transports, worker/integration owner Codex root. User authorized the claim, implementation, commit, documentation update and branch push. N1 remains unmerged; no release or downstream acceptance is claimed.
-- Solo/in-memory/injected PeerJS adapters, connection-bound commands, version/session/round/putt/sequence validation, bounded JSON snapshots and host-to-L1 bridge. Movement is batched at 70 ms. Shared timeout/protocol checks preserve scores above 99 and zero penalties.
-- Full npm test, npm run build and node scripts/inventory-baseline.cjs --check passed. Final npm run test:network passed nine fake-transport scenarios; contract and 14-scenario lifecycle checks also passed. Hosted CI, actual WebRTC and real-browser adoption were not run for this branch.
-- README, architecture, workflow/issue/roadmap snapshots and review handoff are updated together. No PR creation, merge, deployment or paid provisioning is authorized by this push. I1/N2/N3/T1 and B4 remain open under their own gates.
-
-## N1 accepted-integration record — PR #24
-
-This record becomes effective only when https://github.com/SpikemenDan/putt-pals/pull/24 is merged after successful current-head baseline-ci; before that N1 remains REVIEW. The user explicitly requested completing N1 after PR/review/CI/merge/post-merge steps were explained, authorizing those bounded operations.
-
-N1 delivers the documented transport/host bridge and uncapped-score contract, including regression rejection of inherited-property command names. Local network/contract/session/build/inventory checks pass; full local regression evidence is above. CI and merge results are linked from PR #24 and issue #11. Post-merge verification is recorded in the issue. Accepted N1 makes its code prerequisite available to I1/N3; I1 still needs its other modules and N3 still needs its provider/budget assignment. Browser adoption, actual WebRTC, recovery and TURN remain separate acceptance work.
-
-## A1 accepted-integration record — PR #25
-
-This record becomes effective only after PR #25 merges following successful current-head CI and merged-main verification recorded in #10; until then A1 is ACTIVE/REVIEW. Base main 1387c22, worker/coordinator Codex root. The user requested completing the next task in the established implementation/commit/push/PR/review/CI/merge/post-merge workflow, bounded to A1.
-
-A1 extracts the existing eleven procedural sounds behind a domain-event adapter with injected context/storage/randomness, one context per app, gesture unlock, persistent mute, world-space listener positioning, shared coordinate conversion, bounded voices and explicit teardown. Nine deterministic audio scenarios preserve legacy synthesis signatures and verify failure handling, ended-node release and twenty room resets. Build and baseline inventory pass; full regression/hosted CI results and exact commands are recorded in docs/reviews/A1_AUDIO.md and PR #25. No dependency, physics or legacy HTML changes.
-
-Actual listening, sound balance, browser autoplay and integrated room joins/leaves remain unverified I1/T1/manual acceptance; no browser audio adoption or deployment is implied. Audio consumers must preserve legacy bounce significance filtering and emit each timeout/banner/remote stroke once. A1's code prerequisite becomes available to I1 on accepted merge, without unblocking its other missing modules.
-
-N1 follow-up evidence: post-merge baseline-ci passed on 1387c22, https://github.com/SpikemenDan/putt-pals/actions/runs/40386990190 . This confirms the earlier N1 integration record; no new browser/network validation is implied.
-
-## R1/U1 integration and coordinator cleanup — 2026-10-27
-
-- R1 merged via PR #27 (f72a374) and U1 via PR #29 (e7a59ed); both passed hosted CI before and after merge. Handoffs: docs/reviews/R1_RENDERER.md, docs/reviews/U1_UI_INPUT.md.
-- Known issues found during U1: (1) `npm run build` drops standard `backdrop-filter` from the legacy page, so built glass panels lose their blur in Chrome/Firefox (dev server unaffected; the build check does not cover CSS); (2) `PLAYER_COLORS` in src/shared/constants.js does not match the game palette. Both are assigned to I1.
-- Real-browser evidence so far: U1 Chromium pixel parity for menus/HUD (scripts/ui-visual-parity.cjs). Real WebGL output, audio and WebRTC remain unverified until I1/T1.
-
-## I1 integration — 2026-10-27
-
-- I1 merged via PR #31 (09eaf50); current-head and post-merge baseline-ci passed (run 40591136455). Local `npm test`, `npm run build` and `node scripts/inventory-baseline.cjs --check` passed. Handoff: docs/reviews/I1_APP.md; overview: src/app/README.md.
-- D1 #8 closes with I1: its remaining browser-adoption scope was delivered there.
-- Both U1 findings are fixed in I1: the build no longer minifies CSS, so standard `backdrop-filter` survives (asserted by scripts/check-build.cjs), and `PLAYER_COLORS` is now the game palette.
-- Unblocked: N2 and R2 are READY; T1 stays READY and can now cover the integrated app. N3 stays BLOCKED on the provider/budget decision; Q1 stays BLOCKED on N2, N3, T1, R2 and B4.
-- Not verified: Firefox/WebKit, real GPUs and frame rate, WebRTC across separate networks/TURN, guest recovery and real-browser audio listening. Hosting index.html instead of the legacy page is a Q1 decision.
-
-## Art direction and T1 findings — 2026-10-27
-
-- The user chose an original comic art direction, tracked as V1 #33, G1 #34, K1 #35 and M1 #36. These are future work, blocked behind the modernization tasks. HANDOFF.md is the source of the ideas, not a script.
-- T1 #15 stays ACTIVE. Draft PR #37 adds Playwright solo, input, practice and multiplayer specs and a browser-ci job. On hosted CI, Firefox and WebKit pass on the current head (a3d972b, run 40609448113) and Chromium passed on an earlier head (7b42c7f, run 40605028753); the current-head Chromium job was still running at this snapshot. WebKit multiplayer is skipped until N3 #14 provides a TURN relay. The legacy UI screenshot-parity test was dropped (user-approved) because V1/M1 replace the pastel look; scripts/ui-visual-parity.cjs stays as a manual tool.
-- Findings: without WebGL the app shows a blank page, now I2 #38. A failed join (no WebRTC) gives no feedback, recorded on N2 #13 as part of its actionable connection errors.
-- The user confirmed the new app works in their desktop Firefox.
-
-## I2 integration — 2026-10-27
-
-- I2 #38 merged via PR #40 (b449379); current-head baseline-ci passed at cc57f15 and post-merge baseline-ci passed (run 40614037187). Without WebGL the start screen now renders with a text-only notice, and solo play starts without a renderer or page errors.
-- Verification: new jsdom scenario in `test:app` (App: 10 scenarios). Real browser, ad hoc and uncommitted: Chromium with `--disable-webgl` and with WebGL both passed. Firefox was not run, because Playwright's Firefox fails to launch on the Windows machine.
-- The PR also fixed two Windows-only test problems: built UI test modules are imported by file URL, and `.gitattributes` keeps `*.html` at LF so `putt-pals.html` matches its recorded hash.
-- Follow-up: I2b #41 adds a committed Chromium and Firefox spec once T1's harness (PR #37) is merged.
-
-## T1 integration — 2026-10-27
-
-- T1 #15 merged via PR #37 (26d1025). `npm run test:browser` runs Playwright solo, input, putt/course practice, lifecycle and four-player WebRTC specs against the built app; `tests/integration/out-of-bounds.test.cjs` joins `npm test`. Handoff: docs/reviews/T1_BROWSER.md.
-- Current-head CI on 5331595: baseline-ci and browser-ci passed in Chromium, Firefox and WebKit (run 40615922756). WebKit multiplayer is skipped until N3 #14 provides a TURN relay. CI runners have no GPU, so Chromium and Firefox run headed under xvfb with Mesa software GL.
-- Known flake: the first Chromium attempt on 5331595 failed when one guest's join in the four-player spec did not reach the lobby within 15 s (empty page console); the rerun passed with no code change. The same code had passed on 56dedf6. Watch for repeats; a timing issue in the join path would fall under N2 #13.
-- Unblocked: I2b #41 can add its committed WebGL-fallback spec. Q1 still waits on N2, N3, R2 and B4.
-
-## N2 integration — 2026-10-27
-
-- N2 #13 merged via PR #43 (3f5d010): guest recovery, 8-player rooms, remote interpolation and actionable connection errors. Its PR ran only baseline-ci, because the branch predated browser-ci. Handoff: docs/reviews/N2_NETWORK.md.
-- Post-merge CI on 3f5d010 failed: browser-ci Chromium's four-player spec timed out when guest "Cy" did not reach the lobby within 15 s (run 40618503597; empty page console). baseline-ci, Firefox and WebKit passed. This is the second such Chromium join timeout in three runs (see the T1 entry), so it is a recurring flake, not a one-off; a fix is proposed but not yet started. CI on 734b3d1 was still running at this snapshot.
-- Not yet covered in a real browser: N2 in Firefox/WebKit, and committed specs for room-full, resume, reconnect and host loss.
-- Q1 now waits on N3, R2 and B4.
-
-## R2 integration record — PR #53
-
-Effective after green current-head checks, accepted merge and post-merge verification recorded in [#16](https://github.com/SpikemenDan/putt-pals/issues/16): Three.js is pinned to 0.186.1 with explicit color/shader/light migration and PMREM/shadow disposal. The full local suite and three-engine selected browser flows passed; Mac M1 Pro renderer probe averages ~8.33 ms across six starters, with stable counters and no browser errors. CPU submission increased; full-app FPS is not measured by this probe. Handoff/evidence: docs/reviews/R2_RENDERER.md and tests/fixtures/render-migration/. Until PR #53 merges this is a proposed integration record, not accepted main behavior.
-
-The user authorized merging now using the Mac target and moved Windows Radeon 860M / RTX 5060 Laptop GPU verification to nonblocking [R2w #52](https://github.com/SpikemenDan/putt-pals/issues/52), intended for the other Windows-capable agent after a confirmed claim. PR #53 also restores the normal baseline/browser CI accidentally replaced by the throwaway diagnostics in PR #51, while preserving T1c-owned source/harness work and excluding only its explicitly named diagnostic probe from the normal acceptance run. No deployment, Windows evidence or new art implementation is implied.
-
-
-## S2 cup-capture integration record — 2026-10-28
-
-Effective only after current-head CI, accepted merge and merged-main verification recorded in [#54](https://github.com/SpikemenDan/putt-pals/issues/54): the shared simulation no longer treats the cup depression as a downhill terrain ramp. Slow centred shots fall under gravity; fast/airborne shots can cross, and grazing overlap can miss or lip out. Browser and CLI still use the same simulation. The user explicitly authorized the PR/review/CI/merge/post-merge workflow after the shot-margin changes were disclosed.
-
-Local full npm test/build, 439 controlled trajectories and nine selected real-browser tests across Chromium/Firefox/WebKit passed. New source-fingerprinted evidence retains nominal hole-in-ones for all 36 starters, with robust shots on the existing grid for 31. Cyclone Ring P3/P5 and Grand Finale P1/P3/P5 have nominal solutions but do not meet the previous robustness margin. Twelve historical shot inputs now miss; the original fixtures/legacy HTML remain unchanged. Switchback Garden P1 full-grid hits are 377 (previous 811); this is not a complete current difficulty ladder. Q1 #18 must review the five narrower windows and refresh all 36 full-grid difficulty results before release acceptance. No deployment, new art/power-up work or Rapier adoption is implied. Handoff: docs/reviews/S2_CUP_CAPTURE.md.
-
-P1 remains deferred by user request; its isolated experiment/evidence is preserved on agent/p1-rapier-prototype at 6ba6115, not merged into production.
-
-## Coordinator update — 2026-10-28
-
-- R2 and S2 records above are now accepted (PR #53 62482f8, PR #55 03e4db5; #16 and #54 closed).
-- B4 #4 verified on main and closed (PR #28 4e3eb9e).
-- I2b #41 closed via PR #45 (db3245a).
-- R2w #52 closed via PR #56 (49b74e9) with its washed-out shader finding, being fixed separately in R2c #57 (PR #63 open).
-- T1c #48 closed via PR #50 (b257e39), fixing the recurring Chromium join timeout noted in the T1/N2 entries.
-- N2b #47: PR #49 (1c719e2) merged; the issue was closed by hand because the PR lacked `Closes`.
-- Main advanced to 44c082a via PR #62 (no issue): browser test runs can share a machine. The PeerServer takes a free port (`PP_PEER_PORT` can pin one), `PP_TEST_PORT` sets the preview port and server reuse is opt-in with `PP_REUSE_SERVER=1`.
-- V1 #33 is an umbrella split into V1a–V1d (#58–#61); V1a is blocked by R2c #57, and V1b–V1d by V1a. Reference look: branch reference/v1-toon-sample.
-- P1 #17 paused; Rapier experiment preserved on agent/p1-rapier-prototype (6ba6115).
-- At this 2026-10-28 snapshot, Q1 #18 still listed N3 #14 as its networking prerequisite; the N4 decision and accepted integration below supersede that state.
-- Local browser tests run Chromium only (`npx playwright test --project=chromium`), with CI browser-ci covering Firefox and WebKit.
-- Branch cleanup: deleted merged branches agent/n2b-network-browser-specs, agent/r2-three-upgrade, agent/s2-cup-capture and agent/t1c-diag, and superseded feature/d1-course-snapshot (tip ca68091).
-
-
-## N4a accepted integration — PR #74
-
-PR #74 merged to main as `b30552f` on 2026-10-28. Its head `c4c7af5` includes the contract implementation `3e5985d` and coordinator documentation follow-up. Hosted baseline-ci and browser-ci (Chromium, Firefox and WebKit) passed on the PR head. The accepted v2 room wire/checkpoint contracts, validation and mocks are in `src/network/contracts/`; lifecycle policy and recovery decisions are documented in `docs/networking/SERVER_ROOMS.md`. No Worker, server persistence, browser cutover, actual deployment or recovery is implemented by N4a.
-
-At the N4a integration cutoff, N4b #68 was eligible for coordinator-confirmed claim against accepted main `b30552f`; it has since integrated through PR #75 as `be77190` (see the N4b record below). N4c–N4g remain gated by their native dependency chains. N3 #14 stays paused as an alternative and is not an N4 prerequisite. No Cloudflare account connection, deployment or spending is authorized by this integration record.
-
-## N4b accepted integration — PR #75
-
-PR #75 merged to main as `be77190`; its current-head `baseline-ci` and Chromium, Firefox and WebKit `browser-ci` checks passed. The PR adds pinned Wrangler tooling, a local Worker entrypoint, SQLite-backed Durable Object binding, environment-specific configuration, Static Assets and room WebSocket routing, setup documentation, and local-runtime smoke coverage. Local validation includes `npm run test:contracts`, `npm run test:rooms:local`, and Wrangler dry runs for development, preview and production. The broader `npm test` command was stopped after more than seven minutes without output and is not claimed as passed.
-
-N4b establishes only local setup and route/class-binding behavior. The Worker does not implement N4a hello/session admission, room coordination, durable lifecycle restoration, browser WebSocket adoption or deployment. N4c #69 is now eligible for coordinator-confirmed claim because both #66 and #68 are accepted on main; N4d–N4g remain dependency-gated. No Cloudflare account connection, secrets, remote route, deployment or service spending is authorized by this integration.
+At accepted integration points the coordinator rewrites the relevant paragraph with the date, the merged PR and any new known issue. Keep planned work distinct from verified behavior, drop entries that are no longer true instead of appending history, and never record credentials or relay tokens.
