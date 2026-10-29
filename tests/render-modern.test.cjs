@@ -29,6 +29,7 @@ const { JSDOM } = require('jsdom');
   assert.equal(r.scene.children.filter(o => o.material?.isMeshStandardMaterial).length, 0, 'no floating dream shapes or other textured scenery');
   assert.deepEqual(Object.keys(r.library.textures).sort(), ['blob', 'soft'], 'no surface pattern textures');
   const { definitions } = createCourseData();
+  const domeOf = renderer => renderer.scene.children.find(o => o.geometry?.parameters?.radius === 6000);
   const skyResources = [], skyReleased = new Set();
   let builds = 0, patches = 0, inked = 0, cutInk = 0, trees = 0;
   const beams = [];
@@ -140,6 +141,137 @@ const { JSDOM } = require('jsdom');
     skyResources.push(horizon.children[0].geometry, deck.geometry, dome.geometry, dome.material, horizon.children[0].material);
     for (const resource of skyResources) resource.addEventListener('dispose', () => skyReleased.add(resource));
   }
+  // V1c #60: per-map palettes, ambient weather (visual only) and fan wind streaks.
+  {
+    const { COURSE_PALETTES, DEFAULT_PALETTE, PALETTE_ROLES, paletteForCourse } = await import('../src/courses/palettes.js');
+    const { lightningFlash, LIGHTNING_PERIOD } = await import('../src/render/weather.js');
+    const starters = ['Switchback Garden', 'Dune Serpent', 'Frost Hollow', 'Slime Springs', 'Cyclone Ring', 'Grand Finale'];
+    assert.deepEqual(Object.keys(COURSE_PALETTES), starters, 'one palette per starter map');
+    const palettes = starters.map(name => COURSE_PALETTES[name]);
+    for (const p of palettes) {
+      assert.deepEqual(Object.keys(p.surfaces).sort(), [...PALETTE_ROLES].sort(), `${p.id} defines every surface role`);
+      assert.ok(Object.values(p.surfaces).every(Number.isInteger) && p.sky.up.length === 5 && p.sky.down.length === 3, `${p.id} palette shape`);
+      assert.ok(Object.values(p.sky.clouds).every(Number.isFinite) && p.sky.clouds.ring > 0 && p.sky.clouds.deck > 0 && p.sky.clouds.scale > 0, `${p.id} cloud parameters`);
+      assert.ok(new Set([p.surfaces.turf, p.surfaces.tile, p.surfaces.wall, p.surfaces.ice, p.surfaces.slime, p.surfaces.sand]).size === 6, `${p.id} surfaces stay distinguishable`);
+    }
+    for (const role of ['turf', 'tile', 'wall']) assert.equal(new Set(palettes.map(p => p.surfaces[role])).size, 6, `six distinct ${role} colours`);
+    assert.equal(new Set(palettes.map(p => p.sky.up.join())).size, 6, 'six distinct skies');
+    assert.equal(new Set(palettes.map(p => p.sky.clouds.seed)).size, 6, 'six distinct cloud seeds');
+    assert.deepEqual({ ...DEFAULT_PALETTE.surfaces }, { ...TOON_PALETTE, wind: 0xffffff }, 'the garden palette is the approved V1a look');
+    assert.equal(paletteForCourse({ name: 'Moonshot' }), DEFAULT_PALETTE, 'non-starter maps keep the default palette');
+    assert.deepEqual(palettes.map(p => p.weather), [null, null, 'snow', null, 'storm', null], 'weather on Frost Hollow and Cyclone Ring only');
+
+    // Lightning is a pure function of time: calm periods, no fast flicker, always within 0..1.
+    let flashes = 0, quietPeriods = 0, worst = 0;
+    for (let period = 0; period < 200; period++) {
+      let clusters = 0, previous = 0, lastStart = -9;
+      for (let i = 0; i < LIGHTNING_PERIOD * 100; i++) {
+        const t = period * LIGHTNING_PERIOD + i / 100, f = lightningFlash(t);
+        assert.ok(f >= 0 && f <= 1 && f === lightningFlash(t), 'deterministic flash in 0..1');
+        if (f > 0 && previous === 0 && t - lastStart > 0.5) { clusters++; lastStart = t; }
+        previous = f;
+      }
+      worst = Math.max(worst, clusters); flashes += clusters; quietPeriods += clusters === 0;
+    }
+    assert.equal(worst, 1, 'at most one flash cluster per period');
+    assert.ok(quietPeriods > 20 && flashes > 100, `occasional flashes (${flashes} in 200 periods, ${quietPeriods} quiet)`);
+    assert.equal(lightningFlash(-3), 0);
+
+    const layerOf = (type, attribute) => r.scene.children.flatMap(o => o.isGroup ? o.children : []).filter(o => o[type] && o.geometry.attributes[attribute]);
+    const snowLayer = () => layerOf('isPoints', 'seed')[0], rainLayer = () => layerOf('isLineSegments', 'seed')[0];
+    const poseAt = { position: [300, 500, 200], look: [300, 0, 200], sunTarget: [300, 0, 200], fadeTarget: null, events: [] };
+    const find = name => definitions.find(c => c.name === name);
+    const raw = hex => [hex >> 16 & 255, hex >> 8 & 255, hex & 255].map(v => v / 255);
+    const expected = { 'Frost Hollow': [true, false], 'Cyclone Ring': [false, true], 'Switchback Garden': [false, false], 'Grand Finale': [false, false], Moonshot: [false, false] };
+    for (const [name, [snows, rains]] of Object.entries(expected)) {
+      view.setCourse(find(name), 0);
+      const palette = paletteForCourse(find(name));
+      assert.equal(snowLayer().visible, snows, `${name} snow`);
+      assert.equal(rainLayer().visible, rains, `${name} rain`);
+      assert.equal(r.scene.fog.color.getHex(), palette.sky.up[0], `${name} fog matches the horizon band`);
+      const turfs = []; r.course.group.traverse(o => { if (o.material?.userData.toon && o.material.color.getHex() === palette.surfaces.turf) turfs.push(o); });
+      assert.ok(turfs.length > 0, `${name} turf uses its palette colour`);
+      // The sky takes the palette's bands (display sRGB written raw) and sun strength.
+      const uniforms = domeOf(r).material.uniforms;
+      palette.sky.up.forEach((hex, k) => raw(hex).forEach((v, i) => assert.ok(Math.abs([uniforms.skyUp.value[k].r, uniforms.skyUp.value[k].g, uniforms.skyUp.value[k].b][i] - v) < 1e-6, `${name} sky band ${k}`)));
+      assert.equal(uniforms.sunAmount.value, palette.sky.sun, `${name} sun strength`);
+    }
+    // Rain and snow move in the vertex shader from the shared clock: no per-frame CPU buffer writes.
+    view.setCourse(find('Cyclone Ring'), 0);
+    const washOf = () => r.scene.children.flatMap(o => o.isGroup ? o.children : []).find(o => o.renderOrder === 100 && o.material.isShaderMaterial);
+    const rain = rainLayer(), rainVersion = rain.geometry.attributes.seed.version;
+    let flashSeen = 0;
+    for (let t = 0; t < 140; t += 0.05) {
+      r.render({ now: t * 1000, dt: 0.05, local: null, camera: poseAt });
+      const flashing = domeOf(r).material.uniforms.flash.value > 0;
+      if (flashing) flashSeen++;
+      assert.equal(washOf().visible, flashing, 'the full-screen wash shows only during a flash');
+    }
+    assert.equal(rain.geometry.attributes.seed.version, rainVersion, 'weather particles are not rewritten each frame');
+    assert.ok(flashSeen > 10, 'lightning flashes the sky in the storm');
+    view.setCourse(find('Frost Hollow'), 0);
+    r.render({ now: 5000, dt: 1, local: null, camera: poseAt });
+    assert.equal(domeOf(r).material.uniforms.flash.value, 0, 'no lightning in the snow');
+    assert.ok(!washOf().visible, 'no lightning wash in the snow');
+    r.setWeather(false);
+    assert.ok(!snowLayer().visible && !rainLayer().visible, 'weather can be turned off');
+    view.setCourse(find('Cyclone Ring'), 0);
+    assert.ok(!rainLayer().visible, 'the off choice survives a course swap');
+    r.setWeather(true);
+    assert.ok(rainLayer().visible && !snowLayer().visible, 'and back on');
+
+    // Procedural clouds: deterministic per map, different across maps, always far from the camera and the courses.
+    {
+      const horizonMesh = () => r.scene.children.find(o => o.isGroup && o.children.some(c => c.material?.vertexColors)).children[0].children[0];
+      const deckMesh = () => r.scene.children.find(o => o.isGroup && o.children.some(c => c.material?.vertexColors)).children[1];
+      const signature = geometry => { const a = geometry.attributes.position.array; return `${a.length}:${a[0]}:${a[a.length - 1]}:${a[Math.floor(a.length / 2)]}`; };
+      const seen = new Map();
+      for (const name of starters) {
+        view.setCourse(find(name), 0);
+        const ring = horizonMesh().geometry, deckGeometry = deckMesh().geometry;
+        const first = signature(ring);
+        view.setCourse(find('Switchback Garden'), 0); view.setCourse(find(name), 0);
+        assert.equal(signature(horizonMesh().geometry), first, `${name} clouds are the same every time`);
+        seen.set(name, first);
+        const p = horizonMesh().geometry.attributes.position;
+        let near = Infinity, far = 0, top = -Infinity;
+        for (let i = 0; i < p.count; i++) { const d = Math.hypot(p.getX(i), p.getZ(i)); near = Math.min(near, d); far = Math.max(far, d); }
+        const dp = deckMesh().geometry.attributes.position;
+        for (let i = 0; i < dp.count; i++) top = Math.max(top, dp.getY(i));
+        assert.ok(near > 1500 && far < 7800, `${name} horizon clouds stay between 1500 and 7800 units from the camera (${near.toFixed(0)}..${far.toFixed(0)})`);
+        assert.ok(top < -300, `${name} cloud deck stays below the courses (top ${top.toFixed(0)})`);
+        assert.ok(Array.from(p.array).every(Number.isFinite) && Array.from(dp.array).every(Number.isFinite), `${name} finite cloud vertices`);
+      }
+      assert.equal(new Set(seen.values()).size, 6, 'every starter map has its own cloud layout');
+      // A swap to different cloud parameters releases the old geometry; the same parameters reuse it.
+      view.setCourse(find('Dune Serpent'), 0);
+      const before = horizonMesh().geometry; let released = 0; before.addEventListener('dispose', () => released++);
+      view.setCourse(find('Dune Serpent'), 1);
+      assert.equal(horizonMesh().geometry, before, 'same cloud parameters: nothing rebuilt');
+      view.setCourse(find('Cyclone Ring'), 0);
+      assert.equal(released, 1, 'old cloud geometry released on a swap');
+      const heavy = horizonMesh().geometry.attributes.position.count;
+      view.setCourse(find('Dune Serpent'), 0);
+      assert.ok(heavy > horizonMesh().geometry.attributes.position.count, 'the storm bank has more cloud than the sparse desert sky');
+    }
+
+    // Fans: toon wind streaks in the palette's wind colour, blown along the fan direction.
+    view.setCourse(find('Cyclone Ring'), 0);
+    r.render({ now: 3000, dt: 1 / 60, local: null, camera: poseAt });
+    const fans = r.course.fans;
+    assert.ok(fans.length === 4 && fans.every(f => f.wind), 'Cyclone Ring fans use wind streaks');
+    for (const f of fans) {
+      const p = f.wind.geometry.attributes.position.array, [fx, fy, fw, fh, dx, dz] = f.fan;
+      assert.ok(Array.from(p).every(Number.isFinite) && Array.from(p).some(v => v !== 0), 'streak geometry is filled');
+      assert.equal(f.wind.mesh.material.color.getHex(), COURSE_PALETTES['Cyclone Ring'].surfaces.wind, 'wind colour from the palette');
+      for (let i = 0; i < f.count; i++) {
+        const tail = [p[i * 24], p[i * 24 + 2]], head = [f.positions[i * 3], f.positions[i * 3 + 2]];
+        assert.ok(dx === 0 || Math.sign(head[0] - tail[0]) === Math.sign(dx), 'streak points along the wind (x)');
+        assert.ok(dz === 0 || Math.sign(head[1] - tail[1]) === Math.sign(dz), 'streak points along the wind (z)');
+        assert.ok(head[0] >= fx - 1e-3 && head[0] <= fx + fw + 1e-3 && head[1] >= fy - 1e-3 && head[1] <= fy + fh + 1e-3, 'streak heads stay in the fan area');
+      }
+    }
+  }
   const counters = r.diagnostics(); counters.textures = -1;
   assert.equal(r.diagnostics().textures, 3, 'detached diagnostics');
   view.dispose(); view.dispose();
@@ -163,12 +295,13 @@ const { JSDOM } = require('jsdom');
   legacy.dispose();
   assert.equal(targetDisposed, 1);
   // Toon builds keep the legacy object layout: the same objects in the same places, minus the
-  // landscape trees, plus ink hulls.
+  // landscape trees and fan particles, plus ink hulls.
   {
     const { buildCourseScene, createMaterialLibrary } = await import('../src/render/index.js');
     const layout = o => ({ type: o.type, p: o.position.toArray(), r: o.rotation.toArray().slice(0, 3), s: o.scale.toArray(),
       g: o.geometry && !o.isSprite ? [o.geometry.type, o.geometry.parameters || null] : null,
-      c: o.children.filter(c => !c.userData.inkHull && !(c.isGroup && c.children.some(t => t.geometry?.type === 'IcosahedronGeometry'))).map(layout) });
+      // Fan particles are the one intended difference (V1c): the toon style draws wind streaks instead.
+      c: o.children.filter(c => !c.userData.inkHull && !c.userData.windStreaks && !(c.isPoints && c.material.isPointsMaterial) && !(c.isGroup && c.children.some(t => t.geometry?.type === 'IcosahedronGeometry'))).map(layout) });
     for (const course of definitions) {
       const [toonLayout, legacyLayout] = ['toon', 'legacy'].map(style => {
         const library = createMaterialLibrary({ THREE, createCanvas: () => canvas, random: () => .5, style });

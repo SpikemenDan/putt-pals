@@ -4,3 +4,4 @@ export * from './catalog.js';
 export * from './arena.js';
 export * from './validation.js';
 export * from './document.js';
+export * from './palettes.js';
