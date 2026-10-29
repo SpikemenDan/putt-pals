@@ -1,4 +1,4 @@
-import { RoomDurableObject } from './room-object.mjs';
+import { RoomDurableObject } from './recovery-object.mjs';
 import { roomObjectName } from './room-name.mjs';
 import { validRoomCode } from '../../src/network/contracts/server-room.js';
 

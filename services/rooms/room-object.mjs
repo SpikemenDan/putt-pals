@@ -127,6 +127,12 @@ export class RoomDurableObject {
       socket: server, roomCode: route[1], identity: null, connectionId: null,
       closed: false, lastSeenAt: Date.now(), handshakeTimer: null, livenessTimer: null,
     };
+    this.acceptConnection(server, connection);
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  acceptConnection(server, connection) {
     server.accept();
     this.pending.add(connection);
     server.addEventListener('message', event => {
@@ -139,13 +145,15 @@ export class RoomDurableObject {
     };
     server.addEventListener('close', disconnect);
     server.addEventListener('error', disconnect);
+    this.scheduleHandshake(connection);
+  }
+
+  scheduleHandshake(connection) {
     connection.handshakeTimer = setTimeout(() => {
       this.enqueue(() => {
         if (!connection.identity) this.reject(connection, 'invalid-message', 1008, 'Handshake timeout');
       });
     }, SERVER_ROOM_LIMITS.handshakeMs);
-
-    return new Response(null, { status: 101, webSocket: client });
   }
 
   originAllowed(request, url) {
@@ -351,7 +359,7 @@ export class RoomDurableObject {
       emptyAt: null, controllerAt: null, roomTimer: null, suppress: 0, dirty: false,
       logicalTime: Date.now(),
     };
-    room.session = createRoomSession({
+    room.session = this.makeSession(room, {
       controllerId: playerId, hostName: name, serverOwned: true, isReserved: id => {
         const seat = room.seats.get(id);
         return !!seat && seat.connectedSince === null && seat.resumeUntil !== null && seat.resumeUntil > this.now(room);
@@ -370,6 +378,18 @@ export class RoomDurableObject {
     room.suppress--;
     room.dirty = false;
     return room;
+  }
+
+  makeSession(room, options) {
+    return createRoomSession(options);
+  }
+
+  closeConnection(connection, code, reason) {
+    connection.socket.close(code, reason);
+  }
+
+  publish(connection, raw) {
+    connection.socket.send(raw);
   }
 
   async createIdentity(room, playerId, name, token = randomToken()) {
@@ -458,7 +478,7 @@ export class RoomDurableObject {
       this.reject(connection, 'service-unavailable', 1013, 'Client is too slow');
       return false;
     }
-    connection.socket.send(raw);
+    this.publish(connection, raw);
     return true;
   }
 
@@ -471,13 +491,13 @@ export class RoomDurableObject {
         const raw = encodeRoomFrame({ version: SERVER_ROOM_VERSION, type: 'error', code, retryAfterMs: null }, 'server');
         const bytes = raw === null ? 0 : new TextEncoder().encode(raw).byteLength;
         if (raw !== null && (connection.socket.bufferedAmount || 0) + bytes <= SERVER_ROOM_LIMITS.outgoingQueueBytes) {
-          connection.socket.send(raw);
+          this.publish(connection, raw);
         }
       }
-      if (connection.socket.readyState < 2) connection.socket.close(closeCode, reason);
+      if (connection.socket.readyState < 2) this.closeConnection(connection, closeCode, reason);
     } catch (error) {
       console.error('Failed to close rejected room connection', error);
-      if (connection.socket.readyState < 2) connection.socket.close(1011, 'Room error');
+      if (connection.socket.readyState < 2) this.closeConnection(connection, 1011, 'Room error');
     }
   }
 
@@ -509,7 +529,7 @@ export class RoomDurableObject {
       if ((connection.socket.bufferedAmount || 0) + bytes > SERVER_ROOM_LIMITS.outgoingQueueBytes) {
         this.reject(connection, 'service-unavailable', 1013, 'Client is too slow');
       } else {
-        connection.socket.send(frame);
+        this.publish(connection, frame);
       }
     }
   }
@@ -560,7 +580,7 @@ export class RoomDurableObject {
       connectionId: identity.connectionId, sequence: frame.sequence, revision: room.revision,
     });
     if (payload.type === 'LEAVE_ROOM') {
-      connection.socket.close(1000, 'Left room');
+      this.closeConnection(connection, 1000, 'Left room');
     }
     this.setRoomTimer(room);
   }
@@ -612,7 +632,7 @@ export class RoomDurableObject {
       if ((connection.socket.bufferedAmount || 0) + bytes > SERVER_ROOM_LIMITS.outgoingQueueBytes) {
         this.reject(connection, 'service-unavailable', 1013, 'Client is too slow');
       } else {
-        connection.socket.send(raw);
+        this.publish(connection, raw);
       }
     }
   }
