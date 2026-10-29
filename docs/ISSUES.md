@@ -103,9 +103,9 @@ This table links roadmap IDs to their issues; current state and ownership are al
 | V1b | [#59](https://github.com/SpikemenDan/putt-pals/issues/59) | Sky world |
 | V1c | [#60](https://github.com/SpikemenDan/putt-pals/issues/60) | Per-map palettes, ambient weather visuals and fans |
 | V1d | [#61](https://github.com/SpikemenDan/putt-pals/issues/61) | Comic HUD styling |
-| G1 | [#34](https://github.com/SpikemenDan/putt-pals/issues/34) | Umbrella: gameplay mechanics, power-ups and hazards (to be split into G1a-G1g, see TASKS.md) |
-| K1 | [#35](https://github.com/SpikemenDan/putt-pals/issues/35) | Umbrella: course redesign for floating islands, ramps, drops and tubes (to be split into K1a-K1d) |
-| M1 | [#36](https://github.com/SpikemenDan/putt-pals/issues/36) | Menus, loading screen and feedback polish (to be split into sub-issues) |
+| G1 | [#34](https://github.com/SpikemenDan/putt-pals/issues/34) | Umbrella (tracking only, not claimable): power-ups, hazards and course mechanics; sub-issues G1a-G1g, GM1, GM2 |
+| K1 | [#35](https://github.com/SpikemenDan/putt-pals/issues/35) | Umbrella (tracking only, not claimable): 3D course redesign; sub-issues K0, K1a-K1d, W2, W3, CL1, CL2 |
+| M1 | [#36](https://github.com/SpikemenDan/putt-pals/issues/36) | Menus, loading screen and feedback polish (READY; split into sub-issues before implementation) |
 | I2 | [#38](https://github.com/SpikemenDan/putt-pals/issues/38) | WebGL-unavailable message |
 | I2b | [#41](https://github.com/SpikemenDan/putt-pals/issues/41) | Real-browser WebGL-fallback check |
 

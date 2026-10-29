@@ -17,10 +17,10 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | PAUSED | n/a | Managed TURN; an alternative to N4, not a prerequisite |
 | [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: verify a robust route within par on every putt under the final physics (replaces the hole-in-one refresh; scope to be updated on the issue), production-like preview, rollback, manual playtests |
 | [M1 #36](https://github.com/SpikemenDan/putt-pals/issues/36) | READY | V1 done | Menu panorama, loading screen with tips, active-ball ring, menu and turn-ready sounds; split into sub-issues first |
-| [G1 #34](https://github.com/SpikemenDan/putt-pals/issues/34) | BLOCKED | Q1 | Umbrella for gameplay mechanics and power-ups; split into G1a-G1g below |
-| [K1 #35](https://github.com/SpikemenDan/putt-pals/issues/35) | BLOCKED | G1, Q1 | Umbrella for course redesign; split into K1a-K1d below |
+| [G1 #34](https://github.com/SpikemenDan/putt-pals/issues/34) | ACTIVE (tracking) | none | Umbrella, not claimable: power-ups, hazards and course mechanics; children G1a-G1g, GM1 and GM2 are sub-issues |
+| [K1 #35](https://github.com/SpikemenDan/putt-pals/issues/35) | ACTIVE (tracking) | none | Umbrella, not claimable: 3D course redesign; children K0, K1a-K1d, W2, W3, CL1 and CL2 are sub-issues |
 
-G1 and K1 were gated behind Q1 by an earlier owner decision. On 2026-10-29 the owner left the order to the coordinator (U2 and the other tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. New order: G1a-G1f, GM1, F1 and C3 may start now (they leave default trajectories unchanged); S3 (forgiving physics) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4.
+On 2026-10-29 the owner left the order to the coordinator (U2 and the other tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. New order: G1a-G1f, GM1, F1 and C3 may start now (they leave default trajectories unchanged); S3 (forgiving physics) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4.
 
 ## Vision backlog
 
