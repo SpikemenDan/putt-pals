@@ -17,7 +17,7 @@ const { events } = view.frame({
   now, dt, hazardTime,                               // ms, seconds, synchronized room seconds
   local: { x, y, z, vx, vy, moving, mode, color, effect, collected },
   remotes: [{ id, name, x, y, z, color, effect }],   // only players the session wants shown
-  aim: { charge, angle, aimAngle, spread, reverse }, // or null when not charging
+  aim: { charge, angle, aimAngle, spread, reverse, length }, // or null when not charging
   free: mode === 'wait' || mode === 'spectator',
   keys,                                              // Set of held keys, lower case (free roam)
 });

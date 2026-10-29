@@ -134,35 +134,41 @@ export function createConfetti(THREE, random) {
   };
 }
 
-/** Aim guide: spread cone plus twelve power-coloured dots along the shot line. */
+/** Aim arrow width and head proportions (world units). */
+const ARROW_SHAFT_HALF_WIDTH = 2.6, ARROW_HEAD_HALF_WIDTH = 7, ARROW_HEAD_LENGTH = 14, ARROW_FALLBACK_MAX_LENGTH = 300;
+
+/**
+ * Aim guide: one flat arrow from the ball along the swayed shot direction. Its length is
+ * proportional to the pull from zero (no minimum). It shows direction and power only, not a landing spot.
+ */
 export function createAimGuide(THREE) {
-  const coneGeometry = new THREE.BufferGeometry();
-  coneGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const cone = new THREE.Mesh(coneGeometry, new THREE.MeshBasicMaterial({ color: 0xffb95b, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
-  cone.frustumCulled = false;
-  const dots = [];
-  for (let i = 0; i < 12; i++) {
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(2.8, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    dot.visible = false;
-    dots.push(dot);
-  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(27), 3));
+  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false, depthTest: false }));
+  arrow.frustumCulled = false;
+  arrow.renderOrder = 10;
+  arrow.visible = false;
   return {
-    cone, dots,
-    hide() { dots.forEach(d => { d.visible = false; }); cone.visible = false; },
+    arrow,
+    hide() { arrow.visible = false; },
     /**
      * @param {{x:number,y:number,z:number}} bp Ball centre (world)
-     * @param {{charge:number, angle:number, aimAngle:number, spread:number, reverse?:boolean}} aim
-     *   angle is the swayed shot direction (legacy shotAngle), aimAngle the raw pointer aim (legacy aa).
+     * @param {{charge:number, angle:number, length?:number}} aim angle is the swayed shot direction; length defaults to charge * 300.
      */
     show(bp, aim) {
-      const L = 50 + aim.charge * 250, base = aim.aimAngle + (aim.reverse ? Math.PI : 0), sp = aim.spread, pos = coneGeometry.attributes.position;
-      pos.setXYZ(0, bp.x, bp.y, bp.z);
-      pos.setXYZ(1, bp.x + Math.cos(base - sp) * L, bp.y, bp.z + Math.sin(base - sp) * L);
-      pos.setXYZ(2, bp.x + Math.cos(base + sp) * L, bp.y, bp.z + Math.sin(base + sp) * L);
+      const L = aim.length ?? aim.charge * ARROW_FALLBACK_MAX_LENGTH;
+      const head = Math.min(ARROW_HEAD_LENGTH, L * 0.5), shaft = L - head;
+      const dx = Math.cos(aim.angle), dz = Math.sin(aim.angle), px = -dz, pz = dx;
+      const pos = geometry.attributes.position;
+      const v = (i, along, side) => pos.setXYZ(i, bp.x + dx * along + px * side, bp.y, bp.z + dz * along + pz * side);
+      const w = ARROW_SHAFT_HALF_WIDTH, hw = ARROW_HEAD_HALF_WIDTH;
+      v(0, 0, -w); v(1, shaft, -w); v(2, shaft, w);
+      v(3, 0, -w); v(4, shaft, w); v(5, 0, w);
+      v(6, shaft, -hw); v(7, L, 0); v(8, shaft, hw);
       pos.needsUpdate = true;
-      cone.visible = true;
-      const color = new THREE.Color().setHSL((120 - aim.charge * 120) / 360, 0.85, 0.6);
-      dots.forEach((d, i) => { const r = (i + 1) * L / 12; d.position.set(bp.x + Math.cos(aim.angle) * r, bp.y, bp.z + Math.sin(aim.angle) * r); d.material.color.copy(color); d.visible = true; });
+      geometry.computeBoundingSphere();
+      arrow.material.color.setHSL((120 - aim.charge * 120) / 360, 0.85, 0.6);
+      arrow.visible = true;
     },
   };
 }
