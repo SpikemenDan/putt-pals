@@ -5,13 +5,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Nightly full run, including the tests tagged @slow that pull requests and merges skip.
+  schedule:
+    - cron: '17 3 * * *'
 
 permissions:
   contents: read
 
 concurrency:
   group: baseline-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Newer pushes cancel older pull-request runs, but never a run on main: back-to-back merges used to
+  # cancel each other and leave commits without a result of their own.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   baseline-ci:
@@ -96,10 +101,13 @@ jobs:
       # keep the diagnostic probe available explicitly, outside the default acceptance run.
       - name: Run real-browser solo, input, practice, lifecycle and four-player WebRTC flows
         run: |
+          # Tests tagged @slow (for example nine real browser windows at once) run nightly and on manual runs only.
+          SKIP='join repro'
+          if [ "${{ github.event_name }}" = pull_request ] || [ "${{ github.event_name }}" = push ]; then SKIP='join repro|@slow'; fi
           if [ "${{ matrix.browser }}" != webkit ]; then
-            xvfb-run -a --server-args="-screen 0 1280x1024x24" npx playwright test --grep-invert 'join repro' --project=${{ matrix.browser }} --headed
+            xvfb-run -a --server-args="-screen 0 1280x1024x24" npx playwright test --grep-invert "$SKIP" --project=${{ matrix.browser }} --headed
           else
-            npx playwright test --grep-invert 'join repro' --project=${{ matrix.browser }}
+            npx playwright test --grep-invert "$SKIP" --project=${{ matrix.browser }}
           fi
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
