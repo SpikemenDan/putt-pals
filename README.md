@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Vite prints the local URL (normally `http://127.0.0.1:5173/`). The modular app is served at the root path; the legacy game is at `/putt-pals.html`, which is the page the `dev` and `preview` scripts open by default. Use solo mode to develop without any online service.
+Vite prints the local URL (normally `http://127.0.0.1:5173/`). The modular app is served at the root path; the legacy game is at `/putt-pals.html` (not opened by default). `dev` and `preview` open the root page. Use solo mode to develop without any online service.
 
 ## Commands
 
