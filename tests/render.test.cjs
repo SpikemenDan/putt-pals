@@ -134,7 +134,7 @@ const same = (actual, expected, label) => { const d = firstDifference(actual, ex
 
 // U2: the legacy spread cone (3 vertices) and twelve guide dots are replaced by one arrow (9 vertices);
 // static-scene parity comparisons exclude the guide on both sides (the arrow has its own test).
-const isAimGuide = c => c.geometry?.parameters?.radius === 2.8 || (c.isMesh && c.geometry?.type === 'BufferGeometry' && [3, 9].includes(c.geometry.attributes.position?.count) && c.material?.side === 2);
+const isAimGuide = c => c.geometry?.type === 'RingGeometry' /* M1a active-ball ring */ || c.geometry?.parameters?.radius === 2.8 || (c.isMesh && c.geometry?.type === 'BufferGeometry' && [3, 9].includes(c.geometry.attributes.position?.count) && c.material?.side === 2);
 
 const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.children.length > 20 && c.children.some(x => x.userData.fade || x.geometry?.type === 'BoxGeometry'));
 
@@ -402,6 +402,22 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     assert.equal(guide.arrow.material.color.getHex(), new THREE.Color().setHSL((120 - 1 * 120) / 360, 0.85, 0.6).getHex());
     guide.hide();
     assert.ok(!guide.arrow.visible);
+  });
+
+  await scenario('active-ball ring: hidden by default, shown in the player colour under a ball that may putt, pulses with time', async () => {
+    const { createTurnRing, placeTurnRing } = await import('../src/render/actors.js');
+    const ring = createTurnRing({ THREE });
+    assert.ok(!ring.visible, 'hidden until placed');
+    placeTurnRing(ring, 0xff4fb8, 100, 20, 200, true, 0);
+    assert.ok(ring.visible);
+    assert.deepEqual([ring.position.x, ring.position.z], [100, 200]);
+    assert.ok(ring.position.y > 20 && ring.position.y < 22, 'just above the floor');
+    assert.equal(ring.material.color.getHex(), 0xff4fb8);
+    const sizes = [0, 0.4, 0.8, 1.2].map(t => { placeTurnRing(ring, 0xff4fb8, 100, 20, 200, true, t); return ring.scale.x; });
+    assert.ok(Math.max(...sizes) > Math.min(...sizes), 'pulse changes the scale');
+    assert.ok(sizes.every(x => x >= 1 && x <= 1.18 + 1e-9));
+    placeTurnRing(ring, 0xff4fb8, 100, 20, 200, false, 0);
+    assert.ok(!ring.visible, 'hidden when the ball cannot be putted');
   });
 
   await scenario('ownership: course swaps release every course resource and keep shared ones', async () => {
