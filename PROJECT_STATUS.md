@@ -15,7 +15,7 @@ The product vision (MODERNIZATION_PLAN.md) is largely unbuilt: Putt Pong, the No
 - Server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets. Defaults: immediate controller succession, 30-second reconnect grace, 15-minute empty-room retention. N3 TURN stays paused.
 - Original comic art direction: smooth flat colour, ink outlines, no scenery clutter. Ambient weather on Frost Hollow and Cyclone Ring is visual only.
 - Course direction: per-putt walled islands with designed gaps, true portal pairs, stronger fans.
-- Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 10 players, 3 inventory slots, everyone putts at once and advances together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
+- Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 8 players, 3 inventory slots, free-for-all on the same hole with everyone putting at once and advancing together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
 - Approval is required before commits and remote writes (AGENTS.md).
 
 ## Known issues and gaps

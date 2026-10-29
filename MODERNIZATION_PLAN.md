@@ -56,23 +56,23 @@ Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other th
 
 ### Room and scoring rules (owner decisions, 2026-10-29)
 
-- Up to **10 players** per room, **3 inventory slots**.
-- **Everyone plays at once.** All players putt simultaneously on each putt, and the room moves to the next putt only when every player has finished (sunk or timed out).
+- Up to **8 players** per room, **3 inventory slots**.
+- **Free-for-all, everyone at once.** Every player is on the same course and aims for the same hole in the current putt, all putting simultaneously with no turn order. A player who finishes early waits (spectating) for the others, even if one of them uses the whole time limit; the room moves to the next putt only when every player has finished (sunk or timed out), and everyone moves on together.
 - **Win condition:** strokes minus par. The player with the lowest total relative to par after the 6 putts of a level wins. A casual game is one level; a tournament runs 3, 6 or 9 levels and the lowest total across them wins.
 - **Skins are simply selectable** for now (no unlock progression); the choice is stored locally in the browser.
 - **Legacy power-ups retired:** Rewind, Reversiball and Zanyball are removed in favor of the catalog above.
 - **Solo pool** (Solo and Practice): the self-enhancing power-ups only: Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball, Tall Ball and Sticky Ball. Bumpers and the global weather items are excluded because they are course hazards that exist to affect other players.
 - **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Tasks that change course geometry or physics for every shot (G1g, K1) stay after Q1's fresh difficulty sweep unless the owner un-gates them.
 
-Code today versus these rules: the app caps rooms at 8 players (`MAX_PLAYERS`), the player colour palette has 8 colours, hardcoded as `% 8` in the scorecard, HUD and renderer, and the N4 server-room contract is capped at 4 members, so raising the cap is task C3. Everyone-plays-at-once, advancing together, the 3 slots and the 3/6/9-level tournaments already exist. Ranking is by total strokes with hole-in-ones breaking ties; because every player has the same par this orders players the same as strokes minus par, and the scorecard already shows the relative score, but the results and tournament standings should lead with the relative-to-par figure and compute it from completed putts (C3).
+Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slots, free-for-all simultaneous play, advancing together and the 3/6/9-level tournaments already exist. Two gaps remain, both in task C3: the N4 server-room contract is capped at 4 members and must be raised to 8, and ranking is by total strokes with hole-in-ones breaking ties. Because every player plays the same pars, that orders players the same as strokes minus par and the scorecard already shows the relative score, but results and tournament standings should lead with the relative-to-par figure computed from completed putts.
 
-### Putt Pong (working defaults; the owner can change them when GM2 is specified)
+### Putt Pong
 
-Teams of one or two (2-10 players split into two sides). Each side owns a rack of 6 cups. Both sides putt at the same time each round, using the same putt, and the round ends when everyone has finished. Each sunk putt eliminates one cup from the opposing rack (the shooter picks the cup); a side that eliminates the whole opposing rack first wins, and if the rack counts are level after a set number of rounds, fewer strokes over par breaks the tie. No power-ups by default.
+Putt Pong is not played like the main game. It is a team mode: two sides of one or two players each (2 to 8 players in total). Each side owns a rack of 6 cups. Both sides putt at the same time each round, using the same putt, and the round ends when everyone has finished. Each sunk putt eliminates one cup from the opposing rack (the shooter picks the cup). The first side to eliminate the whole opposing rack wins; if rack counts are level after a set number of rounds, fewer strokes over par breaks the tie. No power-ups by default. These are working defaults the owner can adjust when GM2 is specified.
 
 ### Still open
 
-Whether tournament skins and cosmetics should one day unlock through play or an account (not needed now).
+Whether skins should one day unlock through play or an account (not needed now).
 
 ## Technology
 

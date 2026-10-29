@@ -143,7 +143,7 @@ New primitives (corner wedge, curved ramp, multi-tier drop, transport tube) need
 
 ### Game modes
 
-A mode is session configuration: whether power-ups are on, scoring rules, inventory carryover and win condition. Pure Mini-Golf is a flag on the existing lifecycle. Putt Pong needs its own rules in `src/session/` (rack state, turn order, elimination events), a cup-rack scene in the renderer and its own scoring, and reuses the shared simulation for each putt.
+A mode is session configuration: whether power-ups are on, scoring rules, inventory carryover and win condition. Pure Mini-Golf is a flag on the existing lifecycle. Putt Pong is a team mode with its own rules in `src/session/` (rack state, elimination events, win condition), a cup-rack scene in the renderer and its own scoring; it reuses the shared simulation for each putt.
 
 ### Cosmetics
 
