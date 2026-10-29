@@ -152,6 +152,9 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     if (remote && !['shot', 'sink', 'timeout'].includes(event.type)) return false;
     if (event.type === 'banner') return ['hio', 'power', 'event'].includes(event.kind) && play(event.kind, null, .9);
     if (event.type === 'putt_change') return event.initial !== true && play('warp');
+    if (event.type === 'ui') return ['hover', 'click'].includes(event.kind) && play('menu_' + event.kind, null, event.kind === 'hover' ? .5 : .8);
+    if (event.type === 'turn_ready') return play('ready', null, .8);
+    if (event.type === 'ring') return play('ring', null, .6);
     if (!vector(event.position)) return false;
     const position = simToWorld(...event.position, origin);
     switch (event.type) {
