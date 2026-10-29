@@ -4,7 +4,7 @@ import { useCommands, useView } from './context.js';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
 
-const TAGLINE = { display: 'block', fontSize: '12px', letterSpacing: '4px', color: '#e6b283', margin: '12px 0' };
+const TAGLINE = { display: 'block', fontSize: '12px', letterSpacing: '4px', color: 'var(--pink-d)', margin: '12px 0' };
 const ICE_PLACEHOLDER = '[{"urls":"turn:your-server:3478","username":"temporary-user","credential":"temporary-password"}]';
 
 /** Start screen: name, room code, join/solo and optional ICE settings (legacy #lobby). */

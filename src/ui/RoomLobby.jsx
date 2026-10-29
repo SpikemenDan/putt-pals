@@ -6,7 +6,7 @@ import { Row } from './Row.jsx';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
 
-const ROOM_LABEL = { fontSize: '18px', fontWeight: 700, letterSpacing: '1px', color: '#ffca91' };
+const ROOM_LABEL = { fontSize: '18px', fontWeight: 700, letterSpacing: '1px', color: 'var(--pink-d)' };
 const soloOnly = value => MODE_OPTIONS.some(o => o.value === value && o.soloOnly);
 
 /** Room lobby: roster, host mode choice, Start Game and the pre-start countdown (legacy #waiting). */
