@@ -14,7 +14,8 @@ module.exports = defineConfig({
   // One app per worker keeps frame times (and so real-time hazards) predictable.
   workers: 1,
   fullyParallel: false,
-  retries: 0,
+  // One retry on CI: a test that passes on the retry is reported as flaky instead of failing the run.
+  retries: process.env.CI ? 1 : 0,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   outputDir: 'test-results/browser',
