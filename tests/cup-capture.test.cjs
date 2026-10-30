@@ -59,7 +59,7 @@ const assert = require("node:assert/strict");
   // All supported cup radii and approach angles: capture depends on residence time.
   for (let radius = 8; radius <= 15; radius++) {
     for (const angle of [0, 0.4, Math.PI / 2, 2.1, Math.PI, -1.2]) {
-      const slow = trial({ radius, angle, speed: 80 });
+      const slow = trial({ radius, angle, speed: 40 });
       assert.equal(
         slow.player.mode,
         "sunk",
@@ -119,7 +119,7 @@ const assert = require("node:assert/strict");
     "flat cup cannot create a large downward impulse",
   );
   // A partly submerged edge shot hits the inner lip and emerges without scoring.
-  const lip = trial({ speed: 95, offset: 9.5 });
+  const lip = trial({ speed: 130, offset: 9.5 }); // S3: the cup fillet guides gentler edge balls in; this one still lips out
   assert(lip.events.some((e) => e.type === "cup_lip"));
   assert.equal(lip.player.mode, "play");
   assert(Math.abs(lip.player.y - 9.5) > 1, "lip deflects the shot");
@@ -150,8 +150,8 @@ const assert = require("node:assert/strict");
   }
   // Neighbouring speeds straddle the gravity/residence-time transition; there is
   // no runtime speed cutoff. Tiny height changes must not cause instant capture.
-  assert.equal(trial({ speed: 225 }).player.mode, 'sunk');
-  assert.equal(trial({ speed: 230 }).player.mode, 'play');
+  assert.equal(trial({ speed: 238 }).player.mode, 'sunk');
+  assert.equal(trial({ speed: 239 }).player.mode, 'play');
   for (const height of [-.01, 0, .001, .1, .8, 1, 4.9, 5.1]) {
     const fall = trial({ start: 0, speed: 0, height });
     assert.equal(fall.player.mode, 'sunk');

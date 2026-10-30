@@ -12,6 +12,7 @@
  */
 
 import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
+import { TUNING } from '../shared/tuning.js';
 import { displayColor, TELEPORTER_COLORS } from './materials.js';
 import { createWindStreaks } from './weather.js';
 import { DEFAULT_PALETTE } from '../courses/palettes.js';
@@ -57,7 +58,7 @@ function cutCup(THREE, mesh, course, origin) {
   const replaced = mesh.material;
   const material = replaced.clone();
   mesh.material = material;
-  const radius = cupOf(course);
+  const radius = cupOf(course) + TUNING.cup.filletWidth; // S3: the cutout also takes in the fillet collar
   const base = replaced.onBeforeCompile, baseKey = replaced.customProgramCacheKey;
   material.onBeforeCompile = (shader, renderer) => {
     if (toon) base.call(material, shader, renderer);
@@ -67,7 +68,7 @@ function cutCup(THREE, mesh, course, origin) {
     shader.fragmentShader = 'varying vec3 cupWorld;uniform vec2 cupCenter;\n' + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif(distance(cupWorld.xz,cupCenter)<' + radius.toFixed(1) + ')discard;');
   };
-  material.customProgramCacheKey = () => 'cup-cut-v5-' + radius + (toon ? '|' + baseKey.call(material) : '');
+  material.customProgramCacheKey = () => 'cup-cut-v6-' + radius + (toon ? '|' + baseKey.call(material) : '');
   return replaced;
 }
 
@@ -194,8 +195,13 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   sleeve.position.set(...at(hl.hole[0], hl.hole[1], holeHeight - CUP_DEPTH / 2)); g.add(sleeve);
   const bottom = new THREE.Mesh(new THREE.CircleGeometry(cup, 64), new THREE.MeshBasicMaterial({ color: 0 }));
   bottom.rotation.x = -Math.PI / 2; bottom.position.set(...at(hl.hole[0], hl.hole[1], holeHeight - CUP_DEPTH)); g.add(bottom);
+  // S3 fillet collar: the same profile as physics' filletDrop, easing from the green down to the rim.
+  const filletPoints = [];
+  for (let i = 0; i <= 8; i++) { const o = i / 8; filletPoints.push(new THREE.Vector2(cup + TUNING.cup.filletWidth * o, -TUNING.cup.filletDepth * (1 - o) * (1 - o))); }
+  const fillet = new THREE.Mesh(new THREE.LatheGeometry(filletPoints, 64), solid('cupFillet', { color: 0x6fbf8a, roughness: 0.9, side: THREE.DoubleSide }));
+  fillet.userData.fillet = true; fillet.position.set(...at(hl.hole[0], hl.hole[1], holeHeight)); g.add(fillet);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(cup + 0.7, 0.65, 8, 64), solid('cupRim', { color: 0xffffff, roughness: 0.3 }));
-  rim.rotation.x = Math.PI / 2; rim.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 0.2)); g.add(ink(rim));
+  rim.rotation.x = Math.PI / 2; rim.position.set(...at(hl.hole[0], hl.hole[1], holeHeight - TUNING.cup.filletDepth + 0.2)); rim.userData.cupRim = true; g.add(ink(rim));
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 60, 8), solid('pole', { color: 0xffffff, metalness: 0.5, roughness: 0.3, envMap: environment, envMapIntensity: 0.9 }));
   pole.position.set(...at(hl.hole[0], hl.hole[1], holeHeight + 30)); pole.castShadow = true; g.add(ink(pole));
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(26, 16, 12, 6), new THREE.MeshBasicMaterial({ color: toon ? palette.surfaces.flag : 0xff4fb8, side: THREE.DoubleSide }));

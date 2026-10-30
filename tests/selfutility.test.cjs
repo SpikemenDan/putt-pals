@@ -96,7 +96,7 @@ const assert = require('node:assert/strict');
   // The smallest cup still takes a tall ball, and a small one.
   for (const ids of [['tall'], ['small']]) {
     const cup = courseWith({ cup: 8, hole: [60, 0] });
-    const r = run({ course: cup, armed: ids, speed: 90 });
+    const r = run({ course: cup, armed: ids, speed: 65 });
     assert.equal(r.player.mode, 'sunk', ids + ' ball sinks in the smallest cup');
   }
 

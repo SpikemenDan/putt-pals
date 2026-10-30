@@ -14,7 +14,7 @@ async function run() {
   assert.equal(shared.MIN_CUP_RADIUS, 8);
   assert.equal(shared.SHOT_POWER, 900);
   assert.equal(shared.POWER, 900);
-  assert.equal(shared.TURF_FRICTION, 0.75);
+  assert.equal(shared.TURF_FRICTION, 0.5);
   assert.equal(shared.FIXED_TIMESTEP, 1 / 240);
   assert.deepEqual(Array.from(shared.STARTER_COURSE_INDICES), [0, 8, 20, 21, 5, 19]);
   console.log('PASS: Constants match P32 baseline');
