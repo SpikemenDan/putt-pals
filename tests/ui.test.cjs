@@ -200,18 +200,16 @@ function fakeClock() {
     t.commands.length = 0;
     await click(join);
     await click(solo);
-    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', iceText: '' }, { type: 'play-solo', name: '  Zed  ' }]);
+    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' }, { type: 'play-solo', name: '  Zed  ' }]);
     await act(async () => t.store.setLocal({ connecting: true }));
     assert.equal(join.disabled, true); assert.equal(solo.disabled, true);
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!', iceText: '' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom', peerOptions: {} });
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: 'x', iceText: '{"urls":1}' }), { ok: false, message: 'ICE servers must be a JSON array.' });
+    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
     assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Enter a room code.' });
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: 'a', iceText: '[{"urls":"turn:x"}]' }).peerOptions, { config: { iceServers: [{ urls: 'turn:x' }] } });
     assert.equal(ui.parseJoinRequest({ multi: false, name: '' }).name, 'Player');
     assert.equal(ui.initialRoomCode('#room=AB-cd9'), 'abcd9');
     assert.equal(ui.parseJoinRequest({ multi: true, roomCode: 'abcdefghijklmnop' }).roomCode, 'abcdefghijkl', 'room codes keep 12 characters');
     assert.equal(ui.sanitizeName('abcdefghijklmnopq'), 'abcdefghijklmn', 'names keep 14 characters');
-    assert.equal(ui.initialRoomCode('', () => 0.3), 'kkkk');
+    assert.equal(ui.initialRoomCode('', () => 0.3), 'kkkkkkkk');
     await t.teardown();
   });
 
@@ -503,7 +501,7 @@ function fakeClock() {
     await t.step(1);
     assert.equal(t.within('[data-ui=game] [role=status]').textContent, '', 'toasts clear after 3 s');
     await act(async () => t.store.setLocal({ connected: false }));
-    assert.equal(t.root.querySelector('[role=alert]').textContent, 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.');
+    assert.equal(t.root.querySelector('[role=alert]').textContent, 'Connection lost. Gameplay is paused. Leave and rejoin the room, or try again when the service is available.');
     assert.equal(t.root.querySelector('[role=alert]').hidden, false);
     await act(async () => t.store.setLocal({ connected: true }));
     assert.equal(t.root.querySelector('[role=alert]').hidden, true);

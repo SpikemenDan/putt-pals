@@ -1,6 +1,4 @@
-// T1 real-browser tests: Playwright drives the built modular app (index.html) in real Chromium,
-// Firefox and WebKit, with real WebGL and, for multiplayer specs, real PeerJS/WebRTC through a local
-// PeerServer started by tests/browser/support/global-setup.cjs. Run with `npm run test:browser`.
+// Browser tests run the built app and the real local room Worker on the same origin.
 const { defineConfig, devices } = require('@playwright/test');
 
 // PP_TEST_PORT moves the preview server so two checkouts can run the suite at once.
@@ -19,7 +17,6 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   outputDir: 'test-results/browser',
-  globalSetup: require.resolve('./tests/browser/support/global-setup.cjs'),
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1280, height: 900 },
@@ -37,7 +34,7 @@ module.exports = defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } } },
   ],
   webServer: {
-    command: `npm run build && npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
+    command: `npm run build && npx wrangler dev --local --ip 127.0.0.1 --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}/`,
     // Reusing a server is opt-in: a running server may belong to another checkout and serve its build.
     reuseExistingServer: !process.env.CI && process.env.PP_REUSE_SERVER === '1',
