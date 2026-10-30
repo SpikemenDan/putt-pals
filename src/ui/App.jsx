@@ -22,7 +22,7 @@ function Screens({ onCanvas, initialName, initialRoomCode }) {
       {connecting && <Loading />}
       <RoomLobby hidden={!screens.lobby} />
       <MapSelect hidden={!screens.voting} />
-      <div className={app.netnotice} hidden={!screens.netNotice} role="alert">{screens.netNotice ? (screens.reconnecting ? MESSAGES.reconnecting : MESSAGES.connectionLost) : ''}</div>
+      <div className={app.netnotice} hidden={!screens.netNotice} role="alert">{screens.netNotice ? (screens.reconnecting ? MESSAGES.reconnecting : screens.connectionReason || MESSAGES.connectionLost) : ''}</div>
       <ScorecardOverlay />
       <Banner />
       <GameScreen hidden={!screens.game && !screens.landing} backdrop={!screens.game && screens.landing} onCanvas={onCanvas} />

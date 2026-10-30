@@ -1,0 +1,9 @@
+# Browser room client
+
+Online rooms use `src/network/server-room.js`, a browser WebSocket adapter for the v2 room protocol. The hosted page connects to its same-origin `/api/rooms/<code>/socket` endpoint with WSS. Local development can set `window.__PP_ROOM_ENDPOINT` to a loopback Worker endpoint; the client rejects remote endpoint overrides and insecure non-loopback connections.
+
+Before opening the socket, the client hashes the current course document. It sends a hello with the room code, display name, and a per-tab resume identity stored in `sessionStorage`. The service validates the protocol version and course hash, then returns the authoritative session snapshot and the client's seat identity. The credential is never added to URLs or public snapshots.
+
+Snapshots update the shared session and room-controller permission. Commands carry per-connection sequence numbers and the current server round. Local physics remains immediate: after a shot, the client reports its stroke count and publishes bounded, round-scoped position updates. Presence is interpolated for display and is not used to decide scores. Reconnection uses the same identity, starts a new command sequence for the new connection, and stops at the service's recovery deadline. Explicit Leave releases the seat; page disposal closes the socket without sending Leave so a reload can resume.
+
+The browser test suite starts Wrangler with the built assets and local Durable Objects. Its recovery case starts a separate ephemeral Miniflare Worker and forces local Durable Object eviction with socket closure to exercise automatic reconnect without releasing the seat. Chromium, Firefox, and WebKit therefore exercise actual browser WebSockets against local Worker processes without PeerJS, ICE servers, or a public network. These checks do not represent a deployed-service or cross-network test.

@@ -1,13 +1,12 @@
 # Modular application (I1)
 
-`index.html` → `src/app/main.js` → `createApp()` runs the game from the extracted modules: course data (D1), simulation (S1), room session (L1), transports (N1), audio (A1), renderer and camera (R1), React UI and input (U1). The legacy single-file game stays at `putt-pals.html`, unchanged and still built; Q1 owns the hosting/release decision. N4a's server-room contract is accepted at `b30552f`; N4b's local Worker routing scaffold is integrated at `be77190`. The modular app still uses PeerJS until room authority and browser-adoption tasks are integrated.
+`index.html` → `src/app/main.js` → `createApp()` runs the game from the extracted modules: course data (D1), simulation (S1), room session (L1), transports (N1), audio (A1), renderer and camera (R1), React UI and input (U1). The legacy single-file game stays at `putt-pals.html`, unchanged and still built; Q1 owns the hosting/release decision. N4a's server-room contract is accepted at `b30552f`; N4b's local Worker routing scaffold is integrated at `be77190`. Online rooms use the same-origin WebSocket API and durable room Worker; solo play keeps the in-memory session.
 
 ```js
 import * as THREE from 'three';          // three@0.128.0, the version the legacy page embeds
-import { Peer } from 'peerjs';           // peerjs@1.5.4, ditto
 import { createApp } from './src/app/index.js';
 
-const app = createApp({ root: document.getElementById('root'), THREE, Peer, peerServer: {} });
+const app = createApp({ root: document.getElementById('root'), THREE });
 // ...
 await app.dispose();                     // leaves the room and releases everything
 ```
@@ -15,7 +14,8 @@ await app.dispose();                     // leaves the room and releases everyth
 ## What the app owns
 
 - **One loop.** A single `requestAnimationFrame` loop advances the local ball in fixed 1/240 s steps (frame time clamped to 0.05 s, as before), renders through `createGameView()` and updates the audio listener. A 100 ms interval refreshes the HUD and room countdowns. Nothing runs at 240 Hz through React.
-- **Rooms** (`room.js`). Solo uses the in-memory solo transport with a local session. Online, the first player to claim `puttpals-circuit-v6-<code>` on the signalling server becomes host (session + `bindRoomSession`), and later players join as guests (legacy behaviour). The namespace changed from `-v5-` because the protocol is incompatible with the legacy page. `peerServer` optionally points PeerJS at a self-hosted PeerServer; `main.js` reads `window.__PP_PEER_SERVER` for that.
+- **Rooms** (`room.js`, `network/server-room.js`). Solo uses the in-memory solo transport. Online rooms connect by WebSocket to `/api/rooms/<code>/socket`; the service validates course and protocol versions, stores session checkpoints, owns game transitions, elects a room controller, and accepts local ball presence. No PeerJS or ICE configuration is used.
+- **Online client details.** Handshake, identity storage, snapshot validation, commands, presence and reconnect behavior are described in `docs/networking/WEBSOCKET_CLIENT.md`.
 - **Rounds** (`putt.js`). When the room's round starts, the app builds the putt's scene, creates a `SimulationEngine` (hazard time = room time since the start, as before), aims at the hole and, for putts 2–6 outside putt practice, plays the putt-to-putt arc and warp cue. It reports each finished putt once with `REPORT_SCORE`, including timeouts at the real deadline. Live stroke counts travel in presence, which is how the legacy scoreboard got them.
 - **Legacy rules around the simulation** (`rules.js`): fans, tornadoes and moving hazards wake a resting ball; a ball moving for 25 s returns to its last spot; `?` blocks give random power-ups from the gameplay catalog (three slots; tournaments carry the inventory across putts and rounds, other modes reset it each putt; solo and practice draw only self-only entries; a No Power-Ups session spawns none); sunk players switch to waiting/free roam after 1.2 s; the scorecard opens on sinking (not in putt practice); power-ups and their toasts/banners (`src/gameplay/`).
 - **Presence** every 70 ms (or immediately on shots, sinks and power-ups): rounded position, mode, strokes, aura `effect` and attack `fx`. Remote balls of players still putting are drawn with names, auras and shadows; finished players' balls are hidden (legacy). Remote shots and sinks are audible; opponent effects arrive as validated `fx` messages and land as pending effects on the target's own client.
@@ -27,7 +27,7 @@ await app.dispose();                     // leaves the room and releases everyth
 
 - Leaving a room returns to the start screen instead of reloading the page.
 - Ball colours follow join order (the protocol carries no colour; legacy picked randomly). All screens and balls agree.
-- A player who leaves and rejoins gets a new identity, so tournament totals list them twice; resume identity is N2's scope.
+- An explicit leave releases the seat; a page reload or connection interruption can resume the same seat during the service recovery window.
 - Presence gained two optional, validated fields (`effect`, `fx`) to keep power-up auras and attacks working across players; see `src/network/protocol.js`.
 
 ## Verification
@@ -42,4 +42,4 @@ await app.dispose();                     // leaves the room and releases everyth
 - a bundle check that the runtime contains no legacy extraction;
 - a check that npm three@0.128.0 builds all 22 courses identically to the embedded copy.
 
-Real-browser evidence (Chromium, WebGL, real PeerJS/WebRTC) is recorded in `docs/reviews/I1_APP.md`.
+`npm run test:browser` drives Chromium, Firefox, and WebKit against the local Worker and app. It validates browser WebSockets and WebGL, but does not validate a deployed service or internet-wide reachability.
