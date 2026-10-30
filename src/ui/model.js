@@ -53,11 +53,11 @@ export function colorOf(room, local, id) {
   return at < 0 ? 0 : at % 8;
 }
 
-/** "Room ABCD · 2 players · You are the host", or "Solo practice". */
+/** Describes the room controller, other members, or solo practice. */
 export function roomLabel(room, local) {
   if (!local.roomCode) return 'Solo practice';
   const n = connectedPlayers(room).length;
-  return 'Room ' + local.roomCode.toUpperCase() + ' · ' + n + ' player' + (n === 1 ? '' : 's') + ' · ' + (local.isHost ? 'You are the host' : 'Waiting for host');
+  return 'Room ' + local.roomCode.toUpperCase() + ' · ' + n + ' player' + (n === 1 ? '' : 's') + ' · ' + (local.serverOwned ? (local.isHost ? 'You control the room' : 'Waiting for room controller') : (local.isHost ? 'You are the host' : 'Waiting for host'));
 }
 
 const inCountdown = (room, now) => room.phase === SessionPhases.PLAY && room.puttIndex === 0 && now < room.roundStartTime;
@@ -74,6 +74,7 @@ export function screensView(room, local, now) {
     results: active && room.phase === SessionPhases.RESULTS,
     netNotice: !!local.active && local.connected === false,
     reconnecting: !!local.active && !!local.reconnecting,
+    connectionReason: local.connectionReason || '',
   };
 }
 
@@ -86,7 +87,7 @@ export function lobbyView(room, local, now, courses) {
     const course = courses[room.mapIndex];
     status = course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
   } else {
-    status = local.isHost ? 'Pick a game mode, then start to open map voting.' : 'The host will pick the mode and start map voting.';
+    status = local.isHost ? 'Pick a game mode, then start to open map voting.' : (local.serverOwned ? 'The room controller will pick the mode and start map voting.' : 'The host will pick the mode and start map voting.');
   }
   return {
     label: roomLabel(room, local),
@@ -264,7 +265,7 @@ export function resultsView(room, local, courses) {
     text = 'You finished ' + n + (n > 1 ? ' putts' : ' putt') + ' in ' + total + ' strokes (' + (d > 0 ? '+' : '') + d + ' vs par). The scoreboard shows how everyone else is doing.';
   }
   if (local.mode === 'spectator') text = 'Round finished. You joined as a spectator; join the next map to play.';
-  if (!local.isHost) text += ' Waiting for the host to return to the lobby.';
+  if (!local.isHost) text += local.serverOwned ? ' Waiting for the room controller to return to the lobby.' : ' Waiting for the host to return to the lobby.';
   return {
     text,
     buttonLabel: practice ? 'Pick another map' : more ? 'Next map vote' : 'Back to lobby',

@@ -1,6 +1,6 @@
 # Durable room recovery (N4d)
 
-The Worker exports `RoomDurableObject` from `services/rooms/recovery-object.mjs`. It wraps the N4c coordinator in serialized storage transactions and uses Cloudflare's Hibernation WebSocket API. Browser physics and the current PeerJS browser application are unchanged; N4e owns browser adoption. This document describes the local implementation, not deployed acceptance.
+The Worker exports `RoomDurableObject` from `services/rooms/recovery-object.mjs`. It wraps the N4c coordinator in serialized storage transactions and uses Cloudflare's Hibernation WebSocket API. Browser physics remains local; N4E (#71) supplies the WebSocket client, pending integration. This document describes the local implementation, not deployed acceptance.
 
 ## Commit boundary
 
@@ -12,7 +12,7 @@ Presence, token-bucket rates and healthy-link timestamps are ephemeral. Presence
 
 ## Restore and deadlines
 
-`createRoomSession({serverOwned: true, durable: true, restore, ...})` maps the explicit domain form to the pinned XState machine with `resolveState`. Entry actions are not replayed, and volatile `after` timers are disabled for durable actors. `exportDomain()` provides the portable node/context. The adapter validates the full checkpoint before calling the restore API. Solo and PeerJS actors continue using their original timers and interface.
+`createRoomSession({serverOwned: true, durable: true, restore, ...})` maps the explicit domain form to the pinned XState machine with `resolveState`. Entry actions are not replayed, and volatile `after` timers are disabled for durable actors. `exportDomain()` provides the portable node/context. The adapter validates the full checkpoint before calling the restore API. Solo actors continue using their original timers and interface.
 
 Only the private `advanceDeadline` API can trigger durable timer transitions. It checks the expected round, node and absolute time. Public commands cannot submit timer events. The checkpoint includes the replay deadline, avoiding a restarted replay pause after reconstruction.
 
