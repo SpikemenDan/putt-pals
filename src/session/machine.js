@@ -1,4 +1,5 @@
 import { setup, assign, createActor } from 'xstate';
+import { sessionDomain, sessionValue, sessionNode } from './recovery.js';
 import { createInitialSessionState, GameModes, resolveVote, SessionCommands } from '../shared/session.js';
 import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
@@ -19,11 +20,16 @@ const seriesLength = mode => ({ tournament_3: 3, tournament_6: 6, tournament_9: 
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
-export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', serverOwned = false, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
-  const initialControllerId = serverOwned ? controllerId : hostId;
+export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
+  const initialControllerId = (serverOwned ? controllerId : hostId) ?? (restore ? Object.keys(restore.context?.players ?? {})[0] : undefined);
   if (!validIdentity({ playerId: initialControllerId }) || !validName(hostName)) throw new Error('Valid room controller identity and name required');
   if (typeof isReserved !== 'function') throw new Error('A reservation lookup is required');
   if (!clock || !['now', 'setTimeout', 'clearTimeout'].every(key => typeof clock[key] === 'function')) throw new Error('An explicit now/setTimeout/clearTimeout clock is required');
+  if ((durable || restore !== null) && !serverOwned) throw new Error('Durable recovery requires server ownership');
+  if (restore !== null && !durable) throw new Error('Restore requires externally driven durable deadlines');
+  const timed = (name, transition, on = {}) => durable
+    ? { on: { ...on, [`SERVER_TIMER_${name}`]: transition } }
+    : { after: { [name]: transition }, on };
   const courseData = structuredClone(courses);
   const checked = validateCourseDocument({ schemaVersion: 1, courses: courseData });
   if (!checked.valid) throw new Error(`Invalid session courses: ${checked.errors.join('; ')}`);
@@ -166,8 +172,8 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
           timing: {
             entry: 'deadline',
             always: [{ guard: 'practice', target: '#session.play', actions: 'votedMap' }, { guard: 'replay', target: 'choosingPutt' }, { guard: 'everyoneVoted', target: '#session.play', actions: 'votedMap' }],
-            after: { votingRemaining: [{ guard: 'hasVotes', target: '#session.play', actions: 'votedMap' }, { target: 'waiting' }] },
-            on: { CAST_VOTE: { guard: 'vote', actions: 'vote' } },
+            ...timed('votingRemaining', [{ guard: 'hasVotes', target: '#session.play', actions: 'votedMap' }, { target: 'waiting' }],
+              { CAST_VOTE: { guard: 'vote', actions: 'vote' } }),
           },
           choosingPutt: { on: { CAST_VOTE: { guard: 'vote', actions: 'vote' }, START_ROUND: { guard: 'choosePutt', target: '#session.play', actions: 'chosenPutt' } } },
         },
@@ -182,18 +188,18 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
           RETURN_TO_LOBBY: { guard: 'replayHost', target: 'lobby', actions: 'lobby' },
         },
         states: {
-          starting: { after: { startRemaining: 'active' } },
+          starting: { ...timed('startRemaining', 'active') },
           active: {
             initial: 'settling',
             states: {
-              settling: { after: { minimumPlay: 'running' } },
+              settling: { ...timed('minimumPlay', 'running') },
               running: {
                 always: [{ guard: 'doneReplay', target: 'replaying' },
                   { guard: 'doneLast', target: '#session.results', actions: ['record', 'finish'] },
                   { guard: 'done', target: '#session.play.starting', actions: ['record', 'next'] }],
-                after: { fallbackRemaining: { guard: 'notReplay', actions: 'forceTimeout' } },
+                ...timed('fallbackRemaining', { guard: 'notReplay', actions: 'forceTimeout' }),
               },
-              replaying: { after: { replay: { target: '#session.play.starting', actions: 'loop' } } },
+              replaying: { ...timed('replay', { target: '#session.play.starting', actions: 'loop' }) },
             },
           },
         },
@@ -205,7 +211,17 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       ] } },
     },
   });
-  const actor = createActor(machine, { clock });
+  let restoredState;
+  if (restore !== null) {
+    const c = structuredClone(restore.context);
+    if (!c || !modes.includes(c.mode) || !Number.isInteger(c.mapIndex) || !courseData[c.mapIndex]
+      || !Number.isInteger(c.puttIndex) || !courseData[c.mapIndex].putts[c.puttIndex]
+      || !Array.isArray(c.roster) || !c.players || !validCount(c.roundNumber)) {
+      throw new Error('Invalid session recovery context');
+    }
+    restoredState = machine.resolveState({ value: sessionValue(restore.node), context: { ...c, controllerId } });
+  }
+  const actor = createActor(machine, { clock, ...(restoredState ? { snapshot: restoredState } : {}) });
   const snapshot = value => {
     const phase = typeof value.value === 'string' ? value.value : Object.keys(value.value)[0];
     return structuredClone({ ...value.context, phase, state: value.value });
@@ -214,6 +230,26 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   actor.start();
   return {
     getSnapshot: () => snapshot(actor.getSnapshot()),
+    ...(durable ? {
+      exportDomain: () => sessionDomain(snapshot(actor.getSnapshot())),
+      advanceDeadline(kind, expectedRound, at) {
+        if (disposed || expectedRound !== actor.getSnapshot().context.roundNumber || clock.now() < at) return false;
+        const value = actor.getSnapshot();
+        const c = value.context;
+        const node = sessionNode(value.value);
+        const timers = {
+          voteAt: ['select.timing', 'votingRemaining', c.votingDeadline],
+          startAt: ['play.starting', 'startRemaining', c.roundStartTime],
+          minimumPlayAt: ['play.active.settling', 'minimumPlay', c.roundStartTime + SESSION_TIMING.minimumPlay],
+          fallbackAt: ['play.active.running', 'fallbackRemaining', c.roundStartTime + c.roundLimitSeconds * 1000 + SESSION_TIMING.fallback],
+          replayAt: ['play.active.replaying', 'replay', at],
+        };
+        const timer = timers[kind];
+        if (!timer || node !== timer[0] || at !== timer[2] || !Number.isSafeInteger(at) || at < 0) return false;
+        actor.send({ type: `SERVER_TIMER_${timer[1]}` });
+        return value !== actor.getSnapshot();
+      },
+    } : {}),
     send(event) {
       if (disposed || !event || typeof event !== 'object' || typeof event.type !== 'string' || !eventTypes.has(event.type)) return false;
       const before = actor.getSnapshot();

@@ -10,13 +10,13 @@ import hud from './Hud.module.css';
  * mounted so the WebGL context survives screen changes; `onCanvas` hands it to
  * the renderer and input adapter.
  */
-export function GameScreen({ hidden, onCanvas }) {
+export function GameScreen({ hidden, backdrop = false, onCanvas }) {
   const { send, session } = useCommands();
   const view = useView(v => v.hud);
   const toast = useView(v => v.toast);
   const ghost = buttons.ghost;
   return (
-    <div hidden={hidden} data-ui="game">
+    <div hidden={hidden} data-ui={backdrop ? 'backdrop' : 'game'} className={backdrop ? hud.backdrop : undefined} aria-hidden={backdrop || undefined}>
       <div className={hud.stage}>
         <div className={hud.bar}>
           <span className={`${hud.info}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>

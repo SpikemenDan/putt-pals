@@ -11,6 +11,7 @@ import {
   TURF_FRICTION,
   FIXED_TIMESTEP,
 } from './constants.js';
+import { TUNING } from './tuning.js';
 
 export const SimulationEventTypes = Object.freeze({
   SHOT: 'shot',
@@ -84,6 +85,10 @@ export function applyShot(player, angle, power, powerMultiplier = SHOT_POWER) {
   player.strokes = (player.strokes || 0) + 1;
   player.movingHazardTime = 0;
   player.prevPosition = [player.x, player.y, player.z];
+  if (player.armedPowerups?.chip) { // Chip In: lofted launch; the lift keeps the first tick airborne
+    player.vz = TUNING.powerups.chipLaunch;
+    player.z += 1;
+  }
 
   return {
     type: SimulationEventTypes.SHOT,

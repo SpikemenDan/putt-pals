@@ -79,13 +79,13 @@ export function createAura(library) {
 }
 
 /** Legacy updateAura(). */
-export function placeAura(mesh, type, position, visible, time) {
+export function placeAura(mesh, type, position, visible, time, scale = 1) {
   mesh.visible = !!(visible && EFFECT_COLORS[type]);
   if (!mesh.visible) return;
   mesh.position.copy(position);
   displayColor(mesh.material.uniforms.col.value, EFFECT_COLORS[type]);
   mesh.material.uniforms.kind.value = EFFECT_KINDS.indexOf(type);
-  mesh.scale.setScalar(1 + Math.sin(time * 5) * 0.1);
+  mesh.scale.setScalar((1 + Math.sin(time * 5) * 0.1) * scale);
 }
 
 /** Ball trail: additive soft points that fade along the path (hard-edged dots in the toon style). */

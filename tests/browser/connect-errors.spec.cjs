@@ -6,7 +6,7 @@ const { roomCode, requireGuestLinks, openPlayer } = require('./support/rooms.cjs
 
 const MAX_PLAYERS = 8;
 
-test('connect errors: a ninth player is told the room is full and stays on the start screen', async ({ browser }, testInfo) => {
+test('connect errors: a ninth player is told the room is full and stays on the start screen @slow', async ({ browser }, testInfo) => {
   test.setTimeout(600_000);
   await requireGuestLinks(browser, testInfo);
   const code = roomCode('N2F');

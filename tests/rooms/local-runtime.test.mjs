@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './inbound-queue.test.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import http from 'node:http';
@@ -8,6 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { roomObjectName } from '../../services/rooms/room-name.mjs';
 import { SERVER_ROOM_VERSION, validRoomSnapshot } from '../../src/network/contracts/server-room.js';
+
+await import('./session-recovery.test.mjs');
+await import('./durable-recovery.test.mjs');
+await import('./hibernation-runtime.test.mjs');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');

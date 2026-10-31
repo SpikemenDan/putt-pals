@@ -19,9 +19,9 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
-  assert.deepEqual(G.auraIds(), ['', 'mag', 'steady']);
+  assert.deepEqual(G.auraIds(), ['', ...G.powerupIds()]);
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
   assert.equal(G.powerupName('nope'), 'nope');
   assert.equal(G.isPowerupId('steady'), true);
@@ -76,7 +76,7 @@ async function run() {
 
   // ---- activation, stacking, hooks
   const fresh = () => { const p = createPlayerState('t'); p.armedPowerups = G.armedState(TEST_CATALOG); p.pendingPowerups = G.pendingState(TEST_CATALOG); return p; };
-  assert.deepEqual(G.armedState(), { mag: 0, steady: 0 });
+  assert.deepEqual(G.armedState(), { mag: 0, steady: 0, chip: 0, ghost: 0, small: 0, tall: 0, sticky: 0 });
   assert.deepEqual(G.pendingState(), {});
   assert.deepEqual(G.pendingState(TEST_CATALOG), { xx: 0 });
   let p = fresh();
@@ -111,7 +111,7 @@ async function run() {
   }
   assert.equal(G.validEffectMessage({ id: 1, t: 'mag' }), false, 'no shipped power-up is opponent-targeted yet');
   const base = { x: 1, y: 2, z: 0, mode: 'play', strokes: 1 };
-  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', 'mag', 'steady']);
+  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds()]);
   for (const fx of [{ id: 1, t: 'rev' }, { id: 1, t: 'zany' }]) assert.equal(protocol.validPresence({ ...base, fx }), false);
 
   // ---- putt integration: boxes, inventory carryover, activation
@@ -149,7 +149,7 @@ async function run() {
   sit(boxed); assert.match(boxed.frame(0, 0.016).toasts.join('|'), /Inventory full/);
   assert.deepEqual(boxed.player.inventory, ['mag', 'mag', 'steady'], 'a full inventory loses the box');
   boxed.dispose();
-  const picker = make({ random: () => 0.99, powerups: solo, inventory: ['mag'] });
+  const picker = make({ random: () => 0.2, powerups: solo, inventory: ['mag'] });
   sit(picker); assert.match(picker.frame(0, 0.016).toasts.join('|'), /Got Steady Aim!/);
   assert.deepEqual(picker.player.inventory, ['mag', 'steady'], 'carried slots are kept and the box adds one');
   const used = picker.useItem(1, 0);
