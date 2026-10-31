@@ -7,13 +7,15 @@
 
 import { surfaceHeight } from '../simulation/physics.js';
 import { createCameraRig } from '../camera/rig.js';
+import { resolveCameraPosition } from '../camera/collision.js';
 
 /**
  * @param {object} options
  * @param {ReturnType<import('./renderer.js').createGameRenderer>} options.renderer
  * @param {ReturnType<typeof createCameraRig>} [options.rig]
+ * @param {boolean} [options.cameraCollision=true] Keep the drawn camera out of walls and platforms (CL2 #103); the rig's own state is unchanged. Off only for the legacy pose-parity tests.
  */
-export function createGameView({ renderer, rig = createCameraRig() }) {
+export function createGameView({ renderer, rig = createCameraRig(), cameraCollision = true }) {
   const requireCourse = () => {
     const build = renderer.course;
     if (!build) throw new Error('setCourse() must be called before drawing a course frame');
@@ -48,7 +50,7 @@ export function createGameView({ renderer, rig = createCameraRig() }) {
      * @returns {{ events: string[], mode: string, transitioning: boolean }}
      */
     frame({ now, dt, hazardTime = 0, local, remotes = [], aim = null, free = false, keys }) {
-      const { course, transform, holePosition } = requireCourse();
+      const { course, transform, holePosition, solids } = requireCourse();
       const me = local || { x: 0, y: 0, z: 0, mode: 'lobby' };
       const ballVisible = me.mode === 'play' || me.mode === 'sunk';
       const pose = rig.update({
@@ -62,6 +64,7 @@ export function createGameView({ renderer, rig = createCameraRig() }) {
         groundHeight: (x, y) => surfaceHeight(course, x, y),
         ballVisible,
       });
+      if (cameraCollision) pose.position = resolveCameraPosition(pose.position, solids);
       renderer.render({ now, dt, hazardTime, local, remotes, aim, camera: pose });
       return { events: pose.events, mode: pose.mode, transitioning: pose.transitioning };
     },

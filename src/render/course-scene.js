@@ -112,6 +112,7 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   for (const r of hl.w) {
     const wall = box(THREE, r[2], WALL_HEIGHT, r[3], surface('wall', T.brick, Math.max(r[2], r[3]) / 90, 1, { transparent: true }), at(r[0] + r[2] / 2, r[1] + r[3] / 2, WALL_HEIGHT / 2), true);
     wall.userData.fade = true;
+    wall.userData.wall = true;
     g.add(ink(wall));
   }
   for (const p of hl.pl) {
@@ -258,10 +259,18 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     }
   }
 
+  // World-space boxes the camera must stay out of (CL2 #103): walls and platforms, the same
+  // boxes that fade. Platforms reach 10 below their top, as built above.
+  const solids = [];
+  const solidBox = (x, y, w, d, low, high) => solids.push({ min: transform.ground(x, y, low), max: transform.ground(x + w, y + d, high) });
+  for (const r of hl.w) solidBox(r[0], r[1], r[2], r[3], 0, WALL_HEIGHT);
+  for (const p of hl.pl) solidBox(p[0], p[1], p[2], p[3], -10, p[4]);
+
   let disposed = false;
   return {
     group: g,
     course: hl,
+    solids,
     puttIndex,
     transform,
     flags, fans, vortices, movers, wallFade, powerBlocks,

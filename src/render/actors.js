@@ -165,7 +165,8 @@ const ARROW_SHAFT_HALF_WIDTH = 2.6, ARROW_HEAD_HALF_WIDTH = 7, ARROW_HEAD_LENGTH
 export function createAimGuide(THREE) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(27), 3));
-  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false, depthTest: false }));
+  // Depth-tested (CL2 #103): walls, ramps and other balls hide the arrow instead of it drawing over them.
+  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false }));
   arrow.frustumCulled = false;
   arrow.renderOrder = 10;
   arrow.visible = false;
