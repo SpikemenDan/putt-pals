@@ -12,4 +12,4 @@ Shipped entries: Hole Magnet (`mag`, per-tick force in the cup physics) and Stea
 
 With nothing armed no hook changes any number, so shot results stay bit-identical to the parity fixtures. Adding a power-up means adding a catalog record, its hook, an aura colour in `src/render/materials.js`, and tests; the catalog tests (`tests/gameplay.test.cjs`, part of `npm run test:contracts`) cover the framework with a catalog that includes an opponent-targeted entry.
 
-The renderer still draws `?` boxes in No Power-Ups sessions; hiding them belongs to GM1, which also supplies the session flag `powerupPolicy` reads.
+No Power-Ups (GM1): the room flag `powerups` (host-set in the lobby with `SET_POWERUPS`, default true) is read by `app.js` into `powerupPolicy({ powerups })`. With it off the policy has `spawn: false` and `boxes: false`, and `createPutt` marks every `?` block collected, so none is drawn or touchable and the inventory stays empty. Practice and solo modes always keep power-ups on.

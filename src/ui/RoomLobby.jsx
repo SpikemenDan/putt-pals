@@ -14,12 +14,18 @@ export function RoomLobby({ hidden }) {
   const { send, session } = useCommands();
   const lobby = useView(v => v.lobby);
   const [mode, setMode] = useState(GameModes.STANDARD);
+  const [powerups, setPowerups] = useState(true);
   const multiplayer = !!lobby?.multiplayer;
+  // The room's setting wins when it changes (for example after returning to the lobby).
+  const roomPowerups = lobby?.powerups !== false;
+  useEffect(() => setPowerups(roomPowerups), [roomPowerups]);
   // Legacy: practice modes are solo only; a second player resets the choice to Standard.
   useEffect(() => { if (multiplayer && soloOnly(mode)) setMode(GameModes.STANDARD); }, [multiplayer, mode]);
   const start = () => {
     if (soloOnly(mode) && multiplayer) return;
     session({ type: 'SET_MODE', mode });
+    const enabled = soloOnly(mode) ? true : powerups;
+    if (enabled !== (lobby?.powerups !== false)) session({ type: 'SET_POWERUPS', enabled });
     session({ type: 'START_VOTING' });
   };
   return (
@@ -30,6 +36,7 @@ export function RoomLobby({ hidden }) {
       <label hidden={!lobby?.showModes}>Game mode<select value={mode} onChange={e => setMode(e.target.value)}>
         {(lobby?.modes || MODE_OPTIONS).map(o => <option key={o.value} value={o.value} disabled={!!o.disabled}>{o.label}</option>)}
       </select></label>
+      <label hidden={!lobby?.showModes || soloOnly(mode)}><input type="checkbox" checked={!powerups} onChange={e => setPowerups(!e.target.checked)} data-ui="no-powerups" /> No power-ups (pure mini-golf)</label>
       <p className={app.status}>{lobby?.status}</p>
       <button type="button" hidden={!lobby?.showStart} onClick={start}>Start Game</button>
       <button type="button" className={buttons.ghost} hidden={!lobby?.showInvite} onClick={() => send(UiCommands.INVITE)}>Copy invite</button>

@@ -250,6 +250,37 @@ function fakeClock() {
     await g.teardown();
   });
 
+  await scenario('lobby: the No power-ups box (host only, not for practice) is sent with Start only when it changes, and the status says so', async () => {
+    const t = await setup();
+    const lobby = t.within('[data-ui=room-lobby]');
+    const box = lobby.querySelector('[data-ui=no-powerups]');
+    assert.equal(box.checked, false, 'power-ups are on by default');
+    t.commands.length = 0;
+    await click(button('Start Game'));
+    assert.deepEqual(t.commands.map(c => c.event.type), ['SET_MODE', 'START_VOTING'], 'unchanged: no extra command');
+    await t.teardown();
+    const u = await setup();
+    const check = u.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]');
+    await act(async () => { check.click(); });
+    assert.equal(check.checked, true);
+    u.commands.length = 0;
+    await click(button('Start Game'));
+    assert.deepEqual(u.commands.map(c => c.event), [{ type: 'SET_MODE', mode: 'standard' }, { type: 'SET_POWERUPS', enabled: false }, { type: 'START_VOTING' }]);
+    await u.teardown();
+    const p = await setup();
+    await act(async () => { p.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').click(); });
+    const sel = p.within('[data-ui=room-lobby]').querySelector('select');
+    await act(async () => { sel.value = 'practice'; sel.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+    assert.equal(p.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').closest('label').hidden, true, 'practice is solo and never has the box');
+    p.commands.length = 0;
+    await click(button('Start Game'));
+    assert.deepEqual(p.commands.map(c => c.event.type), ['SET_MODE', 'START_VOTING'], 'practice keeps power-ups on');
+    await p.teardown();
+    const g = await setup({ localId: 'host', isHost: false });
+    assert.equal(g.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').closest('label').hidden, true, 'guests do not see it');
+    await g.teardown();
+  });
+
   await scenario('tournament: voting countdown, votes, start countdown, putt banners, HUD, hole in one, map results and the champion', async () => {
     const t = await setup();
     await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });

@@ -32,6 +32,7 @@ Run one coordinator per room on the host. This module does not authenticate peer
 | JOIN_ROOM | `playerId`, text-only `name`; validates identity/name and capacity; late joins spectate until the next map |
 | LEAVE_ROOM | Sender's `playerId`; removes its vote and active participation; no host migration |
 | SET_MODE | Host, lobby only; C1 GameModes value; practice modes require solo membership |
+| SET_POWERUPS | Host, lobby only; `{ enabled: boolean }` sets the room's `powerups` flag (default true). false is the No Power-Ups mode (GM1): no `?` boxes, no inventory. Works with Standard and Tournament modes; practice always keeps power-ups on |
 | START_VOTING | Host, lobby only; clears the new series' scores/totals |
 | CAST_VOTE | Connected sender and eligible starter `mapIndex` |
 | START_ROUND | Host in putt-practice selection only, `puttIndex`; uses the host's selected map |

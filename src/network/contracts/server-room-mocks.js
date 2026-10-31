@@ -6,7 +6,7 @@ export function createServerRoomFixture({ now = 1700000000000, policy = {} } = {
   return {
     roomCode:'friends', sessionId:'session_fixture', rulesVersion:ROOM_RULES_VERSION, courseHash:'a'.repeat(64), revision:1, serverTime:now, controllerId:'p1', policy:createRoomPolicy(policy),
     seats:[{playerId:'p1',joinOrder:1,connectedSince:now,resumeUntil:null},{playerId:'p2',joinOrder:2,connectedSince:now,resumeUntil:null}],
-    session:{node:'lobby',context:{ mode:'standard',mapIndex:0,puttIndex:0,roundNumber:0,roundLimitSeconds:120,roundStartTime:0,votingDeadline:0,
+    session:{node:'lobby',context:{ mode:'standard',powerups:true,mapIndex:0,puttIndex:0,roundNumber:0,roundLimitSeconds:120,roundStartTime:0,votingDeadline:0,
       votes:{},roster:[],players:{p1:player('p1','Controller'),p2:player('p2','Guest')},completedMaps:[],totals:{},last:null }},
   };
 }

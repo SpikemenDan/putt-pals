@@ -170,7 +170,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     panoramaBuilt = false;
     const definition = data.definitions[s.mapIndex];
     const playing = !spectate && s.roster.includes(room.localId);
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length });
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),

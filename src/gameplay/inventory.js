@@ -16,13 +16,16 @@ const SOLO_MODES = Object.freeze([GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
  * Power-up rules for a session.
  * @param {{mode: string, rosterSize?: number, powerups?: boolean}} session
  *   powerups=false is the No Power-Ups mode (GM1 supplies the flag): no boxes spawn.
- * @returns {{spawn: boolean, solo: boolean, carryover: boolean, pool: object[]}}
+ * @returns {{spawn: boolean, boxes: boolean, solo: boolean, carryover: boolean, pool: object[]}}
+ *   boxes: whether `?` blocks exist at all; false in the No Power-Ups mode, where they are hidden.
  *   carryover: tournaments keep the inventory across putts and rounds; every other mode resets it each putt.
  */
 export function powerupPolicy({ mode, rosterSize = 1, powerups = true }, catalog) {
   const solo = rosterSize <= 1 || SOLO_MODES.includes(mode);
+  // Practice modes always keep power-ups on, whatever the room flag says.
+  if (SOLO_MODES.includes(mode)) powerups = true;
   const pool = spawnPool({ powerups, solo }, catalog);
-  return { spawn: powerups && pool.length > 0, solo, carryover: TOURNAMENT_MODES.includes(mode), pool };
+  return { spawn: powerups && pool.length > 0, boxes: powerups, solo, carryover: TOURNAMENT_MODES.includes(mode), pool };
 }
 
 /** Inventory for the next putt: the carried slots in a tournament, empty otherwise. */

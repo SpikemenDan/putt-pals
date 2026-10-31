@@ -124,6 +124,26 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(!tracked(ana).slice(before).includes('ui:click'), 'a disabled button is silent');
   });
 
+  await scenario('No Power-Ups (GM1): the host checks the lobby box, everyone plays without power-up boxes', async () => {
+    const W = world();
+    const ana = await W.client('Ana'); await ana.join('pure');
+    const ben = await W.client('Ben'); await ben.join('pure');
+    await W.run(300);
+    assert.equal(ben.$('[data-ui=no-powerups]').closest('label').hidden, true, 'guests cannot change it');
+    assert.equal(ana.snapshot.powerups, true, 'power-ups are on by default');
+    await act(async () => { ana.$('[data-ui=no-powerups]').click(); });
+    await ana.click('Start Game');
+    await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'voting');
+    assert.equal(ana.snapshot.powerups, false); assert.equal(ben.snapshot.powerups, false, 'the flag reaches guests');
+    assert.match(ana.text('[data-ui=map-select] p'), /Vote/);
+    for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
+    await W.until(() => [ana, ben].every(c => c.ready()), 10000, 'map start');
+    for (const c of [ana, ben]) {
+      const picked = c.app.putt.player.collectedPickups;
+      assert.equal(Object.keys(picked).length, c.app.putt.course.q.length, c.name + ': every box counts as collected, none is drawn (the first putt of this map has no boxes; the box case is covered in gameplay.test)');
+    }
+  });
+
   await scenario('solo: a full six-putt map through the real UI scores six holes in one with transitions, banners and audio', async () => {
     const W = world();
     const ana = await W.client('Ana');
