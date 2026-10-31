@@ -10,6 +10,10 @@ import { fileURLToPath } from 'node:url';
 import { roomObjectName } from '../../services/rooms/room-name.mjs';
 import { SERVER_ROOM_VERSION, validRoomSnapshot } from '../../src/network/contracts/server-room.js';
 
+await import('./session-recovery.test.mjs');
+await import('./durable-recovery.test.mjs');
+await import('./hibernation-runtime.test.mjs');
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');
 const assetsDir = path.join(root, 'dist', 'assets');

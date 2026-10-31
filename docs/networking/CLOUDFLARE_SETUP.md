@@ -26,7 +26,7 @@ npm run test:rooms:local
 npx wrangler deploy --dry-run --env=""
 ```
 
-The first command builds the app and runs a bounded local runtime test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, invalid routes, origin rejection, v2 handshake and input limits, room isolation/capacity, controller succession and resume, and four clients completing a six-putt game. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
+The first command builds the app, runs deterministic recovery and real local workerd hibernation/process-restart checks, then runs a bounded Wrangler runtime test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, invalid routes, origin rejection, v2 handshake and input limits, room isolation/capacity, controller succession and resume, and four clients completing a six-putt game. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
 
 The dry run validates the pinned Worker/Static Assets/SQLite Durable Object bundle without publishing it. It is not a deployment or account-connection check. N4b does not configure remote bindings, routes, secrets, CI credentials, or account resources. Do not run `wrangler deploy` for this setup task.
 
@@ -36,7 +36,7 @@ The dry run validates the pinned Worker/Static Assets/SQLite Durable Object bund
 - Room object names include environment, protocol v2 and the canonical room code; callers reject codes outside the accepted 1–12 lowercase ASCII letter/digit form.
 - `ROOM_ALLOWED_ORIGINS` is an optional comma-separated exact-origin allowlist; configure it for non-local environments. Without it, only development loopback requests are accepted (same-origin when an `Origin` header is present).
 - `ROOM_POLICY` is an optional JSON object of validated new-room policy overrides (`reconnectGraceMs`, `controllerTransferDelayMs`, `emptyRoomTtlMs`). Invalid JSON, unknown fields or out-of-range values fail admission rather than silently falling back.
-- The room coordinator keeps current room state in the Durable Object instance and does not yet write/recover the N4a checkpoint. Do not treat this local runtime as a crash-recovery or production persistence check; N4d owns that boundary.
+- The durable room adapter writes/reconstructs the validated N4a checkpoint and uses hibernating WebSockets and durable alarms. See [DURABLE_RECOVERY.md](DURABLE_RECOVERY.md) for commit guarantees, local eviction/process-restart tests, active-cost bounds and rollback limits. These local checks do not establish deployed recovery or separate-network acceptance.
 - No remote account is selected and no preview/production route or custom domain is configured.
 - Before a preview can be deployed, N4g must obtain explicit authorization for the exact account, plan, resource names, origins, repository/token scopes and deploy action, then configure the route, secrets and rollback process. Never put tokens in source, client assets, logs or issue comments.
 
