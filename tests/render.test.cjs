@@ -150,7 +150,8 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
   const canvas = w.document.getElementById('cv');
   const makeView = () => {
     const renderer = render.createGameRenderer({ THREE, canvas, random: () => RANDOM, style: 'legacy', createWebGLRenderer: () => new THREE.WebGLRenderer() });
-    return render.createGameView({ renderer });
+    // Pose parity with the legacy renderer; the CL2 camera collision has its own scenario below.
+    return render.createGameView({ renderer, cameraCollision: false });
   };
 
   await scenario('transform: explicit sim-to-world mapping matches shared coords and inverts', async () => {
@@ -227,6 +228,13 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     same([...mineCam.position.toArray(), ...mineCam.quaternion.toArray()], [...legacyCam.position.toArray(), ...legacyCam.quaternion.toArray()], `${label} camera @${now}`);
     const ls = P().ball.parent, ms = view.renderer.scene;
     assert.notEqual(ls, ms, "comparing two different scenes");
+    // CL2 #103 fades walls more than legacy did (the wall around a free-roam camera, walls hiding the ball's lower half);
+    // the wall-fade scenario covers that, so the rest of the scene stays compared with legacy wall state copied over.
+    P().wallFade.forEach((e, i) => {
+      const entry = view.renderer.course.wallFade[i], material = entry.mesh.material;
+      entry.alpha = e.a;
+      material.opacity = e.m.material.opacity; material.depthWrite = e.m.material.depthWrite;
+    });
     const pick = scene => scene.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === legacyCourseGroup(scene) || c === view.renderer.course.group));
     const L = pick(ls).map(c => node(c)), M = pick(ms).map(c => node(c));
     same(M, L, `${label} full scene @${now}`);
@@ -358,7 +366,6 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
     const cases = [
       [new V(400, 40, 100), new V(400, 5, 250), 'wall between camera and ball'],
       [new V(400, 40, 100), new V(400, 5, 250), 'held for another frame'],
-      [new V(400, 14, 159), null, 'camera inside a wall, no ball'],
       [new V(400, 14, 159), new V(400, 5, 300), 'camera inside a wall, ball beyond it'],
       [new V(100, 300, 100), new V(110, 5, 110), 'clear view recovers'],
       [new V(200, 30, 400), new V(420, 5, 260), 'diagonal through two walls'],
@@ -370,14 +377,78 @@ const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.child
         fade(build.wallFade, dt, from, to);
         const L = legacyEntries.map(e => [e.a, e.m.material.opacity, e.m.material.depthWrite]);
         const M = build.wallFade.map(e => [e.alpha, e.mesh.material.opacity, e.mesh.material.depthWrite]);
-        same(M, L, `${label} dt=${dt}`);
+        // Platforms fade exactly like legacy; walls also fade for the lower-half ray, so never less than legacy (CL2 #103).
+        build.wallFade.forEach((e, i) => {
+          if (e.mesh.userData.wall) assert.ok(M[i][0] <= L[i][0] + 1e-12, `${label} dt=${dt}: wall ${i} fades at least as much as legacy`);
+          else same(M[i], L[i], `${label} dt=${dt}: platform ${i}`);
+        });
         if (L.some(([a]) => a < 1)) blockedFrames++;
         minimum = Math.min(minimum, ...M.map(([a]) => a));
       }
     }
     assert.ok(blockedFrames >= 6, 'some walls actually faded');
     assert.equal(minimum, render.FADE_MIN, 'fade reaches the minimum opacity');
+    // CL2 #103: with no ball (free roam, putt transition) the wall around the camera still fades; legacy left it opaque.
+    const solo = render.createWallFade(THREE), inside = new V(400, 14, 159);
+    for (let i = 0; i < 20; i++) solo(build.wallFade, 0.05, inside, null);
+    const faded = build.wallFade.filter(e => e.alpha === render.FADE_MIN);
+    assert.ok(faded.length >= 1 && faded.every(e => e.box.containsPoint(inside)), 'only walls containing the camera fade without a ball');
+    for (let i = 0; i < 20; i++) solo(build.wallFade, 0.05, new V(100, 300, 100), null);
+    assert.ok(build.wallFade.every(e => e.alpha === 1), 'walls recover once the camera leaves them');
     view.dispose();
+  });
+
+  await scenario('wall fade lower ray and aim arrow depth (CL2 #103)', async () => {
+    const V = THREE.Vector3, fade = render.createWallFade(THREE);
+    // A wall whose top edge clears the ball centre but hides its lower half, seen from just above the wall.
+    const make = isWall => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(100, 28, 2), new THREE.MeshBasicMaterial({ transparent: true }));
+      mesh.position.set(0, 14, 11); mesh.userData.fade = true; if (isWall) mesh.userData.wall = true;
+      mesh.updateMatrixWorld(true);
+      return { mesh, alpha: 1, box: null };
+    };
+    const wall = make(true), platform = make(false);
+    for (let i = 0; i < 20; i++) { fade([wall], 0.05, new V(0, 30, 0), new V(0, 24, 40)); fade([platform], 0.05, new V(0, 30, 0), new V(0, 24, 40)); }
+    assert.equal(wall.alpha, render.FADE_MIN, 'a wall hiding only the lower half of the ball fades');
+    assert.equal(platform.alpha, 1, 'a platform never fades for the lower ray, so the one under the ball stays solid');
+    const guide = (await import('../src/render/actors.js')).createAimGuide(THREE);
+    assert.notEqual(guide.arrow.material.depthTest, false, 'the aim arrow is depth-tested');
+  });
+
+  await scenario('camera collision: the drawn camera never ends inside a wall or platform (CL2 #103)', async () => {
+    const { resolveCameraPosition, insideSolid, CAMERA_CLEARANCE } = await import('../src/camera/collision.js');
+    const box = { min: [0, 0, 0], max: [100, 20, 10] };
+    const clear = [50, 100, 50];
+    assert.equal(resolveCameraPosition(clear, [box]), clear, 'a clear camera is returned untouched');
+    const nearSide = resolveCameraPosition([50, 10, 8], [box]);
+    assert.ok(!insideSolid(nearSide, box, CAMERA_CLEARANCE - 1e-9) && nearSide[2] === 10 + CAMERA_CLEARANCE, 'pushed out through the nearest side');
+    const low = resolveCameraPosition([50, 1, 5], [box]);
+    assert.ok(low[1] >= 0, 'never pushed below the floor');
+    const touching = resolveCameraPosition([50, 10, 5], [box, { min: [0, 0, 10], max: [100, 20, 20] }]);
+    assert.ok(![box, { min: [0, 0, 10], max: [100, 20, 20] }].some(s => insideSolid(touching, s, CAMERA_CLEARANCE - 1e-9)), 'two adjacent solids resolve together');
+    // Every shipped map, every camera view, a free-roam sweep through its solids.
+    for (const [index, definition] of definitions.entries()) {
+      const view = render.createGameView({ renderer: makeView().renderer });
+      const build = view.setCourse(definition, 0);
+      for (const solid of build.solids) {
+        const centre = solid.min.map((v, i) => (v + solid.max[i]) / 2);
+        const resolved = resolveCameraPosition(centre, build.solids);
+        assert.ok(!build.solids.some(s => insideSolid(resolved, s, CAMERA_CLEARANCE - 1e-9)), `${definition.name} (#${index}): a camera dropped inside a solid is pushed fully clear`);
+      }
+      view.dispose();
+    }
+    // End to end: a rig that reports a pose inside a wall is drawn outside it, for every view mode.
+    const map = definitions.findIndex(d => d.w.length);
+    for (const mode of ['follow', 'hole', 'strategic', 'free', 'transition']) {
+      const probe = { position: null, look: [0, 0, 0], sunTarget: [0, 0, 0], ball: null, fadeTarget: null, mode, transitioning: false, events: [] };
+      const view = render.createGameView({ renderer: makeView().renderer, rig: { reset() {}, update: () => probe } });
+      const build = view.setCourse(definitions[map], 0);
+      probe.position = build.solids[0].min.map((v, i) => (v + build.solids[0].max[i]) / 2);
+      view.frame({ now: 16, dt: 0.016, local: null });
+      const drawn = view.renderer.camera.position.toArray();
+      assert.ok(!build.solids.some(s => insideSolid(drawn, s, CAMERA_CLEARANCE - 1e-6)), `${mode}: frame() draws the camera outside every solid`);
+      view.dispose();
+    }
   });
 
   await scenario('aim guide: one arrow, length proportional to pull, along the swayed direction, no cone', async () => {
