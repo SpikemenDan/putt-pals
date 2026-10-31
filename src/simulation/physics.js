@@ -95,6 +95,20 @@ export function cupOf(course) {
 }
 
 /**
+ * Downward fillet outside the cup rim: the ball sinks `cup.filletDepth` at the rim
+ * and the drop eases to zero over `cup.filletWidth`.
+ *
+ * @param {number} outside Distance beyond the rim
+ * @returns {number}
+ */
+function filletDrop(outside) {
+  const w = CUPT.filletWidth;
+  if (w <= 0 || outside >= w) return 0;
+  const s = 1 - outside / w;
+  return CUPT.filletDepth * s * s;
+}
+
+/**
  * Computes contact height for the bottom of the ball at (x, y).
  * Accounts for cup depression.
  *
@@ -109,10 +123,12 @@ export function contactHeight(course, x, y, ballRadius = BALL_RADIUS) {
   const base = surfaceHeight(course, x, y);
   const top = surfaceHeight(course, course.hole[0], course.hole[1]);
   const d = Math.hypot(x - course.hole[0], y - course.hole[1]);
-  if (d >= C || Math.abs(base - top) > 1) return base;
+  if (Math.abs(base - top) > 1) return base;
+  if (d >= C) return base - filletDrop(d - C);
   const inset = C - d;
+  // The fillet's drop at the rim tapers to nothing where the ball is fully inside.
   return inset < ballRadius
-    ? top + Math.sqrt(Math.max(0, ballRadius * ballRadius - inset * inset)) - ballRadius
+    ? top + Math.sqrt(Math.max(0, ballRadius * ballRadius - inset * inset)) - ballRadius - CUPT.filletDepth * (1 - inset / ballRadius)
     : top - CUP_DEPTH;
 }
 
@@ -425,6 +441,19 @@ function stepBallTick(player, course, dt, hazardTime) {
       player.vz = gx * player.vx + gy * player.vy;
     }
 
+    // Cup fillet: gentle pull down the rim slope toward the hole.
+    const fx = player.x - course.hole[0];
+    const fy = player.y - course.hole[1];
+    const fd = Math.hypot(fx, fy);
+    const outside = fd - cupOf(course);
+    if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y) - surfaceHeight(course, course.hole[0], course.hole[1])) <= 1) {
+      const s = 1 - outside / CUPT.filletWidth;
+      const slope = (2 * CUPT.filletDepth * s) / CUPT.filletWidth;
+      const pull = (slope * GRAVITY * dt) / (1 + 0.6 * slope * slope);
+      player.vx -= (fx / fd) * pull;
+      player.vy -= (fy / fd) * pull;
+    }
+
     const s0 = Math.hypot(player.vx, player.vy);
     if (s0 > 0) {
       const d = Math.min(s0, cd * dt);
@@ -620,7 +649,7 @@ function stepBallTick(player, course, dt, hazardTime) {
   if (
     gnd &&
     slope < REST.maxSlope &&
-    Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) &&
+    Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) + CUPT.filletWidth &&
     Math.hypot(player.vx, player.vy) < REST.maxSpeed &&
     Math.abs(player.vz) < REST.maxVertical
   ) {

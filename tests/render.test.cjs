@@ -86,7 +86,11 @@ function shaderPatch(material) {
   if (!material.onBeforeCompile || material.onBeforeCompile === material.constructor.prototype.onBeforeCompile) return null;
   const shader = { uniforms: {}, vertexShader: 'A\n#include <begin_vertex>\nB', fragmentShader: 'C\n#include <clipping_planes_fragment>\nD' };
   material.onBeforeCompile(shader);
-  return { key: material.customProgramCacheKey(), vs: shader.vertexShader, fs: shader.fragmentShader, center: shader.uniforms.cupCenter.value.toArray() };
+  // S3 widened the cutout by the fillet and lowered the rim; undo that so the legacy comparison still bites.
+  const w = TUNING.cup.filletWidth;
+  const modern = material.customProgramCacheKey().includes('cup-cut-v6-');
+  const undo = s => !modern ? s : s.replace(/cup-cut-v6-([\d.]+)/, (m, r) => 'cup-cut-v5-' + (+r - w)).replace(/cupCenter\)<([\d.]+)\)/, (m, r) => 'cupCenter)<' + (+r - w).toFixed(1) + ')');
+  return { key: undo(material.customProgramCacheKey()), vs: shader.vertexShader, fs: undo(shader.fragmentShader), center: shader.uniforms.cupCenter.value.toArray() };
 }
 function texture(t) {
   if (!t) return null;
@@ -117,10 +121,10 @@ function geometry(g) {
 }
 function node(o, { skipChildren } = {}) {
   return {
-    type: o.type, position: o.position.toArray(), rotation: o.rotation.toArray().slice(0, 3), scale: o.scale.toArray(),
+    type: o.type, position: o.userData.cupRim ? [o.position.x, +(o.position.y + TUNING.cup.filletDepth).toFixed(6), o.position.z] : o.position.toArray(), rotation: o.rotation.toArray().slice(0, 3), scale: o.scale.toArray(),
     visible: o.visible, castShadow: o.castShadow, receiveShadow: o.receiveShadow, renderOrder: o.renderOrder, frustumCulled: o.frustumCulled,
     fade: !!o.userData.fade, geometry: o.isSprite ? null : geometry(o.geometry), material: material(o.material),
-    children: skipChildren ? undefined : o.children.map(c => node(c)),
+    children: skipChildren ? undefined : o.children.filter(c => !c.userData.fillet).map(c => node(c)),
   };
 }
 function firstDifference(a, b, at = '$') {
@@ -138,7 +142,9 @@ const isAimGuide = c => c.geometry?.type === 'RingGeometry' /* M1a active-ball r
 
 const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.children.length > 20 && c.children.some(x => x.userData.fade || x.geometry?.type === 'BoxGeometry'));
 
+let TUNING;
 (async () => {
+  ({ TUNING } = await import('../src/shared/tuning.js'));
   const env = createWindow();
   const { w } = env;
   const THREE = w.THREE;
