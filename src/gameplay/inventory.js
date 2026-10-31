@@ -22,6 +22,8 @@ const SOLO_MODES = Object.freeze([GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
  */
 export function powerupPolicy({ mode, rosterSize = 1, powerups = true }, catalog) {
   const solo = rosterSize <= 1 || SOLO_MODES.includes(mode);
+  // Practice modes always keep power-ups on, whatever the room flag says.
+  if (SOLO_MODES.includes(mode)) powerups = true;
   const pool = spawnPool({ powerups, solo }, catalog);
   return { spawn: powerups && pool.length > 0, boxes: powerups, solo, carryover: TOURNAMENT_MODES.includes(mode), pool };
 }

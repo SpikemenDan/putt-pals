@@ -82,6 +82,8 @@ const assert = require('node:assert/strict');
   await test('complete checkpoint differs from public snapshot and rejects incompatible versions',()=>{
     const cp=createServerCheckpointFixture();assert.ok(c.decodeRoomCheckpoint(JSON.stringify(cp)));
     assert.equal(c.decodeRoomCheckpoint(JSON.stringify(snapshot)),null);
+    const legacy=JSON.parse(JSON.stringify(cp));delete legacy.snapshot.session.context.powerups;
+    assert.equal(c.decodeRoomCheckpoint(JSON.stringify(legacy)).snapshot.session.context.powerups,true,'pre-GM1 checkpoint restores with power-ups on');
     for(const patch of [{schemaVersion:2},{rulesVersion:'other'},{courseHash:'wrong'},{courseHash:'c'.repeat(64)},{savedAt:0},{nextJoinOrder:2},{token:'secret'}]) assert.equal(c.decodeRoomCheckpoint(JSON.stringify({...cp,...patch})),null);
     assert.equal(c.decodeRoomCheckpoint(' '.repeat(262145)),null);
     const leaked=copy(cp);leaked.identities[0].token='x'.repeat(43);assert.equal(c.validRoomCheckpoint(leaked),false);

@@ -179,7 +179,13 @@ export function validRoomCheckpoint(c) {
 }
 export function decodeRoomCheckpoint(raw) {
   if (typeof raw !== 'string' || raw.length > SERVER_ROOM_LIMITS.checkpointBytes || new TextEncoder().encode(raw).byteLength > SERVER_ROOM_LIMITS.checkpointBytes) return null;
-  try { const c=JSON.parse(raw); return validRoomCheckpoint(c) ? c : null; } catch { return null; }
+  try {
+    const c=JSON.parse(raw);
+    // Checkpoints saved before GM1 have no `powerups`; those rooms had power-ups on.
+    const ctx=c?.snapshot?.session?.context;
+    if (object(ctx) && !Object.hasOwn(ctx,'powerups')) ctx.powerups=true;
+    return validRoomCheckpoint(c) ? c : null;
+  } catch { return null; }
 }
 /** Caller executes due events serially through the guarded actor and re-evaluates after every commit. */
 export function dueRoomDeadlines(checkpoint, now) {

@@ -134,7 +134,8 @@ async function run() {
   const off = G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 4, powerups: false });
   assert.deepEqual([off.spawn, off.boxes, off.pool.length], [false, false, 0]);
   assert.equal(G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 4 }).boxes, true);
-  assert.equal(G.powerupPolicy({ mode: GameModes.PRACTICE, rosterSize: 1, powerups: false }).boxes, false);
+  assert.equal(G.powerupPolicy({ mode: GameModes.PRACTICE, rosterSize: 1, powerups: false }).boxes, true, 'practice ignores the flag');
+  assert.equal(G.powerupPolicy({ mode: GameModes.PUTT_PRACTICE, rosterSize: 1, powerups: false }).spawn, true);
   const hidden = make({ random: () => 0, powerups: off });
   assert.ok(Object.keys(hidden.player.collectedPickups).length === hidden.course.q.length, 'every box counts as collected, so none is drawn');
   sit(hidden); hidden.frame(0, 0.016);
