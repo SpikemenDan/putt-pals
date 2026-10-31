@@ -43,6 +43,7 @@ Each voice owns its oscillator/buffer sources, filters, gains and optional panne
 | ui: `kind` hover / click (M1d) | menu_hover (0.5) / menu_click (0.8); ignores other kinds |
 | turn_ready (M1d) | ready, the your-turn sting at the start of a map |
 | ring (M1d) | ring, a soft pulse when the ball comes to rest and may be putted again |
+| powerup (M1e): `id` one of mag / steady / chip / ghost / small / tall / sticky | pu_<id>, a short accent at 0.7 layered on the generic power banner cue; unknown ids are silent |
 | rest / cup_lip / surface_change / unknown | Silent |
 
 `options.remote:true` admits only shot/sink/timeout, preserving the legacy remote-audio policy. Network snapshots are not themselves an event stream: I1 must derive each remote stroke/completion once and not replay it every snapshot. Consume either timeout or timed-out sink for one completion. A hole-in-one sink emits the sink cue only; the application emits one separate hio banner event, matching the original banner-triggered fanfare. Power/banner/putt-change are explicit application events, not additions to simulation contracts. No new turn-ready or menu-hover sounds are added by this extraction.
