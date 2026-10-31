@@ -88,6 +88,19 @@ Keep one task per PR. Splitting an oversized task into smaller issues is prefera
 - If a contract changes, identify affected issues, update the contract and mocks together, and notify their owners before integration. A locally invented interface is not an agreed contract.
 - Workers do not edit common progress files on every step. Coordinator milestone updates summarize merged behavior and link the corresponding issues/PRs.
 
+## Merging PRs that change the simulation fingerprint
+
+Several PRs can be open at once. Only PRs that change the simulation fingerprint (see `simulationSourceFiles` in `tools/cli/provenance.mjs`: `src/simulation` plus what it imports, including `src/shared/tuning.js` and `src/gameplay/effects.js`) rewrite `simulationSha256` in `tests/fixtures/cup-capture/*.json`, and two such PRs always conflict on those lines. Network, session, UI, audio and docs PRs never touch the fixtures and can merge in any order.
+
+For a PR that changes the fingerprint:
+
+1. Merge these one at a time, in dependency order.
+2. Just before merging, sync with the latest main. On a fixture conflict, take main's version of both fixtures; never hand-merge the JSON.
+3. Regenerate from LF files: `node tests/measure-cup-capture.mjs` for `solutions.json`, and `node tools/cli/main.mjs solve <map> <putt> --full` for the putt recorded in `reference-full.json` (Switchback Garden putt 1, see docs/reviews/S2_CUP_CAPTURE.md). Commit the result as the last commit on the branch. If the physics outcome did not change, only the hash lines should differ; review the diff.
+4. Run `npm run test:cli` and merge. If another fingerprint PR landed in the meantime, repeat from step 2.
+
+The second PR in line is expected to repeat this once; that is the rule working, not a sign of a bad branch. Say in the PR description that the fixtures were regenerated and why.
+
 ## Review and merge
 
 1. Coordinator reviews the issue scope, actual code, shared interfaces and reported evidence. Another agent may review in a separate checkout without changing the worker's branch.
