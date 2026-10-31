@@ -1,5 +1,5 @@
 // Repeated join/leave in a real browser: five solo putt-practice cycles through the real UI, then three
-// online cycles on the local PeerServer. A probe installed before the app loads counts window,
+// online cycles on the local Worker. A probe installed before the app loads counts window,
 // document and canvas listeners, pending timers, pending animation frames and WebGL contexts; it
 // only observes and never changes what the app does.
 const { test, expect } = require('@playwright/test');
@@ -82,21 +82,16 @@ test('lifecycle: repeated join/leave keeps one loop and no leaked listeners, tim
     testInfo.annotations.push({ type: `cycle ${i + 1}`, description: JSON.stringify(now) });
   }
 
-  // Online rooms open a signalling WebSocket and PeerJS timers; leaving must close and clear them.
-  const webrtc = await page.evaluate(() => typeof RTCPeerConnection === 'function');
-  if (webrtc) {
-    const sockets = new Set();
-    page.on('websocket', ws => { sockets.add(ws); ws.on('close', () => sockets.delete(ws)); });
-    for (let i = 0; i < 3; i++) {
-      await ana.join('T1LC' + Date.now().toString(36).slice(-4).toUpperCase());
-      await expect(ana.ui('room-lobby').locator('p').first()).toContainText('You are the host');
-      await ana.button('Leave room').click();
-      await expect(ana.ui('landing')).toBeVisible();
-      await until(() => sockets.size === 0, { timeout: 10_000, label: `online cycle ${i + 1}: signalling socket closed` });
-      await settledAt(base, `online cycle ${i + 1}: listeners and timers back to baseline`);
-    }
-  } else {
-    testInfo.annotations.push({ type: 'skipped', description: 'online cycles: no RTCPeerConnection in this browser' });
+  // Each online room socket must close on explicit leave, without leaking app listeners.
+  const sockets = new Set();
+  page.on('websocket', ws => { sockets.add(ws); ws.on('close', () => sockets.delete(ws)); });
+  for (let i = 0; i < 3; i++) {
+    await ana.join('T1LC' + Date.now().toString(36).slice(-4).toUpperCase());
+    await expect(ana.ui('room-lobby').locator('p').first()).toContainText('You control the room');
+    await ana.button('Leave room').click();
+    await expect(ana.ui('landing')).toBeVisible();
+    await until(() => sockets.size === 0, { timeout: 10_000, label: `online cycle ${i + 1}: room socket closed` });
+    await settledAt(base, `online cycle ${i + 1}: listeners and timers back to baseline`);
   }
   testInfo.annotations.push({ type: 'final', description: JSON.stringify(await probe()) });
   expect(ana.errors, 'no page or console errors').toEqual([]);

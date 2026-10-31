@@ -7,6 +7,7 @@ const { EventEmitter } = require('node:events');
   const { isRoomTransport } = await import('../src/shared/transport.js');
   const { encode, decode, MAX_MESSAGE_BYTES, validCommand } = await import('../src/network/protocol.js');
   const { MAX_PLAYERS } = await import('../src/shared/constants.js');
+  await import('./rooms/server-client.test.mjs');
   let passed = 0;
   const run = async (name, fn) => { await fn(); passed++; console.log('PASS:', name); };
   const fixture = async () => {

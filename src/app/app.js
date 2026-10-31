@@ -10,7 +10,7 @@ import { createAudioAdapter } from '../audio/index.js';
 import { CAMERA_VIEW_LABELS } from '../camera/index.js';
 import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
-import { createRemoteInterpolator } from '../network/index.js';
+import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
@@ -25,22 +25,20 @@ const PANORAMA_LAP_SECONDS = 90;
 const PANORAMA_MAP = STARTER_COURSE_INDICES[0];
 
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
-/** Per-tab guest identity for each room code, so a reload can resume the same seat (N2). */
-const RESUME_KEY = code => 'putt-pals:resume:' + code;
+/** Per-tab room identity for each code, so a reload can resume the same seat. */
+const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
 
 /**
  * @param {object} options
  * @param {HTMLElement} options.root Element the UI mounts into
  * @param {object} options.THREE Three.js namespace (0.128.0, the version the game shipped with)
- * @param {Function} [options.Peer] PeerJS constructor for online rooms
  * @param {Window} [options.window]
  * @param {() => number} [options.random=Math.random]
  * @param {Function} [options.createWebGLRenderer] Renderer seam (tests)
  * @param {() => object} [options.createAudio] Audio seam (tests)
  * @param {(options: object) => object} [options.createTransport] Online transport seam (tests use the in-memory hub)
- * @param {object} [options.peerServer] PeerJS signalling server options ({host, port, path, secure}); default is PeerJS's public server
  */
-export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, peerServer = {} }) {
+export function createApp({ root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket }) {
   const clock = { now: () => win.performance.now(), setTimeout: (f, d) => win.setTimeout(f, d), clearTimeout: id => win.clearTimeout(id) };
   const data = createCourseData();
   const courses = createCourseInfo(data);
@@ -53,6 +51,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   const smooth = createRemoteInterpolator(); // remote balls are drawn slightly behind, between samples
   let presence = {};
   const roomStops = [];
+  let joining = null, joinGeneration = 0, reloadRecovery = false;
   const aimListeners = new Set();
   let unsubscribeInputAim = null;
 
@@ -70,46 +69,62 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
   };
 
   // ---------------------------------------------------------------- rooms
-  async function join({ multi, name, roomCode, iceText }) {
-    const request = parseJoinRequest({ multi, name, roomCode, iceText });
+  async function join({ multi, name, roomCode }) {
+    const request = parseJoinRequest({ multi, name, roomCode });
     if (!request.ok) { alert(request.message); return; }
-    if (room) leave();
-    // Online rooms run on WebRTC; say so up front instead of failing silently (the in-memory test transport needs none).
-    if (multi && !createTransport && typeof win.RTCPeerConnection !== 'function') { setLocal({ connectError: connectErrorMessage('no-webrtc') }); return; }
+    if (room) leave(true);
+    joining?.abort();
+    const generation = ++joinGeneration;
+    const controller = new AbortController();
+    joining = controller;
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, peerOptions: { ...peerServer, ...request.peerOptions }, Peer, clock, random, createTransport, identity: stored });
-      if (disposed) { opened.close(); return; }
+      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, clock, random, createTransport, identity: stored, endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
+      joining = null;
+      reloadRecovery = !!opened.resumed;
       if (opened.identity) resume.write(request.roomCode, { ...opened.identity, name: request.name });
       room = opened; leaving = false;
       remoteSeen.clear(); presence = {}; activeRound = null; lastPhase = null; carriedInventory = [];
-      setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
+      setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, serverOwned: !!room.serverOwned, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
       roomStops.push(room.onSnapshot(onSnapshot), room.onPresence(onPresence), room.onStatus(onStatus));
       if (room.isHost) publish(true);
     } catch (error) {
+      if (disposed || controller.signal.aborted || generation !== joinGeneration) return;
+      joining = null;
+      if (multi && error?.message === 'session-expired') resume.forget(request.roomCode);
       setLocal({ connecting: false, connectError: connectErrorMessage(error?.message) });
     }
   }
 
   /** @param {boolean} [forget] An explicit Leave also forgets this tab's identity for the room, so rejoining is a fresh seat. */
   function leave(forget = false) {
+    joinGeneration++; joining?.abort(); joining = null;
+    setLocal({ connecting: false });
     if (!room) return;
     if (forget && room.roomCode) resume.forget(room.roomCode);
     leaving = true;
     for (const stop of roomStops.splice(0)) stop();
-    room.close(); room = null;
+    room.close({ leave: forget }); room = null;
     endPutt(); carriedInventory = [];
     activeRound = null; lastPhase = null; presence = {}; remoteSeen.clear(); smooth.clear();
     audio.resetSession();
     setLocal({ active: false, connecting: false, connected: true, reconnecting: false, mode: 'lobby', strokes: 0, inventory: [] });
   }
 
-  function onStatus({ state }) {
+  function onStatus({ state, reason }) {
     if (leaving || !room) return;
-    if (state === 'reconnecting') { input?.cancel(); setLocal({ connected: false, reconnecting: true }); }
-    else if (state === 'connected') setLocal({ connected: true, reconnecting: false });
-    else if (state === 'disconnected' || state === 'closed') { input?.cancel(); setLocal({ connected: false, reconnecting: false }); }
+    if (state === 'reconnecting') { input?.cancel(); setLocal({ connected: false, reconnecting: true, isHost: false }); }
+    else if (state === 'connected') {
+      setLocal({ connected: true, reconnecting: false, isHost: room.isHost, connectionReason: reason ? connectErrorMessage(reason) : '' });
+      if (room.identity) resume.write(room.roomCode, { ...room.identity, name: room.snapshot?.players[room.localId]?.name });
+      const s = room.snapshot;
+      if (room.serverOwned && putt?.completion && s?.roundNumber === activeRound && !s.players[room.localId]?.done) {
+        room.command({ type: 'REPORT_SCORE', ...putt.completion, roundNumber: s.roundNumber, puttIndex: s.puttIndex });
+      }
+    }
+    else if (state === 'disconnected' || state === 'closed') { input?.cancel(); setLocal({ connected: false, reconnecting: false, connectionReason: connectErrorMessage(reason) }); }
   }
 
   /** Session snapshot for the UI, with live stroke counts from presence (as the legacy scoreboard). */
@@ -124,6 +139,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
 
   function onSnapshot(s) {
     if (!room) return;
+    setLocal({ isHost: room.isHost });
     store.setRoom(uiSnapshot(s), room.now());
     syncRound(s);
   }
@@ -169,13 +185,20 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     activeRound = s.roundNumber;
     panoramaBuilt = false;
     const definition = data.definitions[s.mapIndex];
-    const playing = !spectate && s.roster.includes(room.localId);
+    const ownState = s.players[room.localId];
+    const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
     puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
-      inventory: startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
+      inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
     });
+    if (room.serverOwned) {
+      putt.player.strokes = ownState?.strokes ?? 0;
+      if (ownState?.done) putt.player.mode = 'sunk';
+      if (reloadRecovery && playing) toast('Rejoined: your ball starts at the tee. Strokes and the timer are kept; temporary items are cleared.');
+    }
+    reloadRecovery = false;
     putt.mapIndex = s.mapIndex; putt.puttIndex = s.puttIndex;
     if (view) {
       view.setCourse(definition, s.puttIndex);
@@ -187,7 +210,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     }
     if (playing && !(previous && previous.mapIndex === s.mapIndex)) audio.handleEvent({ type: 'turn_ready' });
     input?.setAimAngle(putt.aimAngle());
-    setLocalIfChanged({ mode: putt.mode, strokes: 0, inventory: [...putt.player.inventory] });
+    setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
     publish(true);
   }
 
@@ -336,7 +359,12 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
-      case UiCommands.SHOT: if (putt?.shoot(command.angle, command.power)) publish(true); break;
+      case UiCommands.SHOT:
+        if (room?.connected && putt?.shoot(command.angle, command.power)) {
+          if (room.serverOwned) room.command({ type: 'UPDATE_STROKES', strokes: putt.player.strokes });
+          publish(true);
+        }
+        break;
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
         const out = putt.useItem(command.index, win.performance.now());
