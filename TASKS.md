@@ -10,9 +10,9 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | --- | --- | --- | --- |
 | [N4 #65](https://github.com/SpikemenDan/putt-pals/issues/65) | BLOCKED | children below | Parent: server-owned Cloudflare rooms replace PeerJS. Spec: docs/networking/SERVER_ROOMS.md |
 | [N4c #69](https://github.com/SpikemenDan/putt-pals/issues/69) | ACTIVE | N4a, N4b | Room coordination on a Durable Object. PR #81 merged (333d06d); the issue is still open, so confirm what remains before claiming |
-| [N4d #70](https://github.com/SpikemenDan/putt-pals/issues/70) | BLOCKED | #69 | Durable checkpoints, alarms, reconnect and controller recovery |
-| [N4e #71](https://github.com/SpikemenDan/putt-pals/issues/71) | BLOCKED | #66, #69, #70 | Browser WebSocket room client replaces PeerJS rooms |
-| [N4f #72](https://github.com/SpikemenDan/putt-pals/issues/72) | BLOCKED | #68-#71 | Cross-browser server-room tests, quota and performance checks |
+| [N4d #70](https://github.com/SpikemenDan/putt-pals/issues/70) | REVIEW | #69 | PR #122 merged; durable checkpoints, alarms and recovery implemented; issue acceptance remains open |
+| [N4e #71](https://github.com/SpikemenDan/putt-pals/issues/71) | REVIEW | #66, #69, #70 | PR #123 merged with all browser CI projects green; production browser uses WebSockets; issue acceptance remains open |
+| [N4f #72](https://github.com/SpikemenDan/putt-pals/issues/72) | ACTIVE | #68-#71 | Codex root claim: complete server-room coverage, quota measurements and N4G checklist |
 | [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | BLOCKED | #68, #72 and owner authorization | Connect Cloudflare, deploy a preview, separate-network acceptance, rollback |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | PAUSED | n/a | Managed TURN; an alternative to N4, not a prerequisite |
 | [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: verify a robust route within par on every putt under the final physics (replaces the hole-in-one refresh; scope to be updated on the issue), production-like preview, rollback, manual playtests |
