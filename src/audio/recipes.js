@@ -16,6 +16,14 @@ export function createRecipes({ tone, puff, random }) {
   menu_hover:(c,t,o)=>{tone(c,o,'sine',880,1040,t,.05,.15);},
   menu_click:(c,t,o)=>{tone(c,o,'triangle',520,780,t,.09,.3);puff(c,o,'highpass',3000,3000,t,.02,.15);},
   ready:(c,t,o)=>{tone(c,o,'sine',523,523,t,.16,.3);tone(c,o,'sine',784,784,t+.09,.22,.3);},
-  ring:(c,t,o)=>{tone(c,o,'sine',440,660,t,.18,.12);}
+  ring:(c,t,o)=>{tone(c,o,'sine',440,660,t,.18,.12);},
+  // M1e: one short accent per self-utility power-up, layered over the generic 'power' sweep.
+  pu_mag:(c,t,o)=>{tone(c,o,'sine',360,140,t,.28,.3);tone(c,o,'sine',365,145,t+.04,.24,.2);},
+  pu_steady:(c,t,o)=>{tone(c,o,'triangle',700,700,t,.05,.25);tone(c,o,'triangle',700,700,t+.09,.05,.25);},
+  pu_chip:(c,t,o)=>{tone(c,o,'sine',300,900,t,.12,.4);tone(c,o,'sine',900,500,t+.12,.12,.25);},
+  pu_ghost:(c,t,o)=>{puff(c,o,'highpass',4000,1500,t,.35,.25);tone(c,o,'sine',900,500,t,.35,.12);},
+  pu_small:(c,t,o)=>{tone(c,o,'sine',1400,1900,t,.12,.3);},
+  pu_tall:(c,t,o)=>{tone(c,o,'sine',240,150,t,.22,.5);},
+  pu_sticky:(c,t,o)=>{puff(c,o,'bandpass',500,250,t,.2,.5);tone(c,o,'sine',200,110,t,.18,.3);}
   });
 }

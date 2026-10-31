@@ -340,7 +340,7 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
         const out = putt.useItem(command.index, win.performance.now());
-        for (const [text, sub, kind] of out.banners) store.announce(text, sub, kind);
+        for (const [text, sub, kind, powerup] of out.banners) { store.announce(text, sub, kind); if (powerup) audio.handleEvent({ type: 'powerup', id: powerup }); }
         for (const message of out.toasts) toast(message);
         setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
         publish(true);

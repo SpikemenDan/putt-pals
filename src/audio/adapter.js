@@ -11,6 +11,8 @@ const defaultContext = () => {
 const defaultStorage = () => { try { return globalThis.window?.localStorage ?? null; } catch { return null; } };
 
 /** Application-owned audio: reuse across rooms; reset voices per room; dispose on app teardown. */
+const POWERUP_CUES = new Set(['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky']);
+
 export function createAudioAdapter({ createContext = defaultContext, storage = defaultStorage(), random = Math.random,
   onError = () => {}, maxVoices = 32 } = {}) {
   if (typeof createContext !== 'function' || typeof random !== 'function' || typeof onError !== 'function'
@@ -155,6 +157,7 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     if (event.type === 'ui') return ['hover', 'click'].includes(event.kind) && play('menu_' + event.kind, null, event.kind === 'hover' ? .5 : .8);
     if (event.type === 'turn_ready') return play('ready', null, .8);
     if (event.type === 'ring') return play('ring', null, .6);
+    if (event.type === 'powerup') return typeof event.id === 'string' && POWERUP_CUES.has(event.id) && play('pu_' + event.id, null, .7);
     if (!vector(event.position)) return false;
     const position = simToWorld(...event.position, origin);
     switch (event.type) {
