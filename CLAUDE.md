@@ -1,5 +1,9 @@
 # Claude instructions
 
-All agent instructions for this repository live in [AGENTS.md](AGENTS.md). Read it first and follow it; it is the single source of truth, so nothing is repeated here.
+@AGENTS.md is the single source of truth; nothing from it is repeated here.
 
-@AGENTS.md
+## Claude-specific
+
+- Plan before editing `src/shared` or `src/simulation`; those changes need the integration owner and may alter shot trajectories.
+- Search with Grep or Glob and read only the needed sections of the large docs (MODERNIZATION_PLAN.md, TASKS.md, ARCHITECTURE.md) instead of loading them whole.
+- Commit work in progress to your own branch; never `git stash` (shared across worktrees).
