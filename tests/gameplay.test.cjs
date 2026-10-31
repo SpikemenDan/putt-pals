@@ -140,7 +140,7 @@ async function run() {
   assert.deepEqual(picker.player.inventory, ['mag', 'steady'], 'carried slots are kept and the box adds one');
   const used = picker.useItem(1, 0);
   assert.deepEqual(used.toasts, ['Your next shot has no wobble.']);
-  assert.deepEqual(used.banners, [['Me', 'STEADY AIM ACTIVATED', 'power']]);
+  assert.deepEqual(used.banners, [['Me', 'STEADY AIM ACTIVATED', 'power', 'steady']]);
   assert.deepEqual(picker.player.inventory, ['mag']);
   assert.equal(picker.effect, 'steady');
   picker.useItem(0, 0); assert.equal(picker.player.armedPowerups.mag, 1, 'two effects armed together');
