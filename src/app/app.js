@@ -13,12 +13,16 @@ import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/index.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
-import { BALL_RADIUS } from '../shared/constants.js';
+import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
 import { createPutt } from './putt.js';
 import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
+
+/** Start-screen panorama (M1b): seconds per camera lap and the course it shows. */
+const PANORAMA_LAP_SECONDS = 90;
+const PANORAMA_MAP = STARTER_COURSE_INDICES[0];
 
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
 /** Per-tab guest identity for each room code, so a reload can resume the same seat (N2). */
@@ -163,9 +167,10 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     endPutt();
     smooth.clear(); // new tee positions must not glide from the previous hole
     activeRound = s.roundNumber;
+    panoramaBuilt = false;
     const definition = data.definitions[s.mapIndex];
     const playing = !spectate && s.roster.includes(room.localId);
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length });
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
@@ -238,13 +243,40 @@ export function createApp({ root, THREE, Peer, window: win = root.ownerDocument.
     setLocal(partial);
   }
 
+  /** Which course the start-screen panorama has built; reset whenever a game round replaces the scene. */
+  let panoramaBuilt = false;
+
+  /** Slowly orbits a course behind the start screen (M1b). Pure view work: no room, putt or input is involved. */
+  function drawPanorama(t, dt) {
+    if (!panoramaBuilt) {
+      view.setCourse(data.definitions[PANORAMA_MAP], 0);
+      panoramaBuilt = true;
+    }
+    const { course, transform } = renderer.course;
+    const tiles = course.tiles?.length ? course.tiles : [[0, 0, 800, 500]];
+    const x0 = Math.min(...tiles.map(r => r[0])), x1 = Math.max(...tiles.map(r => r[0] + r[2]));
+    const y0 = Math.min(...tiles.map(r => r[1])), y1 = Math.max(...tiles.map(r => r[1] + r[3]));
+    const [cx, cy, cz] = transform.ground((x0 + x1) / 2, (y0 + y1) / 2, 0);
+    const span = Math.max(x1 - x0, y1 - y0);
+    const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const angle = reducedMotion ? 0.6 : t / 1000 / PANORAMA_LAP_SECONDS * Math.PI * 2;
+    const radius = span * 0.5 + 110, height = span * 0.26 + 70;
+    renderer.resize(renderer.canvasWidth());
+    renderer.render({
+      now: t, dt, hazardTime: t / 1000, local: null, remotes: [], aim: null,
+      camera: { position: [cx + Math.cos(angle) * radius, height, cz + Math.sin(angle) * radius], look: [cx, 10, cz], sunTarget: [cx, 0, cz], ball: null, fadeTarget: null },
+    });
+  }
+
   function frame(t) {
     frameId = null;
     if (disposed) return;
     const dt = Math.min(0.05, Math.max(0, (t - lastFrame) / 1000));
     lastFrame = t;
     const screens = store.getSnapshot().screens;
-    if (room && putt && view && screens.game) {
+    if (view && renderer && screens.landing && !screens.game && !room) drawPanorama(t, dt);
+    else if (room && putt && view && screens.game) {
+      panoramaBuilt = false;
       if (room.connected) {
         const out = putt.frame(t, dt);
         if (out.cancelInput) input?.cancel();

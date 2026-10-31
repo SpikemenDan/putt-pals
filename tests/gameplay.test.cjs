@@ -130,6 +130,20 @@ async function run() {
   sit(noBoxes); noBoxes.frame(0, 0.016);
   assert.deepEqual(noBoxes.player.inventory, [], 'No Power-Ups: boxes award nothing');
   noBoxes.dispose();
+  // GM1: the No Power-Ups policy hides every box and nothing can be collected; other policies leave them.
+  const off = G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 4, powerups: false });
+  assert.deepEqual([off.spawn, off.boxes, off.pool.length], [false, false, 0]);
+  assert.equal(G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 4 }).boxes, true);
+  assert.equal(G.powerupPolicy({ mode: GameModes.PRACTICE, rosterSize: 1, powerups: false }).boxes, true, 'practice ignores the flag');
+  assert.equal(G.powerupPolicy({ mode: GameModes.PUTT_PRACTICE, rosterSize: 1, powerups: false }).spawn, true);
+  const hidden = make({ random: () => 0, powerups: off });
+  assert.ok(Object.keys(hidden.player.collectedPickups).length === hidden.course.q.length, 'every box counts as collected, so none is drawn');
+  sit(hidden); hidden.frame(0, 0.016);
+  assert.deepEqual(hidden.player.inventory, [], 'no power-ups can be gained');
+  hidden.dispose();
+  const shown = make({ random: () => 0, powerups: G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 1 }) });
+  assert.deepEqual(shown.player.collectedPickups, {}, 'boxes are drawn when power-ups are on');
+  shown.dispose();
   const solo = G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 1 });
   const boxed = make({ random: () => 0.99, powerups: solo, inventory: ['mag', 'mag', 'steady'] });
   sit(boxed); assert.match(boxed.frame(0, 0.016).toasts.join('|'), /Inventory full/);

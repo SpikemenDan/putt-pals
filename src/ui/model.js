@@ -87,11 +87,13 @@ export function lobbyView(room, local, now, courses) {
     status = course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
   } else {
     status = local.isHost ? 'Pick a game mode, then start to open map voting.' : 'The host will pick the mode and start map voting.';
+    if (room.powerups === false) status += ' Power-ups are off.';
   }
   return {
     label: roomLabel(room, local),
     roster: players.map(p => ({ id: p.id, name: p.name + (p.id === local.id ? ' (you)' : ''), color: colorOf(room, local, p.id) })),
     showModes: !!local.isHost,
+    powerups: room.powerups !== false,
     showStart: !!local.isHost && room.phase === SessionPhases.LOBBY,
     showInvite: !!local.roomCode,
     modes: MODE_OPTIONS.map(o => ({ value: o.value, label: o.label, disabled: o.soloOnly && n > 1 })),

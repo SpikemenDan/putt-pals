@@ -70,9 +70,20 @@ const assert = require('node:assert/strict');
     const play=copy(snapshot);play.session.node='play.active.running';play.session.context.roster=['p1','p2'];assert.equal(c.authorizeRoomFrame(frame,binding,play,play.serverTime),null);
     for(const patch of [{x:Infinity},{x:1000001},{strokes:-1},{effect:'unknown'},{effect:'rev'},{fx:{id:1,t:'rev'}},{fx:{id:1,t:'mag'}},{fx:{id:1,t:'zany',playerId:'p2'}}]) assert.equal(c.validServerPresence({...p,...patch}),false);
   });
+  await test('No Power-Ups (GM1): SET_POWERUPS is a controller command with a boolean and the context carries the flag',()=>{
+    assert.ok(c.CONTROLLER_COMMANDS.includes('SET_POWERUPS'));
+    assert.equal(c.validServerCommand({type:'SET_POWERUPS',enabled:false}),true);
+    for(const bad of [{type:'SET_POWERUPS'},{type:'SET_POWERUPS',enabled:'no'},{type:'SET_POWERUPS',enabled:1},{type:'SET_POWERUPS',enabled:true,extra:1}]) assert.equal(c.validServerCommand(bad),false,JSON.stringify(bad));
+    assert.equal(c.validSessionContext(snapshot.session.context),true);
+    const noFlag=copy(snapshot.session.context);delete noFlag.powerups;assert.equal(c.validSessionContext(noFlag),false,'the flag is part of the context');
+    assert.equal(c.validSessionContext({...snapshot.session.context,powerups:'yes'}),false);
+    assert.equal(c.validSessionContext({...snapshot.session.context,powerups:false}),true);
+  });
   await test('complete checkpoint differs from public snapshot and rejects incompatible versions',()=>{
     const cp=createServerCheckpointFixture();assert.ok(c.decodeRoomCheckpoint(JSON.stringify(cp)));
     assert.equal(c.decodeRoomCheckpoint(JSON.stringify(snapshot)),null);
+    const legacy=JSON.parse(JSON.stringify(cp));delete legacy.snapshot.session.context.powerups;
+    assert.equal(c.decodeRoomCheckpoint(JSON.stringify(legacy)).snapshot.session.context.powerups,true,'pre-GM1 checkpoint restores with power-ups on');
     for(const patch of [{schemaVersion:2},{rulesVersion:'other'},{courseHash:'wrong'},{courseHash:'c'.repeat(64)},{savedAt:0},{nextJoinOrder:2},{token:'secret'}]) assert.equal(c.decodeRoomCheckpoint(JSON.stringify({...cp,...patch})),null);
     assert.equal(c.decodeRoomCheckpoint(' '.repeat(262145)),null);
     const leaked=copy(cp);leaked.identities[0].token='x'.repeat(43);assert.equal(c.validRoomCheckpoint(leaked),false);

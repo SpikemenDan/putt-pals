@@ -25,7 +25,7 @@ function Screens({ onCanvas, initialName, initialRoomCode }) {
       <div className={app.netnotice} hidden={!screens.netNotice} role="alert">{screens.netNotice ? (screens.reconnecting ? MESSAGES.reconnecting : MESSAGES.connectionLost) : ''}</div>
       <ScorecardOverlay />
       <Banner />
-      <GameScreen hidden={!screens.game} onCanvas={onCanvas} />
+      <GameScreen hidden={!screens.game && !screens.landing} backdrop={!screens.game && screens.landing} onCanvas={onCanvas} />
       <Results hidden={!screens.results} />
     </div>
   );

@@ -5,7 +5,7 @@ const { EventEmitter } = require('node:events');
   const { createRoomSession } = await import('../src/session/index.js');
   const { MemoryRoomHub, createSoloTransport, createPeerTransport, bindRoomSession } = await import('../src/network/index.js');
   const { isRoomTransport } = await import('../src/shared/transport.js');
-  const { encode, decode, MAX_MESSAGE_BYTES } = await import('../src/network/protocol.js');
+  const { encode, decode, MAX_MESSAGE_BYTES, validCommand } = await import('../src/network/protocol.js');
   const { MAX_PLAYERS } = await import('../src/shared/constants.js');
   let passed = 0;
   const run = async (name, fn) => { await fn(); passed++; console.log('PASS:', name); };
@@ -46,6 +46,21 @@ const { EventEmitter } = require('node:events');
       assert.equal(f.snapshots.at(-1).payload.last.scores.a, 900);
       f.snapshots.at(-1).payload.players.a.name = 'changed';
       assert.equal(f.session.getSnapshot().players.a.name, 'a');
+    } finally { f.close(); }
+  });
+  await run('No Power-Ups (GM1): SET_POWERUPS validates as a host command and the flag reaches guests in snapshots', async () => {
+    assert.equal(validCommand({ type: 'SET_POWERUPS', enabled: false }, true), true);
+    assert.equal(validCommand({ type: 'SET_POWERUPS', enabled: false }, false), false, 'guests cannot send it');
+    for (const bad of [{ type: 'SET_POWERUPS' }, { type: 'SET_POWERUPS', enabled: 0 }, { type: 'SET_POWERUPS', enabled: true, x: 1 }]) assert.equal(validCommand(bad, true), false, JSON.stringify(bad));
+    const f = await fixture();
+    try {
+      f.command('SET_POWERUPS', { enabled: false }, f.guests[0]);
+      f.clock.increment(300);
+      assert.ok(f.snapshots.every(s => s.payload?.powerups !== false), 'a guest cannot turn power-ups off');
+      f.command('SET_POWERUPS', { enabled: false });
+      f.clock.increment(300);
+      assert.equal(f.session.getSnapshot().powerups, false);
+      assert.ok(f.snapshots.some(s => s.payload?.powerups === false), 'guests receive the flag in the validated snapshot');
     } finally { f.close(); }
   });
   await run('reject spoofed identities, host commands, internal events, stale tokens, oversized data and incompatible versions', async () => {

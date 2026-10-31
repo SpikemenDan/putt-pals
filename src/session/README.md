@@ -1,6 +1,6 @@
 # Host-owned room lifecycle
 
-L1 implements the local room coordinator as an XState 5 actor. It has no DOM, renderer, audio or transport dependency. I1/N1 adopted it in the modular PeerJS app; the legacy browser game is unchanged. N4a's server-room contract is accepted at `b30552f`, while server-side authority, durable restore and WebSocket adoption remain unimplemented in N4c–N4e.
+L1 implements the local room coordinator as an XState 5 actor. It has no DOM, renderer, audio or transport dependency. I1/N1 adopted it in the modular PeerJS app; the legacy browser game is unchanged. N4a's server-room contract is accepted at `b30552f`. N4c supplies server-owned coordination; N4d adds opt-in durable restoration with externally driven deadlines. Browser WebSocket adoption remains N4e.
 
 ```js
 import { createRoomSession, SessionEvents } from './src/session/index.js';
@@ -32,6 +32,7 @@ Run one coordinator per room on the host. This module does not authenticate peer
 | JOIN_ROOM | `playerId`, text-only `name`; validates identity/name and capacity; late joins spectate until the next map |
 | LEAVE_ROOM | Sender's `playerId`; removes its vote and active participation; no host migration |
 | SET_MODE | Host, lobby only; C1 GameModes value; practice modes require solo membership |
+| SET_POWERUPS | Host, lobby only; `{ enabled: boolean }` sets the room's `powerups` flag (default true). false is the No Power-Ups mode (GM1): no `?` boxes, no inventory. Works with Standard and Tournament modes; practice always keeps power-ups on |
 | START_VOTING | Host, lobby only; clears the new series' scores/totals |
 | CAST_VOTE | Connected sender and eligible starter `mapIndex` |
 | START_ROUND | Host in putt-practice selection only, `puttIndex`; uses the host's selected map |
@@ -58,3 +59,9 @@ Scorecards retain each putt once; disconnected participants get null entries and
 `npm run test:session` uses XState's SimulatedClock with explicit deadline steps. It covers voting deadlines/ties, host guards/internal-event rejection, stale tokens, starts/timeouts/no stroke cap, six-putt cards, 3/6/9-map totals, spectators/disconnects, course practice, replay controls/loops, zero penalties, unusual peer IDs, detached snapshots and cleanup. The command is in `npm test` and CI. These tests verify the headless coordinator, not browser/transport integration.
 
 Local L1 verification: `npm test` passed end-to-end (including the lifecycle scenarios, contracts, simulation/course/CLI checks, physics and both legacy jsdom/fake-network smoke suites). `npm run build` preserved the embedded scripts. Baseline inventory and both course/arena export checks passed. The exact XState 5.33.3 dependency/lockfile, CI YAML/script references and scoped whitespace/syntax checks were verified. No real-browser or real-network adoption test is claimed.
+
+## Durable server adapter
+
+`durable: true` requires `serverOwned: true` and disables volatile actor delay timers. The server adapter calls `exportDomain()` to persist the explicit node and full domain context, and supplies `restore: {node, context}` plus the separately validated `controllerId` to reconstruct the same state without replaying entry actions. The backend must validate the complete checkpoint before calling restore. This is a domain-to-machine mapping, not storage of an opaque XState actor.
+
+`advanceDeadline(kind, expectedRound, absoluteTime)` is available only in durable mode. It rejects early, stale-round or wrong-node timers; transport commands cannot invoke it. The backend stores the absolute replay deadline separately and drives all deadlines through durable alarms. See [durable recovery](../../docs/networking/DURABLE_RECOVERY.md) for transactional publication, catch-up ordering and verification. Local/PeerJS actors keep their existing clock scheduling.

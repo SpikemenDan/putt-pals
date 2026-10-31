@@ -91,6 +91,23 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const tracked = c => c.audio.log.map(e => e.type + (e.kind ? ':' + e.kind : '') + (e.hazardType ? ':' + e.hazardType : '') + (e.remote ? ':remote' : ''));
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('start screen: a 3D panorama orbits behind the menu, then hands the canvas to the game', async () => {
+    const W = world();
+    const ana = await W.client('Ana');
+    await W.run(1000);
+    assert.ok(ana.app.renderer.course, 'a course is built for the panorama');
+    assert.ok(ana.shown('[data-ui=landing]') && ana.shown('[data-ui=backdrop]'), 'the canvas stays visible behind the menu');
+    assert.ok(!ana.shown('[data-ui=game]'), 'the backdrop is not the game screen');
+    assert.equal(ana.$('[data-ui=backdrop]').getAttribute('aria-hidden'), 'true');
+    const first = ana.app.renderer.camera.position.clone();
+    await W.run(5000);
+    assert.ok(ana.app.renderer.camera.position.distanceTo(first) > 1, 'the camera orbits');
+    assert.equal(ana.app.putt, null, 'no putt or input is involved');
+    await ana.solo();
+    assert.ok(ana.shown('[data-ui=room-lobby]') && !ana.shown('[data-ui=landing]'), 'the menu is gone');
+    assert.ok(!ana.shown('[data-ui=backdrop]'), 'the panorama backdrop is gone with the menu');
+  });
+
   await scenario('feedback cues: a resting ball pulses the ring cue; disabled buttons and sinks stay silent', async () => {
     const { frameSounds } = await import('../src/app/rules.js');
     const state = o => ({ round: 1, strokes: 1, mode: 'play', moving: false, x: 10, y: 10, z: 0, vx: 0, vy: 0, vz: 0, over: false, ...o });
@@ -105,6 +122,26 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     ana.button('Join room').disabled = true;
     await ana.click(ana.button('Join room'));
     assert.ok(!tracked(ana).slice(before).includes('ui:click'), 'a disabled button is silent');
+  });
+
+  await scenario('No Power-Ups (GM1): the host checks the lobby box, everyone plays without power-up boxes', async () => {
+    const W = world();
+    const ana = await W.client('Ana'); await ana.join('pure');
+    const ben = await W.client('Ben'); await ben.join('pure');
+    await W.run(300);
+    assert.equal(ben.$('[data-ui=no-powerups]').closest('label').hidden, true, 'guests cannot change it');
+    assert.equal(ana.snapshot.powerups, true, 'power-ups are on by default');
+    await act(async () => { ana.$('[data-ui=no-powerups]').click(); });
+    await ana.click('Start Game');
+    await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'voting');
+    assert.equal(ana.snapshot.powerups, false); assert.equal(ben.snapshot.powerups, false, 'the flag reaches guests');
+    assert.match(ana.text('[data-ui=map-select] p'), /Vote/);
+    for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
+    await W.until(() => [ana, ben].every(c => c.ready()), 10000, 'map start');
+    for (const c of [ana, ben]) {
+      const picked = c.app.putt.player.collectedPickups;
+      assert.equal(Object.keys(picked).length, c.app.putt.course.q.length, c.name + ': every box counts as collected, none is drawn (the first putt of this map has no boxes; the box case is covered in gameplay.test)');
+    }
   });
 
   await scenario('solo: a full six-putt map through the real UI scores six holes in one with transitions, banners and audio', async () => {
