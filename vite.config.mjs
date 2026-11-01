@@ -4,7 +4,8 @@ import { defineConfig } from 'vite';
 // Two pages: index.html is the modular app (I1); putt-pals.html is the legacy single-file game, kept
 // runnable and byte-identical in its scripts until the modular app replaces it.
 export default defineConfig({
-  publicDir: false,
+  // Deployment metadata such as Cloudflare's _headers is copied into dist.
+  publicDir: 'public',
   build: {
     // Lightning CSS minification drops the standard `backdrop-filter` whenever the legacy CSS also
     // declares `-webkit-backdrop-filter`, which removed the frosted-glass panels in Chrome/Firefox

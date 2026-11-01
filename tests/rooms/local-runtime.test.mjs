@@ -13,6 +13,7 @@ import { SERVER_ROOM_VERSION, validRoomSnapshot } from '../../src/network/contra
 await import('./session-recovery.test.mjs');
 await import('./durable-recovery.test.mjs');
 await import('./traffic.test.mjs');
+await import('./preview-config.test.mjs');
 await import('./hibernation-runtime.test.mjs');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -200,13 +201,22 @@ async function main() {
 
   const page = await fetch(`${baseUrl}/`);
   assert.equal(page.status, 200);
+  assert.match(page.headers.get('cache-control'), /no-cache/);
   assert.match(page.headers.get('content-type'), /text\/html/);
+  const indexPage = await fetch(`${baseUrl}/index.html`);
+  assert.equal(indexPage.status, 200);
+  assert.match(indexPage.headers.get('cache-control'), /no-cache|max-age=0/);
+  const legacyPage = await fetch(`${baseUrl}/putt-pals.html`);
+  assert.equal(legacyPage.status, 200);
+  assert.match(legacyPage.headers.get('cache-control'), /no-cache|max-age=0/);
 
   const assets = await readdir(assetsDir);
   const script = assets.find(file => file.endsWith('.js'));
   assert.ok(script, 'Vite build should emit a JavaScript asset');
   const assetResponse = await fetch(`${baseUrl}/assets/${script}`);
   assert.equal(assetResponse.status, 200);
+  assert.match(assetResponse.headers.get('cache-control'), /max-age=31536000/);
+  assert.match(assetResponse.headers.get('cache-control'), /immutable/);
   assert.match(assetResponse.headers.get('content-type'), /javascript/);
 
   const unknownApi = await fetch(`${baseUrl}/api/not-a-room-route`);
