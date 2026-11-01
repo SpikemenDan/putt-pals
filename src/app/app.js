@@ -13,7 +13,7 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
-import { ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { aimModeOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -448,7 +448,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       },
       getState: () => ({
         active: !!room, mode: putt ? putt.mode : 'lobby', moving: !!putt?.player.moving, connected: !!room?.connected,
-        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady,
+        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '',
       }),
     });
     unsubscribeInputAim = input.subscribeAim((charging, charge) => { for (const l of [...aimListeners]) l(charging, charge); });

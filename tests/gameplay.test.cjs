@@ -19,7 +19,7 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
   assert.deepEqual(G.auraIds(), ['', ...G.powerupIds()]);
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
@@ -77,7 +77,7 @@ async function run() {
   // ---- activation, stacking, hooks
   const fresh = () => { const p = createPlayerState('t'); p.armedPowerups = G.armedState(TEST_CATALOG); p.pendingPowerups = G.pendingState(TEST_CATALOG); return p; };
   assert.deepEqual(G.armedState(), { mag: 0, steady: 0, chip: 0, ghost: 0, small: 0, tall: 0, sticky: 0 });
-  assert.deepEqual(G.pendingState(), {});
+  assert.deepEqual(G.pendingState(), { aim360: 0, aim180: 0 });
   assert.deepEqual(G.pendingState(TEST_CATALOG), { xx: 0 });
   let p = fresh();
   assert.deepEqual(G.activatePowerup(p, 'aa', 1, TEST_CATALOG), { ok: true, entry: TEST_CATALOG[0], toast: 'aa armed' });
@@ -109,7 +109,8 @@ async function run() {
   for (const m of [{ id: 3, t: 'aa' }, { id: -1, t: 'xx' }, { id: 1.5, t: 'xx' }, { id: 1, t: 'xx', extra: 1 }, { id: 1 }, { t: 'xx' }, 'xx', null, [], { id: 1, t: 'zany' }]) {
     assert.equal(G.validEffectMessage(m, TEST_CATALOG), false, JSON.stringify(m));
   }
-  assert.equal(G.validEffectMessage({ id: 1, t: 'mag' }), false, 'no shipped power-up is opponent-targeted yet');
+  assert.equal(G.validEffectMessage({ id: 1, t: 'mag' }), false, 'self power-ups cannot travel as effect messages');
+  for (const t of ['aim360', 'aim180']) assert.equal(G.validEffectMessage({ id: 1, t }), true, t);
   const base = { x: 1, y: 2, z: 0, mode: 'play', strokes: 1 };
   assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds()]);
   for (const fx of [{ id: 1, t: 'rev' }, { id: 1, t: 'zany' }]) assert.equal(protocol.validPresence({ ...base, fx }), false);

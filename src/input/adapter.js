@@ -19,7 +19,7 @@ const isTextEntry = target => !!(target && target.matches && target.matches('inp
  * @param {ReturnType<import('../camera/rig.js').createCameraRig>} options.camera
  * @param {(clientX: number, clientY: number) => ({x:number, z:number}|null)} options.pickGround
  *   World point under the pointer on the horizontal plane through the ball (legacy planePoint)
- * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean}} options.getState
+ * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean, aimMode?:string}} options.getState
  *   active: joined a room; mode: local simulation mode (play/sunk/wait/spectator/lobby)
  * @param {(command: object) => void} options.dispatch
  */
@@ -71,7 +71,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
   on(canvas, 'pointerup', e => {
     const s = getState();
     if (s.connected && pull && pull.id === e.pointerId && charge > SHOT_MIN_CHARGE && s.mode === 'play' && !s.moving) {
-      dispatch({ type: InputCommands.SHOT, angle: shotAngle({ aimAngle, charge, time: swayTime, steady: !!s.steady }), power: charge });
+      dispatch({ type: InputCommands.SHOT, angle: shotAngle({ aimAngle, charge, time: swayTime, steady: !!s.steady, aimMode: s.aimMode || '' }), power: charge });
     }
     cancel();
   });
@@ -142,7 +142,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
       const s = getState();
       if (!(s.mode === 'play' && !s.moving && charging && charge > GUIDE_MIN_CHARGE)) return null;
       swayTime = time;
-      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady }), spread: s.steady ? 0 : spread(charge), length: charge * AIM_ARROW_MAX_LENGTH };
+      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady, aimMode: s.aimMode || '' }), spread: s.steady ? 0 : spread(charge), length: charge * AIM_ARROW_MAX_LENGTH };
     },
     /** Power meter updates (charging, charge) on pointer changes; keeps per-frame values out of React state. */
     subscribeAim(listener) { aimListeners.add(listener); listener(charging, charge); return () => aimListeners.delete(listener); },
