@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 (async () => {
+  await require('./cosmetics.test.cjs'); // F1 catalog, persistence and actor checks run with the render suite
   const THREE = await import('three');
   const { createGameRenderer, createGameView } = await import('../src/render/index.js');
   const { createCourseData } = await import('../src/courses/index.js');
@@ -18,6 +19,10 @@ const { JSDOM } = require('jsdom');
   const r = createGameRenderer({ THREE: namespace, canvas, random: () => .37, createWebGLRenderer: () => backend });
   const view = createGameView({ renderer: r });
   const modern = Number(THREE.REVISION) >= 152;
+  r.setCosmetics({ ball: 'ember', trail: 'comet', celebration: 'gold' });
+  assert.equal(r.localBall.material.emissive.getHex(), 0xff5a1f, 'the chosen ball skin is applied to the local ball');
+  r.setCosmetics({ ball: 'nope' });
+  assert.equal(r.localBall.material.emissiveIntensity, 0, 'an unknown id falls back to the classic skin');
   assert.equal(modern ? backend.outputColorSpace : backend.outputEncoding, modern ? THREE.SRGBColorSpace : THREE.sRGBEncoding);
   for (const t of Object.values(r.library.textures)) assert.equal(modern ? t.colorSpace : t.encoding, modern ? THREE.SRGBColorSpace : THREE.sRGBEncoding);
   const sun = r.scene.children.find(o => o.isDirectionalLight);

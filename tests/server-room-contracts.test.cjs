@@ -61,7 +61,8 @@ const assert = require('node:assert/strict');
     const high=copy(snapshot);high.session.context.players.p1.strokes=150;high.session.context.players.p1.scores=[{score:150,timedOut:true,par:2,penalty:0}];assert.ok(c.validRoomSnapshot(high));
     const absent=copy(snapshot);absent.controllerId='no-player';assert.equal(c.validRoomSnapshot(absent),false);
     const injected=copy(snapshot);injected.session.context.votes={constructor:0};assert.equal(c.validRoomSnapshot(injected),false);
-    const oversized=copy(snapshot);for(let i=3;i<=5;i++){oversized.seats.push({playerId:'p'+i,joinOrder:i,connectedSince:0,resumeUntil:null});oversized.session.context.players['p'+i]={...copy(snapshot.session.context.players.p1),id:'p'+i};}assert.equal(c.validRoomSnapshot(oversized),false);
+    const full=copy(snapshot);for(let i=3;i<=8;i++){full.seats.push({playerId:"p"+i,joinOrder:i,connectedSince:0,resumeUntil:null});full.session.context.players["p"+i]={...copy(snapshot.session.context.players.p1),id:"p"+i};}full.session.context.roster=full.seats.map(s=>s.playerId);assert.equal(c.validRoomSnapshot(full),true,"eight members are accepted");
+    const oversized=copy(snapshot);for(let i=3;i<=9;i++){oversized.seats.push({playerId:'p'+i,joinOrder:i,connectedSince:0,resumeUntil:null});oversized.session.context.players['p'+i]={...copy(snapshot.session.context.players.p1),id:'p'+i};}assert.equal(c.validRoomSnapshot(oversized),false);
   });
   await test('presence is finite and roster scoped, supports current effect messages',()=>{
     const p={x:0,y:1,z:2,mode:'play',strokes:1,effect:'mag'};

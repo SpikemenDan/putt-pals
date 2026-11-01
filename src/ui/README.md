@@ -20,7 +20,7 @@ store.toast('Hole Magnet armed for this shot.');
 store.announce(name, 'HOLE MAGNET ACTIVATED', 'power');
 ```
 
-`roomNow()` must use the same time base as `roundStartTime` and `votingDeadline` in the snapshot (host monotonic time; guests apply the host offset, see src/network).
+`roomNow()` must use the same time base as `roundStartTime` and `votingDeadline` (local time for solo; service time synchronized by the online WebSocket client).
 
 ## Commands
 
@@ -28,8 +28,8 @@ The UI never mutates game or session state. Buttons dispatch the same command ob
 
 | Command | Meaning |
 | --- | --- |
-| `{ type: 'session', event }` | An L1 `SessionEvents` command without `playerId` (CAST_VOTE, SET_MODE, START_VOTING, START_ROUND, RETURN_TO_LOBBY, PRACTICE_STEP, PRACTICE_MAPS). The application binds the sender: host → `session.send({...event, playerId})`, guest → `transport.send({ type: 'command', payload: event })`. |
-| `join` / `play-solo` | Landing form; validate with `parseJoinRequest()`, which returns the legacy alert messages for bad ICE JSON or a missing room code. |
+| `{ type: 'session', event }` | An L1 `SessionEvents` command without `playerId`; the app binds the local player identity and the room service validates controller permissions. |
+| `join` / `play-solo` | Landing form; `parseJoinRequest()` normalizes the name and room code. |
 | `leave`, `invite`, `toggle-quality` | Legacy Leave room, Invite/Copy invite and Quality buttons. |
 
 `createUiDispatcher` applies `toggle-card`/`close-card` to the store first (the scorecard is UI state), then forwards every command. Give the same dispatcher to the input adapter so K and Escape behave like the buttons.
@@ -45,7 +45,7 @@ The view models in `model.js` are pure functions of the room snapshot, local sta
 - Notification timing is legacy: toasts clear after 3 s; banners queue, show 1.9 s (2.8 s for hole-in-one and champion), with 0.35 s gaps. A putt banner appears on every round start of a multi-putt map, a hole-in-one banner once per player and round, and winner/champion banners on results.
 - The scorecard closes when a putt starts and on lobby/selection, as before.
 - **Focus management (new, intentional):** opening the scorecard moves keyboard focus to its Close button and closing returns focus to the opener. The Close button therefore shows a focus ring that the legacy page did not; this is the only visual difference in the parity run.
-- Accessibility attributes that render nothing were added: `role="dialog"` on the scorecard, `role="meter"` with live `aria-valuenow` on the power bar, `aria-pressed` on map cards, `role="status"` live regions for toasts and banners, `role="alert"` for the disconnect notice and labels for the canvas and ICE field.
+- Accessibility attributes that render nothing were added: `role="dialog"` on the scorecard, `role="meter"` with live `aria-valuenow` on the power bar, `aria-pressed` on map cards, `role="status"` live regions for toasts and banners, `role="alert"` for the disconnect notice and a label for the canvas.
 - The legacy "Play selected map" button was permanently hidden and is not ported. The unused `#warp` overlay is not ported.
 - The L1 protocol carries no player colour. Colours follow join order unless the application passes `local.colors`; legacy colours were random per player. The UI uses the legacy 8-colour palette from `src/render/materials.js`; `PLAYER_COLORS` in `src/shared/constants.js` is a different 4-colour list (integration owner to reconcile).
 - Legacy reports join errors with `alert()`. The UI leaves that to the application through `parseJoinRequest()` messages.

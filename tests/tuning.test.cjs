@@ -6,11 +6,11 @@ async function run() {
   const physics = await import('../src/simulation/physics.js');
   const aim = await import('../src/input/aim.js');
 
-  // Defaults equal the numbers the game shipped with before T2.
+  // Defaults equal the numbers the game shipped with before T2, except the S3 retune (turf, sand, ice, slime friction).
   assert.equal(shared.BALL_RADIUS, 5);
   assert.equal(shared.DEFAULT_CUP_RADIUS, 15);
   assert.equal(shared.MIN_CUP_RADIUS, 8);
-  assert.equal(shared.TURF_FRICTION, 0.75);
+  assert.equal(shared.TURF_FRICTION, 0.5); // S3 retune
   assert.equal(shared.SHOT_POWER, 900);
   assert.deepEqual({ ...shared.SURFACE_DRAG }, { turf: 1.0, sand: 3.5, ice: 0.15, slime: 6.0 });
   assert.equal(physics.GRAVITY, 700);
@@ -18,7 +18,7 @@ async function run() {
   assert.equal(physics.CUP_DEPTH, 36);
   const s = TUNING.surface;
   assert.deepEqual([s.turf.friction, s.turf.drag, s.sand.friction, s.ice.friction, s.ice.drag, s.slime.friction, s.slime.drag, s.padFrictionBonus],
-    [0.75, 30, 3.2, 0.12, 4, 5.5, 45, 0.05]);
+    [0.5, 15, 2.4, 0.02, 0, 4, 30, 0.05]);
   assert.deepEqual([TUNING.bounce.wallRestitution, TUNING.bounce.ledgeDamping, TUNING.bounce.ledgeHeight, TUNING.bounce.landingRestitution, TUNING.bounce.landingSpeed], [1.82, 0.8, 5, 0.25, 180]);
   assert.deepEqual([TUNING.rest.maxSlope, TUNING.rest.maxSpeed, TUNING.rest.maxVertical, TUNING.rest.airTolerance, TUNING.rest.groundTolerance], [0.015, 6, 5, 0.8, 0.6]);
   assert.deepEqual([TUNING.powerups.magnetRange, TUNING.powerups.magnetPull], [90, 300]);

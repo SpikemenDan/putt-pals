@@ -30,6 +30,14 @@ export function createBall(library, color, opacity, environment) {
   return mesh;
 }
 
+/** Applies a cosmetic ball skin (catalog record): a self-lit glow over the player colour. Materials without an emissive channel are left alone. */
+export function applyBallSkin(mesh, skin) {
+  const material = mesh?.material;
+  if (!material?.emissive) return;
+  material.emissive.set(skin.emissive);
+  material.emissiveIntensity = skin.emissiveIntensity;
+}
+
 /** Legacy mkBlob(): soft contact shadow under a ball. */
 export function createBlob(library) {
   const { THREE } = library;
@@ -94,14 +102,27 @@ export function createTrail(THREE, { toon = false } = {}) {
   let length = 0;
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('a', new THREE.BufferAttribute(alphas, 1));
-  const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { col: { value: displayColor(new THREE.Color(), 0xffffff) } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: toon ? 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>.55)discard;gl_FragColor=vec4(col,va*.5);}' : 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}' }));
+  const fragmentShader = toon ? 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>.55)discard;gl_FragColor=vec4(col,va*.5);}' : 'uniform vec3 col;varying float va;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;gl_FragColor=vec4(col,(1.-d)*(1.-d)*va*.6);}';
+  const trailMaterial = (vertexShader, extraUniforms = {}) => new THREE.ShaderMaterial({ uniforms: { col: { value: displayColor(new THREE.Color(), 0xffffff) }, ...extraUniforms }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader, fragmentShader });
+  // The classic trail keeps the legacy vertex shader; a trail skin with another point size swaps in a scaled one.
+  const classicVertex = 'attribute float a;varying float va;void main(){va=a;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=a*30.*(300./-mv.z);gl_Position=projectionMatrix*mv;}';
+  const classicMaterial = trailMaterial(classicVertex);
+  let sizedMaterial = null;
+  const points = new THREE.Points(geometry, classicMaterial);
   points.frustumCulled = false;
   return {
     points,
     get length() { return length; },
-    update(p, moving, visible, color) {
+    /** `size` scales the points (trail skin); 1 is the classic trail. */
+    update(p, moving, visible, color, size = 1) {
       points.visible = !!visible;
       if (!visible) { length = 0; return; }
+      if (size === 1) points.material = classicMaterial;
+      else {
+        sizedMaterial ??= trailMaterial(`uniform float size;${classicVertex}`.replace('a*30.*', 'a*30.*size*'), { size: { value: size } });
+        sizedMaterial.uniforms.size.value = size;
+        points.material = sizedMaterial;
+      }
       displayColor(points.material.uniforms.col.value, color);
       if (moving) {
         if (length && Math.hypot(p.x - positions[0], p.y - positions[1], p.z - positions[2]) > 90) length = 0;
@@ -125,21 +146,23 @@ export function createConfetti(THREE, random) {
   const points = new THREE.Points(geometry, new THREE.ShaderMaterial({ uniforms: { op: { value: 1 } }, transparent: true, depthWrite: false, vertexShader: 'attribute vec3 ccol;varying vec3 vc;void main(){vc=ccol;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=11.*(300./-mv.z);gl_Position=projectionMatrix*mv;}', fragmentShader: 'uniform float op;varying vec3 vc;void main(){vec2 q=abs(gl_PointCoord-.5)*2.;if(max(q.x,q.y)>.85)discard;gl_FragColor=vec4(vc,op);}' }));
   points.frustumCulled = false;
   points.visible = false;
-  const palette = [0xff7ac8, 0xffd23f, 0x7fe3ff, 0xb8f0a2, 0xc9a8ff, 0xffffff];
+  const classic = { palette: [0xff7ac8, 0xffd23f, 0x7fe3ff, 0xb8f0a2, 0xc9a8ff, 0xffffff], speed: 1, lift: 1, lifetime: 2.4 };
   return {
     points,
     get remaining() { return remaining; },
-    burst(p) {
+    /** `celebration` is a catalog record (palette, speed, lift, lifetime); the classic confetti when omitted. */
+    burst(p, celebration = classic) {
+      const { palette, speed: speedScale, lift, lifetime } = celebration;
       const c = new THREE.Color();
       for (let i = 0; i < N; i++) {
-        displayColor(c, palette[i % 6]);
+        displayColor(c, palette[i % palette.length]);
         colors.set([c.r, c.g, c.b], i * 3);
         positions.set([p.x, p.y + 8, p.z], i * 3);
         const a = random() * 6.283, speed = 40 + random() * 110;
-        velocity.set([Math.cos(a) * speed, 110 + random() * 170, Math.sin(a) * speed], i * 3);
+        velocity.set([Math.cos(a) * speed * speedScale, (110 + random() * 170) * lift, Math.sin(a) * speed * speedScale], i * 3);
       }
       geometry.attributes.ccol.needsUpdate = true;
-      remaining = 2.4;
+      remaining = lifetime;
       points.visible = true;
     },
     update(dt) {
@@ -165,7 +188,8 @@ const ARROW_SHAFT_HALF_WIDTH = 2.6, ARROW_HEAD_HALF_WIDTH = 7, ARROW_HEAD_LENGTH
 export function createAimGuide(THREE) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(27), 3));
-  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false, depthTest: false }));
+  // Depth-tested (CL2 #103): walls, ramps and other balls hide the arrow instead of it drawing over them.
+  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false }));
   arrow.frustumCulled = false;
   arrow.renderOrder = 10;
   arrow.visible = false;

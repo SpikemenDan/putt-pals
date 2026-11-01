@@ -1,6 +1,6 @@
 // I1 integration tests: the composed app (UI, input, renderer, simulation, session, transports, audio)
 // runs in jsdom clients on one virtual clock. WebGL output and audio are recorded stubs; rooms use the
-// N1 in-memory hub. Real-browser rendering/WebRTC evidence is recorded separately (docs/reviews/I1_APP.md).
+// Legacy in-memory transport seam for app composition. Browser room evidence is covered by Playwright.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -36,8 +36,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
     async function run(ms) { for (let t = 0; t < ms; t += 500) { await act(async () => { scheduler.advance(Math.min(500, ms - t)); }); await settle(); } }
     async function until(fn, ms = 60000, label = 'condition') { for (let t = 0; t <= ms; t += 100) { if (fn()) return; await run(100); } assert.fail('timed out waiting for ' + label); }
-    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true, storage = {} } = {}) {
+    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true, storage = {}, local = {} } = {}) {
       const win = createWindow(scheduler, { url });
+      for (const [k, v] of Object.entries(local)) win.w.localStorage.setItem(k, v);
       for (const [k, v] of Object.entries(storage)) win.w.sessionStorage.setItem(k, v); // a reloaded tab keeps its sessionStorage
       const audio = createAudioRecorder();
       let app;
@@ -91,6 +92,22 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const tracked = c => c.audio.log.map(e => e.type + (e.kind ? ':' + e.kind : '') + (e.hazardType ? ':' + e.hazardType : '') + (e.remote ? ':remote' : ''));
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('cosmetics (F1): the picked style is saved locally, restored on reload and junk storage falls back to defaults', async () => {
+    const W = world();
+    const first = await W.client('Pat');
+    const selects = [...first.doc.querySelectorAll('[data-ui=landing] [data-ui=cosmetics] select')];
+    assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti']);
+    await act(async () => { selects[0].value = 'frost'; selects[0].dispatchEvent(new first.win.w.Event('change', { bubbles: true })); });
+    await act(async () => { selects[2].value = 'gold'; selects[2].dispatchEvent(new first.win.w.Event('change', { bubbles: true })); });
+    const saved = first.win.w.localStorage.getItem('pp_cosmetics');
+    assert.deepEqual(JSON.parse(saved), { ball: 'frost', trail: 'classic', celebration: 'gold' });
+    const reloaded = await W.client('Pat2', { local: { pp_cosmetics: saved } });
+    assert.deepEqual([...reloaded.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['frost', 'classic', 'gold']);
+    const junk = await W.client('Pat3', { local: { pp_cosmetics: '{"ball":"<img src=x>","trail":"comet"}' } });
+    assert.deepEqual([...junk.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['classic', 'comet', 'confetti'], 'unknown ids fall back, valid ones are kept');
+    await first.dispose(); await reloaded.dispose(); await junk.dispose();
+  });
+
   await scenario('start screen: a 3D panorama orbits behind the menu, then hands the canvas to the game', async () => {
     const W = world();
     const ana = await W.client('Ana');
@@ -178,7 +195,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       }
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6. Map winner: Ana.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6 (-6). Map winner: Ana.');
     assert.equal(ana.text('[data-ui=results] button'), 'Back to lobby');
     assert.equal(transitions, 5);
     await W.run(20000);
@@ -247,7 +264,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       await W.until(() => ana.snapshot.players.solo.scores.length > k, 30000, 'sink');
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10. Practice round finished.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10 (-2). Practice round finished.');
     // Cells 5* 1 1 1 1 1, total 10, −2 against par 12, five holes in one, one timeout.
     assert.equal(ana.$('[data-ui=results] table tbody tr').textContent.replace(/\s/g, ''), '1.Ana(you)5*1111110-251');
     await ana.click('Pick another map');
@@ -360,12 +377,12 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.run(300);
     for (const g of guests) {
       assert.equal(g.$('[role=alert]').hidden, false, `${g.name} sees the reconnecting notice`);
-      assert.equal(g.text('[role=alert]'), 'Connection dropped. Reconnecting… your place in the room is kept for 30 seconds.');
+      assert.equal(g.text('[role=alert]'), 'Connection dropped. Reconnecting… your place is reserved while the room allows recovery.');
     }
     await W.run(32000);
     for (const g of guests) {
       assert.equal(g.$('[role=alert]').hidden, false, `${g.name} sees the disconnect notice`);
-      assert.equal(g.text('[role=alert]'), 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.');
+      assert.equal(g.text('[role=alert]'), 'The host closed the connection before you got into the room. Try joining again; if it keeps happening, ask the host to reopen the room.');
       assert.equal(g.app.room.isHost, false, 'no guest took over as host');
     }
     assert.equal(W.hub.rooms.has('puttpals-circuit-v6-party'), false, 'nobody claimed the host ID');
@@ -506,7 +523,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     // Network loss (no LEAVE): Ben sees a reconnecting notice, the host keeps his seat.
     await act(async () => { W.hub.rooms.get(hostId).detach(benId); });
     await W.settle();
-    assert.equal(ben.text('[role=alert]'), 'Connection dropped. Reconnecting… your place in the room is kept for 30 seconds.');
+    assert.equal(ben.text('[role=alert]'), 'Connection dropped. Reconnecting… your place is reserved while the room allows recovery.');
     assert.equal(ana.snapshot.players[benId].connected, true, 'the seat is held during grace');
     await W.until(() => ben.app.room.connected, 5000, 'automatic reconnect');
     assert.equal(ben.app.room.localId, benId, 'same identity'); assert.equal(ben.$('[role=alert]').hidden, true);
@@ -515,12 +532,12 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.until(() => ana.snapshot.players[benId].scores.length === 1, 30000, 'putt recorded for both');
     assert.equal(ana.snapshot.players[benId].scores[0].score, 1, "Ben's hole in one after reconnecting counts");
     // Reload: pagehide disposes the app (sending LEAVE), sessionStorage survives in the tab.
-    const stored = ben.win.w.sessionStorage.getItem('putt-pals:resume:resume');
+    const stored = ben.win.w.sessionStorage.getItem('putt-pals:server-resume:resume');
     assert.ok(stored && JSON.parse(stored).peerId === benId, 'identity stored per room code');
     await ben.dispose();
     await W.run(100);
     assert.equal(ana.snapshot.players[benId].connected, false);
-    const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=resume', storage: { 'putt-pals:resume:resume': stored } });
+    const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=resume', storage: { 'putt-pals:server-resume:resume': stored } });
     const [n, r] = reloaded.doc.querySelectorAll('[data-ui=landing] input');
     assert.equal(n.value, 'Ben', 'the name is prefilled after reload'); assert.equal(r.value, 'resume');
     await reloaded.click('Join room');
@@ -529,7 +546,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(reloaded.snapshot.players[benId].scores[0].score, 1, 'scores survive the reload');
     // An explicit Leave forgets the identity: the next join is a fresh seat.
     await act(async () => { reloaded.app.dispatch({ type: 'leave' }); });
-    assert.equal(reloaded.win.w.sessionStorage.getItem('putt-pals:resume:resume'), null);
+    assert.equal(reloaded.win.w.sessionStorage.getItem('putt-pals:server-resume:resume'), null);
     for (const c of [ana, reloaded]) await c.dispose();
   });
 
@@ -546,7 +563,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await late.fill(n, 'Ivy'); await late.fill(r, 'crowd'); await late.click('Join room');
     await W.run(200);
     assert.equal(late.shown('[data-ui=landing]'), true, 'the ninth player stays on the start screen');
-    assert.equal(late.text('[data-ui=connect-error]'), 'That room is full (8 players). Ask someone to leave, or use a different room code.');
+    assert.equal(late.text('[data-ui=connect-error]'), 'That room is full. Ask someone to leave, or use a different room code.');
     assert.equal(late.app.room, null);
     assert.equal(late.button('Join room').disabled, false, 'the player can try again');
     await all[0].click('Start Game');
@@ -559,7 +576,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const offline = await W.client('Joe', { memoryTransport: false });
     const [n2, r2] = offline.doc.querySelectorAll('[data-ui=landing] input');
     await offline.fill(n2, 'Joe'); await offline.fill(r2, 'crowd'); await offline.click('Join room');
-    assert.match(offline.text('[data-ui=connect-error]'), /WebRTC is unavailable/);
+    assert.match(offline.text('[data-ui=connect-error]'), /Could not reach the room service/);
     assert.equal(offline.shown('[data-ui=landing]'), true);
     for (const c of [...all, late, offline]) await c.dispose();
   });

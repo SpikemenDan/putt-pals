@@ -16,7 +16,7 @@
     "test:contracts": "node tests/contracts.test.cjs && node tests/server-room-contracts.test.cjs && node tests/gameplay.test.cjs",
     "test:gameplay": "node tests/gameplay.test.cjs",
     "test:rooms:local": "npm run build && node tests/rooms/local-runtime.test.mjs",
-    "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs && node tests/selfutility.test.cjs",
+    "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs && node tests/selfutility.test.cjs && node tests/aimsabotage.test.cjs && node tests/ballauras.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
     "test:render": "node tests/render.test.cjs && node tests/render-modern.test.cjs",
     "test:input": "node tests/input.test.cjs",
@@ -38,12 +38,10 @@
   "devDependencies": {
     "@playwright/test": "1.64.0",
     "jsdom": "30.1.3",
-    "peer": "1.0.2",
     "vite": "8.3.5",
     "wrangler": "4.155.0"
   },
   "dependencies": {
-    "peerjs": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "three": "0.186.1",

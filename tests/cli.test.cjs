@@ -225,10 +225,10 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert(!files.includes(unrelated), `${unrelated} must not invalidate recorded difficulty`);
     }
   });
-  run('all 36 starters retain nominal hole-in-ones; 31 meet the recorded robustness margin', () => {
+  run('all 36 starters retain nominal hole-in-ones; 34 meet the recorded robustness margin (S3 retune)', () => {
     const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8'));
     assert.equal(baseline.results.length, 36);
-    assert.equal(baseline.results.filter(r => r.best).length, 31, 'five explicit S2 course-tuning gaps');
+    assert.equal(baseline.results.filter(r => r.best).length, 34, 'two course-tuning gaps remain after the S3 retune (5/5, 19/2)');
     assert.equal(baseline.simulationSha256, provenanceTools.hashSimulationSources(), 'S2 measurements must match simulation source');
     for (const ref of baseline.results) {
       const shot = ref.best || ref.nominal;
@@ -261,7 +261,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.code, 1);
     assert.ok(out.lines.some(line => line.includes('Imported courses:')));
   });
-  run('solve reproduces all 36 S2 search outcomes, including five no-robust-shot results', () => {
+  run('solve reproduces all 36 S2 search outcomes, including two no-robust-shot results', () => {
     const refs = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8')).results;
     assert.equal(refs.length, 36);
     for (const ref of refs) {

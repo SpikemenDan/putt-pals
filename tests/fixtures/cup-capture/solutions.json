@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-28T14:19:53.294Z",
-  "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+  "generatedAt": "2026-10-30T03:00:23.937Z",
+  "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
   "configuration": {
     "version": 1,
     "angleSteps": 720,
@@ -35,29 +35,29 @@
         },
         "mode": "play",
         "position": [
-          218.20752266218167,
-          75.63116206204015,
+          266.5378294005723,
+          166.4115655104816,
           0
         ]
       },
-      "hits": 5,
+      "hits": 14,
       "best": {
-        "deg": 32,
-        "power": 0.8
+        "deg": 22,
+        "power": 0.85
       },
-      "elapsedMs": 736.683708,
+      "nominal": {
+        "deg": 22,
+        "power": 0.85
+      },
+      "elapsedMs": 554.439,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-1",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 32,
-        "power": 0.8
       }
     },
     {
@@ -76,24 +76,24 @@
           -31
         ]
       },
-      "hits": 2,
+      "hits": 6,
       "best": {
-        "deg": 25,
-        "power": 0.65
+        "deg": 12.5,
+        "power": 0.75
       },
-      "elapsedMs": 544.785458,
+      "nominal": {
+        "deg": 12.5,
+        "power": 0.75
+      },
+      "elapsedMs": 295.0033000000001,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-2",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 25,
-        "power": 0.65
       }
     },
     {
@@ -105,31 +105,31 @@
           "deg": 14,
           "power": 1
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          720,
-          146,
-          -31
+          722.33561776266,
+          58.26690554434736,
+          0
         ]
       },
-      "hits": 5,
+      "hits": 2,
       "best": {
-        "deg": 14.5,
-        "power": 1
+        "deg": 12,
+        "power": 0.8
       },
-      "elapsedMs": 311.5949999999998,
+      "nominal": {
+        "deg": 12,
+        "power": 0.8
+      },
+      "elapsedMs": 262.7050999999999,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-3",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 14.5,
-        "power": 1
       }
     },
     {
@@ -148,24 +148,24 @@
           -31
         ]
       },
-      "hits": 2,
+      "hits": 18,
       "best": {
-        "deg": 13,
-        "power": 1
+        "deg": 14,
+        "power": 0.6
       },
-      "elapsedMs": 299.19891600000005,
+      "nominal": {
+        "deg": 14,
+        "power": 0.6
+      },
+      "elapsedMs": 356.54330000000004,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-4",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 13,
-        "power": 1
       }
     },
     {
@@ -177,31 +177,31 @@
           "deg": 40.5,
           "power": 0.4
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          480,
-          356,
-          -31
+          476.96899659940726,
+          285.50959041574225,
+          0
         ]
       },
-      "hits": 3,
+      "hits": 5,
       "best": {
         "deg": 41,
-        "power": 0.4
+        "power": 0.3
       },
-      "elapsedMs": 177.38370900000018,
+      "nominal": {
+        "deg": 41,
+        "power": 0.3
+      },
+      "elapsedMs": 147.11840000000007,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-5",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 41,
-        "power": 0.4
       }
     },
     {
@@ -220,24 +220,24 @@
           -31
         ]
       },
-      "hits": 5,
+      "hits": 9,
       "best": {
-        "deg": 13,
-        "power": 0.7
+        "deg": 7,
+        "power": 0.75
       },
-      "elapsedMs": 279.72291700000005,
+      "nominal": {
+        "deg": 7,
+        "power": 0.75
+      },
+      "elapsedMs": 192.48029999999972,
       "provenance": {
         "version": 1,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-6",
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 13,
-        "power": 0.7
       }
     },
     {
@@ -256,24 +256,24 @@
           -31
         ]
       },
-      "hits": 4,
+      "hits": 8,
       "best": {
         "deg": 22.5,
-        "power": 1
+        "power": 0.7
       },
-      "elapsedMs": 532.8516249999998,
+      "nominal": {
+        "deg": 22.5,
+        "power": 0.7
+      },
+      "elapsedMs": 594.9652000000001,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-1",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 22.5,
-        "power": 1
       }
     },
     {
@@ -285,31 +285,31 @@
           "deg": 16,
           "power": 0.65
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          484,
-          216,
-          -31
+          311.67042317136617,
+          201.32609061112035,
+          0
         ]
       },
-      "hits": 17,
+      "hits": 7,
       "best": {
-        "deg": 16.5,
-        "power": 0.6
+        "deg": 8,
+        "power": 0.8
       },
-      "elapsedMs": 373.19108400000005,
+      "nominal": {
+        "deg": 8,
+        "power": 0.8
+      },
+      "elapsedMs": 202.18129999999974,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-2",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 16.5,
-        "power": 0.6
       }
     },
     {
@@ -331,21 +331,21 @@
       "hits": 1,
       "best": {
         "deg": 0,
-        "power": 0.35
+        "power": 0.3
       },
-      "elapsedMs": 9.176292000000103,
+      "nominal": {
+        "deg": 0,
+        "power": 0.3
+      },
+      "elapsedMs": 2.2777000000000953,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-3",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 0,
-        "power": 0.35
       }
     },
     {
@@ -357,31 +357,31 @@
           "deg": 41,
           "power": 0.9
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          244,
-          426,
-          -31
+          252.62133525840864,
+          323.4695888380651,
+          0
         ]
       },
       "hits": 5,
       "best": {
-        "deg": 41.5,
-        "power": 0.9
+        "deg": 24,
+        "power": 0.95
       },
-      "elapsedMs": 906.9684580000003,
+      "nominal": {
+        "deg": 24,
+        "power": 0.95
+      },
+      "elapsedMs": 1019.3184000000001,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-4",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 41.5,
-        "power": 0.9
       }
     },
     {
@@ -393,31 +393,31 @@
           "deg": 14,
           "power": 0.9
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          484,
-          426,
-          -31
+          392.8650381183421,
+          386.3609445397406,
+          0
         ]
       },
-      "hits": 3,
+      "hits": 5,
       "best": {
         "deg": 14,
-        "power": 0.9
+        "power": 0.6
       },
-      "elapsedMs": 325.2240840000004,
+      "nominal": {
+        "deg": 14,
+        "power": 0.6
+      },
+      "elapsedMs": 675.1369000000004,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-5",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 14,
-        "power": 0.9
       }
     },
     {
@@ -431,29 +431,29 @@
         },
         "mode": "play",
         "position": [
-          740.1618040687312,
-          337.4644855214936,
+          600.6686430884075,
+          437.9233691317424,
           0
         ]
       },
-      "hits": 8,
+      "hits": 22,
       "best": {
-        "deg": 24.5,
-        "power": 0.7
+        "deg": 26.5,
+        "power": 0.4
       },
-      "elapsedMs": 523.7082920000003,
+      "nominal": {
+        "deg": 26.5,
+        "power": 0.4
+      },
+      "elapsedMs": 1174.0042000000003,
       "provenance": {
         "version": 1,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-6",
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 24.5,
-        "power": 0.7
       }
     },
     {
@@ -465,31 +465,31 @@
           "deg": 19,
           "power": 0.75
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          244,
-          76,
-          -31
+          187.33225292145457,
+          172.32435582453198,
+          0
         ]
       },
-      "hits": 25,
+      "hits": 10,
       "best": {
-        "deg": 43,
-        "power": 0.6
+        "deg": 11,
+        "power": 0.75
       },
-      "elapsedMs": 1629.4584169999998,
+      "nominal": {
+        "deg": 11,
+        "power": 0.75
+      },
+      "elapsedMs": 931.6504999999997,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-1",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 43,
-        "power": 0.6
       }
     },
     {
@@ -503,29 +503,29 @@
         },
         "mode": "play",
         "position": [
-          480.29928111303167,
-          237.61920223312902,
+          384.2688691931552,
+          153.17856621669316,
           0
         ]
       },
-      "hits": 20,
+      "hits": 9,
       "best": {
-        "deg": 59,
-        "power": 0.45
+        "deg": 15,
+        "power": 0.5
       },
-      "elapsedMs": 2209.061541,
+      "nominal": {
+        "deg": 15,
+        "power": 0.5
+      },
+      "elapsedMs": 2070.8763,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-2",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 59,
-        "power": 0.45
       }
     },
     {
@@ -537,31 +537,31 @@
           "deg": 14,
           "power": 0.65
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          724,
-          146,
-          -31
+          740.3233296256888,
+          57.82036654626952,
+          0
         ]
       },
       "hits": 4,
       "best": {
-        "deg": 14.5,
-        "power": 0.65
+        "deg": 7,
+        "power": 0.85
       },
-      "elapsedMs": 526.8052920000009,
+      "nominal": {
+        "deg": 7,
+        "power": 0.85
+      },
+      "elapsedMs": 746.7924999999996,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-3",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 14.5,
-        "power": 0.65
       }
     },
     {
@@ -580,24 +580,24 @@
           -31
         ]
       },
-      "hits": 4,
+      "hits": 2,
       "best": {
-        "deg": 30.5,
-        "power": 0.95
+        "deg": 16,
+        "power": 1
       },
-      "elapsedMs": 1325.280917,
+      "nominal": {
+        "deg": 16,
+        "power": 1
+      },
+      "elapsedMs": 2108.732100000001,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-4",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 30.5,
-        "power": 0.95
       }
     },
     {
@@ -616,24 +616,24 @@
           -31
         ]
       },
-      "hits": 3,
+      "hits": 7,
       "best": {
         "deg": 15.5,
-        "power": 0.65
+        "power": 0.45
       },
-      "elapsedMs": 457.66212500000074,
+      "nominal": {
+        "deg": 15.5,
+        "power": 0.45
+      },
+      "elapsedMs": 1338.5977000000003,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-5",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 15.5,
-        "power": 0.65
       }
     },
     {
@@ -645,31 +645,31 @@
           "deg": 35,
           "power": 0.65
         },
-        "mode": "play",
+        "mode": "sunk",
         "position": [
-          743.4607168579245,
-          282.6609450158294,
-          0
+          724,
+          286,
+          -31
         ]
       },
-      "hits": 22,
+      "hits": 28,
       "best": {
-        "deg": 40.5,
-        "power": 0.45
+        "deg": 34.5,
+        "power": 0.4
       },
-      "elapsedMs": 1564.7159589999992,
+      "nominal": {
+        "deg": 34.5,
+        "power": 0.4
+      },
+      "elapsedMs": 3885.0855999999985,
       "provenance": {
         "version": 1,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-6",
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 40.5,
-        "power": 0.45
       }
     },
     {
@@ -681,31 +681,31 @@
           "deg": 15.5,
           "power": 1
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          226,
-          76,
-          -31
+          106.56635960034903,
+          202.02645932509768,
+          0
         ]
       },
       "hits": 5,
       "best": {
-        "deg": 49,
-        "power": 0.7
+        "deg": 8,
+        "power": 0.85
       },
-      "elapsedMs": 2674.338458,
+      "nominal": {
+        "deg": 8,
+        "power": 0.85
+      },
+      "elapsedMs": 775.1332000000002,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-1",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 49,
-        "power": 0.7
       }
     },
     {
@@ -717,31 +717,31 @@
           "deg": 0,
           "power": 0.7
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          486,
+          719.559177043411,
           146,
-          -31
+          0
         ]
       },
-      "hits": 1,
+      "hits": 13,
       "best": {
-        "deg": 0,
-        "power": 0.7
+        "deg": 3,
+        "power": 0.5
       },
-      "elapsedMs": 17.96837499999856,
+      "nominal": {
+        "deg": 3,
+        "power": 0.5
+      },
+      "elapsedMs": 217.87149999999747,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-2",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 0,
-        "power": 0.7
       }
     },
     {
@@ -755,29 +755,29 @@
         },
         "mode": "play",
         "position": [
-          705.676578397182,
-          143.29651340247042,
+          664.6862767566067,
+          115.13847398884877,
           0
         ]
       },
-      "hits": 7,
+      "hits": 10,
       "best": {
-        "deg": 22.5,
-        "power": 0.95
+        "deg": 20.5,
+        "power": 0.65
       },
-      "elapsedMs": 1003.9848750000001,
+      "nominal": {
+        "deg": 20.5,
+        "power": 0.65
+      },
+      "elapsedMs": 1449.541799999999,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-3",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 22.5,
-        "power": 0.95
       }
     },
     {
@@ -789,31 +789,31 @@
           "deg": 50.5,
           "power": 0.75
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          244,
-          426,
-          -31
+          216.8007720266546,
+          432.20991994902,
+          0
         ]
       },
-      "hits": 6,
+      "hits": 4,
       "best": {
-        "deg": 50.5,
-        "power": 0.75
+        "deg": 20,
+        "power": 1
       },
-      "elapsedMs": 2152.9558749999997,
+      "nominal": {
+        "deg": 20,
+        "power": 1
+      },
+      "elapsedMs": 1266.4795999999988,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-4",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 50.5,
-        "power": 0.75
       }
     },
     {
@@ -827,29 +827,29 @@
         },
         "mode": "play",
         "position": [
-          464.78073810004236,
-          287.77313814245144,
+          306.26345774114844,
+          339.6100223025712,
           0
         ]
       },
-      "hits": 4,
+      "hits": 9,
       "best": {
-        "deg": 19,
-        "power": 1
+        "deg": 18,
+        "power": 0.65
       },
-      "elapsedMs": 1002.2964170000014,
+      "nominal": {
+        "deg": 18,
+        "power": 0.65
+      },
+      "elapsedMs": 1451.1041000000005,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-5",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 19,
-        "power": 1
       }
     },
     {
@@ -861,31 +861,31 @@
           "deg": 22,
           "power": 0.65
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          724,
-          426,
-          -31
+          569.1826707376024,
+          413.6838374234452,
+          0
         ]
       },
-      "hits": 17,
+      "hits": 3,
       "best": {
-        "deg": 22,
-        "power": 0.65
+        "deg": 3.5,
+        "power": 0.95
       },
-      "elapsedMs": 1052.6984589999993,
+      "nominal": {
+        "deg": 3.5,
+        "power": 0.95
+      },
+      "elapsedMs": 364.26810000000114,
       "provenance": {
         "version": 1,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-6",
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 22,
-        "power": 0.65
       }
     },
     {
@@ -899,29 +899,29 @@
         },
         "mode": "play",
         "position": [
-          204.91118861719778,
-          213.2515842123767,
+          178.0431396685666,
+          127.76286139700377,
           0
         ]
       },
-      "hits": 3,
+      "hits": 34,
       "best": {
-        "deg": 32,
-        "power": 0.75
+        "deg": 32.5,
+        "power": 0.5
       },
-      "elapsedMs": 1532.9071660000009,
+      "nominal": {
+        "deg": 32.5,
+        "power": 0.5
+      },
+      "elapsedMs": 2795.8617999999988,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-1",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 32,
-        "power": 0.75
       }
     },
     {
@@ -933,31 +933,31 @@
           "deg": 10,
           "power": 1
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          484,
-          196,
-          -31
+          321.69050325969323,
+          109.46509413608776,
+          0
         ]
       },
-      "hits": 14,
+      "hits": 23,
       "best": {
-        "deg": 14.5,
-        "power": 0.3
+        "deg": 10.5,
+        "power": 0.6
       },
-      "elapsedMs": 973.9343749999971,
+      "nominal": {
+        "deg": 10.5,
+        "power": 0.6
+      },
+      "elapsedMs": 1260.2599999999984,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-2",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 14.5,
-        "power": 0.3
       }
     },
     {
@@ -969,28 +969,31 @@
           "deg": 60,
           "power": 0.65
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          724,
-          216,
-          -31
+          560.2443474928353,
+          226.6890950635776,
+          0
         ]
       },
-      "hits": 84,
-      "best": null,
-      "elapsedMs": 18621.113959,
+      "hits": 15,
+      "best": {
+        "deg": 47.5,
+        "power": 1
+      },
+      "nominal": {
+        "deg": 47.5,
+        "power": 1
+      },
+      "elapsedMs": 3256.146099999998,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-3",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 44,
-        "power": 0.7
       }
     },
     {
@@ -1002,31 +1005,31 @@
           "deg": 31.5,
           "power": 0.7
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          244,
-          286,
-          -31
+          230.40916184808862,
+          448.54917990814636,
+          0
         ]
       },
-      "hits": 5,
+      "hits": 16,
       "best": {
-        "deg": 32,
-        "power": 0.7
+        "deg": 17.5,
+        "power": 0.75
       },
-      "elapsedMs": 1580.5835000000006,
+      "nominal": {
+        "deg": 17.5,
+        "power": 0.75
+      },
+      "elapsedMs": 925.6731,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-4",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 32,
-        "power": 0.7
       }
     },
     {
@@ -1040,26 +1043,29 @@
         },
         "mode": "play",
         "position": [
-          419.72093014740403,
-          348.03699690272936,
+          366.43862529324736,
+          328.11235793698216,
           0
         ]
       },
-      "hits": 88,
-      "best": null,
-      "elapsedMs": 20810.059167,
+      "hits": 43,
+      "best": {
+        "deg": 57,
+        "power": 0.7
+      },
+      "nominal": {
+        "deg": 57,
+        "power": 0.7
+      },
+      "elapsedMs": 3396.1725000000006,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-5",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 16.5,
-        "power": 0.8
       }
     },
     {
@@ -1073,29 +1079,26 @@
         },
         "mode": "play",
         "position": [
-          607.2286235025905,
-          390.40282998721193,
+          543.3430522932694,
+          434.92702617795584,
           0
         ]
       },
-      "hits": 26,
-      "best": {
-        "deg": 129,
-        "power": 1
+      "hits": 374,
+      "best": null,
+      "nominal": {
+        "deg": 0,
+        "power": 0.5
       },
-      "elapsedMs": 7424.376624999997,
+      "elapsedMs": 25816.074800000002,
       "provenance": {
         "version": 1,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-6",
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 129,
-        "power": 1
       }
     },
     {
@@ -1109,26 +1112,29 @@
         },
         "mode": "play",
         "position": [
-          207.0543818081034,
-          221.71071048394498,
+          192.80558405014148,
+          132.64480309821218,
           0
         ]
       },
-      "hits": 63,
-      "best": null,
-      "elapsedMs": 25524.760624999995,
+      "hits": 31,
+      "best": {
+        "deg": 40.5,
+        "power": 1
+      },
+      "nominal": {
+        "deg": 40.5,
+        "power": 1
+      },
+      "elapsedMs": 3080.2632999999987,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-1",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 15,
-        "power": 0.9
       }
     },
     {
@@ -1140,31 +1146,31 @@
           "deg": 34.5,
           "power": 0.9
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          486,
-          146,
-          -31
+          461.9290062228983,
+          138.7593783857794,
+          0
         ]
       },
-      "hits": 1,
+      "hits": 37,
       "best": {
-        "deg": 0,
-        "power": 0.7
+        "deg": 35,
+        "power": 0.65
       },
-      "elapsedMs": 13.52424999998766,
+      "nominal": {
+        "deg": 35,
+        "power": 0.65
+      },
+      "elapsedMs": 1291.654499999997,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-2",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 0,
-        "power": 0.7
       }
     },
     {
@@ -1178,26 +1184,26 @@
         },
         "mode": "play",
         "position": [
-          622.8372413264652,
-          61.807612346455805,
+          577.0429751154643,
+          70.0356277491215,
           0
         ]
       },
-      "hits": 84,
+      "hits": 132,
       "best": null,
-      "elapsedMs": 24191.331667000006,
+      "nominal": {
+        "deg": 13.5,
+        "power": 0.55
+      },
+      "elapsedMs": 36486.54259999999,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-3",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 14,
-        "power": 1
       }
     },
     {
@@ -1209,31 +1215,31 @@
           "deg": 50.5,
           "power": 0.8
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          244,
-          426,
-          -31
+          215.2878524523943,
+          431.00841864642246,
+          0
         ]
       },
-      "hits": 11,
+      "hits": 17,
       "best": {
-        "deg": 71,
-        "power": 0.65
+        "deg": 25,
+        "power": 0.95
       },
-      "elapsedMs": 2620.174291000003,
+      "nominal": {
+        "deg": 25,
+        "power": 0.95
+      },
+      "elapsedMs": 1598.0789000000077,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-4",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 71,
-        "power": 0.65
       }
     },
     {
@@ -1247,26 +1253,29 @@
         },
         "mode": "play",
         "position": [
-          496.95735368186115,
-          309.9341358488296,
+          424.95584114988685,
+          311.0432063423888,
           0
         ]
       },
-      "hits": 93,
-      "best": null,
-      "elapsedMs": 29859.763541999986,
+      "hits": 178,
+      "best": {
+        "deg": 149.5,
+        "power": 0.65
+      },
+      "nominal": {
+        "deg": 149.5,
+        "power": 0.65
+      },
+      "elapsedMs": 20519.817500000005,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-5",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 21.5,
-        "power": 0.8
       }
     },
     {
@@ -1278,31 +1287,31 @@
           "deg": 22.5,
           "power": 0.65
         },
-        "mode": "sunk",
+        "mode": "play",
         "position": [
-          724,
-          426,
-          -31
+          568.5903542792148,
+          411.76325429117367,
+          0
         ]
       },
-      "hits": 9,
+      "hits": 36,
       "best": {
-        "deg": 55.5,
-        "power": 0.4
+        "deg": 34.5,
+        "power": 0.8
       },
-      "elapsedMs": 2924.2537499999744,
+      "nominal": {
+        "deg": 34.5,
+        "power": 0.8
+      },
+      "elapsedMs": 2431.8110000000015,
       "provenance": {
         "version": 1,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-6",
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "e99117c09194287d537b94bb8572d9b32511a9951e25787c243e9576bfe5f872",
+        "simulationSha256": "9ae00fb6d10435ed33c6b50ab45ebb187adfbba5653c4644329a976a0c288890",
         "configurationSha256": "3722594394956b7a8cd1119722e161451a0b53a5d54c832fbed507d1d3a52b72",
         "searchMode": "fast"
-      },
-      "nominal": {
-        "deg": 55.5,
-        "power": 0.4
       }
     }
   ]

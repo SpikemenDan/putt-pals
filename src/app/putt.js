@@ -129,7 +129,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const activation = activatePowerup(player, item, fxCount + 1);
       if (activation.toast) out.toasts.push(activation.toast);
       if (!activation.ok) return out;
-      out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power']);
+      out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power', item]);
       if (activation.message) { fx = activation.message; fxCount = fx.id; }
       player.flashType = item; player.flashUntil = now + EFFECT_FLASH_MS;
       takeFromInventory(player.inventory, index);
@@ -141,6 +141,9 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       if (disposed || !receiveEffect(player, type)) return null;
       return String(from || 'Someone').slice(0, 14) + ' used ' + powerupName(type) + ' on you!';
     },
+
+    /** Love / Hate Ball sources from other players' balls (G1d); this client applies them to its own ball while it rolls. */
+    setAuras(sources) { player.auraSources = disposed || player.mode !== 'play' ? [] : sources; },
 
     /** Ball centre height of the tee/cup for transitions. */
     surface: (x, y) => surfaceHeight(course, x, y),

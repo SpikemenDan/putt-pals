@@ -8,3 +8,4 @@
 .join{display:block;width:100%;margin:8px 0}
 .panel p.or{text-align:center;margin:14px 0 0;font:900 12px var(--font);letter-spacing:3px;text-transform:uppercase;color:var(--mut)}
 @media (max-width:640px){.panel{padding:18px;box-shadow:5px 5px 0 var(--ink)}.panel h1{font-size:32px}}
+.style{display:grid;gap:8px;margin-top:8px}

@@ -159,6 +159,8 @@ class Gestures {
       ['sink', { timedOut: true }, 2], ['timeout', {}, 2], ['out_of_bounds', {}, 2],
       ['hazard', { hazardType: 'pad' }, 2], ['hazard', { hazardType: 'teleporter' }, 2],
       ['banner', { kind: 'hio' }, 6], ['banner', { kind: 'power' }, 2], ['banner', { kind: 'event' }, 1], ['putt_change', {}, 3]];
+    for (const id of ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky']) { f.adapter.resetSession(); assert.equal(f.adapter.handleEvent({ type: 'powerup', id }), true, id); }
+    for (const id of ['rev', 'constructor', undefined, 7]) assert.equal(f.adapter.handleEvent({ type: 'powerup', id }), false, String(id));
     for (const [type, fields, expected] of cases) { const before = sources(); assert.equal(event(type, fields), true, type); assert.equal(sources() - before, expected, type); }
     for (const type of ['rest', 'cup_lip', 'surface_change', 'constructor', '__proto__']) assert.equal(event(type), false);
     assert.equal(event('hazard', { hazardType: 'unknown' }), false);

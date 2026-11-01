@@ -1,17 +1,11 @@
 /**
- * Room connection for the app: a solo room, or a PeerJS room where the first
- * player to claim the room code's host ID becomes host and later players join
- * as guests (the legacy peerRoom() behaviour). Hides host/guest differences
- * behind one interface: room snapshots, remote presence, commands and status.
- *
- * Guests (N2) join with a resumable identity: a peer ID plus a secret token
- * that only the host learns. If a guest's link drops, the room reports
- * `reconnecting` and retries as a guest with the same identity while the host
- * holds the seat (RECONNECT_GRACE_PERIOD_MS). It never claims the host ID, so
- * host loss stays explicit: after the grace period it reports `host-lost`.
+ * Production online rooms use the durable WebSocket service. Solo uses the
+ * in-memory session. The legacy transport seam below keeps unit fixtures
+ * independent from the browser service.
  */
 
-import { bindRoomSession, createPeerTransport, createSoloTransport } from '../network/index.js';
+import { connectServerRoom } from '../network/server-room.js';
+import { bindRoomSession, createSoloTransport } from '../network/index.js';
 import { HEARTBEAT_MS, LINK_TIMEOUT_MS, validResumeToken } from '../network/protocol.js';
 import { createRoomSession } from '../session/index.js';
 import { RECONNECT_GRACE_PERIOD_MS } from '../shared/constants.js';
@@ -34,17 +28,16 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {boolean} options.multi
  * @param {string} options.name Display name (already sanitized)
  * @param {string} [options.roomCode] Sanitized room code (multi only)
- * @param {object} [options.peerOptions] PeerJS options, e.g. ICE servers
- * @param {Function} [options.Peer] PeerJS constructor (multi with the default transport factory)
  * @param {{now: () => number, setTimeout: Function, clearTimeout: Function}} options.clock Local monotonic clock
  * @param {() => number} [options.random]
- * @param {(options: object) => object} [options.createTransport] Test seam; defaults to PeerJS
+ * @param {(options: object) => object} [options.createTransport] Legacy unit-test transport seam
  * @param {{peerId: string, token: string}} [options.identity] Guest identity to resume (a new one is made if missing or invalid)
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, Peer, clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS }) {
+async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS }) {
   const now = () => clock.now();
-  const makePeer = createTransport || (options => createPeerTransport({ Peer, peerOptions, clock, ...options }));
+  if (multi && !createTransport) throw new Error('test transport required');
+  const makePeer = createTransport;
   const wait = ms => new Promise(resolve => clock.setTimeout(resolve, ms));
   const hostId = multi ? hostIdFor(roomCode) : SOLO_ID;
   const guest = validIdentity(identity) ? { peerId: identity.peerId, token: identity.token } : createIdentity(random);
@@ -190,5 +183,27 @@ export async function openRoom({ multi, name, roomCode = '', peerOptions = {}, P
       transport.close();
       session?.dispose();
     },
+  };
+}
+
+/** Online production rooms use the v2 service; injected transports retain the legacy unit-test seam. */
+export async function openRoom(options) {
+  if (!options.multi || options.createTransport) return openLocalRoom(options);
+  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name,
+    resume: options.identity, endpoint: options.endpoint, location: options.location,
+    clock: options.clock, WebSocket: options.WebSocket, random: options.random, signal: options.signal,
+    expectedCourseHash: options.expectedCourseHash, crypto: options.crypto,
+  });
+  return {
+    serverOwned: true, resumed: server.resumed, localId: server.localId, roomCode: server.roomCode,
+    get controllerId() { return server.controllerId; },
+    get isHost() { return server.isController; }, // Compatibility permission flag for existing view models.
+    get isController() { return server.isController; },
+    get identity() { return server.identity; },
+    get snapshot() { return server.snapshot; },
+    get connected() { return server.connected; },
+    now: server.now, command: server.send, presence: server.sendPresence,
+    onSnapshot: server.onSnapshot, onPresence: server.onPresence, onStatus: server.onStatus,
+    close: options => server.close(options),
   };
 }
