@@ -30,21 +30,24 @@ export function createWallFade(THREE) {
         if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
         right.normalize();
         const up = new V().crossVectors(right, dir).normalize(), meshes = entries.map(w => w.mesh), target = new V(), d = new V();
-        // Centre, left, right and above; never below, so the platform under the ball is not hit.
-        for (const [a, b] of [[0, 0], [1, 0], [-1, 0], [0, 1]]) {
+        // Centre, left, right and above for every entry; never below for platforms, so the platform
+        // under the ball is not hit. Walls also get a ray to the ball's lower half (CL2 #103), or a
+        // wall edge in front of the ball could hide it without fading.
+        for (const [a, b] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
           target.copy(to).addScaledVector(right, a * BALL_RADIUS * 1.5).addScaledVector(up, b * BALL_RADIUS * 1.5);
           d.subVectors(target, from);
           const l = d.length();
           if (l < 2) continue;
           d.multiplyScalar(1 / l);
           ray.set(from, d); ray.near = 0; ray.far = Math.max(0, l - 1);
-          for (const hit of ray.intersectObjects(meshes, false)) blocked.add(hit.object);
+          for (const hit of ray.intersectObjects(meshes, false)) if (b >= 0 || hit.object.userData.wall) blocked.add(hit.object);
         }
       }
-      for (const w of entries) {
-        if (!w.box) { w.mesh.updateWorldMatrix(true, false); w.box = new THREE.Box3().setFromObject(w.mesh).expandByScalar(3); }
-        if (w.box.containsPoint(from)) blocked.add(w.mesh);
-      }
+    }
+    // Free roam and the putt transition pass no ball; the wall around the camera still fades (CL2 #103).
+    for (const w of entries) {
+      if (!w.box) { w.mesh.updateWorldMatrix(true, false); w.box = new THREE.Box3().setFromObject(w.mesh).expandByScalar(3); }
+      if (w.box.containsPoint(from)) blocked.add(w.mesh);
     }
     const k = Math.min(1, dt * 10);
     for (const w of entries) {

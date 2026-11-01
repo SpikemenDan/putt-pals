@@ -12,6 +12,7 @@ import { SERVER_ROOM_VERSION, validRoomSnapshot } from '../../src/network/contra
 
 await import('./session-recovery.test.mjs');
 await import('./durable-recovery.test.mjs');
+await import('./traffic.test.mjs');
 await import('./hibernation-runtime.test.mjs');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -258,17 +259,23 @@ async function main() {
     assert.ok(validRoomSnapshot(host.snapshot), 'joined room snapshots remain valid');
     assert.deepEqual(host.frames.filter(frame => frame.type === 'error'), [], 'host has no prior protocol errors');
 
-    const fifthSocket = new WebSocket(`${baseUrl}/api/rooms/${testRoomCode}/socket`);
-    const fifth = observe(fifthSocket);
+    phase = 'eight-member capacity';
+    const capacityRoom = 'room131';
+    const capacityClients = [];
+    for (let i = 1; i <= 8; i += 1) capacityClients.push(await openRoom(baseUrl, `Cap ${i}`, null, capacityRoom));
+    assert.equal(capacityClients[7].snapshot.seats.length, 8);
+    const ninthSocket = new WebSocket(`${baseUrl}/api/rooms/${capacityRoom}/socket`);
+    const ninth = observe(ninthSocket);
     await new Promise((resolve, reject) => {
-      fifthSocket.addEventListener('open', resolve, { once: true });
-      fifthSocket.addEventListener('error', reject, { once: true });
+      ninthSocket.addEventListener('open', resolve, { once: true });
+      ninthSocket.addEventListener('error', reject, { once: true });
     });
-    const fullResponse = nextFrame(fifth, frame => frame.type === 'error');
-    fifthSocket.send(JSON.stringify({
-      version: SERVER_ROOM_VERSION, type: 'hello', roomCode: testRoomCode, name: 'Fifth', resume: null,
+    const fullResponse = nextFrame(ninth, frame => frame.type === 'error');
+    ninthSocket.send(JSON.stringify({
+      version: SERVER_ROOM_VERSION, type: 'hello', roomCode: capacityRoom, name: 'Ninth', resume: null,
     }));
     assert.equal((await fullResponse).code, 'room-full');
+    for (const client of capacityClients) client.socket.close();
 
     phase = 'guest controller guard';
     assert.equal((await command(clients[1], { type: 'START_VOTING' })).code, 'unauthorized');
@@ -349,7 +356,7 @@ async function main() {
     const results = await waitForSnapshot(controller, snapshot => snapshot.session.node === 'results');
     assert.equal(results.session.context.players[host.playerId].scores.length, 6);
     assert.equal(results.session.context.players[clients[1].playerId].scores.length, 6);
-    console.log('Local Wrangler runtime passed: routing/isolation, v2 admission, four-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
+    console.log('Local Wrangler runtime passed: routing/isolation, v2 admission, eight-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
   } catch (error) {
     throw new Error(`${phase}: ${error.message}`, { cause: error });
   } finally {

@@ -149,10 +149,11 @@ function fakeClock() {
     const legacyEnd = legacy.$('endt').textContent, legacyAgain = legacy.$('again').textContent;
     await act(async () => {
       t.store.setLocal({ mode: 'wait' });
-      t.store.setRoom({ ...room, phase: 'results', puttIndex: 5, completedMaps: [0, 8], totals: { solo: { name: 'Ana', total: 24, wins: 2 }, b: { name: 'Ben', total: 30, wins: 0 }, c: { name: 'Cy', total: 32, wins: 0 } },
-        last: { mapIndex: 8, scores: { solo: 14, b: 17, c: 20 }, winners: ['solo'] } }, 99999);
+      t.store.setRoom({ ...room, phase: 'results', puttIndex: 5, completedMaps: [0, 8], totals: { solo: { name: 'Ana', total: 24, par: 18, wins: 2 }, b: { name: 'Ben', total: 30, par: 18, wins: 0 }, c: { name: 'Cy', total: 32, par: 18, wins: 0 } },
+        last: { mapIndex: 8, scores: { solo: 14, b: 17, c: 20 }, pars: { solo: 10, b: 10, c: 10 }, winners: ['solo'] } }, 99999);
     });
-    assert.equal(t.within('[data-ui=results] p').textContent, legacyEnd);
+    // C3: results now lead with strokes minus par, so the text deliberately differs from the legacy strokes-only wording.
+    assert.equal(t.within('[data-ui=results] p').textContent, 'Dune Serpent: Ana 14 (+4) · Ben 17 (+7) · Cy 20 (+10). Map winner: Ana. Standings after map 2/3: Ana +6 · Ben +12 · Cy +14.');
     assert.equal(t.within('[data-ui=results] button').textContent, legacyAgain);
     R.peers = own;
     assert.deepEqual(legacy.errors, []);
@@ -179,6 +180,21 @@ function fakeClock() {
     await t.teardown();
   });
 
+  await scenario('landing: the style picker lists the cosmetics catalog and dispatches validated ids', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ active: false }));
+    const selects = [...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')];
+    assert.equal(selects.length, 3, 'ball, trail and celebration');
+    assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti'], 'defaults selected');
+    assert.ok(selects.every(s => s.options.length >= 3));
+    t.commands.length = 0;
+    await act(async () => { selects[1].value = 'rainbow'; selects[1].dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+    assert.deepEqual(t.commands, [{ type: 'set-cosmetic', kind: 'trail', id: 'rainbow' }]);
+    await act(async () => t.store.setLocal({ cosmetics: { ball: 'ember', trail: 'rainbow', celebration: 'gold' } }));
+    assert.deepEqual([...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['ember', 'rainbow', 'gold'], 'the view follows the stored choice');
+    await t.teardown();
+  });
+
   await scenario('landing: join needs a room code, both buttons dispatch, connecting disables them; join validation matches legacy', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));
@@ -200,18 +216,16 @@ function fakeClock() {
     t.commands.length = 0;
     await click(join);
     await click(solo);
-    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', iceText: '' }, { type: 'play-solo', name: '  Zed  ' }]);
+    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' }, { type: 'play-solo', name: '  Zed  ' }]);
     await act(async () => t.store.setLocal({ connecting: true }));
     assert.equal(join.disabled, true); assert.equal(solo.disabled, true);
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!', iceText: '' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom', peerOptions: {} });
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: 'x', iceText: '{"urls":1}' }), { ok: false, message: 'ICE servers must be a JSON array.' });
+    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
     assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Enter a room code.' });
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: 'a', iceText: '[{"urls":"turn:x"}]' }).peerOptions, { config: { iceServers: [{ urls: 'turn:x' }] } });
     assert.equal(ui.parseJoinRequest({ multi: false, name: '' }).name, 'Player');
     assert.equal(ui.initialRoomCode('#room=AB-cd9'), 'abcd9');
     assert.equal(ui.parseJoinRequest({ multi: true, roomCode: 'abcdefghijklmnop' }).roomCode, 'abcdefghijkl', 'room codes keep 12 characters');
     assert.equal(ui.sanitizeName('abcdefghijklmnopq'), 'abcdefghijklmn', 'names keep 14 characters');
-    assert.equal(ui.initialRoomCode('', () => 0.3), 'kkkk');
+    assert.equal(ui.initialRoomCode('', () => 0.3), 'kkkkkkkk');
     await t.teardown();
   });
 
@@ -343,7 +357,7 @@ function fakeClock() {
     await act(async () => t.store.setLocal({ mode: 'wait' }));
     const results = t.within('[data-ui=results]');
     assert.ok(shown(results));
-    assert.equal(results.querySelector('p').textContent, 'Dune Serpent: Ana 12 · Ben 16. Map winner: Ana. Standings after map 1/3: Ana 12 · Ben 16.');
+    assert.equal(results.querySelector('p').textContent, 'Dune Serpent: Ana 12 (-3) · Ben 16 (+1). Map winner: Ana. Standings after map 1/3: Ana -3 · Ben +1.');
     assert.equal(results.querySelector('button').textContent, 'Next map vote');
     assert.ok(results.querySelector('table'), 'final scorecard on the results card');
     assert.equal(results.querySelector('[data-ui=scorecard] div').textContent, 'SCORECARDDune Serpent · Map 1/3', 'results title counts the finished map');
@@ -366,7 +380,7 @@ function fakeClock() {
     snap = t.session.getSnapshot();
     assert.equal(snap.phase, 'results');
     const text = t.within('[data-ui=results] p').textContent;
-    assert.match(text, /Standings after map 3\/3: Ana 36 · Ben 40\. OVERALL CHAMPION: Ana!$/);
+    assert.match(text, /Standings after map 3\/3: Ana -9 · Ben -5\. OVERALL CHAMPION: Ana!$/);
     assert.equal(t.within('[data-ui=results] button').textContent, 'Back to lobby');
     const seen = [];
     for (let i = 0; i < 10; i++) { seen.push(t.within('[data-ui=banner]').textContent); await t.step(1000); }
@@ -401,7 +415,7 @@ function fakeClock() {
       await t.send({ type: 'REPORT_SCORE', playerId: 'host', roundNumber: s.roundNumber, puttIndex: s.puttIndex, strokes: 2 });
       await t.step(5000);
     }
-    assert.equal(t.within('[data-ui=results] p').textContent, 'Switchback Garden: Ana 12. Practice round finished.');
+    assert.equal(t.within('[data-ui=results] p').textContent, 'Switchback Garden: Ana 12 (E). Practice round finished.');
     assert.equal(t.within('[data-ui=results] button').textContent, 'Pick another map');
     assert.equal(t.within('[data-ui=banner]').textContent, 'PRACTICE DONESWITCHBACK GARDEN');
     await click(t.within('[data-ui=results] button'));
@@ -503,7 +517,7 @@ function fakeClock() {
     await t.step(1);
     assert.equal(t.within('[data-ui=game] [role=status]').textContent, '', 'toasts clear after 3 s');
     await act(async () => t.store.setLocal({ connected: false }));
-    assert.equal(t.root.querySelector('[role=alert]').textContent, 'Connection lost. Gameplay paused. Reload and rejoin a new room; host migration is not supported.');
+    assert.equal(t.root.querySelector('[role=alert]').textContent, 'Connection lost. Gameplay is paused. Leave and rejoin the room, or try again when the service is available.');
     assert.equal(t.root.querySelector('[role=alert]').hidden, false);
     await act(async () => t.store.setLocal({ connected: true }));
     assert.equal(t.root.querySelector('[role=alert]').hidden, true);

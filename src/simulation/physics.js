@@ -15,7 +15,7 @@ import {
 import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
-import { ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
+import { auraAcceleration, ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
 
 export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;
@@ -373,6 +373,10 @@ function stepBallTick(player, course, dt, hazardTime) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
+  if (player.auraSources?.length) { // Love / Hate Ball of other players (G1d); absent or empty leaves every result unchanged
+    const [ax, ay] = auraAcceleration(player.auraSources, player.x, player.y, dt);
+    player.vx += ax; player.vy += ay;
+  }
   const R = ballRadiusOf(player);
   const ghost = !!player.armedPowerups?.ghost; // Ghost Ball skips wall and obstacle bounces
   let f = contactHeight(course, player.x, player.y, R);

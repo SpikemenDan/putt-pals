@@ -9,6 +9,7 @@
 5. MODERNIZATION_PLAN.md: product direction (the game vision), confirmed scope, technology choices and stage status. Read when the task touches product scope.
 6. ARCHITECTURE.md: module boundaries, shared contracts and the design for power-ups, hazards, modes and cosmetics. Read for gameplay or contract work.
 7. TASKS.md: roadmap IDs, dependency graph and the vision backlog. Search it instead of reading it whole.
+8. docs/AGENT_ROUTING.md: which model (Claude or Gemini Pro) takes which kind of task; Gemini follows GEMINI.md.
 
 ## Scope and authority
 
@@ -28,12 +29,3 @@ The confirmed target is private friend rooms in desktop browsers with a normal h
 - Report changed files, verification results, assumptions and failures in the issue or PR. Partial commits keep the issue ACTIVE until acceptance criteria are met; a ready worker submits for REVIEW and the coordinator closes the issue after accepted integration and verification.
 - The coordinator owns shared status and roadmap docs (PROJECT_STATUS.md, TASKS.md, docs/ISSUES.md). Live GitHub claims supersede any snapshot.
 - Integrate in dependency order, run current-head checks and obtain user merge approval unless explicitly delegated. Do not bypass branch rules or force-push shared branches. Do not publish, provision paid services or send external messages without authorization.
-
-## Delegating mundane tasks to Gemini CLI
-
-The owner uses Gemini CLI (Gemini Pro, `gemini -m pro`) for mundane work so other agents keep their budget for design-heavy tasks. Gemini follows this guide and docs/ENGINEERING_RULES.md like any other agent; GEMINI.md imports this file.
-
-- **Good fits:** typo and formatting fixes in docs, link and reference checks, summarizing logs or CI output, listing and inventory commands, drafting PR descriptions or changelog text for review, boilerplate test scaffolding that a reviewer will read.
-- **Not for Gemini:** `src/simulation`, `src/shared`, tuning values, course data, package and build files, CI configuration, anything that changes shot trajectories, and any remote write, merge or deployment.
-- Run it headless and read-only unless an edit is the task: `gemini -m pro --approval-mode plan -p "<task>"`. Use `--approval-mode default` for edits and review the diff before committing. Do not use `--yolo`.
-- Gemini works in its own worktree and branch, and commits only with the owner's approval, like every other agent.

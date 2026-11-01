@@ -47,6 +47,8 @@ jobs:
         run: npm run test:session
       - name: Check room transports and protocol boundaries
         run: npm run test:network
+      - name: Check local Worker recovery, abuse boundaries and traffic measurements
+        run: npm run test:rooms:local
       - name: Check procedural audio and resource ownership
         run: npm run test:audio
       - name: Check renderer and camera parity with the legacy scene
@@ -99,7 +101,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
       # PR #51 accidentally merged the diagnostic workflow. Restore the normal gates;
       # keep the diagnostic probe available explicitly, outside the default acceptance run.
-      - name: Run real-browser solo, input, practice, lifecycle and four-player WebRTC flows
+      - name: Run real-browser solo, practice and server-room WebSocket flows
         run: |
           # Tests tagged @slow (for example nine real browser windows at once) run nightly and on manual runs only.
           SKIP='join repro'

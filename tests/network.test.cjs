@@ -7,6 +7,7 @@ const { EventEmitter } = require('node:events');
   const { isRoomTransport } = await import('../src/shared/transport.js');
   const { encode, decode, MAX_MESSAGE_BYTES, validCommand } = await import('../src/network/protocol.js');
   const { MAX_PLAYERS } = await import('../src/shared/constants.js');
+  await import('./rooms/server-client.test.mjs');
   let passed = 0;
   const run = async (name, fn) => { await fn(); passed++; console.log('PASS:', name); };
   const fixture = async () => {
@@ -88,8 +89,8 @@ const { EventEmitter } = require('node:events');
         { ...snapshot, players: { ...snapshot.players, host: { ...snapshot.players.host, strokes: -1 } } },
         { ...snapshot, players: { ...snapshot.players, host: { ...snapshot.players.host, extra: { nested: [] } } } },
         { ...snapshot, roster: ['missing'] }, { ...snapshot, state: 'results' },
-        { ...snapshot, totals: { host: { name: 'Host', total: -1, wins: 0 } } },
-        { ...snapshot, last: { mapIndex: 0, scores: { host: 1 }, winners: ['missing'] } },
+        { ...snapshot, totals: { host: { name: 'Host', total: -1, par: 0, wins: 0 } } },
+        { ...snapshot, last: { mapIndex: 0, scores: { host: 1 }, pars: { host: 1 }, winners: ['missing'] } },
         { ...snapshot, presence: { missing: { x: 1, y: 2, z: 0, mode: 'play', strokes: 0 } } },
       ]) assert.equal(guest.receive('host', JSON.stringify(make({ type: 'snapshot', senderId: 'host',
         sessionId: 'session-1', roundNumber: snapshot.roundNumber, puttIndex: snapshot.puttIndex, sequence: 999, payload }))), false);
@@ -98,7 +99,7 @@ const { EventEmitter } = require('node:events');
       const huge = structuredClone(snapshot);
       for (let i = 0; i < 124; i++) {
         const id = `past-${i}`;
-        huge.totals[id] = { name: 'Historical', total: Number.MAX_SAFE_INTEGER, wins: 0 };
+        huge.totals[id] = { name: 'Historical', total: Number.MAX_SAFE_INTEGER, par: 0, wins: 0 };
         huge.players[id] = { ...huge.players.host, id, name: 'Historical', connected: false,
           scores: Array.from({ length: 6 }, () => ({ score: Number.MAX_SAFE_INTEGER, timedOut: false, par: 2, penalty: 0 })) };
       }

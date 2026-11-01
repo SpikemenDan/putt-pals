@@ -8,12 +8,6 @@
 const { expect } = require('@playwright/test');
 const solver = require('../../fixtures/cup-capture/solutions.json');
 
-// global-setup.cjs picks a free port per run and publishes it here, so parallel runs never collide.
-const PEER_PORT = Number(process.env.PP_PEER_PORT) || 9310;
-const PEER_PATH = '/pp';
-// Loopback signalling and no STUN, so tests never touch the public network.
-const PEER_SERVER = { debug: Number(process.env.PP_PEER_DEBUG || 0), host: '127.0.0.1', port: PEER_PORT, path: PEER_PATH, secure: false, config: { iceServers: [] } };
-
 const best = (map, putt) => solver.results.find(r => r.map === map && r.putt === putt).best;
 
 /** Fails with the page's console output attached, so CI-only failures explain themselves. */
@@ -30,15 +24,15 @@ async function openApp(page, name) {
     // Headed browsers request /favicon.ico, which the app does not ship; that 404 is not an app error.
     if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) errors.push(message.text());
   });
-  await page.addInitScript(peer => {
-    window.__PP_APP_HOOK = true; window.__PP_PEER_SERVER = peer;
+  await page.addInitScript(() => {
+    window.__PP_APP_HOOK = true;
     // Every banner the page shows, so short-lived banners can be asserted after the fact.
     window.__ppBanners = [];
     new MutationObserver(() => {
       const text = document.querySelector('[data-ui=banner]')?.textContent;
       if (text && text !== window.__ppBanners.at(-1)) window.__ppBanners.push(text);
     }).observe(document, { subtree: true, childList: true, characterData: true });
-  }, PEER_SERVER);
+  });
   await page.goto('/');
   await explained(log, name + ' start screen', () => expect(page.locator('[data-ui=landing]')).toBeVisible());
 
@@ -104,4 +98,4 @@ async function playPutt(players) {
   return s;
 }
 
-module.exports = { PEER_PORT, PEER_PATH, PEER_SERVER, best, openApp, until, playPutt };
+module.exports = { best, openApp, until, playPutt };

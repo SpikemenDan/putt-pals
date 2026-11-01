@@ -67,6 +67,45 @@ export function clearAtRest(player, catalog = POWERUP_CATALOG) {
   for (const e of catalog) if (e.duration.kind === DurationKinds.STROKE && e.id in player.armedPowerups) player.armedPowerups[e.id] = 0;
 }
 
+/** Aim-mode ids and the indicator mode each one puts on the target's aim (G1c). */
+export const AIM_MODES = Object.freeze({ aim360: 'spin', aim180: 'sweep' });
+
+/** Aim hook: the indicator mode ('spin', 'sweep' or '') from the player's pending opponent effects; the first in catalog order wins. */
+export function aimModeOf(player, catalog = POWERUP_CATALOG) {
+  const pending = player.pendingPowerups;
+  if (!pending) return '';
+  for (const id of powerupIds(catalog)) if (pending[id] && AIM_MODES[id]) return AIM_MODES[id];
+  return '';
+}
+
+/** Aura kinds: the catalog ids whose owner's ball acts on other players' balls. */
+export const AURA_KINDS = Object.freeze(['love', 'hate']);
+
+/**
+ * Aura sources from presence-like entries `{x, y, effect}` of other players. Each client applies them to its
+ * own ball only (remote balls are non-colliding ghosts). Unknown effects and non-finite positions are ignored.
+ */
+export const auraSourcesOf = others => others.filter(o => o && AURA_KINDS.includes(o.effect) && Number.isFinite(o.x) && Number.isFinite(o.y))
+  .map(o => ({ kind: o.effect, x: o.x, y: o.y }));
+
+/**
+ * Aura hook: adds the acceleration (x/y, world units per second squared) that the active sources exert on a ball
+ * at (x, y) over dt. Love pulls toward the source and Hate pushes away, both fading linearly to zero at the
+ * reach. Returns [0, 0] when there are no sources, so inactive results stay bit-identical.
+ */
+export function auraAcceleration(sources, x, y, dt) {
+  let ax = 0, ay = 0;
+  if (!sources?.length) return [ax, ay];
+  const range = TUNING.powerups.auraRange;
+  for (const s of sources) {
+    const dx = s.x - x, dy = s.y - y, d = Math.hypot(dx, dy);
+    if (!(d > 1e-6 && d < range)) continue;
+    const strength = (s.kind === 'love' ? TUNING.powerups.auraPull : -TUNING.powerups.auraPush) * (1 - d / range) * dt;
+    ax += dx / d * strength; ay += dy / d * strength;
+  }
+  return [ax, ay];
+}
+
 /** Radius hook: the ball radius for the armed effects (exactly BALL_RADIUS when none apply). Small and Tall Ball stack multiplicatively. */
 export function ballRadiusOf(player) {
   const armed = player.armedPowerups;

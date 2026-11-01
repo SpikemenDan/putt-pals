@@ -54,7 +54,7 @@ Collectible ball skins and trail skins (speed lines, elemental auras, comic spar
 
 ## What exists today
 
-Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding Hole Magnet and Steady Aim plus the legacy Rewind, Reversiball and Zanyball (retired by decision), `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms still use PeerJS; the server-owned room migration (N4) is in progress.
+Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding Hole Magnet and Steady Aim plus the legacy Rewind, Reversiball and Zanyball (retired by decision), `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms now use the server-owned WebSocket service (N4D #122 and N4E #123 merged); N4F coverage/quota evidence and N4G hosted acceptance remain.
 
 Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other than Hole Magnet and Steady Aim, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers, skins and ace celebrations. The task breakdown is in TASKS.md.
 
@@ -127,7 +127,7 @@ TypeScript, Zod, Vitest, ESLint and Prettier were considered and are not adopted
 | M1 Build and module extraction: Vite, shared contracts, headless simulation, adapters | Done |
 | M2 Course data and validation: 22 validated courses, CLI imports the real simulation | Done |
 | M3 UI and lifecycle: React screens, XState room lifecycle, input adapter, modular app | Done |
-| M4 Server-owned rooms (N4, #65): contracts, local Worker runtime and room coordination are merged; durable recovery, browser adoption, cross-browser coverage and an authorized preview deployment remain | In progress |
+| M4 Server-owned rooms (N4, #65): contracts, local runtime, room coordination, durable recovery and browser adoption are merged; N4F coverage/quota evidence and an authorized N4G preview deployment remain | In progress |
 | M5 Three.js upgrade and desktop rendering validation | Done |
 | Look and feel (V1a-V1d): toon style, sky world, palettes, ambient weather, comic HUD | Done |
 | M6 Release readiness (Q1 #18): par-achievability check under final physics, production-like preview, rollback, manual playtests | Blocked on N4 |

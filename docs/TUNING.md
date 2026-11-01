@@ -45,6 +45,9 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `powerups.magnetRange` | 90 | 0 to 1000 | Hole Magnet reach (full-size cup). |
 | `powerups.magnetPull` | 300 | 0 to 10000 | Hole Magnet pull acceleration (full-size cup). |
 | `powerups.chipLaunch` | 300 | 0 to 5000 | Chip In vertical launch speed added to the shot. |
+| `powerups.auraRange` | 120 | 0 to 1000 | Love and Hate Ball reach around the owner (world units). |
+| `powerups.auraPull` | 260 | 0 to 10000 | Love Ball pull acceleration on a ball at the owner (falls off linearly to the edge of the reach). |
+| `powerups.auraPush` | 260 | 0 to 10000 | Hate Ball push acceleration on a ball at the owner (falls off linearly to the edge of the reach). |
 | `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
 | `powerups.tallBallScale` | 1.5 | 1 to 1.6 | Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup). |
 | `hazards.padRadius` | 18 | 0 to 100 | Jump pad trigger radius. |
@@ -53,6 +56,8 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `hazards.teleporterRadius` | 16 | 0 to 100 | Teleporter trigger radius. |
 | `hazards.teleporterCooldown` | 0.8 | 0 to 10 | Seconds before a teleporter can fire again. |
 | `aim.swayPeriod` | 1.4 | 0.1 to 60 | Seconds per aim sway cycle. |
+| `aim.spinPeriod` | 3 | 0.5 to 60 | 360° Aim: seconds for the aim indicator to turn one full circle. |
+| `aim.sweepPeriod` | 2.4 | 0.5 to 60 | 180° Aim: seconds for the aim indicator to sweep across 180° and back. |
 | `aim.spreadBase` | 0.002 | 0 to 1 | Angular spread (radians) at zero power. |
 | `aim.spreadGain` | 0.14 | 0 to 3 | Added spread (radians) at full power. |
 | `aim.spreadExponent` | 2.6 | 0.1 to 10 | How sharply spread grows with power. |

@@ -81,9 +81,10 @@ export function validSnapshot(s) {
     || !Object.entries(s.votes).every(([id, vote]) => Object.hasOwn(s.players, id) && index(vote, 22))
     || !Array.isArray(s.completedMaps) || s.completedMaps.length > 9 || !s.completedMaps.every(n => index(n, 22))
     || !record(s.totals) || Object.keys(s.totals).length > 128
-    || !Object.entries(s.totals).every(([id, t]) => validId(id) && record(t) && keys(t, ['name', 'total', 'wins']) && name(t.name) && count(t.total) && count(t.wins))) return false;
-  if (s.last !== null && (!record(s.last) || !keys(s.last, ['mapIndex', 'scores', 'winners']) || !index(s.last.mapIndex, 22) || !record(s.last.scores)
+    || !Object.entries(s.totals).every(([id, t]) => validId(id) && record(t) && keys(t, ['name', 'total', 'par', 'wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
+  if (s.last !== null && (!record(s.last) || !keys(s.last, ['mapIndex', 'scores', 'pars', 'winners']) || !index(s.last.mapIndex, 22) || !record(s.last.scores)
     || Object.keys(s.last.scores).length > MAX_PLAYERS || !Object.entries(s.last.scores).every(([id, score]) => validId(id) && count(score))
+    || !record(s.last.pars) || Object.keys(s.last.pars).length > MAX_PLAYERS || !Object.entries(s.last.pars).every(([id, par]) => Object.hasOwn(s.last.scores, id) && count(par))
     || !Array.isArray(s.last.winners) || !s.last.winners.every(id => Object.hasOwn(s.last.scores, id)))) return false;
   if (s.presence !== undefined && (!record(s.presence) || Object.keys(s.presence).length > MAX_PLAYERS
     || !Object.entries(s.presence).every(([id, p]) => Object.hasOwn(s.players, id) && s.players[id].connected && validPresence(p)))) return false;
