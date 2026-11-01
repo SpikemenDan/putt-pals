@@ -4,10 +4,10 @@ const { mkdtemp, rm } = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-async function startLocalRoomWorker(allowedOrigin) {
+async function startLocalRoomWorker(allowedOrigin, { entryPoint = 'services/rooms/worker.mjs' } = {}) {
   const { Log, LogLevel, Miniflare } = await import('miniflare');
   const { roomObjectName } = await import('../../../services/rooms/room-name.mjs');
-  const bundled = await build({ entryPoints: ['services/rooms/worker.mjs'], bundle: true, write: false,
+  const bundled = await build({ entryPoints: [entryPoint], bundle: true, write: false,
     format: 'esm', platform: 'browser', target: 'es2022', logLevel: 'silent' });
   const persistence = await mkdtemp(path.join(os.tmpdir(), 'putt-pals-n4e-browser-'));
   const scriptName = 'n4e-browser-recovery';

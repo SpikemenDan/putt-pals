@@ -4,6 +4,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
+assert.equal(fs.readFileSync(path.join(root, 'dist/_headers'), 'utf8'), fs.readFileSync(path.join(root, 'public/_headers'), 'utf8'), 'Cloudflare static header rules must survive the build');
 const source = new JSDOM(fs.readFileSync(path.join(root, 'putt-pals.html'), 'utf8'));
 const built = new JSDOM(fs.readFileSync(path.join(root, 'dist/putt-pals.html'), 'utf8'));
 try {
