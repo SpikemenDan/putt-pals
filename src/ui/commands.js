@@ -17,6 +17,8 @@ export const UiCommands = Object.freeze({
   LEAVE: 'leave',
   /** { type } — Invite / Copy invite. */
   INVITE: 'invite',
+  /** { type, kind, id } — Choose a cosmetic (kind: ball, trail or celebration; id from the cosmetics catalog). */
+  SET_COSMETIC: 'set-cosmetic',
   /** { type } — Quality: High/Low. */
   TOGGLE_QUALITY: 'toggle-quality',
   /** { type, event } — an L1 SessionEvents command without playerId; the app binds the sender. */

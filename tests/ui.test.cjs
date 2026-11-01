@@ -179,6 +179,21 @@ function fakeClock() {
     await t.teardown();
   });
 
+  await scenario('landing: the style picker lists the cosmetics catalog and dispatches validated ids', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ active: false }));
+    const selects = [...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')];
+    assert.equal(selects.length, 3, 'ball, trail and celebration');
+    assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti'], 'defaults selected');
+    assert.ok(selects.every(s => s.options.length >= 3));
+    t.commands.length = 0;
+    await act(async () => { selects[1].value = 'rainbow'; selects[1].dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+    assert.deepEqual(t.commands, [{ type: 'set-cosmetic', kind: 'trail', id: 'rainbow' }]);
+    await act(async () => t.store.setLocal({ cosmetics: { ball: 'ember', trail: 'rainbow', celebration: 'gold' } }));
+    assert.deepEqual([...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['ember', 'rainbow', 'gold'], 'the view follows the stored choice');
+    await t.teardown();
+  });
+
   await scenario('landing: join needs a room code, both buttons dispatch, connecting disables them; join validation matches legacy', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));
