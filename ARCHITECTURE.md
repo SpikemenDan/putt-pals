@@ -12,7 +12,7 @@
 - **UI and input** (`src/ui/`, `src/input/`): React 19 screens and HUD with CSS Modules; pointer and keyboard commands in their own adapter. React never drives physics ticks or mesh transforms.
 - **Audio** (`src/audio/`): procedural WebAudio adapter with injected context, storage and randomness; one context per app, gesture unlock, persistent mute, bounded voices and explicit teardown. It consumes simulation events and world-space listener positions.
 
-Physics advances through a requestAnimationFrame accumulator. Online controller departure preserves the server-owned match; the service elects another connected player. Deployment and separate-network acceptance remain N4G gates.
+Physics advances through a requestAnimationFrame accumulator. Online controller departure preserves the server-owned match; the service elects another connected player. Deployment and separate-network acceptance remain N4G gates. Library versions are pinned in package.json (the source of truth). Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs guards the legacy CSS. Gameplay numbers live in `src/shared/tuning.js` (docs/TUNING.md).
 
 ## Layout
 
@@ -61,67 +61,25 @@ The concrete contracts are in the next section; these principles govern changes 
 - Rendering: explicit sim-to-world transform, snapshot interpolation, resource ownership/disposal. Visual interpolation never changes scoring or authoritative room transitions.
 - UI: cached immutable snapshots and stable subscribe/getSnapshot methods; commands for input, no direct mutations of simulation state.
 
-## Agreed shared contracts (Task C1)
+## Shared contracts
 
-The contracts below are implemented in `src/shared/` and verified by `tests/contracts.test.cjs`:
+Implemented in `src/shared/` and verified by `tests/contracts.test.cjs`. Signatures and values live in code and that test, not here. Gameplay numbers live in `src/shared/tuning.js` (docs/TUNING.md).
 
-### 1. Constants (`src/shared/constants.js`)
-- Physics: `BALL_RADIUS = 5`, `DEFAULT_CUP_RADIUS = 15`, `MIN_CUP_RADIUS = 8`, `SHOT_POWER = 900`, `FIXED_TIMESTEP = 1 / 240`, `TURF_FRICTION = 0.75`.
-- Surface drag multipliers: `turf: 1.0`, `sand: 3.5`, `ice: 0.15`, `slime: 6.0`.
-- Limits & Rules: `MIN_TIMEOUT_SECONDS = 120`, `MAX_TIMEOUT_SECONDS = 600`, `DEFAULT_PAR = 2`, `DEFAULT_PENALTY = 3`, `STARTER_COURSE_INDICES = [0, 8, 20, 21, 5, 19]`.
-- Network & Protocol: `PROTOCOL_VERSION = 1`, `MAX_PLAYERS = 8`, `SNAPSHOT_INTERVAL_MS = 70`, `VOTING_COUNTDOWN_SECONDS = 15`, `RECONNECT_GRACE_PERIOD_MS = 30000`, `MAX_PLAYER_NAME_LENGTH = 14`.
+| File | Purpose |
+| --- | --- |
+| `constants.js` | Physics, surface, limit, protocol and player constants |
+| `coords.js` | Simulation (x/y plane, z up) to Three.js world transforms |
+| `scoring.js` | Timeout score, score formatting, scorecard summary, ranking |
+| `courses.js` | Putt and course validation, time-limit normalization |
+| `protocol.js` | Presence, room snapshot and vote validation; message envelope |
+| `simulation.js` | Player state, shot application, domain event types, engine contract |
+| `session.js` | Phases, modes, commands, deterministic vote resolution, command gating |
+| `transport.js` | Connection states and the room transport contract |
+| `render.js` | Camera modes, immutable render snapshot, sightline test |
+| `mocks.js` | Sample course, mock simulation and in-memory transports for tests |
 
-### 2. Coordinate transformations (`src/shared/coords.js`)
-- Simulation: horizontal plane `[x, y]`, vertical elevation `z`.
-- Three.js World: horizontal `x = simX + origin[0]`, vertical `y = simZ + BALL_RADIUS`, horizontal depth `z = simY + origin[1]`.
-- Functions: `simToWorld(simX, simY, simZ, origin, heightOffset)`, `worldToSim(worldX, worldY, worldZ, origin, heightOffset)`, `simToWorldGround([simX, simY], origin)`.
+Changing an agreed signature requires updating `src/shared/`, `tests/contracts.test.cjs` and notifying affected task owners.
 
-### 3. Pure scoring calculations (`src/shared/scoring.js`)
-- `calculateTimeoutScore(strokes, par, penalty)`: `Math.max(strokes, par + penalty)` after defensive input normalization; N1 removes the old 99-score cap and preserves zero penalties. Wire scores/strokes are nonnegative safe integers.
-- `formatScoreEntry(score, timedOut, par, penalty)`: e.g. "1" or "2+3*".
-- `summarizeScorecard(holes)`: computes total strokes, total par, +/- relative score, hole-in-ones, timeouts.
-- `rankPlayers(players)`: ranks players by lowest total strokes, breaking ties by highest hole-in-ones.
-
-### 4. Course validation & schemas (`src/shared/courses.js`)
-- `validatePutt(putt)`: validates tee, hole, par (1..10), penalty (0..10), optional limitSeconds (120..600), cupRadius (8..15).
-- `validateCourse(course)`: validates id, name, index, starter constraints (6 putts, in starter set).
-- `normalizeLimit(limit)`: enforces 120..600 second bounds, defaulting to 120.
-
-### 5. Protocol boundary validation (`src/shared/protocol.js`)
-- `validatePresence(data, maxMaps)`: validates player name length, map index, coordinates, scores array, powerups.
-- `validateRoomSnapshot(snapshot, maxMaps)`: validates room phase, map, round, start time, roster.
-- `validateVote(vote, maxMaps)`: validates map voting index.
-- `createMessageEnvelope(type, payload, senderId)`: standard envelope with version, timestamp, type, payload, senderId.
-
-### 6. Simulation interface & domain events (`src/shared/simulation.js`)
-- `createPlayerState(name, colorIndex, options)`: pure player simulation state record without global closures.
-- `applyShot(player, angle, power, powerMultiplier)`: sets velocities, strokes, and emits shot event.
-- `SimulationEventTypes`: `shot`, `bounce`, `surface_change`, `cup_lip`, `sink`, `hazard`, `out_of_bounds`, `rest`, `timeout`.
-- Simulation contract: `addPlayer(id, name, colorIndex)`, `getPlayer(id)`, `launch(playerId, angle, power)`, `step(dt)`, `getSnapshot()`, `dispose()`.
-
-### 7. Session lifecycle & state machine (`src/shared/session.js`)
-- `SessionPhases`: `lobby`, `select`, `play`, `results`.
-- `GameModes`: `standard`, `tournament_3`, `tournament_6`, `tournament_9`, `practice`, `putt_practice`.
-- `SessionCommands`: `JOIN_ROOM`, `LEAVE_ROOM`, `SET_MODE`, `SET_POWERUPS`, `START_VOTING`, `CAST_VOTE`, `START_ROUND`, `ADVANCE_PUTT`, `FINISH_ROUND`, `RETURN_TO_LOBBY`.
-- `resolveVote(votes, eligibleMaps, { round, connectedIds })`: deterministic winner; counts only integer votes for eligible maps (and connected voters when given). Ties match the legacy host: tied maps ascending, winner `tied[(round * 7 + validVotes) % tied.length]`. No valid votes returns the first eligible map.
-- `canExecuteCommand(phase, command, isHost)`: phase and host command gating.
-
-### 8. Transport interface (`src/shared/transport.js`)
-- `ConnectionStates`: `disconnected`, `connecting`, `connected`, `reconnecting`, `closed`.
-- `RoomTransportContract`: `connect()`, `send(msg)`, `subscribe(listener)`, `close()`, `now()`, `isHost`, `peerId`, `connectionState`.
-- `isRoomTransport(transport)`: runtime contract conformance validator.
-
-### 9. Render contracts & camera (`src/shared/render.js`)
-- `CameraModes`: `ball`, `hole`, `world`, `free_roam`.
-- `createRenderSnapshot(...)`: immutable render snapshot decoupling Three.js from simulation loops.
-- `checkSightlineObstructions(cameraPos, ballPos, boundingBoxes)`: ray-AABB sightline test for wall fading.
-
-### 10. High-fidelity mocks (`src/shared/mocks.js`)
-- `createSampleCourse()`: sample course fixture for standalone testing.
-- `MockSimulation`: headless simulation mock implementing `SimulationEngineContract`.
-- `MockTransportHub` & `MockTransport`: in-memory multi-node virtual transport for fake-network integration tests.
-
-Changing an agreed signature requires updating `src/shared/`, `tests/contracts.test.cjs`, and notifying affected task owners.
 
 ## Gameplay systems design (power-ups, hazards, modes, cosmetics)
 
@@ -154,11 +112,6 @@ Ball skins, trail skins and ace celebrations are data records applied by the ren
 ## Deferred architecture changes
 
 Rapier was evaluated and production adoption is deferred (docs/reviews/P1_RAPIER.md); revisit only if the ramp, drop and tube work in K1 proves the custom physics inadequate, and treat it as a separate physics migration that re-solves every course. A general authoritative game server is unnecessary: N4 keeps ball physics in the browser and gives the server room coordination only. Public matchmaking, accounts, native packaging and offline packaging remain out of scope.
-
-## Modular application (I1)
-
-The composition root and the legacy page are described under Current state. Three.js 0.186.1 and PeerJS 1.5.4 are npm dependencies pinned in package.json, which is the source of truth for versions. Contract changes made as integration owner: `PLAYER_COLORS` is now the game's eight-colour palette (shared by renderer and UI), and presence accepts optional validated `effect` and `fx` fields. Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs guards the legacy CSS.
-
 
 ## Course geometry integrity (CL1)
 
