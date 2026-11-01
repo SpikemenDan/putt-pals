@@ -21,7 +21,7 @@
 
 export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent' });
 export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke' });
-export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode' });
+export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura' });
 
 const deepFreeze = value => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -76,6 +76,16 @@ export const POWERUP_CATALOG = deepFreeze([
     id: 'aim180', name: '180° Aim', group: 'aim-sabotage', target: PowerupTargets.OPPONENT, solo: false, weight: 1,
     duration: { kind: DurationKinds.NEXT_SHOT }, hook: PowerupHooks.AIM_MODE,
     banner: '180° AIM', toast: 'Their aim indicator sweeps back and forth on their next shot.',
+  },
+  {
+    id: 'love', name: 'Love Ball', group: 'ball-aura', target: PowerupTargets.SELF, solo: false, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.AURA,
+    banner: 'LOVE BALL', toast: 'Your ball pulls nearby rolling balls in.',
+  },
+  {
+    id: 'hate', name: 'Hate Ball', group: 'ball-aura', target: PowerupTargets.SELF, solo: false, weight: 1,
+    duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.AURA,
+    banner: 'HATE BALL', toast: 'Your ball pushes nearby rolling balls away.',
   },
 ]);
 

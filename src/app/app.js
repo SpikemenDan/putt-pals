@@ -13,7 +13,7 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
-import { aimModeOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { aimModeOf, auraSourcesOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -251,6 +251,13 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     }
   }
 
+  /** Other connected players' raw presence positions and auras, for the aura hook (G1d). */
+  function remoteBalls() {
+    const s = room?.snapshot;
+    if (!s) return [];
+    return Object.entries(presence).filter(([id, p]) => id !== room.localId && s.players[id]?.connected && s.roster.includes(id) && p.mode === 'play').map(([, p]) => p);
+  }
+
   function remotesForRender(now) {
     const s = room?.snapshot;
     if (!s || !putt) return [];
@@ -306,6 +313,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     else if (room && putt && view && screens.game) {
       panoramaBuilt = false;
       if (room.connected) {
+        putt.setAuras(auraSourcesOf(remoteBalls()));
         const out = putt.frame(t, dt);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);

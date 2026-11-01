@@ -16,7 +16,7 @@
     "test:contracts": "node tests/contracts.test.cjs && node tests/server-room-contracts.test.cjs && node tests/gameplay.test.cjs",
     "test:gameplay": "node tests/gameplay.test.cjs",
     "test:rooms:local": "npm run build && node tests/rooms/local-runtime.test.mjs",
-    "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs && node tests/selfutility.test.cjs && node tests/aimsabotage.test.cjs",
+    "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs && node tests/selfutility.test.cjs && node tests/aimsabotage.test.cjs && node tests/ballauras.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
     "test:render": "node tests/render.test.cjs && node tests/render-modern.test.cjs",
     "test:input": "node tests/input.test.cjs",

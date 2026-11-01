@@ -26,6 +26,8 @@ export function createRecipes({ tone, puff, random }) {
   pu_tall:(c,t,o)=>{tone(c,o,'sine',240,150,t,.22,.5);},
   pu_aim360:(c,t,o)=>{tone(c,o,'triangle',400,1200,t,.3,.25);tone(c,o,'triangle',1200,400,t+.15,.3,.2);},
   pu_aim180:(c,t,o)=>{tone(c,o,'sine',500,900,t,.2,.25);tone(c,o,'sine',900,500,t+.2,.2,.25);},
+  pu_love:(c,t,o)=>{tone(c,o,'sine',520,780,t,.2,.3);tone(c,o,'sine',660,990,t+.08,.2,.25);},
+  pu_hate:(c,t,o)=>{tone(c,o,'sawtooth',300,120,t,.25,.25);puff(c,o,'bandpass',300,150,t,.2,.25);},
   pu_sticky:(c,t,o)=>{puff(c,o,'bandpass',500,250,t,.2,.5);tone(c,o,'sine',200,110,t,.18,.3);}
   });
 }

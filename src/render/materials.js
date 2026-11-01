@@ -18,7 +18,7 @@ import { createInkMaterial, createInkUniforms, INK_COLOR } from './outline.js';
 
 export const SHADER_VERTEX = 'varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
 
-export const EFFECT_COLORS = Object.freeze({ mag: 0x36cfff, steady: 0x73ffaa, chip: 0xffd23f, ghost: 0xe8f0ff, small: 0xff7ad9, tall: 0xff9a3c, sticky: 0x9be564, aim360: 0xff6b35, aim180: 0xc77dff });
+export const EFFECT_COLORS = Object.freeze({ mag: 0x36cfff, steady: 0x73ffaa, chip: 0xffd23f, ghost: 0xe8f0ff, small: 0xff7ad9, tall: 0xff9a3c, sticky: 0x9be564, aim360: 0xff6b35, aim180: 0xc77dff, love: 0xff5c8a, hate: 0x8a2be2 });
 export const EFFECT_KINDS = Object.freeze(Object.keys(EFFECT_COLORS));
 /** Player colours by colour index (legacy COLS); the canonical list lives in src/shared/constants.js. */
 export { PLAYER_COLORS } from '../shared/constants.js';
