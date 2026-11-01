@@ -149,10 +149,11 @@ function fakeClock() {
     const legacyEnd = legacy.$('endt').textContent, legacyAgain = legacy.$('again').textContent;
     await act(async () => {
       t.store.setLocal({ mode: 'wait' });
-      t.store.setRoom({ ...room, phase: 'results', puttIndex: 5, completedMaps: [0, 8], totals: { solo: { name: 'Ana', total: 24, wins: 2 }, b: { name: 'Ben', total: 30, wins: 0 }, c: { name: 'Cy', total: 32, wins: 0 } },
-        last: { mapIndex: 8, scores: { solo: 14, b: 17, c: 20 }, winners: ['solo'] } }, 99999);
+      t.store.setRoom({ ...room, phase: 'results', puttIndex: 5, completedMaps: [0, 8], totals: { solo: { name: 'Ana', total: 24, par: 18, wins: 2 }, b: { name: 'Ben', total: 30, par: 18, wins: 0 }, c: { name: 'Cy', total: 32, par: 18, wins: 0 } },
+        last: { mapIndex: 8, scores: { solo: 14, b: 17, c: 20 }, pars: { solo: 10, b: 10, c: 10 }, winners: ['solo'] } }, 99999);
     });
-    assert.equal(t.within('[data-ui=results] p').textContent, legacyEnd);
+    // C3: results now lead with strokes minus par, so the text deliberately differs from the legacy strokes-only wording.
+    assert.equal(t.within('[data-ui=results] p').textContent, 'Dune Serpent: Ana 14 (+4) · Ben 17 (+7) · Cy 20 (+10). Map winner: Ana. Standings after map 2/3: Ana +6 · Ben +12 · Cy +14.');
     assert.equal(t.within('[data-ui=results] button').textContent, legacyAgain);
     R.peers = own;
     assert.deepEqual(legacy.errors, []);
@@ -356,7 +357,7 @@ function fakeClock() {
     await act(async () => t.store.setLocal({ mode: 'wait' }));
     const results = t.within('[data-ui=results]');
     assert.ok(shown(results));
-    assert.equal(results.querySelector('p').textContent, 'Dune Serpent: Ana 12 · Ben 16. Map winner: Ana. Standings after map 1/3: Ana 12 · Ben 16.');
+    assert.equal(results.querySelector('p').textContent, 'Dune Serpent: Ana 12 (-3) · Ben 16 (+1). Map winner: Ana. Standings after map 1/3: Ana -3 · Ben +1.');
     assert.equal(results.querySelector('button').textContent, 'Next map vote');
     assert.ok(results.querySelector('table'), 'final scorecard on the results card');
     assert.equal(results.querySelector('[data-ui=scorecard] div').textContent, 'SCORECARDDune Serpent · Map 1/3', 'results title counts the finished map');
@@ -379,7 +380,7 @@ function fakeClock() {
     snap = t.session.getSnapshot();
     assert.equal(snap.phase, 'results');
     const text = t.within('[data-ui=results] p').textContent;
-    assert.match(text, /Standings after map 3\/3: Ana 36 · Ben 40\. OVERALL CHAMPION: Ana!$/);
+    assert.match(text, /Standings after map 3\/3: Ana -9 · Ben -5\. OVERALL CHAMPION: Ana!$/);
     assert.equal(t.within('[data-ui=results] button').textContent, 'Back to lobby');
     const seen = [];
     for (let i = 0; i < 10; i++) { seen.push(t.within('[data-ui=banner]').textContent); await t.step(1000); }
@@ -414,7 +415,7 @@ function fakeClock() {
       await t.send({ type: 'REPORT_SCORE', playerId: 'host', roundNumber: s.roundNumber, puttIndex: s.puttIndex, strokes: 2 });
       await t.step(5000);
     }
-    assert.equal(t.within('[data-ui=results] p').textContent, 'Switchback Garden: Ana 12. Practice round finished.');
+    assert.equal(t.within('[data-ui=results] p').textContent, 'Switchback Garden: Ana 12 (E). Practice round finished.');
     assert.equal(t.within('[data-ui=results] button').textContent, 'Pick another map');
     assert.equal(t.within('[data-ui=banner]').textContent, 'PRACTICE DONESWITCHBACK GARDEN');
     await click(t.within('[data-ui=results] button'));

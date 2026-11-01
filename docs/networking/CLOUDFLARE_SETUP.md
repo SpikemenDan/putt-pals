@@ -26,7 +26,7 @@ npm run test:rooms:local
 npx wrangler deploy --dry-run --env=""
 ```
 
-The first command builds the app, runs deterministic recovery and real local workerd hibernation/process-restart checks, then runs a bounded Wrangler runtime test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, invalid routes, origin rejection, v2 handshake and input limits, room isolation/capacity, controller succession and resume, and four clients completing a six-putt game. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
+The first command builds the app, runs deterministic recovery and real local workerd hibernation/process-restart checks, then runs a bounded Wrangler runtime test with isolated temporary SQLite persistence. It checks static asset delivery, API/asset separation, invalid routes, origin rejection, v2 handshake and input limits, room isolation/eight-member capacity, controller succession and resume, and four clients completing a six-putt game. Test diagnostics under `/api/_local/rooms/<roomCode>/identity` require both the development environment and the local-only `ROOM_LOCAL_DIAGNOSTICS` CLI variable; they expose only the local Durable Object ID, not room state or credentials.
 
 The dry run validates the pinned Worker/Static Assets/SQLite Durable Object bundle without publishing it. It is not a deployment or account-connection check. N4b does not configure remote bindings, routes, secrets, CI credentials, or account resources. Do not run `wrangler deploy` for this setup task.
 

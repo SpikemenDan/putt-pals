@@ -195,7 +195,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       }
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6. Map winner: Ana.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6 (-6). Map winner: Ana.');
     assert.equal(ana.text('[data-ui=results] button'), 'Back to lobby');
     assert.equal(transitions, 5);
     await W.run(20000);
@@ -264,7 +264,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       await W.until(() => ana.snapshot.players.solo.scores.length > k, 30000, 'sink');
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10. Practice round finished.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10 (-2). Practice round finished.');
     // Cells 5* 1 1 1 1 1, total 10, −2 against par 12, five holes in one, one timeout.
     assert.equal(ana.$('[data-ui=results] table tbody tr').textContent.replace(/\s/g, ''), '1.Ana(you)5*1111110-251');
     await ana.click('Pick another map');

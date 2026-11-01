@@ -167,6 +167,7 @@ try {
     const c = context();
     const h = await fresh(c);
     const g1 = await join(h.room, c), g2 = await join(h.room, c), g3 = await join(h.room, c);
+    for (let i = 0; i < 4; i++) await join(h.room, c); // host + 7 guests fill all eight seats
     const gWelcome = g1.frames.find(f => f.type === 'welcome');
     const duplicate = await join(h.room, c, { sessionId: gWelcome.snapshot.sessionId, playerId: gWelcome.playerId, token: gWelcome.resumeToken });
     assert.equal(duplicate.frames.at(-1).code, 'identity-rejected');

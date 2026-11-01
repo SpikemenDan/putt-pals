@@ -1,5 +1,6 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
 import { GameModes } from '../../shared/session.js';
+import { MAX_PLAYERS } from '../../shared/constants.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 
@@ -7,7 +8,7 @@ export const SERVER_ROOM_VERSION = 2;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-1';
 export const SERVER_ROOM_LIMITS = Object.freeze({
-  members: 4, history: 128, messageBytes: 65536, checkpointBytes: 262144,
+  members: MAX_PLAYERS, history: 128, messageBytes: 65536, checkpointBytes: 262144,
   presenceIntervalMs: 70, commandBurst: 20, commandsPerSecond: 10,
   presenceBurst: 30, presencePerSecond: 20, handshakeMs: 10000,
   pingIntervalMs: 15000, linkTimeoutMs: 45000, pendingHandshakes: 8,
@@ -88,12 +89,12 @@ export function validSessionContext(c) {
     || !modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
-    || !Array.isArray(c.roster) || c.roster.length > 4 || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
-    || !mapOf(c.votes,4,(v,id) => Object.hasOwn(c.players,id) && [0,8,20,21,5,19].includes(v))
+    || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
+    || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && [0,8,20,21,5,19].includes(v))
     || !Array.isArray(c.completedMaps) || c.completedMaps.length > 9 || !c.completedMaps.every(n => index(n,22))
-    || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','wins']) && name(t.name) && count(t.total) && count(t.wins))) return false;
-  return c.last === null || (exact(c.last,['mapIndex','scores','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,4,count)
-    && Array.isArray(c.last.winners) && c.last.winners.length <= 4 && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));
+    || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
+  return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
+    && Array.isArray(c.last.winners) && c.last.winners.length <= MAX_PLAYERS && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));
 }
 const seat = s => exact(s,['playerId','joinOrder','connectedSince','resumeUntil']) && validRoomId(s.playerId) && positive(s.joinOrder)
   && nullable(s.connectedSince,time) && nullable(s.resumeUntil,time) && ((s.connectedSince !== null) !== (s.resumeUntil !== null));
@@ -101,7 +102,7 @@ const session = s => exact(s,['node','context']) && SESSION_NODES.includes(s.nod
   && (!['select.choosingPutt','play.active.replaying'].includes(s.node) || s.context.mode === GameModes.PUTT_PRACTICE);
 export function validRoomSnapshot(s) {
   if (!exact(s,['roomCode','sessionId','rulesVersion','courseHash','revision','serverTime','controllerId','policy','seats','session']) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
-    || s.rulesVersion !== ROOM_RULES_VERSION || !validHash(s.courseHash) || !count(s.revision) || !time(s.serverTime) || !validRoomPolicy(s.policy) || !session(s.session) || !Array.isArray(s.seats) || s.seats.length > 4
+    || s.rulesVersion !== ROOM_RULES_VERSION || !validHash(s.courseHash) || !count(s.revision) || !time(s.serverTime) || !validRoomPolicy(s.policy) || !session(s.session) || !Array.isArray(s.seats) || s.seats.length > MAX_PLAYERS
     || !s.seats.every(seat) || new Set(s.seats.map(s => s.playerId)).size !== s.seats.length || new Set(s.seats.map(s => s.joinOrder)).size !== s.seats.length
     || !s.seats.every(seat => (seat.connectedSince === null || seat.connectedSince <= s.serverTime) && Object.hasOwn(s.session.context.players,seat.playerId) && s.session.context.players[seat.playerId].connected === (seat.connectedSince !== null))
     || !Object.entries(s.session.context.players).every(([id,p]) => !p.connected || s.seats.some(seat => seat.playerId === id))) return false;
@@ -118,7 +119,7 @@ export function validServerFrame(m) {
     case 'snapshot': return exact(m,['version','type','snapshot']) && validRoomSnapshot(m.snapshot);
     case 'ack': return exact(m,['version','type','sessionId','connectionId','sequence','revision']) && validRoomId(m.sessionId) && validRoomId(m.connectionId) && positive(m.sequence) && count(m.revision);
     case 'presence': return exact(m,['version','type','sessionId','roundNumber','puttIndex','sequence','serverTime','players']) && validRoomId(m.sessionId) && count(m.roundNumber)
-      && index(m.puttIndex,6) && positive(m.sequence) && time(m.serverTime) && mapOf(m.players,4,validServerPresence);
+      && index(m.puttIndex,6) && positive(m.sequence) && time(m.serverTime) && mapOf(m.players,MAX_PLAYERS,validServerPresence);
     case 'pong': return exact(m,['version','type','nonce','clientTime','serverTime']) && validRoomId(m.nonce) && Number.isFinite(m.clientTime) && m.clientTime >= 0 && time(m.serverTime);
     case 'error': return exact(m,['version','type','code','retryAfterMs']) && ROOM_ERRORS.includes(m.code) && nullable(m.retryAfterMs,n => count(n) && n <= 300000);
     default: return false;

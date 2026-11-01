@@ -66,14 +66,16 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   }])) };
   const finishMap = c => {
     const scores = Object.fromEntries(active(c).map(id => [id, c.players[id].scores.reduce((sum, p) => sum + (p?.score ?? 0), 0)]));
-    const best = Math.min(...Object.values(scores));
-    const winners = Object.keys(scores).filter(id => scores[id] === best);
+    // Par of the putts a player actually completed, so standings are strokes minus par.
+    const pars = Object.fromEntries(active(c).map(id => [id, c.players[id].scores.reduce((sum, p) => sum + (p?.par ?? 0), 0)]));
+    const best = Math.min(...Object.keys(scores).map(id => scores[id] - pars[id]));
+    const winners = Object.keys(scores).filter(id => scores[id] - pars[id] === best);
     let totals = { ...c.totals };
     for (const [id, score] of Object.entries(scores)) {
       const previous = own(totals, id) ? totals[id] : undefined;
-      totals = { ...totals, [id]: { name: c.players[id].name, total: (previous?.total ?? 0) + score, wins: (previous?.wins ?? 0) + Number(winners.includes(id)) } };
+      totals = { ...totals, [id]: { name: c.players[id].name, total: (previous?.total ?? 0) + score, par: (previous?.par ?? 0) + pars[id], wins: (previous?.wins ?? 0) + Number(winners.includes(id)) } };
     }
-    return { totals, completedMaps: [...c.completedMaps, c.mapIndex], last: { mapIndex: c.mapIndex, scores, winners } };
+    return { totals, completedMaps: [...c.completedMaps, c.mapIndex], last: { mapIndex: c.mapIndex, scores, pars, winners } };
   };
   const scoreEvent = (c, e) => participant(c, e) && e.roundNumber === c.roundNumber && e.puttIndex === c.puttIndex
     && clock.now() >= c.roundStartTime && !c.players[e.playerId].done && validCount(e.strokes)
