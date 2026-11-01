@@ -232,6 +232,8 @@ const nameOf = (room, id) => room.players?.[id]?.name || room.totals?.[id]?.name
  * Results card text, button and the banners announced on arrival
  * (legacy showResults() and fin()).
  */
+const toPar = n => n > 0 ? '+' + n : n < 0 ? String(n) : 'E';
+
 export function resultsView(room, local, courses) {
   const practice = room.mode === GameModes.PRACTICE;
   const tournament = isTournament(room.mode);
@@ -244,15 +246,17 @@ export function resultsView(room, local, courses) {
   if (last) {
     const map = courses[last.mapIndex];
     const ids = Object.keys(last.scores || {});
-    const lines = ids.slice().sort((a, b) => last.scores[a] - last.scores[b]).map(id => nameOf(room, id) + ' ' + last.scores[id]);
+    const rel = id => last.scores[id] - (last.pars?.[id] ?? 0);
+    const lines = ids.slice().sort((a, b) => rel(a) - rel(b)).map(id => nameOf(room, id) + ' ' + last.scores[id] + ' (' + toPar(rel(id)) + ')');
     const win = (last.winners || []).map(id => nameOf(room, id)).join(' & ');
     text = map.name + ': ' + lines.join(' · ') + (practice ? '. Practice round finished.' : '. Map winner: ' + win + '.');
     banners.push({ text: practice ? 'PRACTICE DONE' : win, sub: (practice ? '' : 'MAP WINNER · ') + map.name.toUpperCase(), kind: 'event' });
     if (tournament) {
-      const standings = Object.values(room.totals || {}).sort((a, b) => a.total - b.total);
-      text += ' Standings after map ' + mapNo + '/' + series + ': ' + standings.map(x => x.name + ' ' + x.total).join(' · ') + '.';
+      const relative = x => x.total - (x.par ?? 0);
+      const standings = Object.values(room.totals || {}).sort((a, b) => relative(a) - relative(b));
+      text += ' Standings after map ' + mapNo + '/' + series + ': ' + standings.map(x => x.name + ' ' + toPar(relative(x))).join(' · ') + '.';
       if (!more && standings.length) {
-        const champion = standings.filter(x => x.total === standings[0].total).map(x => x.name).join(' & ');
+        const champion = standings.filter(x => relative(x) === relative(standings[0])).map(x => x.name).join(' & ');
         text += ' OVERALL CHAMPION: ' + champion + '!';
         banners.push({ text: champion, sub: 'TOURNAMENT CHAMPION', kind: 'hio' });
       }

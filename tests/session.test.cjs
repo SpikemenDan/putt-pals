@@ -126,6 +126,20 @@ const assert = require('node:assert/strict');
     assert.equal(f.send('RETURN_TO_LOBBY', {}, 'a'), false);
     f.send('RETURN_TO_LOBBY'); assert.equal(f.state().phase, 'lobby'); assert.deepEqual(f.state().totals, {});
   });
+  run('C3: map winners and tournament standings are strokes minus par, with par recorded per player', () => {
+    const f = make(['a']); start(f, GameModes.TOURNAMENT_3);
+    for (let putt = 0; putt < 6; putt++) {
+      f.clock.increment(1500);
+      assert.equal(score(f, 'host', 2), true); assert.equal(score(f, 'a', 3), true);
+      if (putt < 5) f.clock.increment(2500);
+    }
+    const s = f.state(), par = s.players.host.scores.reduce((sum, p) => sum + p.par, 0);
+    assert.ok(par >= 12 && par <= 36, 'six putts of par 2 to 6');
+    assert.deepEqual(s.last.scores, { host: 12, a: 18 }); assert.deepEqual(s.last.pars, { host: par, a: par });
+    assert.deepEqual(s.last.winners, ['host']);
+    assert.deepEqual(s.totals.host, { name: 'Host', total: 12, par, wins: 1 });
+    assert.equal(s.totals.a.par, par); assert.equal(s.totals.a.wins, 0);
+  });
   run('late joins spectate the whole map; disconnects record blanks and do not block', () => {
     const f = make(['a']); start(f); f.send('JOIN_ROOM', { name: 'late' }, 'late');
     assert.equal(score(f, 'late'), false); f.clock.increment(1500); f.send('LEAVE_ROOM', {}, 'a'); score(f);

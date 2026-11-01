@@ -92,8 +92,8 @@ export function validSessionContext(c) {
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
     || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && [0,8,20,21,5,19].includes(v))
     || !Array.isArray(c.completedMaps) || c.completedMaps.length > 9 || !c.completedMaps.every(n => index(n,22))
-    || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','wins']) && name(t.name) && count(t.total) && count(t.wins))) return false;
-  return c.last === null || (exact(c.last,['mapIndex','scores','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count)
+    || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
+  return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
     && Array.isArray(c.last.winners) && c.last.winners.length <= MAX_PLAYERS && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));
 }
 const seat = s => exact(s,['playerId','joinOrder','connectedSince','resumeUntil']) && validRoomId(s.playerId) && positive(s.joinOrder)
