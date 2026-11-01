@@ -84,18 +84,28 @@ test('server rooms: duplicate resume and incompatible frames are rejected withou
 
 test('server rooms: delayed frames and foreground switching retain synchronized room time', async ({ browser }, info) => {
   const code = roomCode('N4L');
-  const ana = await openPlayer(browser, info, 'Ana', { contexts }); await ana.join(code);
   const context = await browser.newContext({ baseURL: info.project.use.baseURL }); contexts.push(context);
   // Synthetic 150 ms client-frame delay, not a claim about internet latency/loss.
   await context.addInitScript(() => {
     const send = WebSocket.prototype.send;
     WebSocket.prototype.send = function (raw) { const ws = this; setTimeout(() => { if (ws.readyState === 1) send.call(ws, raw); }, 150); };
   });
+  const ana = await openApp(await context.newPage(), 'Ana'); await ana.join(code);
   const ben = await openApp(await context.newPage(), 'Ben'); await ben.join(code);
   await ana.page.bringToFront();
-  info.annotations.push({ type: 'background-visibility', description: await ben.page.evaluate(() => document.visibilityState) });
+  const backgroundState = await ben.page.evaluate(() => document.visibilityState);
+  if (backgroundState === 'hidden') {
+    info.annotations.push({ type: 'background-visibility', description: 'The other client entered the hidden state.' });
+  } else {
+    info.annotations.push({
+      type: 'background-visibility-not-exercised',
+      description: `After foregrounding the other tab, the browser still reported ${backgroundState}; background throttling was not exercised.`,
+    });
+  }
   await ana.page.waitForTimeout(2000);
   await ben.page.bringToFront();
+  const foregroundState = await ben.page.evaluate(() => document.visibilityState);
+  expect(foregroundState).toBe('visible');
   const times = await Promise.all([ana, ben].map(p => p.page.evaluate(() => window.__ppApp.room.now())));
   expect(Math.abs(times[0] - times[1])).toBeLessThan(1500);
   await ana.button('Start Game').click();
