@@ -8,6 +8,7 @@
 
 import { createAudioAdapter } from '../audio/index.js';
 import { CAMERA_VIEW_LABELS } from '../camera/index.js';
+import { loadCosmetics, saveCosmetics, selectCosmetic } from '../cosmetics/index.js';
 import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
@@ -43,6 +44,10 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const data = createCourseData();
   const courses = createCourseInfo(data);
   const store = createUiStore({ courses, clock });
+  // localStorage can be missing or throw (privacy modes); the choice then simply does not persist.
+  const cosmeticsStorage = (() => { try { return win.localStorage ?? null; } catch { return null; } })();
+  let cosmetics = loadCosmetics(cosmeticsStorage);
+  store.setLocal({ cosmetics });
   const audio = createAudio();
   const unbindGestures = audio.bindGestures(win);
   let room = null, putt = null, puttPolicy = null, carriedInventory = [], activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
@@ -382,6 +387,12 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         toast(r.label);
         break;
       }
+      case UiCommands.SET_COSMETIC:
+        cosmetics = selectCosmetic(cosmetics, command.kind, command.id);
+        if (cosmeticsStorage) saveCosmetics(cosmeticsStorage, cosmetics);
+        renderer?.setCosmetics(cosmetics);
+        setLocal({ cosmetics });
+        break;
       case UiCommands.TOGGLE_QUALITY:
         quality = !quality;
         renderer?.setQuality(quality, win.devicePixelRatio);
@@ -423,6 +434,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       setLocal({ webglUnavailable: true });
       return;
     }
+    renderer.setCosmetics(cosmetics);
     renderer.canvasWidth = () => Math.floor(canvas.parentNode?.clientWidth || 0);
     view = createGameView({ renderer });
     const ray = new THREE.Raycaster();
