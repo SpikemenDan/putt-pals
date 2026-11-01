@@ -56,6 +56,9 @@ export const TUNING_FIELDS = Object.freeze([
   ['powerups.magnetRange', 0, 1000, 'Hole Magnet reach (full-size cup).'],
   ['powerups.magnetPull', 0, 10000, 'Hole Magnet pull acceleration (full-size cup).'],
   ['powerups.chipLaunch', 0, 5000, 'Chip In vertical launch speed added to the shot.'],
+  ['powerups.auraRange', 0, 1000, 'Love and Hate Ball reach around the owner (world units).'],
+  ['powerups.auraPull', 0, 10000, 'Love Ball pull acceleration on a ball at the owner (falls off linearly to the edge of the reach).'],
+  ['powerups.auraPush', 0, 10000, 'Hate Ball push acceleration on a ball at the owner (falls off linearly to the edge of the reach).'],
   ['powerups.smallBallScale', 0.1, 1, 'Small Ball radius multiplier.'],
   ['powerups.tallBallScale', 1, 1.6, 'Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup).'],
 
@@ -97,7 +100,7 @@ export const DEFAULT_TUNING = {
   surfaceDragMultiplier: { turf: 1.0, sand: 3.5, ice: 0.15, slime: 6.0 },
   bounce: { wallRestitution: 1.82, ledgeDamping: 0.8, ledgeHeight: 5, landingRestitution: 0.25, landingSpeed: 180 },
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
-  powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, smallBallScale: 0.6, tallBallScale: 1.5 },
+  powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,

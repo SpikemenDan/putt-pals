@@ -67,6 +67,34 @@ export function clearAtRest(player, catalog = POWERUP_CATALOG) {
   for (const e of catalog) if (e.duration.kind === DurationKinds.STROKE && e.id in player.armedPowerups) player.armedPowerups[e.id] = 0;
 }
 
+/** Aura kinds: the catalog ids whose owner's ball acts on other players' balls. */
+export const AURA_KINDS = Object.freeze(['love', 'hate']);
+
+/**
+ * Aura sources from presence-like entries `{x, y, effect}` of other players. Each client applies them to its
+ * own ball only (remote balls are non-colliding ghosts). Unknown effects and non-finite positions are ignored.
+ */
+export const auraSourcesOf = others => others.filter(o => o && AURA_KINDS.includes(o.effect) && Number.isFinite(o.x) && Number.isFinite(o.y))
+  .map(o => ({ kind: o.effect, x: o.x, y: o.y }));
+
+/**
+ * Aura hook: adds the acceleration (x/y, world units per second squared) that the active sources exert on a ball
+ * at (x, y) over dt. Love pulls toward the source and Hate pushes away, both fading linearly to zero at the
+ * reach. Returns [0, 0] when there are no sources, so inactive results stay bit-identical.
+ */
+export function auraAcceleration(sources, x, y, dt) {
+  let ax = 0, ay = 0;
+  if (!sources?.length) return [ax, ay];
+  const range = TUNING.powerups.auraRange;
+  for (const s of sources) {
+    const dx = s.x - x, dy = s.y - y, d = Math.hypot(dx, dy);
+    if (!(d > 1e-6 && d < range)) continue;
+    const strength = (s.kind === 'love' ? TUNING.powerups.auraPull : -TUNING.powerups.auraPush) * (1 - d / range) * dt;
+    ax += dx / d * strength; ay += dy / d * strength;
+  }
+  return [ax, ay];
+}
+
 /** Radius hook: the ball radius for the armed effects (exactly BALL_RADIUS when none apply). Small and Tall Ball stack multiplicatively. */
 export function ballRadiusOf(player) {
   const armed = player.armedPowerups;

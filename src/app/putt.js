@@ -142,6 +142,9 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       return String(from || 'Someone').slice(0, 14) + ' used ' + powerupName(type) + ' on you!';
     },
 
+    /** Love / Hate Ball sources from other players' balls (G1d); this client applies them to its own ball while it rolls. */
+    setAuras(sources) { player.auraSources = disposed || player.mode !== 'play' ? [] : sources; },
+
     /** Ball centre height of the tee/cup for transitions. */
     surface: (x, y) => surfaceHeight(course, x, y),
     dispose() { disposed = true; engine.dispose(); },

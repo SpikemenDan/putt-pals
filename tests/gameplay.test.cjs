@@ -19,7 +19,7 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'love', 'hate'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
   assert.deepEqual(G.auraIds(), ['', ...G.powerupIds()]);
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
@@ -76,7 +76,7 @@ async function run() {
 
   // ---- activation, stacking, hooks
   const fresh = () => { const p = createPlayerState('t'); p.armedPowerups = G.armedState(TEST_CATALOG); p.pendingPowerups = G.pendingState(TEST_CATALOG); return p; };
-  assert.deepEqual(G.armedState(), { mag: 0, steady: 0, chip: 0, ghost: 0, small: 0, tall: 0, sticky: 0 });
+  assert.deepEqual(G.armedState(), { mag: 0, steady: 0, chip: 0, ghost: 0, small: 0, tall: 0, sticky: 0, love: 0, hate: 0 });
   assert.deepEqual(G.pendingState(), {});
   assert.deepEqual(G.pendingState(TEST_CATALOG), { xx: 0 });
   let p = fresh();
