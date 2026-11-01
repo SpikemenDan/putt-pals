@@ -39,6 +39,7 @@ Vite prints the local URL (normally `http://127.0.0.1:5173/`). The modular app i
 | `npm run test:rooms:local` | Build, then check the local Cloudflare Worker and Durable Object runtime |
 | `npm test` | The main suites above, sequentially; allow several minutes |
 | `npm run build` | Build `dist/` and verify that the legacy page's scripts are preserved exactly |
+| `npm run build:portable` | Build `release/putt-pals/` and `release/putt-pals.zip`: unzip and double-click `index.html` (no server; rooms still need internet) |
 | `npm run preview` | Serve the built game locally, normally at `http://127.0.0.1:4173/` |
 | `npm run rooms:dev` | Run the local Worker room runtime (see [Cloudflare setup](docs/networking/CLOUDFLARE_SETUP.md)) |
 | `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; add `--full` for an exhaustive search |
