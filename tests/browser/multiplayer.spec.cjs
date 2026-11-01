@@ -44,7 +44,7 @@ test('multiplayer: four pages on real WebSockets play a full map and agree on th
     }
     for (const p of players) await expect(p.ui('results')).toBeVisible({ timeout: 90_000 });
     // Same scores and winners everywhere.
-    const summary = 'Switchback Garden: Ana 6 · Ben 6 · Cy 6 · Dee 6. Map winner: Ana & Ben & Cy & Dee.';
+    const summary = 'Switchback Garden: Ana 6 (-6) · Ben 6 (-6) · Cy 6 (-6) · Dee 6 (-6). Map winner: Ana & Ben & Cy & Dee.';
     await expect(ana.ui('results').locator('p').first()).toHaveText(summary);
     for (const g of guests) await expect(g.ui('results').locator('p').first()).toHaveText(summary + ' Waiting for the room controller to return to the lobby.');
     const snapshots = await Promise.all(players.map(p => p.snapshot()));

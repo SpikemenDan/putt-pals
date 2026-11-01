@@ -8,6 +8,7 @@
 4. PROJECT_STATUS.md: accepted state of main, confirmed owner decisions and known issues.
 5. ARCHITECTURE.md: module boundaries, shared contracts and the design for power-ups, hazards, modes and cosmetics.
 6. TASKS.md: roadmap IDs, dependency graph and the vision backlog.
+7. docs/AGENT_ROUTING.md: which model (Claude or Gemini Pro) takes which kind of task; Gemini follows GEMINI.md.
 
 ## Scope and authority
 

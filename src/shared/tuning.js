@@ -69,6 +69,8 @@ export const TUNING_FIELDS = Object.freeze([
   ['hazards.teleporterCooldown', 0, 10, 'Seconds before a teleporter can fire again.'],
 
   ['aim.swayPeriod', 0.1, 60, 'Seconds per aim sway cycle.'],
+  ['aim.spinPeriod', 0.5, 60, '360° Aim: seconds for the aim indicator to turn one full circle.'],
+  ['aim.sweepPeriod', 0.5, 60, '180° Aim: seconds for the aim indicator to sweep across 180° and back.'],
   ['aim.spreadBase', 0, 1, 'Angular spread (radians) at zero power.'],
   ['aim.spreadGain', 0, 3, 'Added spread (radians) at full power.'],
   ['aim.spreadExponent', 0.1, 10, 'How sharply spread grows with power.'],
@@ -103,7 +105,7 @@ export const DEFAULT_TUNING = {
   powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
-    swayPeriod: 1.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
+    swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
     fullPullPx: 380, canvasPullFraction: 0.6, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
     guideMinCharge: 0.015, shotMinCharge: 0.025,
   },

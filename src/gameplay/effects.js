@@ -67,6 +67,17 @@ export function clearAtRest(player, catalog = POWERUP_CATALOG) {
   for (const e of catalog) if (e.duration.kind === DurationKinds.STROKE && e.id in player.armedPowerups) player.armedPowerups[e.id] = 0;
 }
 
+/** Aim-mode ids and the indicator mode each one puts on the target's aim (G1c). */
+export const AIM_MODES = Object.freeze({ aim360: 'spin', aim180: 'sweep' });
+
+/** Aim hook: the indicator mode ('spin', 'sweep' or '') from the player's pending opponent effects; the first in catalog order wins. */
+export function aimModeOf(player, catalog = POWERUP_CATALOG) {
+  const pending = player.pendingPowerups;
+  if (!pending) return '';
+  for (const id of powerupIds(catalog)) if (pending[id] && AIM_MODES[id]) return AIM_MODES[id];
+  return '';
+}
+
 /** Aura kinds: the catalog ids whose owner's ball acts on other players' balls. */
 export const AURA_KINDS = Object.freeze(['love', 'hate']);
 

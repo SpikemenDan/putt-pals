@@ -36,8 +36,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
     async function run(ms) { for (let t = 0; t < ms; t += 500) { await act(async () => { scheduler.advance(Math.min(500, ms - t)); }); await settle(); } }
     async function until(fn, ms = 60000, label = 'condition') { for (let t = 0; t <= ms; t += 100) { if (fn()) return; await run(100); } assert.fail('timed out waiting for ' + label); }
-    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true, storage = {} } = {}) {
+    async function client(name, { url, createWebGLRenderer = renderers.factory, memoryTransport = true, storage = {}, local = {} } = {}) {
       const win = createWindow(scheduler, { url });
+      for (const [k, v] of Object.entries(local)) win.w.localStorage.setItem(k, v);
       for (const [k, v] of Object.entries(storage)) win.w.sessionStorage.setItem(k, v); // a reloaded tab keeps its sessionStorage
       const audio = createAudioRecorder();
       let app;
@@ -91,6 +92,22 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const tracked = c => c.audio.log.map(e => e.type + (e.kind ? ':' + e.kind : '') + (e.hazardType ? ':' + e.hazardType : '') + (e.remote ? ':remote' : ''));
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('cosmetics (F1): the picked style is saved locally, restored on reload and junk storage falls back to defaults', async () => {
+    const W = world();
+    const first = await W.client('Pat');
+    const selects = [...first.doc.querySelectorAll('[data-ui=landing] [data-ui=cosmetics] select')];
+    assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti']);
+    await act(async () => { selects[0].value = 'frost'; selects[0].dispatchEvent(new first.win.w.Event('change', { bubbles: true })); });
+    await act(async () => { selects[2].value = 'gold'; selects[2].dispatchEvent(new first.win.w.Event('change', { bubbles: true })); });
+    const saved = first.win.w.localStorage.getItem('pp_cosmetics');
+    assert.deepEqual(JSON.parse(saved), { ball: 'frost', trail: 'classic', celebration: 'gold' });
+    const reloaded = await W.client('Pat2', { local: { pp_cosmetics: saved } });
+    assert.deepEqual([...reloaded.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['frost', 'classic', 'gold']);
+    const junk = await W.client('Pat3', { local: { pp_cosmetics: '{"ball":"<img src=x>","trail":"comet"}' } });
+    assert.deepEqual([...junk.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['classic', 'comet', 'confetti'], 'unknown ids fall back, valid ones are kept');
+    await first.dispose(); await reloaded.dispose(); await junk.dispose();
+  });
+
   await scenario('start screen: a 3D panorama orbits behind the menu, then hands the canvas to the game', async () => {
     const W = world();
     const ana = await W.client('Ana');
@@ -178,7 +195,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       }
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6. Map winner: Ana.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 6 (-6). Map winner: Ana.');
     assert.equal(ana.text('[data-ui=results] button'), 'Back to lobby');
     assert.equal(transitions, 5);
     await W.run(20000);
@@ -247,7 +264,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       await W.until(() => ana.snapshot.players.solo.scores.length > k, 30000, 'sink');
     }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'results');
-    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10. Practice round finished.');
+    assert.equal(ana.text('[data-ui=results] p'), 'Switchback Garden: Ana 10 (-2). Practice round finished.');
     // Cells 5* 1 1 1 1 1, total 10, −2 against par 12, five holes in one, one timeout.
     assert.equal(ana.$('[data-ui=results] table tbody tr').textContent.replace(/\s/g, ''), '1.Ana(you)5*1111110-251');
     await ana.click('Pick another map');

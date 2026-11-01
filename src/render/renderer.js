@@ -11,7 +11,8 @@ import { BALL_RADIUS } from '../shared/constants.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
 import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
-import { createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
+import { cosmeticRecord, DEFAULT_COSMETICS, rainbowHex } from '../cosmetics/catalog.js';
+import { applyBallSkin, createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
 import { createSkyWorld } from './sky-world.js';
@@ -152,6 +153,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const trail = createTrail(THREE, { toon });
   scene.add(actor(trail.points));
   const confetti = createConfetti(THREE, random);
+  let cosmetics = { ball: cosmeticRecord('ball', DEFAULT_COSMETICS.ball), trail: cosmeticRecord('trail', DEFAULT_COSMETICS.trail), celebration: cosmeticRecord('celebration', DEFAULT_COSMETICS.celebration) };
   scene.add(actor(confetti.points));
   const aimGuide = createAimGuide(THREE);
   scene.add(actor(aimGuide.arrow));
@@ -209,6 +211,12 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       renderer.setPixelRatio(high ? Math.min(ratio || 1, MAX_PIXEL_RATIO) : 1);
       renderer.shadowMap.enabled = !!high;
       width = 0;
+    },
+
+    /** Applies the local player's cosmetic selection (catalog ids; unknown ids use the defaults). Purely visual. */
+    setCosmetics(selection) {
+      cosmetics = { ball: cosmeticRecord('ball', selection?.ball), trail: cosmeticRecord('trail', selection?.trail), celebration: cosmeticRecord('celebration', selection?.celebration) };
+      applyBallSkin(localBall, cosmetics.ball);
     },
 
     /** Turns the ambient weather (snow, rain, lightning) on or off. On by default; the choice survives course swaps. */
@@ -321,8 +329,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         if (!entry.aura) { entry.aura = createAura(library); scene.add(entry.aura); }
         placeAura(entry.aura, p.effect, entry.ball.position, true, t, entry.ball.userData.scale || 1);
       }
-      trail.update(localBall.position, me.moving, localBall.visible && me.mode === 'play', PLAYER_COLORS[me.color % 8]);
-      if (me.mode === 'sunk' && lastMode !== 'sunk') confetti.burst(localBall.position);
+      const trailSkin = cosmetics.trail;
+      trail.update(localBall.position, me.moving, localBall.visible && me.mode === 'play', trailSkin.color === 'player' ? PLAYER_COLORS[me.color % 8] : trailSkin.color === 'rainbow' ? rainbowHex(t) : trailSkin.color, trailSkin.size);
+      if (me.mode === 'sunk' && lastMode !== 'sunk') confetti.burst(localBall.position, cosmetics.celebration);
       lastMode = me.mode;
       confetti.update(dt);
       for (const { mesh, mover } of build.movers) {

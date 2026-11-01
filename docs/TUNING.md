@@ -56,6 +56,8 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `hazards.teleporterRadius` | 16 | 0 to 100 | Teleporter trigger radius. |
 | `hazards.teleporterCooldown` | 0.8 | 0 to 10 | Seconds before a teleporter can fire again. |
 | `aim.swayPeriod` | 1.4 | 0.1 to 60 | Seconds per aim sway cycle. |
+| `aim.spinPeriod` | 3 | 0.5 to 60 | 360° Aim: seconds for the aim indicator to turn one full circle. |
+| `aim.sweepPeriod` | 2.4 | 0.5 to 60 | 180° Aim: seconds for the aim indicator to sweep across 180° and back. |
 | `aim.spreadBase` | 0.002 | 0 to 1 | Angular spread (radians) at zero power. |
 | `aim.spreadGain` | 0.14 | 0 to 3 | Added spread (radians) at full power. |
 | `aim.spreadExponent` | 2.6 | 0.1 to 10 | How sharply spread grows with power. |

@@ -11,7 +11,7 @@ const defaultContext = () => {
 const defaultStorage = () => { try { return globalThis.window?.localStorage ?? null; } catch { return null; } };
 
 /** Application-owned audio: reuse across rooms; reset voices per room; dispose on app teardown. */
-const POWERUP_CUES = new Set(['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'love', 'hate']);
+const POWERUP_CUES = new Set(['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate']);
 
 export function createAudioAdapter({ createContext = defaultContext, storage = defaultStorage(), random = Math.random,
   onError = () => {}, maxVoices = 32 } = {}) {
