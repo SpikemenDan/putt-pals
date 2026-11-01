@@ -216,6 +216,15 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.equal(validateCourseGeometry(course).valid, false);
     }
   });
+  run('simulation fingerprint covers what physics imports and ignores unrelated shared contracts', () => {
+    const files = provenanceTools.simulationSourceFiles();
+    for (const needed of ['src/simulation/physics.js', 'src/shared/tuning.js', 'src/gameplay/effects.js']) {
+      assert(files.includes(needed), `${needed} must be fingerprinted`);
+    }
+    for (const unrelated of ['src/shared/session.js', 'src/shared/protocol.js', 'src/shared/transport.js']) {
+      assert(!files.includes(unrelated), `${unrelated} must not invalidate recorded difficulty`);
+    }
+  });
   run('all 36 starters retain nominal hole-in-ones; 34 meet the recorded robustness margin (S3 retune)', () => {
     const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8'));
     assert.equal(baseline.results.length, 36);
