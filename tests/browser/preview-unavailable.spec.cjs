@@ -9,6 +9,14 @@ test('preview maintenance: backend failure is actionable and solo remains availa
     await context.addInitScript(origin => {
       window.__PP_ROOM_ENDPOINT = origin;
       window.__peerConnectionAttempts = 0;
+      window.__roomSocketAttempts = 0;
+      const WebSocketConstructor = window.WebSocket;
+      window.WebSocket = new Proxy(WebSocketConstructor, {
+        construct(target, args, newTarget) {
+          window.__roomSocketAttempts++;
+          return Reflect.construct(target, args, newTarget);
+        },
+      });
       for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection']) {
         const PeerConnection = window[name];
         if (typeof PeerConnection === 'function') {
@@ -31,11 +39,13 @@ test('preview maintenance: backend failure is actionable and solo remains availa
     await expect(player.ui('connect-error')).toContainText(/room service.*unavailable|Could not reach the room service/);
     await expect(player.button('Join room')).toBeEnabled();
     expect(await page.evaluate(() => window.__ppApp.room)).toBeNull();
+    expect(await page.evaluate(() => window.__roomSocketAttempts)).toBe(1);
     const roomSocketUrl = worker.origin.replace('http:', 'ws:') + '/api/rooms/maintenance/socket';
     expect(sockets.length).toBeGreaterThan(0);
     expect(sockets.every(url => url === roomSocketUrl)).toBe(true);
     await player.button('Play solo').click();
     await expect(player.ui('room-lobby')).toBeVisible();
+    expect(await page.evaluate(() => window.__roomSocketAttempts)).toBe(1);
     expect(sockets.every(url => url === roomSocketUrl)).toBe(true);
     expect(await page.evaluate(() => window.__peerConnectionAttempts)).toBe(0);
     expect(runtimeErrors).toEqual([]);
