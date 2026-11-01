@@ -21,7 +21,7 @@
 
 export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent' });
 export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke' });
-export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius' });
+export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode' });
 
 const deepFreeze = value => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -66,6 +66,16 @@ export const POWERUP_CATALOG = deepFreeze([
     id: 'sticky', name: 'Sticky Ball', group: 'self-utility', target: PowerupTargets.SELF, solo: true, weight: 1,
     duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.COLLISION,
     banner: 'STICKY BALL', toast: 'Your ball will not rebound on this shot.',
+  },
+  {
+    id: 'aim360', name: '360° Aim', group: 'aim-sabotage', target: PowerupTargets.OPPONENT, solo: false, weight: 1,
+    duration: { kind: DurationKinds.NEXT_SHOT }, hook: PowerupHooks.AIM_MODE,
+    banner: '360° AIM', toast: 'Their aim indicator spins all the way round on their next shot.',
+  },
+  {
+    id: 'aim180', name: '180° Aim', group: 'aim-sabotage', target: PowerupTargets.OPPONENT, solo: false, weight: 1,
+    duration: { kind: DurationKinds.NEXT_SHOT }, hook: PowerupHooks.AIM_MODE,
+    banner: '180° AIM', toast: 'Their aim indicator sweeps back and forth on their next shot.',
   },
 ]);
 

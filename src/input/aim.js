@@ -32,16 +32,30 @@ export const DRAG_RADIANS_PER_PX = AIM.dragRadiansPerPx;
 /** Angular spread (radians) at a power 0..1. */
 export function spread(power) { return AIM.spreadBase + AIM.spreadGain * Math.pow(power, AIM.spreadExponent); }
 
+/** Seconds for one full turn of the 360° Aim indicator, and for one back-and-forth of the 180° Aim sweep. */
+export const SPIN_PERIOD = AIM.spinPeriod;
+export const SWEEP_PERIOD = AIM.sweepPeriod;
+
+/**
+ * Aim-sabotage offset (radians) added to the aim at a time in seconds (G1c). 'spin' turns the indicator through
+ * a full circle; 'sweep' swings it across 180° (plus and minus a quarter turn). Anything else adds nothing.
+ */
+export function aimModeOffset(mode, time) {
+  if (mode === 'spin') return 2 * Math.PI * ((time / SPIN_PERIOD) % 1);
+  if (mode === 'sweep') return (Math.PI / 2) * Math.sin(2 * Math.PI * time / SWEEP_PERIOD);
+  return 0;
+}
+
 /** Sway offset (radians) at a power and a time in seconds. */
 export function sway(power, time) { return spread(power) * Math.sin(time * SWAY_W); }
 
 /**
  * Direction the ball actually leaves in.
- * @param {{aimAngle:number, charge:number, time:number, steady?:boolean}} input
+ * @param {{aimAngle:number, charge:number, time:number, steady?:boolean, aimMode?:string}} input
  *   time is the sway time last shown on screen, so what you see is what you shoot.
  */
-export function shotAngle({ aimAngle, charge, time, steady = false }) {
-  return aimAngle + (steady ? 0 : sway(charge, time));
+export function shotAngle({ aimAngle, charge, time, steady = false, aimMode = '' }) {
+  return aimAngle + aimModeOffset(aimMode, time) + (steady ? 0 : sway(charge, time));
 }
 
 /** Charge 0..1 from a pointer drag distance in CSS pixels. */

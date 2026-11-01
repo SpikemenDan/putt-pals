@@ -67,6 +67,17 @@ export function clearAtRest(player, catalog = POWERUP_CATALOG) {
   for (const e of catalog) if (e.duration.kind === DurationKinds.STROKE && e.id in player.armedPowerups) player.armedPowerups[e.id] = 0;
 }
 
+/** Aim-mode ids and the indicator mode each one puts on the target's aim (G1c). */
+export const AIM_MODES = Object.freeze({ aim360: 'spin', aim180: 'sweep' });
+
+/** Aim hook: the indicator mode ('spin', 'sweep' or '') from the player's pending opponent effects; the first in catalog order wins. */
+export function aimModeOf(player, catalog = POWERUP_CATALOG) {
+  const pending = player.pendingPowerups;
+  if (!pending) return '';
+  for (const id of powerupIds(catalog)) if (pending[id] && AIM_MODES[id]) return AIM_MODES[id];
+  return '';
+}
+
 /** Radius hook: the ball radius for the armed effects (exactly BALL_RADIUS when none apply). Small and Tall Ball stack multiplicatively. */
 export function ballRadiusOf(player) {
   const armed = player.armedPowerups;
