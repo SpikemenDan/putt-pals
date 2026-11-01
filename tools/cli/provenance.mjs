@@ -14,15 +14,31 @@ const canonical = value => {
 };
 export const hashJson = value => digest(JSON.stringify(canonical(value)));
 
-/** Conservative source fingerprint: simulation plus all shared contracts/constants. */
+const IMPORT_PATTERN = /^\s*(?:import|export)\b[^'"]*?['"](\.{1,2}\/[^'"]+)['"]/gm;
+
+/**
+ * Source fingerprint of everything the simulation can execute: `src/simulation` plus the
+ * files it reaches through relative imports. Unrelated shared contracts (session, protocol,
+ * transport) are excluded so network and UI work never invalidates recorded difficulty.
+ */
+export function simulationSourceFiles() {
+  const seen = new Set();
+  const visit = file => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    for (const match of source.matchAll(IMPORT_PATTERN)) {
+      visit(path.posix.normalize(path.posix.join(path.posix.dirname(file), match[1])));
+    }
+  };
+  fs.readdirSync(path.join(root, 'src/simulation'))
+    .filter(name => /\.(?:js|mjs)$/.test(name)).sort()
+    .forEach(name => visit(`src/simulation/${name}`));
+  return [...seen].sort();
+}
+
 export function hashSimulationSources() {
-  const walk = directory => fs.readdirSync(path.join(root, directory), { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
-    .flatMap(entry => entry.isDirectory() ? walk(`${directory}/${entry.name}`)
-      : /\.(?:js|mjs|json)$/.test(entry.name) ? [`${directory}/${entry.name}`] : []);
-  const files = ['src/simulation', 'src/shared'].flatMap(walk)
-    .map(file => [file, digest(fs.readFileSync(path.join(root, file)))]);
-  return hashJson(files);
+  return hashJson(simulationSourceFiles().map(file => [file, digest(fs.readFileSync(path.join(root, file)))]));
 }
 
 export function createDifficultyProvenance(course, puttIndex, { full = false, simulationHash = hashSimulationSources(), configuration = SOLVER_CONFIG } = {}) {

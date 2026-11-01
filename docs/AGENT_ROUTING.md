@@ -25,3 +25,5 @@ gh issue list --repo SpikemenDan/putt-pals --label agent-task --state open --jso
 ```
 
 Pipe in only the data the task needs. Review the result and the diff before committing; any edit to a coordinator-owned file still needs the integration owner.
+
+Gemini CLI 0.66 exits with code 55 in an untrusted folder. For piped-text tasks, run it from an empty scratch directory with `--skip-trust`; do not skip trust inside a worktree that has project config. It also needs network access to the Gemini API: if it fails with `fetch failed`, do the task directly instead of retrying.
