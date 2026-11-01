@@ -28,7 +28,7 @@ test('solo: a full six-putt map renders in WebGL and scores six holes in one', a
   }
 
   await expect(ana.ui('results')).toBeVisible({ timeout: 30_000 });
-  await expect(ana.ui('results').locator('p').first()).toHaveText('Switchback Garden: Ana 6. Map winner: Ana.');
+  await expect(ana.ui('results').locator('p').first()).toHaveText('Switchback Garden: Ana 6 (-6). Map winner: Ana.');
   await ana.button('Back to lobby').click();
   await expect(ana.ui('room-lobby')).toBeVisible();
   await ana.button('Leave room').click();

@@ -59,7 +59,7 @@ test('course practice: a real two-minute timeout scores par + penalty and the ma
     await until(async () => (await ana.snapshot()).players.solo.scores.length > k, { label: 'sink ' + (k + 1) });
   }
   await expect(ana.ui('results')).toBeVisible({ timeout: 30_000 });
-  await expect(ana.ui('results').locator('p').first()).toHaveText('Switchback Garden: Ana 10. Practice round finished.');
+  await expect(ana.ui('results').locator('p').first()).toHaveText('Switchback Garden: Ana 10 (-2). Practice round finished.');
   await ana.button('Pick another map').click();
   await expect(ana.ui('map-select')).toBeVisible();
   expect(ana.errors, 'no page or console errors').toEqual([]);
