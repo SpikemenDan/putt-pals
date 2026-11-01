@@ -12,6 +12,7 @@ import { SERVER_ROOM_VERSION, validRoomSnapshot } from '../../src/network/contra
 
 await import('./session-recovery.test.mjs');
 await import('./durable-recovery.test.mjs');
+await import('./traffic.test.mjs');
 await import('./hibernation-runtime.test.mjs');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
