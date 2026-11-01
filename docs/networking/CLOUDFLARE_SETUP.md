@@ -1,6 +1,6 @@
 # Local Cloudflare Worker setup
 
-N4b adds a local-only development path for the accepted server-room contract in [SERVER_ROOMS.md](SERVER_ROOMS.md). It serves the normal Vite build from Cloudflare Static Assets and routes `/api/rooms/<roomCode>/socket` to a named SQLite-backed Durable Object. N4c implements v2 admission, server-owned lifecycle coordination and local WebSocket gameplay. Durable checkpoint commits and restart recovery remain N4d work; local runtime success does not establish those guarantees.
+The local development path serves the normal Vite build from Cloudflare Static Assets and routes `/api/rooms/<roomCode>/socket` to a named SQLite-backed Durable Object. N4C coordination, N4D durable recovery and N4E browser adoption are merged. Local runtime success does not establish hosted or separate-network acceptance. See [SERVER_ROOMS.md](SERVER_ROOMS.md) for the contract and [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md) for N4G's offline preparation and deployment approval worksheet.
 
 ## Requirements
 
