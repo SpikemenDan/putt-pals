@@ -282,6 +282,17 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     pointer(canvas, 'pointermove', { clientX: 400, clientY: 250 + 190 });
     const g = input.frameAim(0.35);
     assert.equal(g.length, g.charge * AIM_ARROW_MAX_LENGTH);
+    assert.equal(AIM_ARROW_MAX_LENGTH, 180, 'the shipped arrow length is the DISPLAY default');
+    {
+      const { createDisplay } = await import('../src/shared/display.js');
+      const shorter = createInputAdapter({ canvas, window: w, camera: rig, pickGround, getState, dispatch, display: createDisplay({ aim: { arrowMaxLength: 90 } }) });
+      pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 });
+      pointer(canvas, 'pointermove', { clientX: 400, clientY: 250 + 190 });
+      const s = shorter.frameAim(0.35);
+      assert.equal(s.length, s.charge * 90, 'a DISPLAY override changes the arrow length the adapter reports');
+      assert.equal(g.length, g.charge * 180, 'the default adapter is unaffected');
+      shorter.dispose();
+    }
     assert.equal(g.angle, shotAngle({ aimAngle: g.aimAngle, charge: g.charge, time: 0.35 }));
     const z = input.frameAim(0.7);
     assert.ok(Math.abs(z.angle - z.aimAngle) < 1e-9, 'dead straight at a sway zero crossing');

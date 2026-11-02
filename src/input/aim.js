@@ -1,3 +1,4 @@
+import { DISPLAY } from '../shared/display.js';
 import { TUNING } from '../shared/tuning.js';
 
 const AIM = TUNING.aim;
@@ -23,8 +24,8 @@ export const SHOT_MIN_CHARGE = AIM.shotMinCharge;
  */
 export const FULL_PULL_PX = AIM.fullPullPx;
 export const FULL_PULL_CANVAS_FRACTION = AIM.canvasPullFraction;
-/** World-unit length of the aim arrow at full power; the arrow is charge * this, with no minimum. Cosmetic, so it lives here and not in shared tuning (which would change the simulation fingerprint). */
-export const AIM_ARROW_MAX_LENGTH = 180;
+/** World-unit length of the aim arrow at full power; the arrow is charge * this, with no minimum. Presentation only, so it is a DISPLAY setting. */
+export const AIM_ARROW_MAX_LENGTH = DISPLAY.aim.arrowMaxLength;
 /** Arrow keys and non-orbit drags rotate aim by this many radians per step/pixel factor. */
 export const AIM_STEP = AIM.keyStep;
 export const DRAG_RADIANS_PER_PX = AIM.dragRadiansPerPx;

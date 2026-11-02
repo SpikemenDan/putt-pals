@@ -146,7 +146,7 @@ settings instead of copying defaults.
 Ball dimensions agree between collision geometry and rendering. Arrow length and
 thickness are presentation settings; shot strength and drag-to-power mapping are
 separate behavior/input settings. Existing settings such as ball.radius,
-shotPower and aim.arrowMaxLength should be reused, not recreated.
+shotPower and DISPLAY aim.arrowMaxLength should be reused, not recreated.
 
 Keep course data and intentional per-ball effect overrides explicit.
 Configuration extraction preserves current shipped values and behavior.

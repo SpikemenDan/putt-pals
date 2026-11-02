@@ -481,6 +481,22 @@ let TUNING;
     assert.ok(!guide.arrow.visible);
   });
 
+  await scenario('aim guide: non-default DISPLAY settings change the arrow geometry and opacity, defaults keep the shipped look', async () => {
+    const { createAimGuide } = await import('../src/render/actors.js');
+    const { createDisplay } = await import('../src/shared/display.js');
+    const bp = new THREE.Vector3(100, 5, 200);
+    const measure = guide => {
+      guide.show(bp, { charge: 1, angle: 0, aimAngle: 0, spread: 0 });
+      const p = guide.arrow.geometry.attributes.position;
+      return { shaft: Math.abs(p.getZ(0) - 200), head: Math.abs(p.getZ(6) - 200), headStart: p.getX(6) - 100, tip: p.getX(7) - 100, opacity: guide.arrow.material.opacity };
+    };
+    const base = measure(createAimGuide(THREE));
+    const near = (actual, expected, message) => { for (const k of Object.keys(expected)) assert.ok(Math.abs(actual[k] - expected[k]) < 1e-4, `${message}: ${k} ${actual[k]} vs ${expected[k]}`); };
+    near(base, { shaft: 1.3, head: 3.6, headStart: 172, tip: 180, opacity: 0.92 }, 'default arrow is the shipped look');
+    const custom = measure(createAimGuide(THREE, createDisplay({ aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2, arrowHeadHalfWidth: 6, arrowHeadLength: 20, arrowOpacity: 0.5 } })));
+    near(custom, { shaft: 2, head: 6, headStart: 80, tip: 100, opacity: 0.5 }, 'custom arrow');
+  });
+
   await scenario('active-ball ring: hidden by default, shown in the player colour under a ball that may putt, pulses with time', async () => {
     const { createTurnRing, placeTurnRing } = await import('../src/render/actors.js');
     const ring = createTurnRing({ THREE });

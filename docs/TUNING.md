@@ -63,7 +63,7 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `aim.spreadExponent` | 2.6 | 0.1 to 10 | How sharply spread grows with power. |
 | `aim.fullPullPx` | 380 | 10 to 5000 | Drag distance (CSS px) for full power. |
 | `aim.canvasPullFraction` | 0.6 | 0.01 to 1 | Full pull is also capped at this fraction of canvas width. |
-| `aim.arrowMaxLength` | 300 | 1 to 2000 | World-unit length of the aim arrow at full power (no minimum). |
+| `aim.arrowMaxLength` | 300 | 1 to 2000 | Unused. The arrow length is `DISPLAY.aim.arrowMaxLength` (180, docs/DISPLAY.md); this field is slated for removal with a fingerprint regeneration. |
 | `aim.dragRadiansPerPx` | 0.006 | 0 to 1 | Aim rotation per pixel of orbit-less drag. |
 | `aim.keyStep` | 0.06 | 0 to 1 | Aim rotation per arrow-key press (radians). |
 | `aim.guideMinCharge` | 0.015 | 0 to 1 | Below this charge no aim guide is drawn. |
@@ -75,7 +75,7 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 The catalog above describes the supplied documentation snapshot; no code was
 changed by this document update. Expansion beyond existing fields remains planned.
 Do not describe a proposed field as implemented until consumers and validation
-exist. Reuse existing ball.radius, shotPower and aim.arrowMaxLength settings.
+exist. Reuse existing ball.radius and shotPower settings; the aim arrow length is a DISPLAY setting.
 
 Use one documented configuration entry point, organized by domain.
 For each setting record:

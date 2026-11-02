@@ -8,6 +8,7 @@
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
+import { DISPLAY } from '../shared/display.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
 import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
@@ -43,7 +44,7 @@ export function smoothRemotePosition(previous, target) {
  * @param {(THREE: object, canvas: HTMLCanvasElement) => object} [options.createWebGLRenderer]
  * @param {'toon'|'legacy'} [options.style='toon'] Comic toon look (V1a #58); 'legacy' only for historical parity checks
  */
-export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer, style = 'toon' }) {
+export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer, style = 'toon', display = DISPLAY }) {
   if (!THREE) throw new TypeError('THREE is required');
   const toon = style === 'toon';
   const makeCanvas = createCanvas || (() => canvas.ownerDocument.createElement('canvas'));
@@ -155,7 +156,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const confetti = createConfetti(THREE, random);
   let cosmetics = { ball: cosmeticRecord('ball', DEFAULT_COSMETICS.ball), trail: cosmeticRecord('trail', DEFAULT_COSMETICS.trail), celebration: cosmeticRecord('celebration', DEFAULT_COSMETICS.celebration) };
   scene.add(actor(confetti.points));
-  const aimGuide = createAimGuide(THREE);
+  const aimGuide = createAimGuide(THREE, display);
   scene.add(actor(aimGuide.arrow));
 
   const remotes = new Map();
@@ -293,7 +294,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       const me = local || { x: 0, y: 0, z: 0, vx: 0, vy: 0, moving: false, mode: 'lobby', color: 0 };
       localBall.visible = me.mode === 'play' || me.mode === 'sunk';
       localBall.material.color.set(PLAYER_COLORS[me.color % 8]);
-      const meScale = me.radius > 0 ? me.radius / R : 1; // Small/Tall Ball (per-ball radius); 1 when no effect is armed
+      const meScale = (me.radius > 0 ? me.radius / R : 1) * display.ball.visualScale; // Small/Tall Ball (per-ball radius) times the presentation scale
       localBall.scale.setScalar(meScale);
       localBall.position.set(me.x + o[0], me.z + R * meScale, me.y + o[1]);
       if (me.moving) { localBall.rotation.x += me.vy * dt / R; localBall.rotation.z -= me.vx * dt / R; }
@@ -314,7 +315,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         }
         const d = entry.shown = smoothRemotePosition(entry.shown, { x: +p.x || 0, y: +p.y || 0, z: +p.z || 0 });
         entry.ball.material.color.set(PLAYER_COLORS[(+p.color || 0) % 8]);
-        const scale = p.radius > 0 ? p.radius / R : 1;
+        const scale = (p.radius > 0 ? p.radius / R : 1) * display.ball.visualScale;
         entry.ball.scale.setScalar(scale);
         entry.ball.userData.scale = scale;
         entry.ball.position.set(d.x + o[0], d.z + R * scale, d.y + o[1]);
