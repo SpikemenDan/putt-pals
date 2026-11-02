@@ -1,6 +1,6 @@
 # Gameplay tuning
 
-All feel-affecting numbers live in `src/shared/tuning.js` (`TUNING`, frozen, validated at load). Defaults are the shipped values; T2 changed no behavior. S3 (forgiving physics) lowered turf, sand, ice and slime friction and added the cup fillet; recorded difficulty from before S3 is stale. Edit `DEFAULT_TUNING` to retune (a separate, reviewed task). Invalid values (non-finite, out of range, `cup.minRadius > cup.defaultRadius`) throw at load; `createTuning(overrides)` builds a validated variant for tests. Old names (`SHOT_POWER`, `TURF_FRICTION`, `GRAVITY`, `FULL_PULL_PX`, ...) remain exported as aliases.
+The existing T2 gameplay configuration is implemented in `src/shared/tuning.js` (`TUNING`, frozen, validated at load). Defaults are the shipped values; T2 changed no behavior. S3 (forgiving physics) lowered turf, sand, ice and slime friction and added the cup fillet; recorded difficulty from before S3 is stale. Edit `DEFAULT_TUNING` for deliberate retuning; provide a local browser preview for owner feedback and run affected checks before acceptance. Invalid values (non-finite, out of range, `cup.minRadius > cup.defaultRadius`) throw at load; `createTuning(overrides)` builds a validated variant for tests. Old names (`SHOT_POWER`, `TURF_FRICTION`, `GRAVITY`, `FULL_PULL_PX`, ...) remain exported as aliases.
 
 Units: distances in world units (ball radius 5), time in seconds, friction in 1/s, drag in units/s^2. Sand uses turf constant drag.
 
@@ -68,3 +68,54 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 | `aim.keyStep` | 0.06 | 0 to 1 | Aim rotation per arrow-key press (radians). |
 | `aim.guideMinCharge` | 0.015 | 0 to 1 | Below this charge no aim guide is drawn. |
 | `aim.shotMinCharge` | 0.025 | 0 to 1 | Below this charge a release cancels the shot. |
+
+
+## Configuration expansion policy
+
+The catalog above describes the supplied documentation snapshot; no code was
+changed by this document update. Expansion beyond existing fields remains planned.
+Do not describe a proposed field as implemented until consumers and validation
+exist. Reuse existing ball.radius, shotPower and aim.arrowMaxLength settings.
+
+Use one documented configuration entry point, organized by domain.
+For each setting record:
+- Name and authoritative default.
+- Units and allowed range.
+- Description and consumers.
+- Presentation-only or gameplay-affecting classification.
+- Reset/restart requirements.
+- Dependencies and affected verification.
+
+Prioritize physics/dimensions, shot/input mapping, aim-arrow presentation, camera,
+session timers/limits, power-up values, visuals and audio.
+Browser, simulation, renderer, CLI, solver and server use the same relevant
+defaults. Keep course data and intentional per-ball overrides explicit.
+
+Extraction preserves current defaults. Retuning can invalidate geometry clearance,
+cup-fit assumptions, simulation fingerprints and solver evidence. Tests must
+check meaningful resulting behavior, not merely compare a setting with itself.
+
+Online participants must use compatible gameplay configuration. Presentation-only
+preferences may vary. No authoritative match-rule changes midway through play.
+Credentials/authentication and unrestricted infrastructure limits are excluded.
+
+## Developer preview panel target
+
+Provide development-only sliders, toggles and selectors with values, defaults,
+units and valid ranges, plus reset and validated override import/export.
+Clearly mark temporary settings. Do not silently persist them as shipped defaults.
+Keep the panel disabled in ordinary production builds by default.
+
+Safe presentation changes may apply live. Physics, dimensions and session rules
+require preview reset/restart. Reject invalid imports before applying changes.
+
+For proposed appearance or feel changes:
+1. Open the local preview in the Claude browser integration.
+2. Provide relevant developer controls.
+3. Ask the owner to try it and provide feedback before final acceptance.
+4. Persist approved settings.
+5. Rerun affected verification.
+
+If browser access is unavailable, provide the exact local URL and steps and mark
+interactive verification/acceptance pending. The panel remains a target until
+implementation and verification are recorded.

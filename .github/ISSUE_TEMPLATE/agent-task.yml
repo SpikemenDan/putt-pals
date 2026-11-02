@@ -1,70 +1,66 @@
-name: Agent task
-description: Assign a bounded modernization task to one agent.
+name: Development task
+description: Track substantial work for the two-contributor workflow.
 title: "[TASK-ID] Concrete outcome"
 body:
   - type: markdown
     attributes:
       value: |
-        Read AGENTS.md, docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Check the existing backlog before creating a duplicate. The coordinator confirms one worker/session before work starts and maintains native blocked-by links plus status labels. This form does not launch an agent or grant permissions.
+        Follow AGENTS.md. Reuse your contributor branch.
+        Small fixes do not require an issue.
+        This form does not grant additional permissions.
   - type: input
     id: roadmap-id
     attributes:
       label: Roadmap ID
-      placeholder: S1
-    validations:
-      required: true
+      description: Optional existing roadmap reference.
   - type: textarea
-    id: outcome
+    id: scope
     attributes:
       label: Outcome and scope
-      description: Describe the problem, expected behavior, and explicit exclusions.
-    validations:
-      required: true
-  - type: textarea
-    id: assignment
-    attributes:
-      label: Coordinator-confirmed assignment
-      value: |
-        Coordinator:
-        Worker GitHub identity and agent/session:
-        Branch/worktree:
-        Status: TODO
-        Commit/push/PR/comment authorization:
-        Remaining approvals:
+      description: Expected behavior, relevant context and exclusions.
     validations:
       required: true
   - type: textarea
     id: ownership
     attributes:
-      label: Owned paths and shared-file restrictions
-      description: Include test paths. Manifests, lockfile, shared contracts and common status docs belong to the integration owner unless delegated.
+      label: Contributor and affected paths
+      value: |
+        Contributor:
+        Existing contributor branch:
+        Affected paths:
+        Overlapping work checked:
     validations:
       required: true
   - type: textarea
     id: dependencies
     attributes:
-      label: Dependencies and contract revision
-      value: |
-        Blocked by: none / issue links
-        Required merged commit / contract revision:
-        Ready when:
-    validations:
-      required: true
+      label: Dependencies
+      description: Required issues, interfaces or owner decisions.
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance and verification
-      description: List observable acceptance criteria, exact commands, and any real-browser or real-network checks separately.
+      value: |
+        Observable acceptance:
+        Relevant checks:
+        Browser preview needed:
+        Owner feedback needed:
     validations:
       required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Remote authorization, if applicable
+      description: Record actual authorization; this field does not grant it.
   - type: textarea
     id: handoff
     attributes:
       label: Progress and handoff
       value: |
-        PR:
-        Current commit:
+        State:
+        Commits / PR:
         Changes:
         Commands and results:
-        Untested / failures / blockers:
+        Preview / owner acceptance:
+        Blockers / remaining work:
         Next action:

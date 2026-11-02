@@ -1,28 +1,35 @@
 ## Outcome
 
-Describe the concrete problem and resulting behavior. Link the assigned issue and roadmap ID. Use `Closes #...` only for a complete task; otherwise use `Refs #...`.
+Describe the problem and resulting behavior.
+Link the issue/roadmap item when applicable.
+Use Closes only for complete acceptance; otherwise use Refs.
 
-## Scope and ownership
+## Scope
 
-- Worker identity/session:
-- Owned paths:
-- Shared-file changes approved by:
-- Dependency PRs and accepted contract commit:
+- Contributor:
+- Changes:
+- Overlapping work coordinated, if applicable:
+- Configuration or interface changes:
 
 ## Verification
 
-List exact commands and outcomes. Include CI results for the current head. Distinguish real browser/network evidence from jsdom and fake transports. Explain skipped checks and attach visual references when relevant.
+List relevant commands and actual results, including current-head CI when available.
+Identify skipped or blocked checks.
+Distinguish unit/fake-network, real-browser and deployed-network evidence.
 
-## Integration notes
+## Preview and owner acceptance
 
-Record behavior changes, limitations, follow-ups, compatibility and any required merge order. Confirm dependent issues can use the merged interfaces.
+For appearance or game-feel changes:
+- Local browser preview:
+- Developer controls provided:
+- Owner feedback:
+- Approved values persisted:
+- Acceptance still pending:
 
-## Review gates
+Use "Not applicable" when no interactive preview is relevant.
 
-- [ ] Scope matches the coordinator-confirmed assignment.
-- [ ] Dependencies are merged, or an explicit stacked-PR arrangement is recorded.
-- [ ] Applicable checks pass; untested behavior is identified.
-- [ ] Coordinator/reviewer has reviewed the current changes.
-- [ ] User merge approval or explicit delegated merge authority is recorded.
+## Remaining work
 
-Keep this PR draft until ready for review. This checklist does not grant approval or replace branch rules.
+List limitations, dependencies and incomplete acceptance criteria.
+Do not present implementation alone as release acceptance.
+This template does not grant merge or remote-write permission.
