@@ -25,3 +25,5 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 - Export gives `{"version": 1, "display": {...}}` containing only non-default values. Import validates the whole document (unknown keys, out-of-range values, shaft wider than head) and applies nothing if any part is invalid.
 - Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not expose `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope.
 - `window.__ppTuner` is available in dev for browser checks.
+
+Approval: the defaults in the table above were tried in the tuning panel and approved by the project owner on 2026-11-02, with no changes from the pre-panel look.
