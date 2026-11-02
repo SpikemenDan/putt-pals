@@ -26,4 +26,4 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 - Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not expose `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope.
 - `window.__ppTuner` is available in dev for browser checks.
 
-History: the first defaults (length 180, widths 1.3/3.6, head 8) were the pre-panel look. The owner found that arrow too narrow and far too long, so the defaults became length 100 and widths 2.6/7, head 14 (proposed 2026-11-02, pending the owner's confirmation in the tuning panel).
+History: the first defaults (length 180, widths 1.3/3.6, head 8) were the pre-panel look. The owner found that arrow too narrow and far too long, so the defaults became length 100 and widths 2.6/7, head 14 (tried in the tuning panel and approved by the owner on 2026-11-02).
