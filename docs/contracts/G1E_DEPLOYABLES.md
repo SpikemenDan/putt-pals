@@ -14,7 +14,7 @@ A deployed object is a plain record, JSON-safe, with exactly these keys:
 | `kind` | string | a catalog id whose entry has `target: 'course'` (`bumper`, `orbital`) |
 | `x`, `y` | finite numbers | simulation coordinates (x/y horizontal), `abs <= 1000000`; the host also checks the point is on the floor and clear of walls (`HAZARD_WALL_CLEARANCE`) |
 | `owner` | string | `validId`; a player id present in `players` |
-| `impacts` | integer | `0 <= impacts < maxImpacts`; objects at the limit are removed, never sent |
+| `impacts` | integer | `0 <= impacts < deployables.maxImpacts` (tuning, not a literal); objects at the limit are removed, never sent |
 | `placedAt` | finite number | room time (seconds) at placement; the only clock, so no wall-clock reads |
 | `map`, `putt` | integers | `index(map, 22)`, `index(putt, 6)`; objects apply only while that putt is in play |
 
@@ -84,9 +84,9 @@ Gameplay numbers must come from this file and not appear as literals in simulati
 
 The worker then owns: catalog entries and the `course` target, `src/gameplay/deployables.js`, the simulation hook, renderer, HUD, audio and tests.
 
-## 9. Open questions for the owner
+## 9. Decisions (repo owner, 2026-11-02) and remaining question
 
-1. Placement: current ball position, an aimed point, or the opponent's ball? This draft takes an explicit `x`, `y` from the client so any of these works, and the host validates it.
-2. Does a bumper affect its owner? This draft applies it to every player's own ball (each client applies it locally), which is the simplest; "opponents only" needs the owner id compared on each client.
-3. Timeout expiry on top of three impacts? None is proposed.
-4. Bump `PROTOCOL_VERSION` to 2 (recommended) or keep it at 1?
+1. **Placement:** the player who activates the power-up chooses the spot. The client enters a placement mode and sends `DEPLOY_OBJECT` with the chosen `x`, `y` on confirm; the item is consumed only when the host accepts it. Right-click cancels placement and the item stays in the inventory. (Right-click cancelling a pending aim is a separate input-layer change, not part of this contract.)
+2. **Owner is affected:** a bumper bounces every ball, the owner's included. Each client applies it to its own ball, so no owner comparison is needed. The `owner` field stays for attribution and the per-player cap.
+3. **No timeout:** an object lasts until it has taken `deployables.maxImpacts` hits, then it is removed. `maxImpacts` is a tuning field (section 6), so a developer changes it in `src/shared/tuning.js` and nothing else. The `expires` idea is dropped.
+4. **Open, for the integration owner:** bump `PROTOCOL_VERSION` from 1 to 2 in the same PR (recommended). It is the number every message carries, and a client with a different number is refused. Without a bump, an older client would reject snapshots that carry the new `deployables` key.
