@@ -1,8 +1,8 @@
 # Roadmap
 
-Coordinator snapshot of the task graph. GitHub issues own live claims, status, blockers and acceptance; discover and claim work through docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Per-task verification evidence lives in each PR and in docs/reviews/. Workers report in their issue or PR rather than editing this file.
+Roadmap and dependency snapshot from the supplied repository. Historical task states below have not been refreshed from live GitHub. Check relevant issues, PRs and code before starting. Use the two-contributor workflow in docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Keep detailed progress in one task record; update this roadmap when scope or dependencies materially change.
 
-Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (concrete blocker named), PAUSED (deliberate hold), DONE.
+Statuses: READY (eligible after dependency and overlap checks), ACTIVE, BLOCKED (concrete blocker named), PAUSED (deliberate hold), DONE.
 
 ## Open work
 
@@ -27,15 +27,15 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | [CL2 #103](https://github.com/SpikemenDan/putt-pals/issues/103) | REVIEW | none | PR #128 merged (camera collision, wall fade, depth-tested aim arrow); issue acceptance remains open |
 | [G1b #89](https://github.com/SpikemenDan/putt-pals/issues/89) | REVIEW | G1a | PR #118 merged (self utility power-ups); issue acceptance remains open |
 
-On 2026-10-29 the owner left the order to the coordinator (tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. Order: S3 (merged) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4. Labels lag merges; read the issue and main before acting.
+On 2026-10-29 the owner delegated implementation ordering (tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. Order: S3 (merged) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4. Labels lag merges; read the issue and main before acting.
 
 ## Vision backlog
 
-Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), GM1 (#95) and T2 (#83) are closed; S3, C3, F1, CL2 and G1b are merged and listed under Open work. Status labels on the remaining rows can lag merges: G1c-G1f depend only on the closed G1a and SV1 only on merged S3, so their code prerequisites are met, but a coordinator-confirmed claim is still required. #34 (G1) and #35 (K1) are umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
+Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), GM1 (#95) and T2 (#83) are closed; S3, C3, F1, CL2 and G1b are merged and listed under Open work. Status labels on the remaining rows can lag merges: G1c-G1f depend only on the closed G1a and SV1 only on merged S3, so their code prerequisites are met, but dependency and overlapping-work checks are still required. #34 (G1) and #35 (K1) are umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
-| [SV1 #87](https://github.com/SpikemenDan/putt-pals/issues/87) Par-route solver | #86 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools.js` and `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Contract changes go through the integration owner |
+| [SV1 #87](https://github.com/SpikemenDan/putt-pals/issues/87) Par-route solver | #86 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools.js` and `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Coordinate contract changes with affected active work and update consumers/tests together |
 | [G1c #90](https://github.com/SpikemenDan/putt-pals/issues/90) Aim sabotage | #88 | 360° Aim and 180° Aim as aim-indicator modes applied to opponents |
 | [G1d #91](https://github.com/SpikemenDan/putt-pals/issues/91) Ball auras | #88 | Love Ball and Hate Ball, applied by each client to its own ball |
 | [G1e #92](https://github.com/SpikemenDan/putt-pals/issues/92) Deployables | #88 | Bumper and Orbital Bumper (3 impacts, visible radius rings), synced objects |
@@ -65,3 +65,24 @@ All merged to main; details in the PRs and docs/reviews/.
 | Look and feel | V1a toon foundation (#58, PR #67); V1b sky world (#59, PR #76); V1c palettes and weather (#60, PR #78); V1d comic HUD (#61, PR #79); V1 umbrella (#33) |
 | Evaluation | P1 Rapier experiment (#17, PR #80): production adoption deferred |
 | Vision backlog | T2 tuning module (#83, PR #109); G1a power-up framework (#88, PR #115); GM1 No Power-Ups flag (#95, PR #119) |
+
+
+## Developer workflow improvements
+
+These tasks are pending until implementation and verification are recorded.
+IDs below do not imply that GitHub issues have already been created.
+
+| ID | Outcome | Dependencies |
+| --- | --- | --- |
+| DX1 | Audit/extend the validated configuration entry point; reuse existing settings, preserve defaults and remove duplicated adjustable values | Existing tuning system |
+| DX2 | Development-only tuning panel: sliders, toggles, selectors, reset, validated import/export and safe restart semantics | DX1 |
+| DX3 | Inventory legacy consumers, migrate required capabilities/checks, then remove putt-pals.html, tools.js and obsolete infrastructure | Replacement test coverage and build checks |
+| DX4 | Recovery backup: Git history/local refs, working files, manifest, restore verification and private Drive upload verification | Owner-designated Drive destination and authorized access |
+| DX5 | Explicit-start overnight runner with bounded scope/time, local checkpoints, stop behavior and handoff | DX4 |
+| DX6 | Inspect redundant local branches and present a named deletion list | Actual developer checkout inspection; owner approval before deletion |
+
+DX1 extraction preserves current behavior. Retuning needs separate verification.
+DX2 remains disabled in ordinary production builds by default. Appearance/feel
+proposals require a local browser preview and owner feedback before acceptance.
+DX3 preserves useful regression coverage and provenance.
+DX5 has no scheduled start, remote writes or automatic restart.
