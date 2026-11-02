@@ -463,13 +463,13 @@ let TUNING;
     assert.equal(guide.dots, undefined, 'dots removed');
     const bp = new THREE.Vector3(100, 5, 200);
     const tip = (charge, angle) => {
-      guide.show(bp, { charge, angle, aimAngle: 0, spread: 0.05, length: charge * 110 });
+      guide.show(bp, { charge, angle, aimAngle: 0, spread: 0.05, length: charge * 180 });
       const p = guide.arrow.geometry.attributes.position;
       return { x: p.getX(7), y: p.getY(7), z: p.getZ(7) };
     };
     for (const c of [0.02, 0.1, 0.5, 1]) {
       const t = tip(c, 0.4);
-      assert.ok(Math.abs(Math.hypot(t.x - 100, t.z - 200) - c * 110) < 1e-3, `length at charge ${c}`);
+      assert.ok(Math.abs(Math.hypot(t.x - 100, t.z - 200) - c * 180) < 1e-3, `length at charge ${c}`);
       assert.ok(Math.abs(Math.atan2(t.z - 200, t.x - 100) - 0.4) < 1e-5, 'points along the swayed angle');
       assert.equal(t.y, 5);
     }

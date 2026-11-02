@@ -179,7 +179,7 @@ export function createConfetti(THREE, random) {
 }
 
 /** Aim arrow width and head proportions (world units). */
-const ARROW_SHAFT_HALF_WIDTH = 1.3, ARROW_HEAD_HALF_WIDTH = 3.6, ARROW_HEAD_LENGTH = 8, ARROW_FALLBACK_MAX_LENGTH = 110;
+const ARROW_SHAFT_HALF_WIDTH = 1.3, ARROW_HEAD_HALF_WIDTH = 3.6, ARROW_HEAD_LENGTH = 8, ARROW_FALLBACK_MAX_LENGTH = 180;
 
 /**
  * Aim guide: one flat arrow from the ball along the swayed shot direction. Its length is
@@ -198,7 +198,7 @@ export function createAimGuide(THREE) {
     hide() { arrow.visible = false; },
     /**
      * @param {{x:number,y:number,z:number}} bp Ball centre (world)
-     * @param {{charge:number, angle:number, length?:number}} aim angle is the swayed shot direction; length defaults to charge * 110.
+     * @param {{charge:number, angle:number, length?:number}} aim angle is the swayed shot direction; length defaults to charge * 180.
      */
     show(bp, aim) {
       const L = aim.length ?? aim.charge * ARROW_FALLBACK_MAX_LENGTH;
