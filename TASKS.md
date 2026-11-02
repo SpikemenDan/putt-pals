@@ -9,11 +9,7 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | ID | Status | Depends on | Scope |
 | --- | --- | --- | --- |
 | [N4 #65](https://github.com/SpikemenDan/putt-pals/issues/65) | BLOCKED | children below | Parent: server-owned Cloudflare rooms replace PeerJS. Spec: docs/networking/SERVER_ROOMS.md |
-| [N4c #69](https://github.com/SpikemenDan/putt-pals/issues/69) | ACTIVE | N4a, N4b | Room coordination on a Durable Object. PRs #81 and #120 merged; the issue is still open, so confirm what remains before claiming |
-| [N4d #70](https://github.com/SpikemenDan/putt-pals/issues/70) | REVIEW | #69 | PR #122 merged; durable checkpoints, alarms and recovery implemented; issue acceptance remains open |
-| [N4e #71](https://github.com/SpikemenDan/putt-pals/issues/71) | REVIEW | #66, #69, #70 | PR #123 merged with all browser CI projects green; production browser uses WebSockets; issue acceptance remains open |
-| [N4f #72](https://github.com/SpikemenDan/putt-pals/issues/72) | REVIEW | #68-#71 | PR #129 merged (server-room series and Free-plan capacity); issue acceptance remains open |
-| [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | ACTIVE | #68, #72 and owner authorization | PR #130 merged (preview config and rollback). Connecting Cloudflare, deploying a preview and separate-network acceptance still need owner authorization |
+| [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | BLOCKED | admission fix integration; deferred separate-network acceptance | Preview is deployed; physical-shot full map and hosted maintenance/recovery passed. Empty-room history-full fix passes locally and is committed as `28072ff`, pending integration/deployment. User deferred separate-network acceptance; idle metrics have no rows. Evidence: docs/reviews/N4_SERVER_ROOMS.md |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | PAUSED | n/a | Managed TURN; an alternative to N4, not a prerequisite |
 | [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: verify a robust route within par on every putt under the final physics (replaces the hole-in-one refresh; scope to be updated on the issue), production-like preview, rollback, manual playtests |
 | [M1 #36](https://github.com/SpikemenDan/putt-pals/issues/36) | READY | V1 done | Menus, loading screen and feedback polish. Merged so far: M1b start screen over a rotating panorama (PR #114), M1e per-power-up sounds (PR #126). Confirm what remains and split into sub-issues before claiming |
@@ -59,7 +55,7 @@ All merged to main; details in the PRs and docs/reviews/.
 | Baseline and tooling | W1 workflow and CI; B1 inventory (PR #1); B2 solver launch fix; B3 Vite and jsdom; B4 difficulty sweep (#4, PR #28); C2 root cleanup (#19) |
 | Shared core | C1 contracts (#3); S1 headless simulation (#5); S2 cup capture (#54, PR #55); D1 course data and CLI (#8, PRs #22 and #31) |
 | Application | L1 room lifecycle (#9, PR #23); A1 procedural audio (#10, PR #25); N1 transports (#11, PR #24); R1 renderer (#6, PR #27); U1 React UI and input (#7, PR #29); I1 modular app (#12, PR #31); I2 and I2b WebGL fallback (#38 PR #40, #41 PR #45) |
-| Networking | N2 guest recovery and interpolation (#13, PR #43); N2b browser specs (#47, PR #49); T1c join flake (#48, PR #50); N4a contracts (#66, PR #74); N4b local runtime (#68, PR #75) |
+| Networking | N2 guest recovery and interpolation (#13, PR #43); N2b browser specs (#47, PR #49); T1c join flake (#48, PR #50); N4a contracts (#66, PR #74); N4b local runtime (#68, PR #75); N4c coordination (#69, PRs #81/#120); N4d recovery (#70, PR #122); N4e browser adoption (#71, PR #123); N4f coverage/quota evidence (#72, PR #129) |
 | Testing | T1 Playwright suites and browser-ci (#15, PR #37) |
 | Rendering | R2 Three.js 0.186.1 (#16, PR #53); R2w Windows GPU validation (#52, PR #56); R2c shader colours (#57, PR #63) |
 | Look and feel | V1a toon foundation (#58, PR #67); V1b sky world (#59, PR #76); V1c palettes and weather (#60, PR #78); V1d comic HUD (#61, PR #79); V1 umbrella (#33) |

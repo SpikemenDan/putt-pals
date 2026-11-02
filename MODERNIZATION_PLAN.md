@@ -54,7 +54,7 @@ Collectible ball skins and trail skins (speed lines, elemental auras, comic spar
 
 ## What exists today
 
-Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding Hole Magnet and Steady Aim plus the legacy Rewind, Reversiball and Zanyball (retired by decision), `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms now use the server-owned WebSocket service (N4D #122 and N4E #123 merged); N4F coverage/quota evidence and N4G hosted acceptance remain.
+Built and on main: Standard and Tournament 3/6/9 modes with voting, practice and single-putt replay, timed unlimited strokes with timeout scoring, scorecards, spectator mode, three cameras with wall fading, a 3-slot inventory (keys 1-3) holding Hole Magnet and Steady Aim plus the legacy Rewind, Reversiball and Zanyball (retired by decision), `?` pickup blocks, fans, tornadoes, jump pads, portals, water, sand, ice and slime, procedural audio, the toon comic look, sky world, per-map palettes, ambient weather visuals and the comic HUD. Online rooms now use the server-owned WebSocket service (N4D #122 and N4E #123 merged); N4F coverage/quota evidence is merged (PR #129); N4G preview preparation is restored on main (PR #141). Hosted recovery and rollback acceptance passed on 2026-11-02; the discovered empty-room admission fix and deferred separate-network check remain.
 
 Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other than Hole Magnet and Steady Aim, gameplay weather, ramps, drops and tubes, floating-island course geometry, corner bouncers, skins and ace celebrations. The task breakdown is in TASKS.md.
 
@@ -68,7 +68,7 @@ Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other th
 - **Solo pool** (Solo and Practice): the self-enhancing power-ups only: Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball, Tall Ball and Sticky Ball. Bumpers and the global weather items are excluded because they are course hazards that exist to affect other players.
 - **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Physics and course changes follow the course and physics rules below (S3, then SV1, then G1g and K1).
 
-Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slots, free-for-all simultaneous play, advancing together and the 3/6/9-level tournaments already exist. Two gaps remain, both in task C3: the N4 server-room contract is capped at 4 members and must be raised to 8, and ranking is by total strokes with hole-in-ones breaking ties. Because every player plays the same pars, that orders players the same as strokes minus par and the scorecard already shows the relative score, but results and tournament standings should lead with the relative-to-par figure computed from completed putts.
+Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slots, free-for-all simultaneous play, advancing together and the 3/6/9-level tournaments already exist. C3 (PR #133) aligned the N4 server-room contract with eight players and added strokes-minus-par results.
 
 ### Course and physics rules (owner decisions, 2026-10-29)
 
@@ -111,7 +111,7 @@ Whether skins should one day unlock through play or an account (not needed now).
 | Rendering | Three.js 0.186.1, direct (no scene abstraction) |
 | Menus and HUD | React 19 with CSS Modules; physics ticks and mesh transforms stay out of React state |
 | Room lifecycle | XState 5 |
-| Networking today | PeerJS 1.5.4 (client-trusted physics, host-owned room transitions) |
+| Networking today | WebSockets to Cloudflare Workers + SQLite Durable Objects (client-trusted physics, server-owned room transitions) |
 | Networking target | Cloudflare Workers with a SQLite-backed Durable Object per room, over WebSockets (N4) |
 | Audio | Procedural WebAudio synthesis, no audio files |
 | Tests | Node test scripts, jsdom smoke tests, Playwright (Chromium, Firefox, WebKit) |
@@ -127,7 +127,7 @@ TypeScript, Zod, Vitest, ESLint and Prettier were considered and are not adopted
 | M1 Build and module extraction: Vite, shared contracts, headless simulation, adapters | Done |
 | M2 Course data and validation: 22 validated courses, CLI imports the real simulation | Done |
 | M3 UI and lifecycle: React screens, XState room lifecycle, input adapter, modular app | Done |
-| M4 Server-owned rooms (N4, #65): contracts, local runtime, room coordination, durable recovery and browser adoption are merged; N4F coverage/quota evidence and an authorized N4G preview deployment remain | In progress |
+| M4 Server-owned rooms (N4, #65): contracts, local runtime, room coordination, durable recovery and browser adoption are merged; N4F coverage/quota evidence and N4G preview preparation are on main; hosted recovery/rollback passed; admission fix integration and deferred separate-network acceptance remain | In progress |
 | M5 Three.js upgrade and desktop rendering validation | Done |
 | Look and feel (V1a-V1d): toon style, sky world, palettes, ambient weather, comic HUD | Done |
 | M6 Release readiness (Q1 #18): par-achievability check under final physics, production-like preview, rollback, manual playtests | Blocked on N4 |
