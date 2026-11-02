@@ -195,3 +195,17 @@ Remove obsolete files only after replacement coverage and build checks pass.
 Do not weaken useful tests to obtain a passing migration.
 Git history preserves historical source; a second runnable game is unnecessary.
 Legacy references above describe temporary dependencies, not permanent support.
+
+### Legacy consumer inventory and migration status (DX3)
+
+| Consumer | Uses legacy for | Replacement | Status |
+| --- | --- | --- | --- |
+| `npm run check`, `solve`, `rank` | `tools.js check/solve/rank` | `tools/cli` | Migrated |
+| `npm run test:physics` | `tools.js surfaces/cups/mechanics` | `tests/physics.test.cjs` | Migrated |
+| `npm run test:smoke`, `test:multiplayer` | `tools.js smoke/smoke-multi`: ~120 UI and ~60 multiplayer assertions driven through the legacy DOM | `app`, `ui`, `session`, `network` suites and Playwright specs, not yet mapped assertion by assertion | Open: coverage gap analysis needed |
+| `tests/render.test.cjs`, `audio.test.cjs`, `app.test.cjs` (library parity), `simulation.test.cjs`, `courses.test.cjs`, `cli.test.cjs` | Parity against the legacy renderer, sounds, Three r128 topology, physics and course data | Recorded fixtures with provenance | Open |
+| `tools/legacy-adapter.cjs`, `tests/support/legacy-dom.cjs`, `tests/solver-baseline.cjs`, `scripts/export-*.cjs`, `inventory-baseline.cjs`, `aggregate-difficulty.mjs` | VM and HTML extraction | Retire with the parity tests, keep recorded outputs | Open |
+| `tools/cli validate`, `tests/fixtures/source-inventory.json` | Hashes of `putt-pals.html` and `tools.js` | Hash only the exported data | Open |
+| `vite.config.mjs`, `scripts/check-build.cjs`, `public/_headers`, `tests/rooms/local-runtime.test.mjs`, `scripts/ui-visual-parity.cjs`, `docs/THIRD_PARTY.md` | Second built page and script-preservation check | Drop the legacy page and its check | Open |
+
+Nothing is removed until the open rows have replacement coverage.
