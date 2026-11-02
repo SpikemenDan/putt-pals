@@ -7,10 +7,10 @@ async function run() {
   // Defaults equal the arrow and ball values the renderer used before they were parameterized.
   assert.deepEqual(DISPLAY, DEFAULT_DISPLAY);
   assert.equal(DISPLAY.ball.visualScale, 1);
-  assert.equal(DISPLAY.aim.arrowMaxLength, 180);
-  assert.equal(DISPLAY.aim.arrowShaftHalfWidth, 1.3);
-  assert.equal(DISPLAY.aim.arrowHeadHalfWidth, 3.6);
-  assert.equal(DISPLAY.aim.arrowHeadLength, 8);
+  assert.equal(DISPLAY.aim.arrowMaxLength, 100);
+  assert.equal(DISPLAY.aim.arrowShaftHalfWidth, 2.6);
+  assert.equal(DISPLAY.aim.arrowHeadHalfWidth, 7);
+  assert.equal(DISPLAY.aim.arrowHeadLength, 14);
   assert.equal(DISPLAY.aim.arrowOpacity, 0.92);
   assert.ok(Object.isFrozen(DISPLAY) && Object.isFrozen(DISPLAY.aim) && Object.isFrozen(DISPLAY.ball));
   assert.deepEqual(displayProblems(DEFAULT_DISPLAY), []);
@@ -24,9 +24,9 @@ async function run() {
   // Overrides merge over defaults without touching other fields or the defaults object.
   const wide = createDisplay({ aim: { arrowShaftHalfWidth: 3 }, ball: { visualScale: 1.5 } });
   assert.equal(wide.aim.arrowShaftHalfWidth, 3);
-  assert.equal(wide.aim.arrowHeadHalfWidth, 3.6);
+  assert.equal(wide.aim.arrowHeadHalfWidth, 7);
   assert.equal(wide.ball.visualScale, 1.5);
-  assert.equal(DEFAULT_DISPLAY.aim.arrowShaftHalfWidth, 1.3);
+  assert.equal(DEFAULT_DISPLAY.aim.arrowShaftHalfWidth, 2.6);
   assert.equal(DISPLAY.ball.visualScale, 1);
 
   // Invalid display is rejected whole, naming the field.

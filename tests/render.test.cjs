@@ -492,7 +492,7 @@ let TUNING;
     };
     const base = measure(createAimGuide(THREE));
     const near = (actual, expected, message) => { for (const k of Object.keys(expected)) assert.ok(Math.abs(actual[k] - expected[k]) < 1e-4, `${message}: ${k} ${actual[k]} vs ${expected[k]}`); };
-    near(base, { shaft: 1.3, head: 3.6, headStart: 172, tip: 180, opacity: 0.92 }, 'default arrow is the shipped look');
+    near(base, { shaft: 2.6, head: 7, headStart: 86, tip: 100, opacity: 0.92 }, 'default arrow is the shipped look');
     const custom = measure(createAimGuide(THREE, createDisplay({ aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2, arrowHeadHalfWidth: 6, arrowHeadLength: 20, arrowOpacity: 0.5 } })));
     near(custom, { shaft: 2, head: 6, headStart: 80, tip: 100, opacity: 0.5 }, 'custom arrow');
   });

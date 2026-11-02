@@ -11,10 +11,10 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | Field | Default | Allowed range | Effect |
 | --- | --- | --- | --- |
 | `ball.visualScale` | 1 | 0.25 to 4 | Multiplier on the drawn ball size. Visual only: collision and cup fit use TUNING `ball.radius`. |
-| `aim.arrowMaxLength` | 180 | 1 to 2000 | World-unit length of the aim arrow at full power (no minimum). |
-| `aim.arrowShaftHalfWidth` | 1.3 | 0.1 to 50 | Half the width of the aim arrow shaft. |
-| `aim.arrowHeadHalfWidth` | 3.6 | 0.1 to 100 | Half the width of the aim arrow head. |
-| `aim.arrowHeadLength` | 8 | 1 to 200 | Length of the aim arrow head (capped at half the arrow so short arrows stay readable). |
+| `aim.arrowMaxLength` | 100 | 1 to 2000 | World-unit length of the aim arrow at full power (no minimum). |
+| `aim.arrowShaftHalfWidth` | 2.6 | 0.1 to 50 | Half the width of the aim arrow shaft. |
+| `aim.arrowHeadHalfWidth` | 7 | 0.1 to 100 | Half the width of the aim arrow head. |
+| `aim.arrowHeadLength` | 14 | 1 to 200 | Length of the aim arrow head (capped at half the arrow so short arrows stay readable). |
 | `aim.arrowOpacity` | 0.92 | 0.05 to 1 | Opacity of the aim arrow. |
 
 ## Development tuning panel
@@ -26,4 +26,4 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 - Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not expose `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope.
 - `window.__ppTuner` is available in dev for browser checks.
 
-Approval: the defaults in the table above were tried in the tuning panel and approved by the project owner on 2026-11-02, with no changes from the pre-panel look.
+History: the first defaults (length 180, widths 1.3/3.6, head 8) were the pre-panel look. The owner found that arrow too narrow and far too long, so the defaults became length 100 and widths 2.6/7, head 14 (proposed 2026-11-02, pending the owner's confirmation in the tuning panel).

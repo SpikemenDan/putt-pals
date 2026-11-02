@@ -21,7 +21,7 @@ export const DISPLAY_FIELDS = Object.freeze([
 /** Values the renderer used before they were parameterized. */
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
-  aim: { arrowMaxLength: 180, arrowShaftHalfWidth: 1.3, arrowHeadHalfWidth: 3.6, arrowHeadLength: 8, arrowOpacity: 0.92 },
+  aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

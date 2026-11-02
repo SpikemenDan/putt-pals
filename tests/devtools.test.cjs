@@ -18,13 +18,13 @@ async function run() {
   const guide = createAimGuide(THREE, tuner.display);
   const bp = new THREE.Vector3(0, 0, 0);
   const headWidth = () => { guide.show(bp, { charge: 1, angle: 0 }); return Math.abs(guide.arrow.geometry.attributes.position.getZ(6)); };
-  assert.ok(Math.abs(headWidth() - 3.6) < 1e-4);
+  assert.ok(Math.abs(headWidth() - 7) < 1e-4);
   tuner.set('aim.arrowHeadHalfWidth', 9);
   assert.ok(Math.abs(headWidth() - 9) < 1e-4, 'the existing guide follows the tuner');
   assert.equal(tuner.active, true);
   assert.deepEqual(tuner.overrides, { 'aim.arrowHeadHalfWidth': 9 });
-  assert.equal(DEFAULT_DISPLAY.aim.arrowHeadHalfWidth, 3.6, 'shipped defaults are untouched');
-  assert.equal(DISPLAY.aim.arrowHeadHalfWidth, 3.6);
+  assert.equal(DEFAULT_DISPLAY.aim.arrowHeadHalfWidth, 7, 'shipped defaults are untouched');
+  assert.equal(DISPLAY.aim.arrowHeadHalfWidth, 7);
 
   // Invalid values change nothing: out of range, cross-field, unknown path.
   assert.throws(() => tuner.set('aim.arrowOpacity', 5), /arrowOpacity/);
@@ -34,7 +34,7 @@ async function run() {
   assert.equal(tuner.get('aim.arrowOpacity'), 0.92);
 
   // Setting a value back to its default clears the override; reset restores defaults.
-  tuner.set('aim.arrowHeadHalfWidth', 3.6);
+  tuner.set('aim.arrowHeadHalfWidth', 7);
   assert.equal(tuner.active, false);
   tuner.set('ball.visualScale', 1.5);
   tuner.set('aim.arrowMaxLength', 120);
@@ -91,8 +91,8 @@ async function run() {
   const shaft = slider('aim.arrowShaftHalfWidth');
   shaft.value = '30';
   shaft.dispatchEvent(new dom.window.Event('input'));
-  assert.equal(live.get('aim.arrowShaftHalfWidth'), 1.3);
-  assert.equal(+shaft.value, 1.3);
+  assert.equal(live.get('aim.arrowShaftHalfWidth'), 2.6);
+  assert.equal(+shaft.value, 2.6);
   assert.match(doc.querySelector('.pp-tune-status').textContent, /must not exceed/);
   // Export, import and reset through the buttons.
   const button = text => [...doc.querySelectorAll('button')].find(b => b.textContent === text);
