@@ -90,3 +90,10 @@ The worker then owns: catalog entries and the `course` target, `src/gameplay/dep
 2. **Owner is affected:** a bumper bounces every ball, the owner's included. Each client applies it to its own ball, so no owner comparison is needed. The `owner` field stays for attribution and the per-player cap.
 3. **No timeout:** an object lasts until it has taken `deployables.maxImpacts` hits, then it is removed. `maxImpacts` is a tuning field (section 6), so a developer changes it in `src/shared/tuning.js` and nothing else. The `expires` idea is dropped.
 4. **Open, for the integration owner:** bump `PROTOCOL_VERSION` from 1 to 2 in the same PR (recommended). It is the number every message carries, and a client with a different number is refused. Without a bump, an older client would reject snapshots that carry the new `deployables` key.
+
+## 10. Implementation notes (as built on agent/g1e-deployables)
+
+- **Inventory:** in the peer-to-peer room the inventory lives on each client, so the host cannot check it. The placing client removes the item when it sends `DEPLOY_OBJECT` and checks the room and per-player caps from the snapshot first. The host still enforces both caps, the phase and the roster.
+- **Placement check:** `bindRoomSession` takes an optional `validPlacement(map, putt, x, y)` for the course test (on the floor, clear of walls). It is not wired to a course yet; the placement UI will supply it.
+- **Protocol version:** not bumped. `tests/server-room-contracts.test.cjs` records "no active protocol change" for N4 with `PROTOCOL_VERSION` 1, and the network test treats version 2 as incompatible. Bumping is a separate decision for the integration owner. Until then, an older tab rejects a snapshot that carries `deployables`.
+- **Server-owned rooms (N4):** `src/network/contracts/server-room.js` is untouched. The same rules need porting there when deployables go online through the Worker.

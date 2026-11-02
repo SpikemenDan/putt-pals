@@ -104,5 +104,65 @@ const assert = require('node:assert/strict');
   assert.deepEqual(D.orbitalAcceleration([rec('bumper', 50, 0)], 40, 0, 1), [0, 0], 'a plain bumper has no ring');
   cases++;
 
+  // ---- host reducers: placement caps and the impact rate limit
+  const ctx = (extra = {}) => ({ playerId: 'p1', map: 0, putt: 0, time: 5, sequence: 1, ...extra });
+  const put = (list, kind, extra) => D.placeDeployable(list, { kind, x: 30, y: 40 }, ctx(extra));
+  let placed = put([], 'bumper');
+  assert.deepEqual(placed.placed, { id: 'd1', kind: 'bumper', x: 30, y: 40, owner: 'p1', impacts: 0, placedAt: 5, map: 0, putt: 0 });
+  assert.equal(put([], 'mag').reason, 'invalid', 'only course items can be deployed');
+  assert.equal(D.placeDeployable([], { kind: 'bumper', x: NaN, y: 0 }, ctx()).reason, 'invalid');
+  assert.equal(put([], 'bumper', { validPlacement: () => false }).reason, 'blocked');
+  const twoMine = [rec('bumper', 1, 1, { id: 'a' }), rec('orbital', 2, 2, { id: 'b' })];
+  assert.equal(put(twoMine, 'bumper').reason, 'player-full');
+  assert.equal(put(twoMine, 'bumper', { playerId: 'p2' }).placed.owner, 'p2');
+  const roomFull = Array.from({ length: 12 }, (_, i) => rec('bumper', i, i, { id: 'x' + i, owner: 'p' + (i % 6 + 10) }));
+  assert.equal(put(roomFull, 'bumper', { playerId: 'zz' }).reason, 'room-full');
+  const seen = new Map();
+  let l = [rec('bumper', 0, 0)];
+  assert.equal(D.hitDeployable(l, 'nope', 0, seen).counted, false);
+  let r1 = D.hitDeployable(l, 'd1', 1000, seen); assert.equal(r1.counted, true); assert.equal(r1.list[0].impacts, 1);
+  let r2 = D.hitDeployable(r1.list, 'd1', 1000 + P.hitCooldownMs - 1, seen); assert.equal(r2.counted, false, 'flooding is ignored');
+  r2 = D.hitDeployable(r1.list, 'd1', 1000 + P.hitCooldownMs, seen); assert.equal(r2.list[0].impacts, 2);
+  const r3 = D.hitDeployable(r2.list, 'd1', 5000, seen); assert.deepEqual(r3.list, [], 'gone after maxImpacts hits'); assert.equal(seen.size, 0);
+  cases++;
+
+  // ---- wire validators
+  const proto = await import('../src/network/protocol.js');
+  assert.equal(proto.validCommand({ type: 'DEPLOY_OBJECT', kind: 'bumper', x: 1, y: 2 }, false), true);
+  for (const bad of [{ type: 'DEPLOY_OBJECT', kind: 'mag', x: 1, y: 2 }, { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 1 }, { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 1, y: 2, owner: 'x' },
+    { type: 'DEPLOY_HIT' }, { type: 'DEPLOY_HIT', id: 'a b' }, { type: 'DEPLOY_HIT', id: 'd1', extra: 1 }]) assert.equal(proto.validCommand(bad, false), false, JSON.stringify(bad));
+  assert.equal(proto.validCommand({ type: 'DEPLOY_HIT', id: 'd1' }, false), true);
+  cases++;
+
+  // ---- host binding: a verified guest places, hits and the list rides in the snapshot; others are ignored
+  const { bindRoomSession } = await import('../src/network/session.js');
+  const sent = []; let listener = () => {}, clock = 0;
+  const snap = { phase: 'play', mapIndex: 0, puttIndex: 0, roundNumber: 1, hostId: 'host', roster: ['host', 'g1', 'g2'],
+    players: { host: { connected: true }, g1: { connected: true }, g2: { connected: true } } };
+  const transport = { isHost: true, peerId: 'host', links: new Map(), subscribe: f => { listener = f; return () => {}; }, send: m => sent.push(m), localNow: () => clock,
+    lastSeen: () => 0, detach() {}, greet: () => false, reject() {} };
+  const session = { getSnapshot: () => snap, send() {}, subscribe: () => () => {} };
+  const timers = { setTimeout: () => 0, clearTimeout() {} };
+  const unbind = bindRoomSession(transport, session, { clock: timers });
+  const last = () => sent[sent.length - 1].payload;
+  assert.equal(last().deployables, undefined, 'absent when nothing is placed');
+  const cmd = (senderId, payload) => listener({ type: 'command', senderId, payload });
+  cmd('g1', { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 5, y: 6 });
+  assert.equal(last().deployables, undefined, 'an unverified guest is ignored');
+  cmd('g1', { type: 'JOIN_ROOM', name: 'G' }); cmd('g2', { type: 'JOIN_ROOM', name: 'H' });
+  clock = 2000;
+  cmd('g1', { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 5, y: 6 });
+  assert.ok(last().deployables.every(d => D.validDeployable(d)), 'every published record passes the wire validator');
+  assert.equal(last().deployables.length, 1); assert.equal(last().deployables[0].owner, 'g1'); assert.equal(last().deployables[0].placedAt, 2);
+  assert.equal(unbind.deploy({ kind: 'orbital', x: 9, y: 9 }), true, 'the host places for itself');
+  assert.equal(last().deployables.length, 2);
+  cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' }); assert.equal(last().deployables.find(d => d.id === 'd1').impacts, 1);
+  cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' }); assert.equal(last().deployables.find(d => d.id === 'd1').impacts, 1, 'rate-limited');
+  clock += 300; cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' }); clock += 300; cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' });
+  assert.deepEqual(last().deployables.map(d => d.id), ['d2'], 'd1 is gone after three impacts');
+  snap.puttIndex = 1; unbind.hit('d2');
+  assert.equal(last().deployables, undefined, 'a new putt clears the objects');
+  unbind(); cases++;
+
   console.log(`deployables tests passed (${cases} groups)`);
 })().catch(e => { console.error(e); process.exit(1); });

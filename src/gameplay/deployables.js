@@ -1,26 +1,18 @@
 /**
  * Deployable objects (G1e): Bumper and Orbital Bumper. Pure functions over plain records; no DOM, Three.js,
  * network access, clock or randomness. The record shape, caps and commands follow
- * docs/contracts/G1E_DEPLOYABLES.md, which the integration owner has not accepted yet.
+ * docs/contracts/G1E_DEPLOYABLES.md.
  *
  * With no deployables every function returns without touching a number, so shot results stay bit-identical to
  * the parity fixtures.
  */
 
+import { MAX_DEPLOYABLES, MAX_DEPLOYABLES_PER_PLAYER } from '../shared/constants.js';
+import { TUNING } from '../shared/tuning.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
-/**
- * MOCK of the proposed `deployables.*` tuning block. These move to src/shared/tuning.js (and docs/TUNING.md)
- * when the integration owner accepts the contract; until then this is the only place the numbers appear.
- */
-export const DEPLOYABLE_PARAMS = Object.freeze({
-  bumperRadius: 14,
-  bumperRestitution: 1.1,
-  maxImpacts: 3,
-  orbitalRange: 90,
-  orbitalPull: 220,
-  hitCooldownMs: 250,
-});
+/** The `deployables.*` tuning block (src/shared/tuning.js, docs/TUNING.md). Helpers take it as an argument so tests can pass their own. */
+export const DEPLOYABLE_PARAMS = TUNING.deployables;
 
 /** Domain event a bumper contact adds to the step events; the app turns it into a DEPLOY_HIT report. */
 export const DEPLOYABLE_HIT = 'deployable-hit';
@@ -94,4 +86,40 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
     events.push({ type: DEPLOYABLE_HIT, id: d.id });
   }
   return events;
+}
+
+const finiteIn = n => Number.isFinite(n) && Math.abs(n) <= COORD_LIMIT;
+/** Shape of a DEPLOY_OBJECT command payload (the network layer checks the same fields). */
+export const validDeployCommand = (c, catalog = POWERUP_CATALOG) => !!c && typeof c === 'object'
+  && getPowerup(c.kind, catalog)?.target === PowerupTargets.COURSE && finiteIn(c.x) && finiteIn(c.y);
+
+/**
+ * Host side of DEPLOY_OBJECT. Pure: returns the new list and the placed record, or the same list and a reason.
+ * @param {object[]} list Current records
+ * @param {{kind:string,x:number,y:number}} command The placement the player chose
+ * @param {{playerId:string, map:number, putt:number, time:number, sequence:number, validPlacement?:(x:number,y:number)=>boolean}} ctx
+ *   `validPlacement` is the course check (on the floor, clear of walls); the host supplies it when it has the course.
+ * @returns {{list:object[], placed?:object, reason?:string}}
+ */
+export function placeDeployable(list, command, ctx, catalog = POWERUP_CATALOG, params = DEPLOYABLE_PARAMS) {
+  if (!validDeployCommand(command, catalog)) return { list, reason: 'invalid' };
+  if (list.length >= MAX_DEPLOYABLES) return { list, reason: 'room-full' };
+  if (list.filter(d => d.owner === ctx.playerId).length >= MAX_DEPLOYABLES_PER_PLAYER) return { list, reason: 'player-full' };
+  if (ctx.validPlacement && !ctx.validPlacement(command.x, command.y)) return { list, reason: 'blocked' };
+  const placed = { id: `d${ctx.sequence}`, kind: command.kind, x: command.x, y: command.y, owner: ctx.playerId, impacts: 0, placedAt: ctx.time, map: ctx.map, putt: ctx.putt };
+  return validDeployable(placed, catalog, params) ? { list: [...list, placed], placed } : { list, reason: 'invalid' };
+}
+
+/**
+ * Host side of DEPLOY_HIT: counts one impact unless this object was reported less than `hitCooldownMs` ago.
+ * `lastHit` maps object id to the time (ms) of its last accepted report and is updated in place.
+ * @returns {{list:object[], counted:boolean}}
+ */
+export function hitDeployable(list, id, nowMs, lastHit, params = DEPLOYABLE_PARAMS) {
+  if (!list.some(d => d.id === id)) return { list, counted: false };
+  if (lastHit.has(id) && nowMs - lastHit.get(id) < params.hitCooldownMs) return { list, counted: false };
+  lastHit.set(id, nowMs);
+  const next = recordImpact(list, id, params);
+  if (!next.some(d => d.id === id)) lastHit.delete(id);
+  return { list: next, counted: true };
 }
