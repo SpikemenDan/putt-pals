@@ -16,3 +16,12 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `aim.arrowHeadHalfWidth` | 3.6 | 0.1 to 100 | Half the width of the aim arrow head. |
 | `aim.arrowHeadLength` | 8 | 1 to 200 | Length of the aim arrow head (capped at half the arrow so short arrows stay readable). |
 | `aim.arrowOpacity` | 0.92 | 0.05 to 1 | Opacity of the aim arrow. |
+
+## Development tuning panel
+
+`npm run dev` shows a "Display tuning" button (bottom right). It lists every field above as a slider with its unit, range and default, plus per-field Reset, Reset all, Export and Import. Code is in `src/devtools/`; it is only included when vite's `import.meta.env.DEV` is true, so production builds contain none of it.
+
+- Overrides are temporary: they live in this browser tab's `sessionStorage`, a **TEMP OVERRIDES** badge shows while any are active, and they never change `DEFAULT_DISPLAY`. To ship a value, edit the default in `src/shared/display.js` and the table above, then rerun the checks.
+- Export gives `{"version": 1, "display": {...}}` containing only non-default values. Import validates the whole document (unknown keys, out-of-range values, shaft wider than head) and applies nothing if any part is invalid.
+- Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not expose `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope.
+- `window.__ppTuner` is available in dev for browser checks.

@@ -29,17 +29,22 @@ const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefi
 /** Dotted paths of every object and leaf in the shape, so unknown keys can be named. */
 const KNOWN_PATHS = new Set(DISPLAY_FIELDS.flatMap(([path]) => path.split('.').map((_, i, parts) => parts.slice(0, i + 1).join('.'))));
 
-function unknownKeys(value, prefix = '') {
+const GROUP_PATHS = new Set(DISPLAY_FIELDS.flatMap(([path]) => path.split('.').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('.'))));
+
+/** Shape problems in a (partial) display: unknown keys, and a group such as `aim` that is not an object. */
+function shapeProblems(value, prefix = '') {
   if (!isObj(value)) return [];
   return Object.keys(value).flatMap(k => {
     const path = prefix + k;
-    return KNOWN_PATHS.has(path) ? unknownKeys(value[k], path + '.') : [path];
+    if (!KNOWN_PATHS.has(path)) return ['unknown field ' + path];
+    if (GROUP_PATHS.has(path)) return isObj(value[k]) ? shapeProblems(value[k], path + '.') : [path + ' must be an object'];
+    return [];
   });
 }
 
 /** Returns a list of problems (empty when valid). Missing and unknown fields are errors. */
 export function displayProblems(display) {
-  const problems = unknownKeys(display).map(path => 'unknown field ' + path);
+  const problems = shapeProblems(display);
   for (const [path, min, max] of DISPLAY_FIELDS) {
     const v = read(display, path);
     if (typeof v !== 'number' || !Number.isFinite(v)) problems.push(path + ' must be a finite number');
@@ -66,8 +71,8 @@ function deepFreeze(o) { for (const v of Object.values(o)) if (isObj(v)) deepFre
 
 /** Builds a validated, frozen display from defaults plus partial overrides. Unknown override keys throw instead of being ignored. */
 export function createDisplay(overrides = {}) {
-  const unknown = unknownKeys(overrides);
-  if (unknown.length) throw new Error('Invalid display: ' + unknown.map(path => 'unknown field ' + path).join('; '));
+  const shape = shapeProblems(overrides);
+  if (shape.length) throw new Error('Invalid display: ' + shape.join('; '));
   return deepFreeze(validateDisplay(merge(DEFAULT_DISPLAY, overrides)));
 }
 
