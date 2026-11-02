@@ -145,6 +145,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('pointercancel', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('lostpointercapture', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); w.dispatchEvent(new w.Event('blur')); both('pointerup', { clientX: 300, clientY: 330 }); },
+      // Right-click mid-pull cancels the aim (adapter canvas only: the legacy page has no such cancel).
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointerdown', { clientX: 300, clientY: 330, button: 2 }); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { both('pointerdown', { clientX: 400, clientY: 250, button: 1 }); both('pointermove', { clientX: 300, clientY: 330 }); both('pointerup', { clientX: 300, clientY: 330 }); },
     ];
     for (const attempt of attempts) {
