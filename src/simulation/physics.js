@@ -16,6 +16,7 @@ import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { auraAcceleration, ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
+import { bumperContact, orbitalAcceleration } from '../gameplay/deployables.js';
 
 export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;
@@ -379,6 +380,11 @@ function stepBallTick(player, course, dt, hazardTime) {
   }
   const R = ballRadiusOf(player);
   const ghost = !!player.armedPowerups?.ghost; // Ghost Ball skips wall and obstacle bounces
+  if (player.deployables?.length) { // Bumper and Orbital Bumper (G1e); absent or empty leaves every result unchanged
+    const [ax, ay] = orbitalAcceleration(player.deployables, player.x, player.y, dt);
+    player.vx += ax; player.vy += ay;
+    if (!ghost) events.push(...bumperContact(player.deployables, player, R));
+  }
   let f = contactHeight(course, player.x, player.y, R);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.

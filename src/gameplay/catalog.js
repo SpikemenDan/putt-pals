@@ -8,20 +8,22 @@
  *   id        short stable id used in presence, effect messages and auras
  *   name      HUD and toast name
  *   group     grouping for the UI and later balance work
- *   target    'self' (applied to the user's own next shots) or 'opponent'
+ *   target    'self' (applied to the user's own next shots), 'opponent'
  *             (travels as a validated effect message; applied by the target's client)
+ *             or 'course' (places a synced deployable object; see deployables.js)
  *   solo      true when allowed in solo and practice (self-only effects)
  *   weight    relative box spawn weight (> 0)
- *   duration  { kind: 'next-shot' | 'stroke' }: 'next-shot' clears at launch,
- *             'stroke' stays armed until the ball rests, sinks or is reset
+ *   duration  { kind: 'next-shot' | 'stroke' | 'impacts' }: 'next-shot' clears at launch,
+ *             'stroke' stays armed until the ball rests, sinks or is reset,
+ *             'impacts' belongs to a deployed object that is removed after a set number of hits
  *   hook      simulation or input hook the effect uses
  *   banner    activation banner text (the HUD adds " ACTIVATED")
  *   toast     message shown when the effect is armed (self) or sent (opponent)
  */
 
-export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent' });
-export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke' });
-export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura' });
+export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent', COURSE: 'course' });
+export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke', IMPACTS: 'impacts' });
+export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura', DEPLOY: 'deploy' });
 
 const deepFreeze = value => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -87,6 +89,16 @@ export const POWERUP_CATALOG = deepFreeze([
     duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.AURA,
     banner: 'HATE BALL', toast: 'Your ball pushes nearby rolling balls away.',
   },
+  {
+    id: 'bumper', name: 'Bumper', group: 'deployable', target: PowerupTargets.COURSE, solo: false, weight: 1,
+    duration: { kind: DurationKinds.IMPACTS }, hook: PowerupHooks.DEPLOY,
+    banner: 'BUMPER', toast: 'A bumper is placed on the course. It breaks after three hits.',
+  },
+  {
+    id: 'orbital', name: 'Orbital Bumper', group: 'deployable', target: PowerupTargets.COURSE, solo: false, weight: 1,
+    duration: { kind: DurationKinds.IMPACTS }, hook: PowerupHooks.DEPLOY,
+    banner: 'ORBITAL BUMPER', toast: 'An orbital bumper is placed on the course. Its ring bends nearby shots.',
+  },
 ]);
 
 /** Problems with a catalog (empty when valid): duplicate ids, bad fields, non-self entries allowed in solo. */
@@ -118,8 +130,9 @@ export const isOpponentPowerup = (id, catalog = POWERUP_CATALOG) => getPowerup(i
 /** Power-up display name; unknown ids fall back to the id text. */
 export const powerupName = (id, catalog = POWERUP_CATALOG) => getPowerup(id, catalog)?.name || String(id);
 
-/** Aura values a ball can show in presence: '' for none, then every catalog id. */
-export const auraIds = (catalog = POWERUP_CATALOG) => ['', ...powerupIds(catalog)];
+/** Aura values a ball can show in presence: '' for none, then every catalog id except deployables, which are objects and not auras. */
+export const auraIds = (catalog = POWERUP_CATALOG) => ['', ...catalog.filter(e => e.target !== PowerupTargets.COURSE).map(e => e.id)];
+export const isDeployablePowerup = (id, catalog = POWERUP_CATALOG) => getPowerup(id, catalog)?.target === PowerupTargets.COURSE;
 
 /**
  * The entries a box can award for a session.

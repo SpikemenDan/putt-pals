@@ -1,0 +1,97 @@
+/**
+ * Deployable objects (G1e): Bumper and Orbital Bumper. Pure functions over plain records; no DOM, Three.js,
+ * network access, clock or randomness. The record shape, caps and commands follow
+ * docs/contracts/G1E_DEPLOYABLES.md, which the integration owner has not accepted yet.
+ *
+ * With no deployables every function returns without touching a number, so shot results stay bit-identical to
+ * the parity fixtures.
+ */
+
+import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
+
+/**
+ * MOCK of the proposed `deployables.*` tuning block. These move to src/shared/tuning.js (and docs/TUNING.md)
+ * when the integration owner accepts the contract; until then this is the only place the numbers appear.
+ */
+export const DEPLOYABLE_PARAMS = Object.freeze({
+  bumperRadius: 14,
+  bumperRestitution: 1.1,
+  maxImpacts: 3,
+  orbitalRange: 90,
+  orbitalPull: 220,
+  hitCooldownMs: 250,
+});
+
+/** Domain event a bumper contact adds to the step events; the app turns it into a DEPLOY_HIT report. */
+export const DEPLOYABLE_HIT = 'deployable-hit';
+
+const COORD_LIMIT = 1000000;
+const count = n => Number.isSafeInteger(n) && n >= 0;
+const validId = id => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id); // same rule as network/protocol.js; the simulation must not import the network layer
+const index = (n, max) => count(n) && n < max;
+const KEYS = ['id', 'kind', 'x', 'y', 'owner', 'impacts', 'placedAt', 'map', 'putt'];
+
+/** True for a well-formed deployable record (the exact key set, a course catalog id, an impact count below the limit). */
+export function validDeployable(d, catalog = POWERUP_CATALOG, params = DEPLOYABLE_PARAMS) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return false;
+  const k = Object.keys(d);
+  if (k.length !== KEYS.length || !KEYS.every(key => Object.hasOwn(d, key))) return false;
+  return validId(d.id) && validId(d.owner) && getPowerup(d.kind, catalog)?.target === PowerupTargets.COURSE
+    && [d.x, d.y].every(n => Number.isFinite(n) && Math.abs(n) <= COORD_LIMIT)
+    && count(d.impacts) && d.impacts < params.maxImpacts
+    && Number.isFinite(d.placedAt) && index(d.map, 22) && index(d.putt, 6);
+}
+
+/** The records that apply on this putt: valid, right map and putt, not yet used up. */
+export const activeDeployables = (list, map, putt, catalog = POWERUP_CATALOG, params = DEPLOYABLE_PARAMS) =>
+  Array.isArray(list) ? list.filter(d => validDeployable(d, catalog, params) && d.map === map && d.putt === putt) : [];
+
+/**
+ * Records one impact on a list (host side). Returns the new list: the object's count goes up by one and it is dropped
+ * when it reaches the limit. An unknown id returns the list unchanged.
+ */
+export function recordImpact(list, id, params = DEPLOYABLE_PARAMS) {
+  if (!list.some(d => d.id === id)) return list;
+  return list.flatMap(d => d.id !== id ? [d] : d.impacts + 1 >= params.maxImpacts ? [] : [{ ...d, impacts: d.impacts + 1 }]);
+}
+
+/**
+ * Orbital hook: the acceleration (x/y, world units per second squared, already scaled by dt) that every orbital ring
+ * exerts on a ball at (x, y). It pulls toward the centre and falls off linearly to zero at the ring edge.
+ * Returns [0, 0] with no orbitals.
+ */
+export function orbitalAcceleration(list, x, y, dt, params = DEPLOYABLE_PARAMS) {
+  let ax = 0, ay = 0;
+  if (!list?.length) return [ax, ay];
+  for (const d of list) {
+    if (d.kind !== 'orbital') continue;
+    const dx = d.x - x, dy = d.y - y, dist = Math.hypot(dx, dy);
+    if (!(dist > 1e-6 && dist < params.orbitalRange)) continue;
+    const strength = params.orbitalPull * (1 - dist / params.orbitalRange) * dt;
+    ax += dx / dist * strength; ay += dy / dist * strength;
+  }
+  return [ax, ay];
+}
+
+/**
+ * Bumper hook: bounces a ball (player-like, with x, y, vx, vy) off the first solid it overlaps and moving into.
+ * Pushes the ball out to the surface, reflects the normal velocity with the restitution gain and returns the
+ * contact events. Mutates `ball`. A ball moving away from the centre is only pushed out, with no event and no impact.
+ * @returns {{type:string, id:string}[]}
+ */
+export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
+  const events = [];
+  if (!list?.length) return events;
+  for (const d of list) {
+    const dx = ball.x - d.x, dy = ball.y - d.y, dist = Math.hypot(dx, dy), reach = params.bumperRadius + radius;
+    if (!(dist < reach)) continue;
+    const nx = dist > 1e-9 ? dx / dist : 1, ny = dist > 1e-9 ? dy / dist : 0;
+    ball.x = d.x + nx * reach; ball.y = d.y + ny * reach;
+    const vn = ball.vx * nx + ball.vy * ny;
+    if (vn >= 0) continue;
+    ball.vx -= (1 + params.bumperRestitution) * vn * nx;
+    ball.vy -= (1 + params.bumperRestitution) * vn * ny;
+    events.push({ type: DEPLOYABLE_HIT, id: d.id });
+  }
+  return events;
+}
