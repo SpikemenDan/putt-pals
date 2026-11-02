@@ -202,10 +202,29 @@ Legacy references above describe temporary dependencies, not permanent support.
 | --- | --- | --- | --- |
 | `npm run check`, `solve`, `rank` | `tools.js check/solve/rank` | `tools/cli` | Migrated |
 | `npm run test:physics` | `tools.js surfaces/cups/mechanics` | `tests/physics.test.cjs` | Migrated |
-| `npm run test:smoke`, `test:multiplayer` | `tools.js smoke/smoke-multi`: ~120 UI and ~60 multiplayer assertions driven through the legacy DOM | `app`, `ui`, `session`, `network` suites and Playwright specs, not yet mapped assertion by assertion | Open: coverage gap analysis needed |
+| `npm run test:smoke`, `test:multiplayer` | `tools.js smoke/smoke-multi`: ~140 single-player and ~60 multiplayer assertions driven through the legacy DOM | Mapped below. Modular suites cover every area; the transition camera properties now have independent coverage in `tests/camera.test.cjs` | Mapped; the command can go once the oracle-based parity tests are rebased |
 | `tests/render.test.cjs`, `audio.test.cjs`, `app.test.cjs` (library parity), `simulation.test.cjs`, `courses.test.cjs`, `cli.test.cjs` | Parity against the legacy renderer, sounds, Three r128 topology, physics and course data | Recorded fixtures with provenance | Open |
 | `tools/legacy-adapter.cjs`, `tests/support/legacy-dom.cjs`, `tests/solver-baseline.cjs`, `scripts/export-*.cjs`, `inventory-baseline.cjs`, `aggregate-difficulty.mjs` | VM and HTML extraction | Retire with the parity tests, keep recorded outputs | Open |
 | `tools/cli validate`, `tests/fixtures/source-inventory.json` | Hashes of `putt-pals.html` and `tools.js` | Hash only the exported data | Open |
 | `vite.config.mjs`, `scripts/check-build.cjs`, `public/_headers`, `tests/rooms/local-runtime.test.mjs`, `scripts/ui-visual-parity.cjs`, `docs/THIRD_PARTY.md` | Second built page and script-preservation check | Drop the legacy page and its check | Open |
+
+Smoke assertion mapping (legacy area to modular coverage):
+
+| Legacy smoke area | Modular coverage |
+| --- | --- |
+| Sway, spread, shot angle (P24 aim rules) | `input.test.cjs` aim rules and shots |
+| Lobby, Join, solo, practice and putt practice (P28, P29), multi-player disabling | `ui.test.cjs` landing, lobby, practice; `session.test.cjs` practice; `app.test.cjs` practice scenarios |
+| Voting, countdown, ties, early start, host and guest rules | `session.test.cjs`, `network.test.cjs`, `ui.test.cjs` tournament |
+| Strokes without a cap, splash, timeouts, par plus penalty, limits (P24, P26) | `integration/out-of-bounds.test.cjs`, `session.test.cjs`, `contracts.test.cjs`, `physics.test.cjs` |
+| Par, penalty and HUD countdown (P25), 10 s warning | `courses.test.cjs`, `ui.test.cjs` HUD and warning |
+| Scorecard, HIO, T/O, leader, K and Escape (P27) | `ui.test.cjs` scorecard and model, `app.test.cjs` solo |
+| Camera views, shortcuts, drag and arrow orbit (P30), free roam | `input.test.cjs`, `render.test.cjs` |
+| Putt transition arc, 1.5 s, no camera jump | `camera.test.cjs` (independent); `render.test.cjs` (legacy oracle) |
+| Wall fade (P31) | `render.test.cjs` wall fade scenarios |
+| Audio cues, listener, panner, mute | `audio.test.cjs`, `app.test.cjs` solo |
+| Four-client tournament, disconnect, rejoin, results | `app.test.cjs` four clients, `network.test.cjs`, `browser/multiplayer.spec.cjs`, `browser/server-room.spec.cjs` |
+| No runtime errors | Playwright page-error checks, `app.test.cjs` |
+
+Caveat: several of those modular tests (`ui.test.cjs` legacy parity, `render.test.cjs` scene and pose parity, `input.test.cjs` legacy launches, `audio.test.cjs` sound recipes) use the legacy game as the oracle. They must be rebased onto recorded fixtures, not deleted, before `putt-pals.html` can go.
 
 Nothing is removed until the open rows have replacement coverage.
