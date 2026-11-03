@@ -26,7 +26,8 @@ leave remote branches until authorized.
 Automatically use Gemini Pro for worthwhile routine drafting and text-processing
 tasks listed in AGENTS.md.
 
-Give it bounded, relevant, credential-free inputs.
+Give it bounded, relevant, credential-free inputs through tools/gemini/handoff.mjs
+(docs/AGENT_ROUTING.md, "Bounded handoffs").
 Request drafts or findings rather than checkout edits.
 Verify its claims against source files, actual diffs and command output.
 Claude applies the result and remains accountable for correctness.

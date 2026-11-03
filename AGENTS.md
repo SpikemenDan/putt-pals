@@ -10,6 +10,7 @@
 - TASKS.md: roadmap and dependencies, not a duplicate detailed progress ledger.
 - PROJECT_STATUS.md: concise, evidence-backed implementation summary.
 - Subsystem documentation: local contracts, configuration and verification details.
+- ARCHITECTURE.md, "Where to look": entry points for each code area.
 
 Read relevant sections before editing. Do not repeatedly reload unchanged files.
 Direct user instructions take precedence over repository workflow preferences.
@@ -48,6 +49,11 @@ gets its own short-lived task branch.
 - Do not switch branches with uncommitted changes.
 - Do not silently implement on main; direct-main work needs explicit authorization.
 - Do not require an issue or PR for every small local fix.
+- Before substantial implementation, state observable completion: what will be true
+  or visible, the checks that show it and, for appearance or feel, the owner preview
+  acceptance. Small fixes only need that stated in the task or PR description. Stop
+  when the criteria are satisfied; report unrelated improvements separately instead
+  of adding them to the task.
 - Before substantial work, inspect existing issues, PRs, other contributors' task
   branches and work claims.
 - Record contributor, outcome, task branch and affected paths in one existing issue
@@ -113,7 +119,8 @@ Gemini returns drafts or findings. It does not edit the active checkout, commit,
 push, merge, change permissions or launch another assistant.
 
 Claude supplies only relevant inputs, excludes credentials, verifies the result
-against actual files or command output and applies useful changes.
+against actual files or command output and applies useful changes. Handoffs go
+through tools/gemini/handoff.mjs (docs/AGENT_ROUTING.md, "Bounded handoffs").
 
 Do not delegate tiny tasks when handoff costs more than completing them.
 If Gemini is unavailable, continue directly after a brief bounded attempt.
@@ -272,6 +279,8 @@ docs/GITHUB_WORKFLOW.md ("Post-merge checklist").
 
 Use commands that actually exist in package.json.
 
+- Choose local checks with `npm run checks`; unmapped paths fall back to the full
+  suite, and CI still runs everything before merge.
 - Documentation: check changed links, paths, commands and consistency.
 - Application changes: run relevant suites and the build.
 - Integration: run broader relevant checks and inspect current-head CI.
