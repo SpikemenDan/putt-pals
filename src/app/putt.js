@@ -5,6 +5,7 @@
  * One instance per round; the app discards it when the room moves on.
  */
 
+import { deployablesAwake } from '../gameplay/deployables.js';
 import { FIXED_TIMESTEP } from '../shared/constants.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
@@ -30,7 +31,7 @@ import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECON
  * @param {{spawn:boolean, pool:object[]}} [options.powerups] Box rules from gameplay powerupPolicy; omitted: boxes award nothing
  * @param {() => number} [options.now] Local monotonic ms (effect flashes, sunk → waiting)
  */
-export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now() }) {
+export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now(), authoritativeInventory = false }) {
   const hazardTime = () => Math.max(0, (roomNow() - roundStartTime) / 1000);
   const engine = new SimulationEngine(definition, puttIndex, { hazardTime });
   const course = engine.course;
@@ -44,7 +45,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   player.flashUntil = 0; player.flashType = '';
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
 
-  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false });
+  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, pickups: [], impacts: [] });
   const finish = (out, event, now) => {
     waitUntil = now + SINK_WAIT_MS;
     completion = { strokes: player.strokes, timedOut: !!event.timedOut };
@@ -89,12 +90,13 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const out = result();
       if (disposed) return out;
       if (player.mode === 'play') {
-        if (!player.moving && environmentAwake(course, player, hazardTime())) { out.cancelInput = true; player.moving = true; stall = 0; }
+        if (!player.moving && (environmentAwake(course, player, hazardTime()) || deployablesAwake(player, player.deployables, ballRadiusOf(player)))) { out.cancelInput = true; player.moving = true; stall = 0; }
         if (player.moving) {
           stall += dt; accumulator += dt;
           while (accumulator >= FIXED_TIMESTEP && player.moving) {
             for (const event of engine.step(FIXED_TIMESTEP).events) {
-              if (event.type === SimulationEventTypes.SINK) finish(out, event, now);
+              if (event.type === 'deployable_hit') out.impacts.push(event.id);
+              else if (event.type === SimulationEventTypes.SINK) finish(out, event, now);
               else if (event.type === SimulationEventTypes.OUT_OF_BOUNDS) { out.toasts.push('Splash! Back to your last spot. That stroke still counts.'); out.aim = aimAtHole(course, player); }
               else if (event.type === SimulationEventTypes.REST) out.aim = aimAtHole(course, player);
             }
@@ -108,6 +110,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
         }
         if (player.mode === 'play' && powerups.spawn) for (const k of touchedBlocks(course, player)) {
           player.collectedPickups[k] = 1;
+          if (authoritativeInventory) { out.pickups.push(k); continue; }
           const item = rollPowerup(powerups.pool, random);
           if (item && addToInventory(player.inventory, item)) out.toasts.push('Got ' + powerupName(item) + '!');
           else out.toasts.push('Inventory full. Power-up lost.');
@@ -140,6 +143,15 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
     receiveAttack(type, from) {
       if (disposed || !receiveEffect(player, type)) return null;
       return String(from || 'Someone').slice(0, 14) + ' used ' + powerupName(type) + ' on you!';
+    },
+
+    setCoursePowerups(state) {
+      if (disposed) return;
+      player.deployables = player.mode === 'play' ? state?.deployables ?? [] : [];
+      if (authoritativeInventory) {
+        player.inventory = [...(state?.inventories[id] ?? [])];
+        for (const block of state?.collected[id] ?? []) player.collectedPickups[block] = 1;
+      }
     },
 
     /** Love / Hate Ball sources from other players' balls (G1d); this client applies them to its own ball while it rolls. */

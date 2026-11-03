@@ -7,6 +7,7 @@
  * releases every GPU resource the renderer created.
  */
 
+import { createDeployableView } from './deployables.js';
 import { BALL_RADIUS } from '../shared/constants.js';
 import { DISPLAY } from '../shared/display.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
@@ -44,7 +45,7 @@ export function smoothRemotePosition(previous, target) {
  * @param {(THREE: object, canvas: HTMLCanvasElement) => object} [options.createWebGLRenderer]
  * @param {'toon'|'legacy'} [options.style='toon'] Comic toon look (V1a #58); 'legacy' only for historical parity checks
  */
-export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer, style = 'toon', display = DISPLAY }) {
+export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.random, devicePixelRatio = 1, createWebGLRenderer = defaultWebGLRenderer, style = 'toon', display = DISPLAY, deployableSettings }) {
   if (!THREE) throw new TypeError('THREE is required');
   const toon = style === 'toon';
   const makeCanvas = createCanvas || (() => canvas.ownerDocument.createElement('canvas'));
@@ -159,6 +160,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const aimGuide = createAimGuide(THREE, display);
   scene.add(actor(aimGuide.arrow));
 
+  const deployableView = createDeployableView(THREE,scene,deployableSettings);
   const remotes = new Map();
   const updateWallFade = createWallFade(THREE);
   let build = null, lastMode = '', width = 0, disposed = false;
@@ -234,6 +236,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     setCourse(course, puttIndex = 0) {
       if (disposed) throw new Error('Renderer has been disposed');
       build?.dispose();
+      deployableView.dispose();
       const palette = paletteForCourse(course);
       build = buildCourseScene({ library, course, puttIndex, environment, palette });
       scene.add(build.group);
@@ -259,13 +262,14 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
      * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread} while charging
      * @param {object} frame.camera Pose from createCameraRig().update()
      */
-    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, camera: pose }) {
+    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, deployables = [], placement = null, camera: pose }) {
       if (disposed) throw new Error('Renderer has been disposed');
       const t = now / 1000;
       library.time.value = t;
       for (const m of dreamBits) { m.position.y = m.userData.y + Math.sin(t * 0.4 + m.userData.p) * 18; m.rotation.y += 0.002; }
       if (!build) { renderer.render(scene, camera); return; }
       const o = build.transform.origin, course = build.course;
+      deployableView.update(deployables,placement,course,o);
       for (const flag of build.flags) {
         const a = flag.geometry.attributes.position;
         for (let i = 0; i < a.count; i++) a.setZ(i, Math.sin(a.getX(i) * 0.2 + now * 0.004) * (a.getX(i) + 13) / 13 * 2);
@@ -379,6 +383,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const object of ownedActors) { scene.remove(object); disposeObject(object); }
       for (const resource of owned) resource.dispose();
       owned.clear();
+      deployableView.dispose();
       weather?.dispose();
       skyWorld?.dispose();
       sun.shadow.dispose?.();

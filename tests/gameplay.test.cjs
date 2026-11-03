@@ -19,14 +19,14 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
   assert.deepEqual(G.auraIds(), ['', ...G.powerupIds()]);
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
   assert.equal(G.powerupName('nope'), 'nope');
   assert.equal(G.isPowerupId('steady'), true);
   for (const id of ['rew', 'rev', 'zany', '', null]) assert.equal(G.isPowerupId(id), false, String(id));
-  const bad = [entry('aa'), entry('aa'), entry('Bad'), entry('cc', { target: 'course' }), entry('dd', { weight: 0 }), entry('ee', { target: 'opponent', solo: true }),
+  const bad = [entry('aa'), entry('aa'), entry('Bad'), entry('cc', { target: 'unknown' }), entry('dd', { weight: 0 }), entry('ee', { target: 'opponent', solo: true }),
     entry('ff', { duration: { kind: 'forever' } }), entry('gg', { hook: '' })];
   const problems = G.catalogProblems(bad);
   for (const re of [/duplicate id aa/, /id must be/, /target must be/, /weight must be positive/, /only self-targeted/, /duration\.kind/, /hook required/]) {

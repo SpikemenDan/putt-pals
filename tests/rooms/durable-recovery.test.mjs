@@ -105,6 +105,25 @@ try {
   assert.equal(room.checkpoint().snapshot.session.node, 'play.active.settling');
   now += 1500; await room.alarm();
   assert.equal(room.checkpoint().snapshot.session.node, 'play.active.running');
+  // Seed a server-awarded inventory slot, then exercise the real durable command path.
+  const {createCourseData} = await import('../../src/courses/index.js');
+  const {resolvePuttCourse} = await import('../../src/simulation/engine.js');
+  const {canPlaceDeployable} = await import('../../src/gameplay/course-powerups.js');
+  const state = room.runtime.session.getSnapshot();
+  const course = resolvePuttCourse(createCourseData().definitions[state.mapIndex],state.puttIndex);
+  let spot;
+  for (let x=0;x<800 && !spot;x+=10) for (let y=0;y<500 && !spot;y+=10) if (canPlaceDeployable(course,x,y)) spot={x,y};
+  assert.ok(spot);
+  room.runtime.gameplay.inventories[guestWelcome.playerId]=['bumper'];
+  await command(room, guest, {type:'DEPLOY_OBJECT',slot:0,kind:'bumper',...spot},2);
+  assert.equal(room.checkpoint().snapshot.gameplay.deployables.length,1);
+  assert.deepEqual(room.checkpoint().snapshot.gameplay.inventories[guestWelcome.playerId],[]);
+  const deployed = room.checkpoint().snapshot.gameplay.deployables[0];
+  room = new RoomDurableObject(ctx,ctx.env ?? env); await room.ready;
+  assert.deepEqual(room.checkpoint().snapshot.gameplay.deployables,[deployed],'placed objects survive durable reconstruction');
+  await command(room, guest, {type:'DEPLOY_OBJECT',slot:0,kind:'bumper',...spot},2);
+  assert.equal(guest.frames.at(-1).code,'sequence-rejected');
+  assert.equal(room.checkpoint().snapshot.gameplay.deployables.length,1);
   await command(room, ws, { type: 'REPORT_SCORE', strokes: 2, timedOut: false }, 3);
   const round = room.checkpoint().snapshot.session.context.roundNumber;
   room = new RoomDurableObject(ctx, ctx.env ?? env); await room.ready;

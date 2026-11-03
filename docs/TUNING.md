@@ -121,3 +121,29 @@ For proposed appearance or feel changes:
 If browser access is unavailable, provide the exact local URL and steps and mark
 interactive verification/acceptance pending. The panel remains a target until
 implementation and verification are recorded.
+
+## G1e deployables (local review candidate)
+
+Gameplay settings under `deployables` in `src/shared/tuning.js`. All participants
+use the same shipped values; changes require a new match. The isolated development
+chamber resets on every change and never sends overrides to ordinary rooms.
+The hit report cooldown is a validation constraint; it is not a live preview slider.
+Room/per-player caps remain fixed contract bounds. Orbital range must exceed
+bumper radius, and maxImpacts must be an integer. Appearance/feel acceptance is
+pending; see [G1e review](G1E_DEPLOYABLES.md).
+
+| Field | Default | Allowed range | Meaning |
+| --- | --- | --- | --- |
+| `deployables.bumperRadius` | 14 | 1–100 | Solid bumper radius (world units). |
+| `deployables.bumperRestitution` | 1.1 | 0–2 | Normal speed multiplier on bumper reflection. |
+| `deployables.maxImpacts` | 3 | 1–20 | Impacts before removal; integer. |
+| `deployables.orbitalRange` | 90 | 1–1000 | Orbital pull reach (world units). |
+| `deployables.orbitalPull` | 1000 | 0–5000 | Orbital acceleration, fading linearly to zero at its edge. |
+| `deployables.height` | 7 | 1–100 | Maximum ball height difference affected by a bumper. |
+| `deployables.contactRelease` | 2 | 0.1–20 | Distance outside contact before a new impact can count. |
+| `deployables.hitCooldownMs` | 250 | 50–5000 | Minimum time between accepted impact reports. |
+| `deployables.hitReportTolerance` | 80 | 1–200 | Allowance for network presence lag when checking impact reports. |
+| `deployables.placementSlopeTolerance` | 2 | 0–20 | Maximum floor height difference under a bumper footprint. |
+| `deployables.placementClearance` | 20 | 0–100 | Extra clearance from tees, cups and pickups. |
+| `deployables.pickupRadius` | 13 | 1–100 | Pickup radius in addition to ball radius. |
+| `deployables.pickupHeight` | 20 | 1–100 | Maximum height difference for a pickup. |

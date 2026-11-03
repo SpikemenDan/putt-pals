@@ -80,6 +80,22 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     assert.deepEqual(result.differences, ['htmlSha256 changed since the inventory was recorded']);
   });
 
+  run('online maps have one non-colliding pickup on supported floor in every chamber', () => {
+    const data=createCourseData();
+    for(const index of STARTER_COURSE_INDICES){
+      const c=data.definitions[index];
+      assert.equal(c.q.length,6);
+      assert.equal(new Set(c.q.map(q=>q.join(','))).size,6);
+      c.q.forEach(([x,y],i)=>{
+        const ox=[46,286,526][i%3],oy=i<3?46:256;
+        assert.ok(x>ox && x<ox+228 && y>oy && y<oy+198,'pickup stays in its own chamber');
+        assert.ok(c.tiles.some(r=>x>r[0] && x<r[0]+r[2] && y>r[1] && y<r[1]+r[3]));
+        assert.ok(!c.pit.some(r=>x>=r[0] && x<=r[0]+r[2] && y>=r[1] && y<=r[1]+r[3]));
+        assert.ok(Math.hypot(x-c.putts[i].tee[0],y-c.putts[i].tee[1])>30,'a pickup requires leaving the tee');
+      });
+    }
+  });
+
   const document = createCourseDocument();
   const { runShot } = await load('tools/cli/commands.mjs');
   run('versioned document round-trips all maps with persistent course and putt IDs', () => {

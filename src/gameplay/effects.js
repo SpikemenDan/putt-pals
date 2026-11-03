@@ -24,7 +24,7 @@ export const pendingState = (catalog = POWERUP_CATALOG) => Object.fromEntries(ca
  */
 export function activatePowerup(player, id, nextMessageId, catalog = POWERUP_CATALOG) {
   const entry = getPowerup(id, catalog);
-  if (!entry) return { ok: false, toast: '' };
+  if (!entry || entry.target === PowerupTargets.COURSE) return { ok: false, toast: '' };
   if (entry.target === PowerupTargets.OPPONENT) {
     return { ok: true, entry, message: { id: nextMessageId, t: id }, toast: entry.name + ' sent to everyone else!' };
   }

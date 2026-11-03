@@ -448,6 +448,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const { buildCourseScene, createMaterialLibrary } = await import('../src/render/index.js');
     const { createCourseData } = await import('../src/courses/index.js');
     const { definitions } = createCourseData();
+    // Historical topology oracle: current starter pickup actors are covered by render-modern.
+    for (const course of definitions) if (course.putts) course.q = [];
     const ctx = new Proxy(function () {}, { get: (_, k) => (k === 'measureText' ? () => ({ width: 10 }) : ctx), set: () => true, apply: () => ctx });
     const canvas = () => ({ width: 0, height: 0, getContext: () => ctx });
     // Current TorusGeometry exposes tube-angle defaults that r128 did not record.

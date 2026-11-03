@@ -1,3 +1,4 @@
+import { STARTER_PICKUPS } from './starter-pickups.js';
 import { arenaSourceData } from './arena-specs.js';
 import { validateCourseGeometry } from './catalog.js';
 import { validateCourse, validatePutt } from '../shared/courses.js';
@@ -46,7 +47,7 @@ export function generateArena(name) {
     ...(putt.cup ? { cup: putt.cup } : {}),
   }));
   const course = { name, desc, tee: [80, 80], hole: [240, 80], tiles: [[40, 40, 720, 420]],
-    q: [], pl: [], rp: [], movers: [], ...geometry, putts,
+    q: structuredClone(STARTER_PICKUPS[name] ?? []), pl: [], rp: [], movers: [], ...geometry, putts,
     limit: arenaSourceData.limits[name], par: putts.reduce((sum, putt) => sum + putt.par, 0) };
   const checked = validateCourseGeometry(course);
   const rules = { id: slugify(name), name, index: ladder[0], starter: true,

@@ -47,6 +47,8 @@ const { JSDOM } = require('jsdom');
   };
   for (const c of definitions) for (let k = 0; k < (c.putts?.length || 1); k++) {
     view.setCourse(c, k); builds++;
+    assert.equal(r.course.powerBlocks.length,c.q.length,'every authored pickup gets an actor');
+    r.course.powerBlocks.forEach((block,i)=>assert.deepEqual(block.at,c.q[i],'pickup actor uses authored coordinates'));
     const build = r.course;
     build.group.traverse(o => {
       track(o);

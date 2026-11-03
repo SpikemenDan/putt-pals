@@ -19,8 +19,8 @@
  *   toast     message shown when the effect is armed (self) or sent (opponent)
  */
 
-export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent' });
-export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke' });
+export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent', COURSE: 'course' });
+export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke', IMPACTS: 'impacts' });
 export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura' });
 
 const deepFreeze = value => {
@@ -87,6 +87,8 @@ export const POWERUP_CATALOG = deepFreeze([
     duration: { kind: DurationKinds.STROKE }, hook: PowerupHooks.AURA,
     banner: 'HATE BALL', toast: 'Your ball pushes nearby rolling balls away.',
   },
+  { id: 'bumper', icon: '●', name: 'Bumper', group: 'deployables', target: PowerupTargets.COURSE, solo: false, weight: 1, duration: { kind: DurationKinds.IMPACTS }, hook: 'deployable', banner: 'BUMPER', toast: 'Choose a spot. Right-click cancels.' },
+  { id: 'orbital', icon: '◎', name: 'Orbital Bumper', group: 'deployables', target: PowerupTargets.COURSE, solo: false, weight: 1, duration: { kind: DurationKinds.IMPACTS }, hook: 'deployable', banner: 'ORBITAL BUMPER', toast: 'Choose a spot. Right-click cancels.' },
 ]);
 
 /** Problems with a catalog (empty when valid): duplicate ids, bad fields, non-self entries allowed in solo. */

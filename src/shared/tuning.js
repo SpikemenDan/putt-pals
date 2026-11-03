@@ -68,6 +68,20 @@ export const TUNING_FIELDS = Object.freeze([
   ['hazards.teleporterRadius', 0, 100, 'Teleporter trigger radius.'],
   ['hazards.teleporterCooldown', 0, 10, 'Seconds before a teleporter can fire again.'],
 
+  ['deployables.bumperRadius', 1, 100, 'Solid bumper radius (world units).'],
+  ['deployables.bumperRestitution', 0, 2, 'Normal speed multiplier on bumper reflection.'],
+  ['deployables.maxImpacts', 1, 20, 'Impacts before removal; integer.'],
+  ['deployables.orbitalRange', 1, 1000, 'Orbital pull reach (world units).'],
+  ['deployables.orbitalPull', 0, 5000, 'Orbital acceleration, fading linearly to zero at its edge.'],
+  ['deployables.height', 1, 100, 'Maximum ball height difference affected by a bumper.'],
+  ['deployables.contactRelease', 0.1, 20, 'Distance outside contact before a new impact can count.'],
+  ['deployables.hitCooldownMs', 50, 5000, 'Minimum time between accepted impact reports.'],
+  ['deployables.hitReportTolerance', 1, 200, 'Allowance for network presence lag when checking impact reports.'],
+  ['deployables.placementSlopeTolerance', 0, 20, 'Maximum floor height difference under a bumper footprint.'],
+  ['deployables.placementClearance', 0, 100, 'Extra clearance from tees, cups and pickups.'],
+  ['deployables.pickupRadius', 1, 100, 'Pickup radius in addition to ball radius.'],
+  ['deployables.pickupHeight', 1, 100, 'Maximum height difference for a pickup.'],
+
   ['aim.swayPeriod', 0.1, 60, 'Seconds per aim sway cycle.'],
   ['aim.spinPeriod', 0.5, 60, '360° Aim: seconds for the aim indicator to turn one full circle.'],
   ['aim.sweepPeriod', 0.5, 60, '180° Aim: seconds for the aim indicator to sweep across 180° and back.'],
@@ -104,6 +118,7 @@ export const DEFAULT_TUNING = {
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
   powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
+  deployables: { bumperRadius: 14, bumperRestitution: 1.1, maxImpacts: 3, orbitalRange: 90, orbitalPull: 1000, height: 7, contactRelease: 2, hitCooldownMs: 250, hitReportTolerance: 80, placementSlopeTolerance: 2, placementClearance: 20, pickupRadius: 13, pickupHeight: 20 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
     fullPullPx: 380, canvasPullFraction: 0.6, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
@@ -121,6 +136,8 @@ export function tuningProblems(tuning) {
     if (typeof v !== 'number' || !Number.isFinite(v)) problems.push(path + ' must be a finite number');
     else if (v < min || v > max) problems.push(path + ' must be within [' + min + ', ' + max + '], got ' + v);
   }
+  if (!Number.isInteger(tuning.deployables?.maxImpacts)) problems.push('deployables.maxImpacts must be an integer');
+  if (!problems.length && tuning.deployables.orbitalRange <= tuning.deployables.bumperRadius) problems.push('deployables.orbitalRange must exceed bumperRadius');
   if (!problems.length && tuning.cup.minRadius > tuning.cup.defaultRadius) problems.push('cup.minRadius must not exceed cup.defaultRadius');
   return problems;
 }

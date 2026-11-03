@@ -6,6 +6,8 @@
  * resource it created.
  */
 
+import { isDeployableKind, canPlaceDeployable } from '../gameplay/course-powerups.js';
+import { getPowerup } from '../gameplay/catalog.js';
 import { createAudioAdapter } from '../audio/index.js';
 import { CAMERA_VIEW_LABELS } from '../camera/index.js';
 import { loadCosmetics, saveCosmetics, selectCosmetic } from '../cosmetics/index.js';
@@ -57,6 +59,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const remoteSeen = new Map(); // id -> {strokes, done, fx}
   const smooth = createRemoteInterpolator(); // remote balls are drawn slightly behind, between samples
   let presence = {};
+  let placement = null, activationSeen = 0;
   const roomStops = [];
   let joining = null, joinGeneration = 0, reloadRecovery = false;
   const aimListeners = new Set();
@@ -122,7 +125,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
 
   function onStatus({ state, reason }) {
     if (leaving || !room) return;
-    if (state === 'reconnecting') { input?.cancel(); setLocal({ connected: false, reconnecting: true, isHost: false }); }
+    if (state === 'reconnecting') { placement = null; input?.cancel(); setLocal({ connected: false, reconnecting: true, isHost: false }); }
     else if (state === 'connected') {
       setLocal({ connected: true, reconnecting: false, isHost: room.isHost, connectionReason: reason ? connectErrorMessage(reason) : '' });
       if (room.identity) resume.write(room.roomCode, { ...room.identity, name: room.snapshot?.players[room.localId]?.name });
@@ -149,6 +152,29 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     setLocal({ isHost: room.isHost });
     store.setRoom(uiSnapshot(s), room.now());
     syncRound(s);
+    syncPowerups(s);
+  }
+
+  function syncPowerups(s) {
+    if (!putt || !room?.serverOwned || !s.gameplay) return;
+    const activation = s.gameplay.activations[room.localId];
+    if (activation && activation.id > activationSeen) {
+      activationSeen = activation.id;
+      if (!isDeployableKind(activation.kind)) {
+        // Apply the accepted item before replacing the inventory with the server's remaining slots.
+        putt.player.inventory = [activation.kind];
+        const out = putt.useItem(0,win.performance.now());
+        for (const message of out.toasts) toast(message);
+        for (const [text,sub,kind,powerup] of out.banners) { store.announce(text,sub,kind); if (powerup) audio.handleEvent({type:'powerup',id:powerup}); }
+        publish(true);
+      } else {
+        placement = null;
+        store.announce(s.players[room.localId]?.name || 'You',getPowerup(activation.kind).banner + ' DEPLOYED','power');
+        audio.handleEvent({type:'powerup',id:activation.kind});
+      }
+    }
+    putt.setCoursePowerups(s.gameplay);
+    setLocalIfChanged({mode:putt.mode,strokes:putt.player.strokes,inventory:[...putt.player.inventory]});
   }
 
   function onPresence(map) {
@@ -163,6 +189,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
 
   // ---------------------------------------------------------------- rounds
   function endPutt() {
+    placement = null; activationSeen = 0;
     if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
     input?.cancel();
@@ -195,15 +222,18 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
     puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
+    if (!room.serverOwned) puttPolicy = {...puttPolicy,pool:puttPolicy.pool.filter(e => e.target !== 'course')};
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
-      inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
+      inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy, authoritativeInventory: !!room.serverOwned,
     });
     if (room.serverOwned) {
+      activationSeen = s.gameplay?.activations[room.localId]?.id ?? 0;
+      putt.setCoursePowerups(s.gameplay);
       putt.player.strokes = ownState?.strokes ?? 0;
       if (ownState?.done) putt.player.mode = 'sunk';
-      if (reloadRecovery && playing) toast('Rejoined: your ball starts at the tee. Strokes and the timer are kept; temporary items are cleared.');
+      if (reloadRecovery && playing) toast('Rejoined: your ball starts at the tee. Strokes, timer and server inventory are kept; armed effects are cleared.');
     }
     reloadRecovery = false;
     putt.mapIndex = s.mapIndex; putt.puttIndex = s.puttIndex;
@@ -317,6 +347,11 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       if (room.connected) {
         putt.setAuras(auraSourcesOf(remoteBalls()));
         const out = putt.frame(t, dt);
+        if (room.serverOwned && (out.pickups.length || out.impacts.length)) {
+          publish(true);
+          for (const block of out.pickups) room.command({type:'CLAIM_POWERUP',block});
+          for (const id of out.impacts) room.command({type:'DEPLOY_HIT',id});
+        }
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);
         for (const message of out.toasts) toast(message);
@@ -340,7 +375,8 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         now: t, dt, hazardTime: putt.hazardTime(),
         local: { ...state, color },
         remotes: remotesForRender(t),
-        aim: input.frameAim(t / 1000),
+        aim: placement ? null : input.frameAim(t / 1000),
+        deployables: room.snapshot?.gameplay?.deployables ?? [], placement,
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
       });
@@ -382,6 +418,16 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         break;
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
+        if (room.serverOwned) {
+          const kind = putt.player.inventory[command.index];
+          if (!kind || putt.mode !== 'play') break;
+          if (isDeployableKind(kind)) {
+            input?.cancel(); placement = {kind,slot:command.index,x:putt.player.x,y:putt.player.y,valid:false};
+            toast('Choose a spot on the course. Left-click places; right-click or Escape cancels.');
+          } else if (putt.player.armedPowerups[kind]) toast('That power-up is already armed.');
+          else room.command({type:'USE_POWERUP',slot:command.index,kind});
+          break;
+        }
         const out = putt.useItem(command.index, win.performance.now());
         for (const [text, sub, kind, powerup] of out.banners) { store.announce(text, sub, kind); if (powerup) audio.handleEvent({ type: 'powerup', id: powerup }); }
         for (const message of out.toasts) toast(message);
@@ -450,6 +496,23 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     const ray = new THREE.Raycaster();
     input = createInputAdapter({
       canvas, window: win, camera: view.rig, dispatch, display,
+      placement: {
+        active: () => !!placement,
+        cancel: () => { placement = null; },
+        move: p => { if (placement && putt) {
+          const origin = renderer.course?.transform.origin ?? [0,0];
+          placement.x = p.x-origin[0]; placement.y = p.z-origin[1];
+          placement.valid = canPlaceDeployable(putt.course,placement.x,placement.y,putt.hazardTime(),room.snapshot?.gameplay?.deployables);
+        } },
+        confirm: p => {
+          if (!placement || !putt || !room?.connected) return;
+          const origin = renderer.course?.transform.origin ?? [0,0];
+          const x=p.x-origin[0],y=p.z-origin[1];
+          if (!canPlaceDeployable(putt.course,x,y,putt.hazardTime(),room.snapshot?.gameplay?.deployables)) { toast('Choose clear, level ground away from tees, cups and walls.'); return; }
+          room.command({type:'DEPLOY_OBJECT',kind:placement.kind,slot:placement.slot,x,y});
+          placement = null;
+        },
+      },
       pickGround(clientX, clientY) {
         if (!putt) return null;
         const r = canvas.getBoundingClientRect();

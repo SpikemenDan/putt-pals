@@ -167,10 +167,12 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       const before = structuredClone(chambers);
       assert.deepEqual(JSON.parse(JSON.stringify(buildArenaGeometry(chambers))), geometry, name + ' geometry');
       assert.deepEqual(chambers, before, 'transform must not mutate input');
-      assert.deepEqual(generateArena(name), expected, name);
+      const generated = generateArena(name);
+      assert.equal(generated.q.length,6,'one authorized pickup per chamber');
+      assert.deepEqual({...generated,q:[]}, expected, name + ' physical geometry');
       const changed = generateArena(name);
       changed.w[0][0] += 100;
-      assert.deepEqual(generateArena(name), expected, 'output must not share mutable data');
+      assert.deepEqual({...generateArena(name),q:[]}, expected, 'output must not share mutable data');
     }
   });
   run('arena input validation rejects malformed or unsupported chamber data', () => {
@@ -191,7 +193,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   });
   run('imported geometry and resolved rules exactly match all legacy courses', () => {
     assert.equal(data.definitions.length, reference.holeCount);
-    assert.equal(reference.canonicalSha256(data.definitions), reference.holesCanonicalSha256, 'geometry matches the recorded legacy HOLES');
+    assert.equal(reference.canonicalSha256(data.definitions.map(c => c.putts ? {...c,q:[]} : c)), reference.holesCanonicalSha256, 'physical geometry matches legacy; approved starter pickups checked separately');
     assert.deepEqual(data.rules, JSON.parse(JSON.stringify(raw)));
     assert.deepEqual(data.sourceHashes, reference.sources());
     const fresh = createCourseData();

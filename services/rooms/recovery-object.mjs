@@ -308,6 +308,7 @@ export class RoomDurableObject extends RoomCoordinator {
       return;
     }
     Object.assign(room, {
+      gameplay: s.gameplay ? structuredClone(s.gameplay) : room.gameplay,
       sessionId: s.sessionId, courseHash: s.courseHash, policy: s.policy, revision: s.revision,
       logicalTime: checkpoint.savedAt, seats: new Map(s.seats.map(seat => [seat.playerId, { ...seat }])),
       identities: new Map(), nextJoinOrder: checkpoint.nextJoinOrder,

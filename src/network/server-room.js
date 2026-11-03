@@ -2,7 +2,7 @@ import {
   SERVER_ROOM_VERSION, SERVER_ROOM_LIMITS, decodeRoomFrame, encodeRoomFrame,
   validRoomCode, validRoomId, validRoomSecret, validServerCommand,
 } from './contracts/server-room.js';
-import { createCourseDocument } from '../courses/document.js';
+import { gameplayIdentityInput } from './contracts/gameplay-identity.js';
 import { sessionValue } from '../session/recovery.js';
 
 const fatalErrors = new Set(['incompatible-version', 'checkpoint-incompatible', 'session-expired', 'identity-rejected', 'room-full', 'history-full', 'invalid-message', 'course-incompatible']);
@@ -11,7 +11,7 @@ export const validServerIdentity = identity => !!identity && validRoomId(identit
 const loopback = hostname => ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
 
 export async function browserCourseHash(crypto = globalThis.crypto) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(createCourseDocument())));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(gameplayIdentityInput()));
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
@@ -111,7 +111,7 @@ export async function connectServerRoom({ roomCode, name, resume = null, endpoin
     revision = s.revision; wireSnapshot = s;
     sync(s.serverTime, clock.now());
     snapshot = { ...structuredClone(s.session.context), controllerId: s.controllerId,
-      state: sessionValue(s.session.node), phase: s.session.node.split('.')[0] };
+      state: sessionValue(s.session.node), phase: s.session.node.split('.')[0], gameplay: s.gameplay ? structuredClone(s.gameplay) : null };
     positions = Object.fromEntries(Object.entries(positions).filter(([id]) => s.session.context.players[id]?.connected && s.session.context.roster.includes(id)));
     emit('snapshot', snapshot);
     emit('presence', positions);

@@ -132,6 +132,9 @@ let TUNING;
     import('../src/courses/index.js'), import('../src/render/index.js'), import('../src/camera/index.js'), import('../src/simulation/physics.js'), import('../src/shared/coords.js'),
   ]);
   const { definitions } = createCourseData();
+  // This oracle records the pre-G1e scenes. Approved non-colliding starter pickups
+  // are covered with current course data in render-modern, course and browser tests.
+  for (const course of definitions) if (course.putts) course.q = [];
   const canvas = w.document.getElementById('cv');
   const makeView = () => {
     const renderer = render.createGameRenderer({ THREE, canvas, random: () => RANDOM, style: 'legacy', createWebGLRenderer: () => new THREE.WebGLRenderer() });

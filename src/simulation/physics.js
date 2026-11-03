@@ -12,6 +12,7 @@ import {
   TURF_FRICTION,
   FIXED_TIMESTEP,
 } from '../shared/constants.js';
+import { stepDeployables, deployablesAwake } from '../gameplay/deployables.js';
 import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
@@ -359,8 +360,9 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
     ((course.hole[0] - player.x) * dx + (course.hole[1] - player.y) * dy) / distance2)) : 0;
   const crossesCup = Math.hypot(player.x + t * dx - course.hole[0],
     player.y + t * dy - course.hole[1]) < cupOf(course) + R;
-  const steps = crossesCup ? Math.min(128, Math.max(1,
+  let steps = crossesCup ? Math.min(128, Math.max(1,
     Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
+  if (player.deployables?.length) steps = Math.max(steps, Math.min(128,Math.max(1,Math.ceil(Math.sqrt(distance2)/(R/2)))));
   if (steps === 1) return stepBallTick(player, course, dt, hazardTime);
   const events = [];
   for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
@@ -373,6 +375,7 @@ function stepBallTick(player, course, dt, hazardTime) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
+  if (player.deployables?.length) stepDeployables(player, player.deployables, dt, hazardTime, events, ballRadiusOf(player));
   if (player.auraSources?.length) { // Love / Hate Ball of other players (G1d); absent or empty leaves every result unchanged
     const [ax, ay] = auraAcceleration(player.auraSources, player.x, player.y, dt);
     player.vx += ax; player.vy += ay;
@@ -652,6 +655,7 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   if (
     gnd &&
+    !deployablesAwake(player,player.deployables,R) &&
     slope < REST.maxSlope &&
     Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) + CUPT.filletWidth &&
     Math.hypot(player.vx, player.vy) < REST.maxSpeed &&

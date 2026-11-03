@@ -8,7 +8,7 @@
  * clock (the same time base as roundStartTime and votingDeadline).
  */
 
-import { isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
+import { getPowerup, isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
@@ -164,7 +164,7 @@ export function hudView(room, local, now, courses) {
   }));
   const inventory = [0, 1, 2].map(i => {
     const item = (local.inventory || [])[i];
-    return { index: i, label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
+    return { index: i, label: item ? (i + 1) + '. ' + (getPowerup(item)?.icon ? getPowerup(item).icon + ' ' : '') + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
   });
   return {
     info,

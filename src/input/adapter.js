@@ -25,7 +25,7 @@ const isTextEntry = target => !!(target && target.matches && target.matches('inp
  * @param {(command: object) => void} options.dispatch
  * @param {typeof DISPLAY} [options.display] Presentation settings; the aim arrow length comes from display.aim.arrowMaxLength
  */
-export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY }) {
+export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY, placement = null }) {
   if (!canvas || !camera || typeof pickGround !== 'function' || typeof getState !== 'function' || typeof dispatch !== 'function') {
     throw new TypeError('canvas, camera, pickGround, getState and dispatch are required');
   }
@@ -46,6 +46,12 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
   // ---- shot charge, orbit drag and release (legacy pointer handlers) ----
   on(canvas, 'contextmenu', e => e.preventDefault());
   on(canvas, 'pointerdown', e => {
+    if (placement?.active()) {
+      cancel();
+      if (e.button === 2) placement.cancel();
+      else if (e.button === 0) { const p = pickGround(e.clientX,e.clientY); if (p) placement.confirm(p); }
+      return;
+    }
     if (!canStartShot(getState())) return;
     canvas.setPointerCapture?.(e.pointerId);
     if (e.button === 2) { orbit = { x: e.clientX, y: e.clientY, azimuth: camera.state.azimuth, elevation: camera.state.elevation }; return; }
@@ -57,6 +63,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
     notifyAim();
   });
   on(canvas, 'pointermove', e => {
+    if (placement?.active()) { const p = pickGround(e.clientX,e.clientY); if (p) placement.move(p); return; }
     if (orbit !== null) {
       // Legacy quirk preserved: non-orbit views add the whole drag distance on every move.
       if (!camera.orbitDrag(orbit, e.clientX, e.clientY)) aimAngle += (e.clientX - orbit.x) * DRAG_RADIANS_PER_PX;
@@ -90,7 +97,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
     const s = getState();
     if (!s.active) return;
     if (e.key === 'c' || e.key === 'C') dispatch({ type: InputCommands.CYCLE_CAMERA });
-    else if (e.key === 'Escape') { dispatch({ type: InputCommands.CLOSE_CARD }); cancel(); }
+    else if (e.key === 'Escape') { placement?.cancel(); dispatch({ type: InputCommands.CLOSE_CARD }); cancel(); }
     else if (e.key === 'k' || e.key === 'K') dispatch({ type: InputCommands.TOGGLE_CARD });
     else if (e.key >= '1' && e.key <= '3') dispatch({ type: InputCommands.USE_ITEM, index: +e.key - 1 });
     else if (!charging && s.mode === 'play' && !s.moving) {

@@ -1,4 +1,7 @@
-import { createCourseDocument } from '../../src/courses/document.js';
+import { createCoursePowerups, syncCoursePowerups, applyCoursePowerupCommand } from '../../src/gameplay/course-powerups.js';
+import { createCourseData } from '../../src/courses/index.js';
+import { resolvePuttCourse } from '../../src/simulation/engine.js';
+import { gameplayIdentityInput } from '../../src/network/contracts/gameplay-identity.js';
 import { createRoomSession } from '../../src/session/index.js';
 import {
   SERVER_ROOM_LIMITS, SERVER_ROOM_VERSION, ROOM_RULES_VERSION,
@@ -6,6 +9,7 @@ import {
   encodeRoomFrame, validRoomCode, validRoomId,
 } from '../../src/network/contracts/server-room.js';
 
+const courseDefinitions = createCourseData().definitions;
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
   'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
@@ -45,7 +49,7 @@ async function digestHex(value) {
 }
 
 async function createCourseHash() {
-  return digestHex(JSON.stringify(createCourseDocument()));
+  return digestHex(gameplayIdentityInput());
 }
 
 function randomId() {
@@ -357,7 +361,7 @@ export class RoomDurableObject {
       identities: new Map(), seats: new Map(), nextJoinOrder: 1,
       revision: 0, presenceSequence: 0, pendingPresence: new Map(), presenceTimer: null,
       emptyAt: null, controllerAt: null, roomTimer: null, suppress: 0, dirty: false,
-      logicalTime: Date.now(),
+      logicalTime: Date.now(), gameplay: createCoursePowerups(), latestPresence: new Map(),
     };
     room.session = this.makeSession(room, {
       controllerId: playerId, hostName: name, serverOwned: true, isReserved: id => {
@@ -439,13 +443,14 @@ export class RoomDurableObject {
 
   snapshot(room) {
     const state = room.session.getSnapshot();
+    syncCoursePowerups(room.gameplay, state);
     const context = Object.fromEntries(CONTEXT_FIELDS.map(field => [field, state[field]]));
     const snapshot = {
       roomCode: room.roomCode, sessionId: room.sessionId, rulesVersion: ROOM_RULES_VERSION,
       courseHash: room.courseHash, revision: room.revision, serverTime: this.now(room),
       controllerId: state.controllerId, policy: room.policy,
       seats: [...room.seats.values()].sort((a, b) => a.joinOrder - b.joinOrder).map(seat => ({ ...seat })),
-      session: { node: nodeFor(state.state), context },
+      session: { node: nodeFor(state.state), context }, gameplay: structuredClone(room.gameplay),
     };
     return snapshot;
   }
@@ -562,7 +567,20 @@ export class RoomDurableObject {
       type: payload.type, playerId: identity.playerId,
       roundNumber: frame.roundNumber, puttIndex: frame.puttIndex, ...payload,
     };
-    const changed = room.session.send(event);
+    let changed;
+    if (['CLAIM_POWERUP','USE_POWERUP','DEPLOY_OBJECT','DEPLOY_HIT'].includes(payload.type)) {
+      const s = room.session.getSnapshot();
+      const seen = room.latestPresence.get(identity.playerId);
+      const presence = seen?.roundNumber === s.roundNumber && seen?.puttIndex === s.puttIndex && now-seen.at <= SERVER_ROOM_LIMITS.linkTimeoutMs ? seen.payload : null;
+      const course = resolvePuttCourse(courseDefinitions[s.mapIndex],s.puttIndex);
+      const accepted = applyCoursePowerupCommand(room.gameplay,s,identity.playerId,payload, { course,presence,now,random: () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 });
+      if (!accepted) {
+        room.suppress--;
+        this.send(connection,{version:SERVER_ROOM_VERSION,type:'error',code:'unauthorized',retryAfterMs:null});
+        return;
+      }
+      room.dirty = true; changed = true;
+    } else changed = room.session.send(event);
     if (!changed) room.dirty = true;
     if (payload.type === 'LEAVE_ROOM') {
       room.seats.delete(identity.playerId);
@@ -602,6 +620,7 @@ export class RoomDurableObject {
       return;
     }
     identity.lastPresenceSequence = frame.sequence;
+    room.latestPresence.set(identity.playerId,{payload:frame.payload,roundNumber:frame.roundNumber,puttIndex:frame.puttIndex,at:now});
     room.pendingPresence.set(identity.playerId, {
       payload: frame.payload, roundNumber: frame.roundNumber, puttIndex: frame.puttIndex,
     });

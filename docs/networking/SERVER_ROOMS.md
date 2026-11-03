@@ -129,3 +129,14 @@ N4a tests are contract/fixture/mock evidence only. `MockServerRoomBoundary` bind
 - [Cloudflare Hibernation WebSocket API](https://developers.cloudflare.com/durable-objects/best-practices/websockets/): socket attachment/reconstruction and idle hibernation requirements.
 - [Durable Object alarms](https://developers.cloudflare.com/durable-objects/api/alarms/): one alarm per object and at-least-once execution.
 - [Cloudflare pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/): active duration, message requests and storage are distinct usage dimensions. Free-tier capacity must be measured in #72.
+
+## G1e local contract extension (not deployed)
+
+The G1e branch uses server-room wire version 3 and a versioned v3 room namespace.
+Its additive validated `gameplay` snapshot record persists server-awarded inventory,
+pickup receipts, activation receipts and placed objects. New commands are
+`CLAIM_POWERUP`, `USE_POWERUP`, `DEPLOY_OBJECT` and `DEPLOY_HIT`. See
+[G1e review](../G1E_DEPLOYABLES.md) for ownership, validation, compatibility and
+verification limits. Earlier N4a v2 descriptions above are historical contracts;
+local solo/legacy transport version 1 is unchanged. The service still trusts
+client physics and position reports.

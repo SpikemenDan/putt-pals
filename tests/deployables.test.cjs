@@ -1,0 +1,126 @@
+const assert = require('node:assert/strict');
+(async () => {
+  const {stepBall} = await import('../src/simulation/physics.js');
+  const {createPlayerState,applyShot} = await import('../src/shared/simulation.js');
+  const {TUNING,createTuning} = await import('../src/shared/tuning.js');
+  const G = await import('../src/gameplay/course-powerups.js');
+  const catalog = await import('../src/gameplay/catalog.js');
+  const C = await import('../src/network/contracts/server-room.js');
+  const {createServerRoomFixture} = await import('../src/network/contracts/server-room-mocks.js');
+  const {createDeployableView} = await import('../src/render/deployables.js');
+  const THREE = await import('three');
+  const course = {tee:[-250,0],hole:[250,0],tiles:[[-400,-250,800,500]],w:[],q:[[0,100]],fan:[],tornado:[],movers:[],cup:15};
+  const state = {phase:'play',mode:'standard',powerups:true,roundNumber:1,mapIndex:0,puttIndex:0,roundStartTime:1000,roster:['p1','p2'],players:{p1:{connected:true,done:false},p2:{connected:true,done:false}}};
+  const g = G.createCoursePowerups(); G.syncCoursePowerups(g,state);
+  let now=2000;
+  const options = () => ({course,presence:{x:0,y:100,z:0,mode:'play'},now,random:()=>11/13+0.001});
+  const use = c => G.applyCoursePowerupCommand(g,state,'p1',c,options());
+  for (const kind of ['bumper','orbital']) {
+    assert.equal(catalog.getPowerup(kind).target,'course');
+    assert.ok(!catalog.spawnPool({solo:true}).some(e=>e.id===kind));
+    assert.ok(!catalog.spawnPool({powerups:false}).length);
+  }
+  assert.equal(use({type:'CLAIM_POWERUP',block:0}),true);
+  assert.deepEqual(g.inventories.p1,['bumper']);
+  assert.equal(use({type:'CLAIM_POWERUP',block:0}),false,'duplicate pickup cannot mint items');
+  assert.equal(use({type:'DEPLOY_OBJECT',kind:'orbital',slot:0,x:0,y:0}),false,'cannot deploy an item not owned');
+  assert.equal(use({type:'DEPLOY_OBJECT',kind:'bumper',slot:0,x:250,y:0}),false,'cup is protected');
+  assert.equal(g.inventories.p1.length,1,'rejection keeps the item');
+  assert.equal(use({type:'DEPLOY_OBJECT',kind:'bumper',slot:0,x:0,y:0}),true);
+  assert.equal(g.inventories.p1.length,0);
+  assert.equal(g.deployables.length,1);
+  const object = structuredClone(g.deployables[0]);
+  assert.ok(G.validCoursePowerups(g,state));
+  for (const bad of [{...object,kind:'unknown'},{...object,x:Infinity},{...object,impacts:3},{...object,owner:'__proto__'},{...object,extra:1}]) assert.equal(G.validDeployable(bad),false);
+  assert.equal(C.validServerCommand({type:'DEPLOY_OBJECT',kind:'bumper',slot:0,x:0,y:0}),true);
+  for (const bad of [{type:'DEPLOY_OBJECT',kind:'bumper',slot:-1,x:0,y:0},{type:'DEPLOY_OBJECT',kind:'bumper',slot:0,x:NaN,y:0},{type:'DEPLOY_HIT',id:'__proto__'},{type:'CLAIM_POWERUP',block:1024}]) assert.equal(C.validServerCommand(bad),false);
+  assert.equal(C.validClientFrame({version:2,type:'hello',roomCode:'golf',name:'Player',resume:null}),false,'old clients fail explicitly');
+  const snapshot = createServerRoomFixture();
+  snapshot.gameplay=G.createCoursePowerups();
+  assert.ok(C.validRoomSnapshot(snapshot),'empty gameplay survives the public boundary');
+  snapshot.gameplay.inventories.constructor=['bumper'];
+  assert.equal(C.validRoomSnapshot(snapshot),false);
+
+  // No effect is a strict identity, and reflections point away rather than merely changing a setting.
+  const ball = (objects, speed=300) => {
+    const p=createPlayerState('Probe',0,{x:-40,y:0,z:0}); applyShot(p,0,1,speed);
+    if (objects!==undefined) p.deployables=objects;
+    return p;
+  };
+  const a=ball(), b=ball([]);
+  for(let i=0;i<10;i++){stepBall(a,course);stepBall(b,course);}
+  const {deployables:empty,...withoutObjects}=b;
+  assert.deepEqual(a,withoutObjects,'no objects preserves the complete player result');
+  for (const speed of [300,9000]) {
+    const p=ball([object],speed); const events=[];
+    for(let i=0;i<100 && p.vx>0;i++)events.push(...stepBall(p,course));
+    assert.ok(p.vx<0,'bumper reflects slow and fast balls');
+    assert.equal(events.filter(e=>e.type==='deployable_hit').length,1,'one entry makes one report across substeps');
+    assert.equal(p.strokes,1,'a bounce adds no strokes');
+  }
+  const far=ball([{...object,x:0,y:1000,kind:'orbital'}]);
+  const pulled=ball([{...object,x:0,y:40,kind:'orbital'}]);
+  stepBall(far,course); stepBall(pulled,course);
+  assert.equal(far.vy,0); assert.ok(pulled.vy>0,'orbital attracts toward the source');
+  const resting=ball([{...object,kind:'orbital'}],0);resting.x=-70;
+  for(let i=0;i<30;i++)stepBall(resting,course);
+  assert.ok(resting.x>-70 && resting.vx>6 && resting.moving,'orbital force can accelerate a resting ball past the ordinary rest threshold');
+  const airborne=ball([object]);airborne.z=100; stepBall(airborne,course); assert.ok(airborne.vx>0);
+  const ghost=ball([object]);ghost.armedPowerups.ghost=1;
+  for(let i=0;i<60;i++)stepBall(ghost,course);
+  assert.ok(ghost.x>object.x && ghost.vx>0,'Ghost Ball crosses a bumper');
+  const sticky=ball([object]);sticky.armedPowerups.sticky=1;
+  for(let i=0;i<60 && sticky.moving;i++)stepBall(sticky,course);
+  assert.equal(sticky.vx,0,'Sticky Ball stops instead of rebounding');
+  assert.equal(G.canPlaceDeployable({...course,w:[[-5,-5,10,10]]},0,0),false);
+  assert.equal(G.canPlaceDeployable(course,399,0),false,'whole footprint must have support');
+  assert.equal(G.canPlaceDeployable(course,0,0,0,[object]),false,'placements cannot overlap');
+  assert.throws(()=>createTuning({deployables:{maxImpacts:2.5}}),/integer/);
+  const capped=G.createCoursePowerups();G.syncCoursePowerups(capped,state);
+  capped.inventories.p1=['bumper','orbital','bumper'];
+  const deploy=(kind,x)=>G.applyCoursePowerupCommand(capped,state,'p1',{type:'DEPLOY_OBJECT',slot:0,kind,x,y:0},options());
+  assert.equal(deploy('bumper',0),true);assert.equal(deploy('orbital',100),true);
+  assert.equal(deploy('bumper',-100),false,'per-player cap does not consume a third item');
+  assert.deepEqual(capped.inventories.p1,['bumper']);
+  const {GameModes}=await import('../src/shared/session.js');
+  const tournament=structuredClone(capped);G.syncCoursePowerups(tournament,{...state,mode:GameModes.TOURNAMENT_3,roundNumber:2,puttIndex:1});
+  assert.deepEqual(tournament.inventories.p1,['bumper']);assert.deepEqual(tournament.deployables,[]);
+
+  // Impact count is room-owned; fast duplicates and distant reports do not destroy it.
+  const hit = () => G.applyCoursePowerupCommand(g,state,'p2',{type:'DEPLOY_HIT',id:object.id},{...options(),presence:{x:19,y:0,z:0,mode:'play'}});
+  assert.equal(use({type:'DEPLOY_HIT',id:object.id}),false,'distant presence is rejected');
+  assert.equal(hit(),true); assert.equal(g.deployables[0].impacts,1);
+  assert.equal(hit(),false); assert.equal(g.deployables[0].impacts,1);
+  now+=250;assert.equal(hit(),true);
+  now+=250;assert.equal(hit(),true);
+  assert.equal(g.deployables.length,0,'third accepted impact removes the object');
+  assert.deepEqual(g.hitTimes,{});
+  assert.equal(hit(),false);
+  g.inventories.p1=['bumper'];
+  assert.equal(G.applyCoursePowerupCommand(g,{...state,powerups:false},'p1',{type:'DEPLOY_OBJECT',slot:0,kind:'bumper',x:0,y:0},options()),false);
+  assert.deepEqual(g.inventories,{});
+  g.deployables=[object];g.inventories.p1=['orbital'];
+  G.syncCoursePowerups(g,{...state,roundNumber:2,puttIndex:1});
+  assert.deepEqual(g.deployables,[]);assert.deepEqual(g.inventories,{});
+  const scene=new THREE.Scene(),view=createDeployableView(THREE,scene);
+  view.update([object,{...object,id:'d2',kind:'orbital',x:100}],null,course,[0,0]);
+  assert.equal(scene.children.length,2);
+  assert.ok(scene.children[1].children.length>scene.children[0].children.length,'orbital adds visible range rings');
+  let disposals=0;
+  scene.traverse(o=>o.geometry?.addEventListener('dispose',()=>disposals++));
+  view.update([],null,course,[0,0]);assert.equal(scene.children.length,0);assert.ok(disposals>0);
+  view.dispose();view.dispose();
+  const {JSDOM}=require('jsdom');
+  const {createInputAdapter}=await import('../src/input/adapter.js');
+  const dom=new JSDOM('<canvas></canvas>'),canvas=dom.window.document.querySelector('canvas');
+  let placing=true,confirmed=0,cancelled=0,moved=0;const commands=[];
+  const adapter=createInputAdapter({canvas,window:dom.window,camera:{state:{freeRoam:false},orbitDrag(){throw new Error('placement must not orbit');}},pickGround:(x,z)=>({x,z}),getState:()=>({active:true,mode:'play',moving:false,connected:true}),dispatch:c=>commands.push(c),placement:{active:()=>placing,cancel:()=>{placing=false;cancelled++;},move:()=>moved++,confirm:()=>{placing=false;confirmed++;}}});
+  const pointer=(type,button=0)=>{const e=new dom.window.Event(type);Object.assign(e,{pointerId:1,button,clientX:100,clientY:100});canvas.dispatchEvent(e);};
+  pointer('pointermove');assert.equal(moved,1);
+  pointer('pointerdown',2);pointer('pointerup',2);assert.equal(cancelled,1);assert.equal(adapter.charging,false);
+  placing=true;pointer('pointerdown');pointer('pointerup');assert.equal(confirmed,1);
+  assert.ok(!commands.some(c=>c.type==='shot'),'placement click and cancellation never launch a shot');
+  placing=true;dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(cancelled,2);
+  adapter.dispose();dom.window.close();
+  console.log('Deployables: authority, boundaries, policy, collision, pull, three-hit lifetime and disposal passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

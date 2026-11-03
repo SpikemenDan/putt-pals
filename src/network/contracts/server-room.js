@@ -1,10 +1,12 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
+import { isDeployableKind, validCoursePowerups } from '../../gameplay/course-powerups.js';
+import { isPowerupId } from '../../gameplay/catalog.js';
 import { GameModes } from '../../shared/session.js';
 import { MAX_PLAYERS } from '../../shared/constants.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 
-export const SERVER_ROOM_VERSION = 2;
+export const SERVER_ROOM_VERSION = 3;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-1';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -48,9 +50,13 @@ export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'SET_POWERUPS', 'S
 export function validServerCommand(c) {
   if (!object(c)) return false;
   const fields = { LEAVE_ROOM: [], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
-    RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'] }[c.type];
+    RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'], CLAIM_POWERUP: ['block'], USE_POWERUP: ['slot','kind'], DEPLOY_OBJECT: ['slot','kind','x','y'], DEPLOY_HIT: ['id'] }[c.type];
   if (!Array.isArray(fields) || !exact(c, ['type', ...fields])) return false;
   switch (c.type) {
+    case 'CLAIM_POWERUP': return index(c.block,1024);
+    case 'USE_POWERUP': return index(c.slot,3) && isPowerupId(c.kind) && !isDeployableKind(c.kind);
+    case 'DEPLOY_OBJECT': return index(c.slot,3) && isDeployableKind(c.kind) && [c.x,c.y].every(n => Number.isFinite(n) && Math.abs(n) <= 1000000);
+    case 'DEPLOY_HIT': return validRoomId(c.id);
     case 'SET_MODE': return modes.includes(c.mode);
     case 'SET_POWERUPS': return typeof c.enabled === 'boolean';
     case 'CAST_VOTE': return [0, 8, 20, 21, 5, 19].includes(c.mapIndex);
@@ -101,11 +107,12 @@ const seat = s => exact(s,['playerId','joinOrder','connectedSince','resumeUntil'
 const session = s => exact(s,['node','context']) && SESSION_NODES.includes(s.node) && validSessionContext(s.context)
   && (!['select.choosingPutt','play.active.replaying'].includes(s.node) || s.context.mode === GameModes.PUTT_PRACTICE);
 export function validRoomSnapshot(s) {
-  if (!exact(s,['roomCode','sessionId','rulesVersion','courseHash','revision','serverTime','controllerId','policy','seats','session']) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
+  if (!exact(s, ['roomCode','sessionId','rulesVersion','courseHash','revision','serverTime','controllerId','policy','seats','session', ...(Object.hasOwn(s ?? {},'gameplay') ? ['gameplay'] : [])]) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
     || s.rulesVersion !== ROOM_RULES_VERSION || !validHash(s.courseHash) || !count(s.revision) || !time(s.serverTime) || !validRoomPolicy(s.policy) || !session(s.session) || !Array.isArray(s.seats) || s.seats.length > MAX_PLAYERS
     || !s.seats.every(seat) || new Set(s.seats.map(s => s.playerId)).size !== s.seats.length || new Set(s.seats.map(s => s.joinOrder)).size !== s.seats.length
     || !s.seats.every(seat => (seat.connectedSince === null || seat.connectedSince <= s.serverTime) && Object.hasOwn(s.session.context.players,seat.playerId) && s.session.context.players[seat.playerId].connected === (seat.connectedSince !== null))
     || !Object.entries(s.session.context.players).every(([id,p]) => !p.connected || s.seats.some(seat => seat.playerId === id))) return false;
+  if (s.gameplay !== undefined && (!validCoursePowerups(s.gameplay,s.session.context) || s.gameplay.round !== s.session.context.roundNumber || s.gameplay.map !== s.session.context.mapIndex || s.gameplay.putt !== s.session.context.puttIndex)) return false;
   const controller = s.seats.find(seat => seat.playerId === s.controllerId);
   return s.controllerId === null ? !s.seats.some(seat => seat.connectedSince !== null)
     : validRoomId(s.controllerId) && !!controller && (controller.connectedSince !== null || s.policy.controllerTransferDelayMs > 0);

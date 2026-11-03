@@ -28,7 +28,7 @@ async function receive(ws, frame) {
 }
 async function command(ws, payload) {
   const s = room.checkpoint().snapshot;
-  await receive(ws, { version: 2, type: 'command', sessionId: s.sessionId, connectionId: ws.attachment.connectionId,
+  await receive(ws, { version: 3, type: 'command', sessionId: s.sessionId, connectionId: ws.attachment.connectionId,
     sequence: ++ws.sequence, roundNumber: s.session.context.roundNumber, puttIndex: s.session.context.puttIndex, payload });
   assert.equal(ws.frames.at(-1).type, 'ack');
 }
@@ -39,7 +39,7 @@ try {
       send(raw) { const f = JSON.parse(raw); this.frames.push(f); metrics.outputs++; metrics.outputBytes += bytes(raw); if (f.snapshot) metrics.maxSnapshotBytes = Math.max(metrics.maxSnapshotBytes, bytes(JSON.stringify(f.snapshot))); },
       close() { this.readyState = 3; }, serializeAttachment(a) { this.attachment = structuredClone(a); }, deserializeAttachment() { return this.attachment; } };
     room.acceptConnection(ws, { socket: ws, roomCode: 'traffic', identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null });
-    await receive(ws, { version: 2, type: 'hello', roomCode: 'traffic', name: `Player ${i + 1}`, resume: null });
+    await receive(ws, { version: 3, type: 'hello', roomCode: 'traffic', name: `Player ${i + 1}`, resume: null });
     assert.equal(ws.frames[0].type, 'welcome'); clients.push(ws);
   }
   await command(clients[0], { type: 'SET_MODE', mode: 'tournament_3' });
@@ -52,7 +52,7 @@ try {
     now += 70;
     for (const ws of clients) {
       const s = room.checkpoint().snapshot;
-      await receive(ws, { version: 2, type: 'presence', sessionId: s.sessionId, connectionId: ws.attachment.connectionId,
+      await receive(ws, { version: 3, type: 'presence', sessionId: s.sessionId, connectionId: ws.attachment.connectionId,
         sequence: ++ws.presenceSequence, roundNumber: s.session.context.roundNumber, puttIndex: s.session.context.puttIndex,
         payload: { x: tick, y: 10, z: 0, mode: 'play', strokes: 0 } });
     }
