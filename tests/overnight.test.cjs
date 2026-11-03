@@ -47,6 +47,13 @@ const iso = (offsetMs, base = Date.now()) => new Date(base + offsetMs).toISOStri
   }
 
   // ---------------------------------------------------------------- backup
+  await scenario('backup: tar listings parse the same with LF (GNU tar) and CRLF (Windows bsdtar) line endings', async () => {
+    const names = ['a.txt', 'dir/b.js', 'dir/c d.md'];
+    assert.deepEqual(backupLib.parseTarListing(names.join('\n') + '\n'), names);
+    assert.deepEqual(backupLib.parseTarListing(names.join('\r\n') + '\r\n'), names);
+    assert.deepEqual(backupLib.parseTarListing('dir/\r\ndir/b.js\r\n'), ['dir/b.js'], 'directory entries are skipped');
+  });
+
   await scenario('backup: history with unpushed commits, uncommitted and untracked files restore and verify; credentials and dependencies are excluded', async () => {
     const { root } = makeRepo();
     sh(root, 'stash', 'push', '-q', '-u', '-m', 'wip'); // a stash must survive too

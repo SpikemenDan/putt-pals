@@ -14,6 +14,9 @@ import path from 'node:path';
 import { EXCLUDED_DIRS, SECRET_PATTERNS, git, hashProjectFiles, listProjectFiles, readJson, redactRemote, run, scanForSecrets, sha256File, tar, writeJson } from './lib.mjs';
 
 export const MANIFEST_VERSION = 1;
+/** File paths from `tar -t` output; Windows' bsdtar ends lines with CRLF, GNU tar with LF. Directory entries are skipped. */
+export const parseTarListing = output => output.split(/\r?\n/).filter(Boolean).filter(p => !p.endsWith('/')).sort();
+
 const stamp = date => date.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
 
 /**
@@ -90,7 +93,7 @@ export function verifyBackup(dir) {
 
   const listing = tar(['-tzf', 'working-tree.tar.gz'], dir, true);
   check('archive is readable', listing.status === 0, listing.status === 0 ? undefined : (listing.stderr || '').trim());
-  const archived = listing.status === 0 ? listing.stdout.split('\n').filter(Boolean).filter(p => !p.endsWith('/')).sort() : [];
+  const archived = listing.status === 0 ? parseTarListing(listing.stdout) : [];
   const expectedPaths = manifest.workingTree.files.map(f => f.path).sort();
   check('archive holds exactly the manifest files', JSON.stringify(archived) === JSON.stringify(expectedPaths), `${archived.length} archived, ${expectedPaths.length} expected`);
 
