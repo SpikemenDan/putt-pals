@@ -1,6 +1,5 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const vm = require('node:vm');
 class Param {
   constructor(value = 1) { this.value = value; this.calls = []; }
   setValueAtTime(value, time) { this.calls.push(['set', value, time]); }
@@ -67,11 +66,8 @@ class Gestures {
       onError: error => errors.push(error.message), ...options });
     return { adapter, contexts, errors, values, get c() { return contexts[0]; } };
   };
-  // Migration-only reference execution: production audio never reads or evaluates legacy source.
-  const html = fs.readFileSync(require('node:path').join(__dirname, '../putt-pals.html'), 'utf8');
-  const marker = 'function tone(c,out,type,f0,f1,t0,dur,vol){';
-  assert.equal(html.split(marker).length, 2);
-  const referenceSource = marker + html.split(marker)[1].split('\nfunction sfx(')[0] + '\nSFX;';
+  // Recorded node chains of the legacy sound recipes (scripts/record-legacy-reference.cjs era; production audio never reads legacy source).
+  const recorded = require('./fixtures/legacy-reference/audio-signatures.json');
   const signature = c => c.sources().map(source => {
     const chain = []; let node = source;
     // Stop at the per-voice output gain; only synthesis nodes/envelopes belong to the recipe.
@@ -84,11 +80,9 @@ class Gestures {
     const names = ['putt', 'bounce', 'sink', 'sinkover', 'hio', 'power', 'event', 'splash', 'teleport', 'warp', 'boing'];
     for (const name of names) {
       const f = make(); await f.adapter.unlock();
-      const reference = new Context({ state: 'running' });
-      const recipes = vm.runInNewContext(referenceSource, { aNoise: reference.createBuffer(1, 4000, 8000), Math: { random: () => .25, max: Math.max } });
-      recipes[name](reference, reference.currentTime, reference.createGain());
       assert.equal(f.adapter.play(name), true);
-      assert.deepEqual(signature(f.c), signature(reference), name);
+      assert.ok(recorded[name], name + ' has a recorded reference');
+      assert.deepEqual(JSON.parse(JSON.stringify(signature(f.c))), recorded[name], name);
       assert.equal(f.c.buffers[0].length, 4000); assert.equal(f.c.buffers[0].getChannelData(0)[0], -.5);
       f.c.endAll(); assert.equal(f.adapter.getStatus().activeVoices, 0);
       await f.adapter.dispose(); assert.equal(f.c.closeCalls, 1);

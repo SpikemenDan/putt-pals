@@ -439,11 +439,10 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   });
 
   // ---------------------------------------------------------------------------------------------
-  await scenario('library: pinned Three.js preserves legacy course object topology and transforms', async () => {
-    const html = fs.readFileSync(path.join(root, 'putt-pals.html'), 'utf8');
-    const embedded = new JSDOM('', { runScripts: 'outside-only' }).window;
-    embedded.eval(html.match(/<script>\/\* three\.js \(inlined\) \*\/([\s\S]*?)<\/script>/)[1]);
-    assert.equal(embedded.THREE.REVISION, '128');
+  await scenario('library: pinned Three.js preserves the recorded legacy (r128) course object topology and transforms', async () => {
+    // Recorded from the legacy page's inlined Three.js r128 (scene description hashes per map).
+    const recorded = require('./fixtures/legacy-reference/three-r128-course-topology.json');
+    assert.equal(recorded.three, '128');
     const pinned = require('../package.json').dependencies.three;
     assert.equal(THREE.REVISION, pinned.split('.')[1], 'runtime uses the pinned Three.js revision');
     const { buildCourseScene, createMaterialLibrary } = await import('../src/render/index.js');
@@ -466,7 +465,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     });
     let builds = 0;
     for (let map = 0; map < definitions.length; map++) {
-      const scenes = [THREE, embedded.THREE].map(T => {
+      const scenes = [THREE].map(T => {
         // V1a #58: the legacy style, as on r128; the toon layout is compared with it in render-modern.test.cjs.
         const library = createMaterialLibrary({ THREE: T, createCanvas: canvas, random: () => 0.5, style: 'legacy' });
         const build = buildCourseScene({ library, course: definitions[map], puttIndex: 0 });
@@ -474,7 +473,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
         build.dispose(); library.dispose();
         return JSON.parse(JSON.stringify(d)); // same-realm plain data (the embedded build lives in a jsdom realm)
       });
-      assert.deepEqual(scenes[0], scenes[1], `course ${map}`);
+      assert.equal(require('node:crypto').createHash('sha256').update(JSON.stringify(scenes[0])).digest('hex'), recorded.sha256ByMap[map], `course ${map}: object topology and transforms match the r128 recording`);
       builds++;
     }
     assert.equal(builds, 22);
