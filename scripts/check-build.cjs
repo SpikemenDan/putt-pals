@@ -22,7 +22,7 @@ try {
   assert.ok(!bundle.includes('<script id="game">'), 'app bundle does not embed the legacy game');
   // The development tuning panel is only for `vite dev`; production bundles must not carry it.
   const everyScript = fs.readdirSync(path.join(root, 'dist/assets')).filter(f => f.endsWith('.js')).map(f => fs.readFileSync(path.join(root, 'dist/assets', f), 'utf8')).join(' ');
-  for (const marker of ['putt-pals.display-overrides', 'pp-tune']) assert.ok(!everyScript.includes(marker), `production build contains development-only code (${marker})`);
+  for (const marker of ['putt-pals.display-overrides', 'pp-tune', 'findConsumers']) assert.ok(!everyScript.includes(marker), `production build contains development-only code (${marker})`);
   console.log('BUILD_OK: modular app page, module script, CSS and headers present; no legacy page and no development-only panel in the build');
 } finally {
   app.window.close();

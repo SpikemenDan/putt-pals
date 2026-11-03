@@ -23,7 +23,22 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 
 - Overrides are temporary: they live in this browser tab's `sessionStorage`, a **TEMP OVERRIDES** badge shows while any are active, and they never change `DEFAULT_DISPLAY`. To ship a value, edit the default in `src/shared/display.js` and the table above, then rerun the checks.
 - Export gives `{"version": 1, "display": {...}}` containing only non-default values. Import validates the whole document (unknown keys, out-of-range values, shaft wider than head) and applies nothing if any part is invalid.
-- Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not expose `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope.
+- Every field here is presentation-only, so every change applies live and nothing needs a restart or reset. The panel does not let you edit `TUNING` (physics, dimensions, shot mapping, session rules): changing those live would desync a match and invalidate difficulty evidence, so they are deliberately out of scope. It lists them read-only instead (see below).
 - `window.__ppTuner` is available in dev for browser checks.
+
+### Traceability
+
+Each row in the panel shows the setting's units, range, default, that it applies live, and the source files that read it. A "Differences from shipped defaults" list at the top shows each active override as `default → current`, and the **TEMP OVERRIDES** badge stays on until you reset. Reset (per field or all), validated Export and the existing validated Import are unchanged. A collapsed "Simulation settings (TUNING), read-only" section lists every `TUNING` value with its units, the reload requirement and its readers.
+
+The "read by" lists are derived from the source, never hand-kept: `src/shared/config-meta.js` follows `DISPLAY.a.b`, aliases such as `const a = display.aim`, destructuring and group-wide uses. The same data is available outside the browser:
+
+```sh
+npm run config:report                      # DISPLAY and TUNING: defaults, ranges, units, restart rule, readers
+npm run config:report -- display --overrides exported-overrides.json   # validate an export and show how it differs
+```
+
+Units and the restart rule are the only things written by hand (`config-meta.js`); `tests/config-meta.test.cjs` fails if a setting has none, if a setting is read by nothing (the one known exception is the superseded `TUNING.aim.arrowMaxLength`), or if the derivation stops following a supported pattern. `tests/config-reach.test.cjs` checks that every DISPLAY setting changes its real consumers and that representative TUNING settings reach the simulation, input and effects code.
+
+The traceability view (units, live notes, readers, the differences list and the read-only simulation section) was tried in the local preview and approved by the owner on 2026-11-03.
 
 History: the first defaults (length 180, widths 1.3/3.6, head 8) were the pre-panel look. The owner found that arrow too narrow and far too long, so the defaults became length 100 and widths 2.6/7, head 14 (tried in the tuning panel and approved by the owner on 2026-11-02).
