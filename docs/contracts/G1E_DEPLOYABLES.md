@@ -30,7 +30,7 @@ Absent means none, so snapshots from before this change stay valid. Objects are 
 
 Proposed constants in `src/shared/constants.js`:
 
-- `MAX_DEPLOYABLES = 12` (whole room), `MAX_DEPLOYABLES_PER_PLAYER = 2`.
+- `MAX_DEPLOYABLES = 12` (whole room), `MAX_DEPLOYABLES_PER_PLAYER = 4`.
 - The snapshot stays well under `MAX_MESSAGE_BYTES` (12 records is about 1.2 KB).
 
 ## 3. Command

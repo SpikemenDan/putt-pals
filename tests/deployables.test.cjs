@@ -121,7 +121,7 @@ const assert = require('node:assert/strict');
   assert.equal(put([], 'mag').reason, 'invalid', 'only course items can be deployed');
   assert.equal(D.placeDeployable([], { kind: 'bumper', x: NaN, y: 0 }, ctx()).reason, 'invalid');
   assert.equal(put([], 'bumper', { validPlacement: () => false }).reason, 'blocked');
-  const twoMine = [rec('bumper', 1, 1, { id: 'a' }), rec('orbital', 2, 2, { id: 'b' })];
+  const twoMine = Array.from({ length: require('../src/shared/constants.js').MAX_DEPLOYABLES_PER_PLAYER ?? 4 }, (_, i) => rec(i % 2 ? 'orbital' : 'bumper', 1 + i, 1 + i, { id: 'm' + i }));
   assert.equal(put(twoMine, 'bumper').reason, 'player-full');
   assert.equal(put(twoMine, 'bumper', { playerId: 'p2' }).placed.owner, 'p2');
   const roomFull = Array.from({ length: 12 }, (_, i) => rec('bumper', i, i, { id: 'x' + i, owner: 'p' + (i % 6 + 10) }));
