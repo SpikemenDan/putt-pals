@@ -27,7 +27,7 @@ export function runList(raw) {
 export function runValidate({ raw, inventory, hashes, courseHashes }) {
   const catalog = buildCourseCatalog(raw);
   const stale = detectStaleCourses(raw, inventory.courses);
-  const staleHashes = detectStaleHashes(hashes, inventory);
+  const staleHashes = hashes ? detectStaleHashes(hashes, inventory) : { differences: [] };
   const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences,
     ...(courseHashes ? detectStaleHashes(courseHashes, inventory).differences.map(message => `Imported courses: ${message}`) : [])];
   if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
