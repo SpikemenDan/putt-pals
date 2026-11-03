@@ -89,6 +89,8 @@ Commands are listed as they exist in `package.json`; keep this table in sync whe
 | `npm run checks` | Recommend which of the commands above to run for your changed paths, and why; unknown paths fall back to the full suite (details in [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md)) |
 | `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; add `--full` for an exhaustive search |
 | `npm run rank` | Print recorded difficulty counts; these are stale and do not certify current difficulty |
+| `npm run gemini:handoff -- --task ... --expect ... --file ...` | Bounded, read-only Gemini Pro handoff for routine drafts and summaries; refuses credentials and oversize input (see [docs/AGENT_ROUTING.md](docs/AGENT_ROUTING.md)) |
+| `npm run test:gemini` | Gemini handoff limits, refusals and fallback, with a fake Gemini (nothing is sent) |
 | `npm run overnight:backup` | Create and verify a local recovery backup (see [Overnight sessions](#overnight-sessions)) |
 | `npm run overnight:readiness` | Check the Google Drive upload setup for overnight backups |
 

@@ -69,6 +69,8 @@ jobs:
         run: npm run test:integration
       - name: Check overnight backup, preflight and session limits
         run: npm run test:overnight
+      - name: Check bounded Gemini handoffs (fake Gemini, nothing sent)
+        run: npm run test:gemini
 
   browser-ci:
     name: browser-ci (${{ matrix.browser }})

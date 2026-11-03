@@ -119,7 +119,8 @@ Gemini returns drafts or findings. It does not edit the active checkout, commit,
 push, merge, change permissions or launch another assistant.
 
 Claude supplies only relevant inputs, excludes credentials, verifies the result
-against actual files or command output and applies useful changes.
+against actual files or command output and applies useful changes. Handoffs go
+through tools/gemini/handoff.mjs (docs/AGENT_ROUTING.md, "Bounded handoffs").
 
 Do not delegate tiny tasks when handoff costs more than completing them.
 If Gemini is unavailable, continue directly after a brief bounded attempt.

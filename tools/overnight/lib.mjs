@@ -65,6 +65,9 @@ export const SECRET_PATTERNS = Object.freeze([
 
 const MAX_SCAN_BYTES = 5 * 1024 * 1024;
 
+/** Names of the secret patterns found in a piece of text (never the matched value). */
+export const scanTextForSecrets = text => SECRET_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name);
+
 /** @returns {Array<{path: string, pattern: string}>} */
 export function scanForSecrets(root, files) {
   const hits = [];
@@ -75,8 +78,7 @@ export function scanForSecrets(root, files) {
     if (!stat.isFile() || stat.size > MAX_SCAN_BYTES) continue;
     const buffer = fs.readFileSync(full);
     if (buffer.subarray(0, 8000).includes(0)) continue;
-    const text = buffer.toString('utf8');
-    for (const [name, pattern] of SECRET_PATTERNS) if (pattern.test(text)) hits.push({ path: file, pattern: name });
+    for (const pattern of scanTextForSecrets(buffer.toString('utf8'))) hits.push({ path: file, pattern });
   }
   return hits;
 }
