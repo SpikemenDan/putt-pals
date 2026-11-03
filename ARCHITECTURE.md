@@ -50,6 +50,22 @@ UI/input -> application commands -> session/simulation. Render and audio consume
 
 The application owns exactly one simulation scheduler and one rendering loop per session. Adapters have explicit start/dispose lifecycles. Events such as shot, bounce, sink, timeout and putt change drive sound/UI without callbacks from physics into browser APIs.
 
+## Where to look
+
+Entry points only. Each area's own README or the code is authoritative; read it before changing the area.
+
+| Area | Start here | Also |
+| --- | --- | --- |
+| Application composition | [src/app/app.js](src/app/app.js) (`createApp`), [src/app/main.js](src/app/main.js) (browser entry) | [src/app/README.md](src/app/README.md), [src/ui/README.md](src/ui/README.md) |
+| Physics and simulation | [src/simulation/engine.js](src/simulation/engine.js) (`SimulationEngine`), [src/simulation/physics.js](src/simulation/physics.js) (collisions, cup, surfaces) | [src/shared/simulation.js](src/shared/simulation.js) (state and shot application); changes here affect the simulation fingerprint |
+| Aiming and input | [src/input/aim.js](src/input/aim.js) (spread, sway, shot angle), [src/input/adapter.js](src/input/adapter.js) (pointer and keyboard to commands) | [src/render/actors.js](src/render/actors.js) (`createAimGuide`), [src/input/README.md](src/input/README.md) |
+| Rendering and camera | [src/render/renderer.js](src/render/renderer.js) (`createGameRenderer`), [src/render/view.js](src/render/view.js), [src/camera/rig.js](src/camera/rig.js) | [src/render/course-scene.js](src/render/course-scene.js), [src/render/README.md](src/render/README.md) |
+| Rooms and networking | [src/session/machine.js](src/session/machine.js) (lifecycle, voting, scoring), [src/network/server-room.js](src/network/server-room.js) (WebSocket client) | [services/rooms/worker.mjs](services/rooms/worker.mjs) and [services/rooms/room-object.mjs](services/rooms/room-object.mjs) (Worker and Durable Object), [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md) |
+| Configuration | [src/shared/tuning.js](src/shared/tuning.js) (`TUNING`, simulation settings), [src/shared/display.js](src/shared/display.js) (`DISPLAY`, presentation settings) | [src/devtools/panel.js](src/devtools/panel.js) (development panel), [docs/TUNING.md](docs/TUNING.md), [docs/DISPLAY.md](docs/DISPLAY.md); see "Developer configuration" below |
+| Courses and solver | [src/courses/definitions.js](src/courses/definitions.js), [tools/cli/main.mjs](tools/cli/main.mjs) (`check`, `solve`, `shot`) | [src/courses/README.md](src/courses/README.md) |
+| Gameplay catalogs | [src/gameplay/catalog.js](src/gameplay/catalog.js) | [src/gameplay/README.md](src/gameplay/README.md) |
+| Tests and checks | Scripts in [package.json](package.json) and the command table in [README.md](README.md) | [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md) ("Implementation and checks") |
+
 ## Contract principles
 
 The concrete contracts are in the next section; these principles govern changes to them:

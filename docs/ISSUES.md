@@ -15,7 +15,8 @@ For substantial work, record:
 - Outcome and scope.
 - Affected paths.
 - Dependencies.
-- Acceptance criteria.
+- Acceptance criteria, stated as observable completion (see docs/GITHUB_WORKFLOW.md,
+  "Completion criteria").
 - Relevant verification.
 - Remaining work.
 
