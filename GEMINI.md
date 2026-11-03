@@ -16,7 +16,8 @@ Support Claude with bounded routine tasks:
 
 ## Execution
 
-Work from supplied text or read-only source access.
+Work from the excerpts supplied through tools/gemini/handoff.mjs (docs/AGENT_ROUTING.md,
+"Bounded handoffs"), or read-only source access.
 Return a draft, proposed patch text or findings for Claude to verify.
 
 Do not:
