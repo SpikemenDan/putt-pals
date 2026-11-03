@@ -163,6 +163,39 @@ const assert = require('node:assert/strict');
   snap.puttIndex = 1; unbind.hit('d2');
   assert.equal(last().deployables, undefined, 'a new putt clears the objects');
   unbind(); cases++;
+  // ---- test chambers: a walled box, tee (40,100), cup (360,100). Each element changes the outcome of a fixed shot.
+  {
+    cases++;
+    const box = { tee: [40, 100], hole: [360, 100], cup: 15, tiles: [[0, 0, 400, 200]], w: [[0, -4, 400, 4], [0, 200, 400, 4], [-4, 0, 4, 200], [400, 0, 4, 200]] };
+    const shoot = (angle, speed, deployables) => {
+      const p = createPlayerState('Chamber', 0, { x: 40, y: 100, z: 0 });
+      p.deployables = deployables; applyShot(p, angle, 1, speed);
+      let sunk = false, hits = 0;
+      for (let i = 0; i < 4800 && p.moving && !sunk; i++) for (const e of stepBall(p, box, dt)) { if (e.type === 'sink') sunk = true; if (e.type === D.DEPLOYABLE_HIT) hits++; }
+      return { sunk, hits };
+    };
+    // Bumper chamber: the straight shot sinks, and with a bumper on the line it is thrown back and never sinks.
+    assert.deepEqual(shoot(0, 250, []), { sunk: true, hits: 0 });
+    const blocked = shoot(0, 250, [rec('bumper', 200, 100)]);
+    assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.equal(blocked.hits, 1);
+    // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the cup (robust over a range of aims).
+    for (const aimOff of [25, 30]) {
+      const angle = Math.atan2(aimOff, 320);
+      assert.equal(shoot(angle, 250, []).sunk, false, `aim ${aimOff} misses without the ring`);
+      assert.equal(shoot(angle, 250, [rec('orbital', 360, 150)]).sunk, true, `aim ${aimOff} sinks with the ring`);
+    }
+  }
+
+  // Placement check: on the floor, off pits, clear of walls by the bumper radius.
+  { cases++;
+    const arena = { tiles: [[0, 0, 200, 100]], pit: [[150, 0, 20, 100]], w: [[0, 0, 200, 4]] };
+    const r = D.DEPLOYABLE_PARAMS.bumperRadius;
+    assert.equal(D.placementClear(arena, 60, 50), true, 'open floor');
+    assert.equal(D.placementClear(arena, 300, 50), false, 'off the floor tiles');
+    assert.equal(D.placementClear(arena, 160, 50), false, 'over a pit');
+    assert.equal(D.placementClear(arena, 60, 4 + r - 1), false, 'body would overlap the wall');
+    assert.equal(D.placementClear(arena, 60, 4 + r + 1), true, 'just clear of the wall');
+  }
 
   console.log(`deployables tests passed (${cases} groups)`);
 })().catch(e => { console.error(e); process.exit(1); });

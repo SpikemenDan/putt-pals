@@ -9,6 +9,7 @@
 
 import { MAX_DEPLOYABLES, MAX_DEPLOYABLES_PER_PLAYER } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
+import { surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
 /** The `deployables.*` tuning block (src/shared/tuning.js, docs/TUNING.md). Helpers take it as an argument so tests can pass their own. */
@@ -86,6 +87,16 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
     events.push({ type: DEPLOYABLE_HIT, id: d.id });
   }
   return events;
+}
+
+/**
+ * Course check for a placement (host side): the point is on the floor, not over a pit, and the whole body clears
+ * every wall by `bumperRadius`. `course` is a resolved course (tiles, pit, w as [x, y, w, h] rows).
+ */
+export function placementClear(course, x, y, params = DEPLOYABLE_PARAMS) {
+  if (!course || surfaceHeight(course, x, y) <= -999) return false;
+  const r = params.bumperRadius;
+  return !(course.w || []).some(([wx, wy, ww, wh]) => Math.hypot(x - Math.max(wx, Math.min(x, wx + ww)), y - Math.max(wy, Math.min(y, wy + wh))) < r);
 }
 
 const finiteIn = n => Number.isFinite(n) && Math.abs(n) <= COORD_LIMIT;

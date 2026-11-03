@@ -32,9 +32,10 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {() => number} [options.random]
  * @param {(options: object) => object} [options.createTransport] Legacy unit-test transport seam
  * @param {{peerId: string, token: string}} [options.identity] Guest identity to resume (a new one is made if missing or invalid)
+ * @param {(map: number, putt: number, x: number, y: number) => boolean} [options.validPlacement] Host course check for Bumper / Orbital Bumper placement (G1e)
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS }) {
+async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, validPlacement }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
@@ -80,7 +81,7 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
 
   if (transport.isHost) {
     session = createRoomSession({ hostId: transport.peerId, hostName: name, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
-    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS });
+    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, validPlacement });
     stops.push(session.subscribe(s => {
       last = s;
       for (const [id, v] of presence) if (v.roundNumber !== s.roundNumber || v.puttIndex !== s.puttIndex || !s.players[id]?.connected) presence.delete(id);

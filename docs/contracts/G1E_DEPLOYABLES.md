@@ -12,7 +12,7 @@ A deployed object is a plain record, JSON-safe, with exactly these keys:
 |---|---|---|
 | `id` | string | `validId`; unique within the room, assigned by the host as `d<sequence>` |
 | `kind` | string | a catalog id whose entry has `target: 'course'` (`bumper`, `orbital`) |
-| `x`, `y` | finite numbers | simulation coordinates (x/y horizontal), `abs <= 1000000`; the host also checks the point is on the floor and clear of walls (`HAZARD_WALL_CLEARANCE`) |
+| `x`, `y` | finite numbers | simulation coordinates (x/y horizontal), `abs <= 1000000`; the host also checks the point is on the floor, off pits and at least `deployables.bumperRadius` from every wall (`placementClear`) |
 | `owner` | string | `validId`; a player id present in `players` |
 | `impacts` | integer | `0 <= impacts < deployables.maxImpacts` (tuning, not a literal); objects at the limit are removed, never sent |
 | `placedAt` | finite number | room time (seconds) at placement; the only clock, so no wall-clock reads |

@@ -13,8 +13,8 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
-import { createGameRenderer, createGameView } from '../render/index.js';
-import { activeDeployables, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { createGameRenderer, createGameView, resolveRenderCourse } from '../render/index.js';
+import { activeDeployables, addToInventory, placementClear, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -90,7 +90,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, clock, random, createTransport, identity: stored, endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, clock, random, createTransport, identity: stored, validPlacement: (map, puttIndex, x, y) => placementClear(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
       if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
       joining = null;
       reloadRecovery = !!opened.resumed;
@@ -553,6 +553,12 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     store,
     get room() { return room; },
     get putt() { return putt; },
+    /** Development preview only (src/devtools/deployables-preview.js): puts a power-up in the local inventory. Returns whether it fit. */
+    grantItem(kind) {
+      if (!putt || !room?.connected || putt.player.mode !== 'play' || !addToInventory(putt.player.inventory, kind)) return false;
+      setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+      return true;
+    },
     get view() { return view; },
     get input() { return input; },
     get renderer() { return renderer; },
