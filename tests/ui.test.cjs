@@ -1,12 +1,12 @@
 // U1 React UI tests. The UI is compiled with Vite's production JSX/CSS Modules transforms
 // (tests/support/build-ui.cjs) and rendered with React DOM in jsdom. Part A compares view text with the
-// legacy game for the same state; part B drives the real L1 room session through complete flows with a
+// recorded legacy strings for the same state; part B drives the real L1 room session through complete flows with a
 // fake clock; part C checks store caching, notifications, focus, the power meter and cleanup.
 // Visual (pixel) parity is a separate real-browser check: scripts/ui-visual-parity.cjs.
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const { buildUi } = require('./support/build-ui.cjs');
-const { bootLegacy } = require('./support/legacy-dom.cjs');
+const recorded = require('./fixtures/legacy-reference/ui.json');
 
 let passed = 0;
 async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + name); }
@@ -77,33 +77,14 @@ function fakeClock() {
   }
 
   // ------------------------------------------------------------------ Part A: legacy text parity
-  await scenario('legacy parity: HUD line, scoreboard, scorecard and results text match the legacy game for the same state', async () => {
-    const legacy = await bootLegacy();
-    const { P } = legacy;
-    await legacy.play(8, 2, 'tournament');
-    const R = P().R, active = P().active, me = P().me;
-    const meColor = me.c;
-    // Legacy: putt 3 of Dune Serpent, second map of a 3-map tournament; Ben has a hole in one and a
-    // timeout and is done; Cy is still putting and ties Ben; Dee spectates.
-    R.setRoom({ series: 3, mapNo: 1, roster: [R.id(), 'b', 'c'], card: {
-      solo: { n: 'Ana', s: [2, 4], o: [0, 0] }, b: { n: 'Ben', s: [1, 8], o: [0, 1] }, c: { n: 'Cy', s: [3, 3], o: [0, 0] } } });
-    const presence = {
-      b: { n: 'Ben', c: 1, h: 8, round: active, done: true, s: [2], str: 2, tot: 9, over: false, mode: 'sunk' },
-      c: { n: 'Cy', c: 4, h: 8, round: active, done: false, s: [], str: 5, tot: 6, over: false, mode: 'play' },
-      d: { n: 'Dee', c: 6, h: 8, round: active, done: false, s: [], str: 0, tot: 0, over: false, mode: 'spectator' },
-    };
-    const own = R.peers;
-    R.peers = () => [...own(), ...Object.entries(presence).map(([peer, p]) => ({ peer, isMe: false, presence: p }))];
-    me.str = 1; me.tot = 6; P().pub(true);
-    await legacy.until(() => /STROKES 1/.test(legacy.$('info').textContent) && legacy.$('sb').children.length === 5);
-    const legacyInfo = legacy.$('info').textContent;
-    const legacyRows = [...legacy.$('sb').children].map(r => [...r.children].map(c => c.textContent));
-    const legacyDots = [...legacy.$('sb').children].slice(1).map(r => r.querySelector('i').style.background);
-    const cardEl = legacy.w.document.createElement('div');
-    P().renderCard(cardEl);
-    const legacyCard = [...cardEl.querySelectorAll('tr')].map(tr => [...tr.children].map(td => [td.textContent, td.className]));
-    const legacyTitle = cardEl.querySelector('.ptitle').textContent;
-    const legacyLead = [...cardEl.querySelectorAll('tbody tr')].map(tr => tr.className === 'lead');
+  await scenario('legacy parity: HUD line, scoreboard, scorecard and results text match the strings recorded from the legacy game for the same state', async () => {
+    // Legacy output for this state was recorded from the legacy game (scripts/record-legacy-ui-reference.cjs):
+    // putt 3 of Dune Serpent, second map of a 3-map tournament; Ben has a hole in one and a timeout and is
+    // done; Cy is still putting and ties Ben; Dee spectates.
+    const { meColor } = recorded;
+    const legacyInfo = recorded.hud, legacyRows = recorded.scoreboard, legacyDots = recorded.dots, legacyCard = recorded.card;
+    const legacyTitle = recorded.title, legacyLead = recorded.leaders, legacyAgain = recorded.againLabel;
+    assert.deepEqual(recorded.errors, [], 'the recording itself saw no legacy errors');
 
     // The same state as an L1 snapshot.
     const t = await setup({ localId: 'solo', hostName: 'Ana' });
@@ -135,18 +116,7 @@ function fakeClock() {
     assert.equal(t.within('[role=dialog] [data-ui=scorecard] div').textContent, legacyTitle);
     assert.deepEqual([...card.querySelectorAll('tbody tr')].map(tr => [...tr.classList].some(c => c.startsWith('_lead_'))), legacyLead, 'leader highlight');
 
-    // Results: legacy finishMap() records the map, then showResults() writes the text.
-    me.s = [2]; me.mode = 'sunk'; P().pub(true);
-    presence.c = { ...presence.c, done: true, s: [4], mode: 'sunk' };
-    const r = R.room();
-    R.setRoom({ putt: 5, card: { solo: { n: 'Ana', s: [2, 4, 1, 2, 3], o: [0, 0, 0, 0, 0] }, b: { n: 'Ben', s: [1, 8, 2, 2, 2], o: [0, 1, 0, 0, 0] }, c: { n: 'Cy', s: [3, 3, 5, 2, 3], o: [0, 0, 0, 0, 0] } },
-      totals: { solo: { n: 'Ana', t: 10, w: 1 }, b: { n: 'Ben', t: 13, w: 0 }, c: { n: 'Cy', t: 12, w: 0 } }, round: r.round });
-    me.tot = 12; presence.b.tot = 15; presence.c.tot = 16;
-    const winners = 'Ana';
-    R.setRoom({ phase: 'results', mapNo: 2, totals: { solo: { n: 'Ana', t: 24, w: 2 }, b: { n: 'Ben', t: 30, w: 0 }, c: { n: 'Cy', t: 32, w: 0 } },
-      last: { map: 8, sc: { solo: 14, b: 17, c: 20 }, names: { solo: 'Ana', b: 'Ben', c: 'Cy' }, win: ['solo'] } });
-    await legacy.until(() => !legacy.$('end').hidden && legacy.$('endt').textContent.includes(winners));
-    const legacyEnd = legacy.$('endt').textContent, legacyAgain = legacy.$('again').textContent;
+    // Results (the recorded legacy button label is compared; the text was deliberately reworded by C3).
     await act(async () => {
       t.store.setLocal({ mode: 'wait' });
       t.store.setRoom({ ...room, phase: 'results', puttIndex: 5, completedMaps: [0, 8], totals: { solo: { name: 'Ana', total: 24, par: 18, wins: 2 }, b: { name: 'Ben', total: 30, par: 18, wins: 0 }, c: { name: 'Cy', total: 32, par: 18, wins: 0 } },
@@ -155,8 +125,6 @@ function fakeClock() {
     // C3: results now lead with strokes minus par, so the text deliberately differs from the legacy strokes-only wording.
     assert.equal(t.within('[data-ui=results] p').textContent, 'Dune Serpent: Ana 14 (+4) · Ben 17 (+7) · Cy 20 (+10). Map winner: Ana. Standings after map 2/3: Ana +6 · Ben +12 · Cy +14.');
     assert.equal(t.within('[data-ui=results] button').textContent, legacyAgain);
-    R.peers = own;
-    assert.deepEqual(legacy.errors, []);
     await t.teardown();
   });
 
