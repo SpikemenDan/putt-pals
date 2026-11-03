@@ -272,6 +272,8 @@ docs/GITHUB_WORKFLOW.md ("Post-merge checklist").
 
 Use commands that actually exist in package.json.
 
+- Choose local checks with `npm run checks`; unmapped paths fall back to the full
+  suite, and CI still runs everything before merge.
 - Documentation: check changed links, paths, commands and consistency.
 - Application changes: run relevant suites and the build.
 - Integration: run broader relevant checks and inspect current-head CI.
