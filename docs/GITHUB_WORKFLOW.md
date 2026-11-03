@@ -62,6 +62,26 @@ Use issues for substantial work, tracked defects, dependencies and handoffs.
 Keep unrelated changes independently reviewable.
 Do not mix unfinished unrelated features into the next integration.
 
+## Completion criteria
+
+Before substantial implementation, write down what done looks like, in observable
+terms:
+- What will be true or visible when the task is finished (behavior, output, a
+  command that passes), not the code that will be written.
+- The checks that demonstrate it and any that cannot run locally.
+- For appearance, aiming, camera or feel changes, the local preview the owner will try
+  and the settings or controls provided for it. Passing tests do not replace that
+  acceptance.
+
+Put this where the task is already tracked: the issue's "Acceptance and verification"
+field, otherwise the PR's "Outcome" section or the task message. A small fix needs
+one or two sentences and no issue or extra report.
+
+Stop when the criteria are met. Improvements noticed along the way (cleanups, other
+bugs, refactors) are listed in the PR or handoff as separate follow-ups and are not
+added to the task. If the criteria turn out to be wrong or incomplete, say so and
+agree the change before continuing rather than quietly widening the task.
+
 ## Lightweight ownership
 
 Before substantial work:

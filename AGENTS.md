@@ -10,6 +10,7 @@
 - TASKS.md: roadmap and dependencies, not a duplicate detailed progress ledger.
 - PROJECT_STATUS.md: concise, evidence-backed implementation summary.
 - Subsystem documentation: local contracts, configuration and verification details.
+- ARCHITECTURE.md, "Where to look": entry points for each code area.
 
 Read relevant sections before editing. Do not repeatedly reload unchanged files.
 Direct user instructions take precedence over repository workflow preferences.
@@ -48,6 +49,11 @@ gets its own short-lived task branch.
 - Do not switch branches with uncommitted changes.
 - Do not silently implement on main; direct-main work needs explicit authorization.
 - Do not require an issue or PR for every small local fix.
+- Before substantial implementation, state observable completion: what will be true
+  or visible, the checks that show it and, for appearance or feel, the owner preview
+  acceptance. Small fixes only need that stated in the task or PR description. Stop
+  when the criteria are satisfied; report unrelated improvements separately instead
+  of adding them to the task.
 - Before substantial work, inspect existing issues, PRs, other contributors' task
   branches and work claims.
 - Record contributor, outcome, task branch and affected paths in one existing issue

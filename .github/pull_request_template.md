@@ -1,6 +1,7 @@
 ## Outcome
 
 Describe the problem and resulting behavior.
+State the observable completion criteria this PR meets (a sentence or two for a small fix).
 Link the issue/roadmap item when applicable.
 Use Closes only for complete acceptance; otherwise use Refs.
 
