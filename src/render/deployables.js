@@ -3,7 +3,7 @@
  * `deployables.*` tuning block, positions from the synced records, and nothing here touches simulation state.
  *
  * The body is a pinball pop bumper: a wide base lip, an indented waist low on the body, a flared barrel and a
- * domed cap with a centre button. In the toon style it uses the shared cel-shaded material and ink outline, so it
+ * plain domed cap. In the toon style it uses the shared cel-shaded material and ink outline, so it
  * reads like the rest of the comic-book course; the legacy style falls back to plain standard materials.
  * Meshes are pooled by record id and released when the record disappears or the layer is disposed.
  */
