@@ -74,7 +74,6 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const PLACE_REFUSED = {
     blocked: "Can't place it there: it needs open floor, clear of walls and the cup. Your item is kept.",
     overlap: "Can't place it there: it would overlap another bumper. Your item is kept.",
-    'player-full': 'You already have the most bumpers allowed on the course. Your item is kept.',
     'room-full': 'The course is full of bumpers. Your item is kept.',
   };
 

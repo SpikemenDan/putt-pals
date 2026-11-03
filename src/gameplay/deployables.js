@@ -7,7 +7,7 @@
  * the parity fixtures.
  */
 
-import { MAX_DEPLOYABLES, MAX_DEPLOYABLES_PER_PLAYER } from '../shared/constants.js';
+import { MAX_DEPLOYABLES } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
 import { surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
@@ -67,6 +67,20 @@ export function orbitalAcceleration(list, x, y, dt, params = DEPLOYABLE_PARAMS) 
 }
 
 /**
+ * True while an orbital ring is pulling a ball that is not yet touching the orbital's body. Such a ball must not come
+ * to rest (physics rest check) and a resting one must start moving (environment wake), so the pull applies at all
+ * times. A ball touching the body is held there and may rest. False with no orbitals.
+ */
+export function orbitalHolds(list, x, y, radius, params = DEPLOYABLE_PARAMS) {
+  if (!list?.length) return false;
+  return list.some(d => {
+    if (d.kind !== 'orbital') return false;
+    const dist = Math.hypot(d.x - x, d.y - y);
+    return dist < params.orbitalRange && dist > params.bumperRadius + radius + 0.5;
+  });
+}
+
+/**
  * Bumper hook: bounces a ball (player-like, with x, y, vx, vy) off the first solid it overlaps and moving into.
  * Pushes the ball out to the surface, reflects the normal velocity with the restitution gain and returns the
  * contact events. Mutates `ball`. A ball moving away from the centre is only pushed out, with no event and no impact.
@@ -82,9 +96,10 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
     ball.x = d.x + nx * reach; ball.y = d.y + ny * reach;
     const vn = ball.vx * nx + ball.vy * ny;
     if (vn >= 0) continue;
-    ball.vx -= (1 + params.bumperRestitution) * vn * nx;
-    ball.vy -= (1 + params.bumperRestitution) * vn * ny;
-    events.push({ type: DEPLOYABLE_HIT, id: d.id });
+    const restitution = d.kind === 'orbital' ? params.orbitalRestitution : params.bumperRestitution;
+    ball.vx -= (1 + restitution) * vn * nx;
+    ball.vy -= (1 + restitution) * vn * ny;
+    if (-vn >= params.minHitSpeed) events.push({ type: DEPLOYABLE_HIT, id: d.id }); // a ball settling against the body is not an impact
   }
   return events;
 }
@@ -116,7 +131,6 @@ export const validDeployCommand = (c, catalog = POWERUP_CATALOG) => !!c && typeo
 export function placeDeployable(list, command, ctx, catalog = POWERUP_CATALOG, params = DEPLOYABLE_PARAMS) {
   if (!validDeployCommand(command, catalog)) return { list, reason: 'invalid' };
   if (list.length >= MAX_DEPLOYABLES) return { list, reason: 'room-full' };
-  if (list.filter(d => d.owner === ctx.playerId).length >= MAX_DEPLOYABLES_PER_PLAYER) return { list, reason: 'player-full' };
   if (ctx.validPlacement && !ctx.validPlacement(command.x, command.y)) return { list, reason: 'blocked' };
   if (list.some(d => Math.hypot(d.x - command.x, d.y - command.y) < 2 * params.bumperRadius)) return { list, reason: 'overlap' }; // bodies may sit close, but not inside each other
   const placed = { id: `d${ctx.sequence}`, kind: command.kind, x: command.x, y: command.y, owner: ctx.playerId, impacts: 0, placedAt: ctx.time, map: ctx.map, putt: ctx.putt };

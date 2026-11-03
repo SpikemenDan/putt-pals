@@ -157,8 +157,8 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     if (event.type === 'ui') return ['hover', 'click'].includes(event.kind) && play('menu_' + event.kind, null, event.kind === 'hover' ? .5 : .8);
     if (event.type === 'turn_ready') return play('ready', null, .8);
     if (event.type === 'ring') return play('ring', null, .6);
-    if (event.type === 'deployable_hit') return ['bumper', 'orbital'].includes(event.kind) && play(event.kind + '_hit', null, Number.isFinite(speed) ? Math.min(1, .4 + Math.max(0, speed) / 500) : .7);
-    if (event.type === 'powerup') return typeof event.id === 'string' && POWERUP_CUES.has(event.id) && play('pu_' + event.id, null, .7);
+    if (event.type === 'deployable_hit') return ['bumper', 'orbital'].includes(event.kind) && play(event.kind + '_hit', null, Number.isFinite(speed) ? Math.min(1, .75 + Math.max(0, speed) / 600) : .9);
+    if (event.type === 'powerup') return typeof event.id === 'string' && POWERUP_CUES.has(event.id) && play('pu_' + event.id, null, ['bumper', 'orbital'].includes(event.id) ? 1 : .7);
     if (!vector(event.position)) return false;
     const position = simToWorld(...event.position, origin);
     switch (event.type) {

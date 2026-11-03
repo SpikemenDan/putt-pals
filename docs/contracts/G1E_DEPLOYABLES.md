@@ -30,7 +30,7 @@ Absent means none, so snapshots from before this change stay valid. Objects are 
 
 Proposed constants in `src/shared/constants.js`:
 
-- `MAX_DEPLOYABLES = 12` (whole room), `MAX_DEPLOYABLES_PER_PLAYER = 4`.
+- `MAX_DEPLOYABLES = 12` (whole room). There is no per-player limit (owner decision).
 - The snapshot stays well under `MAX_MESSAGE_BYTES` (12 records is about 1.2 KB).
 
 ## 3. Command
@@ -40,7 +40,7 @@ One new command, `DEPLOY_OBJECT`, sent by a guest to the host (and applied direc
 - `kind`: catalog id with `target: 'course'`.
 - `x`, `y`: finite numbers, same bound as above.
 
-Host-side validation, in order, with a silent drop on failure: sender is a connected player in `play` phase; `kind` is a course-target catalog id; the sender holds that item in their inventory; power-ups are enabled for the room; the per-player and room caps; placement rules. On success the host consumes the inventory slot, assigns `id`, `owner`, `placedAt`, appends to `deployables`, and the next snapshot carries it.
+Host-side validation, in order, with a silent drop on failure: sender is a connected player in `play` phase; `kind` is a course-target catalog id; the sender holds that item in their inventory; power-ups are enabled for the room; the room cap; placement rules. On success the host consumes the inventory slot, assigns `id`, `owner`, `placedAt`, appends to `deployables`, and the next snapshot carries it.
 
 ## 4. Impact reports
 

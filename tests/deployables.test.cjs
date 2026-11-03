@@ -121,9 +121,8 @@ const assert = require('node:assert/strict');
   assert.equal(put([], 'mag').reason, 'invalid', 'only course items can be deployed');
   assert.equal(D.placeDeployable([], { kind: 'bumper', x: NaN, y: 0 }, ctx()).reason, 'invalid');
   assert.equal(put([], 'bumper', { validPlacement: () => false }).reason, 'blocked');
-  const twoMine = Array.from({ length: require('../src/shared/constants.js').MAX_DEPLOYABLES_PER_PLAYER ?? 4 }, (_, i) => rec(i % 2 ? 'orbital' : 'bumper', 1 + i, 1 + i, { id: 'm' + i }));
-  assert.equal(put(twoMine, 'bumper').reason, 'player-full');
-  assert.equal(put(twoMine, 'bumper', { playerId: 'p2' }).placed.owner, 'p2');
+  const twoMine = Array.from({ length: 6 }, (_, i) => rec(i % 2 ? 'orbital' : 'bumper', 1 + i, 1 + i, { id: 'm' + i }));
+  assert.equal(put(twoMine, 'bumper').placed?.owner, 'p1', 'no per-player limit');
   const roomFull = Array.from({ length: 12 }, (_, i) => rec('bumper', i, i, { id: 'x' + i, owner: 'p' + (i % 6 + 10) }));
   assert.equal(put(roomFull, 'bumper', { playerId: 'zz' }).reason, 'room-full');
   const seen = new Map();
@@ -172,6 +171,25 @@ const assert = require('node:assert/strict');
   snap.puttIndex = 1; unbind.hit('d2');
   assert.equal(last().deployables, undefined, 'a new putt clears the objects');
   unbind(); cases++;
+  // ---- the ring applies at rest: a resting ball inside it wakes, is drawn in, and only rests against the body
+  {
+    cases++;
+    const R = require('../src/shared/constants.js').BALL_RADIUS;
+    const ring = [rec('orbital', 40, 0)];
+    const ball = () => { const p = createPlayerState('Rest', 0, { x: 0, y: 0, z: 0 }); p.deployables = ring; p.moving = false; return p; };
+    const { environmentAwake } = await import('../src/app/rules.js');
+    const flat = { ...course, fan: [], tornado: [], movers: [], hole: [5000, 5000] };
+    assert.equal(environmentAwake(flat, ball(), 0), true, 'a resting ball inside the ring wakes');
+    const out = ball(); out.x = 40 + 500; assert.equal(environmentAwake(flat, out, 0), false, 'outside the ring it stays asleep');
+    const touching = ball(); touching.x = 40 - P.bumperRadius - R; assert.equal(environmentAwake(flat, touching, 0), false, 'a ball held against the body may rest');
+    const p = ball(); p.moving = true;
+    for (let i = 0; i < 4800 && p.moving; i++) stepBall(p, course, dt);
+    assert.equal(p.moving, false, 'it comes to rest');
+    assert.ok(Math.abs(Math.hypot(p.x - 40, p.y) - (P.bumperRadius + R)) < 2, 'resting against the orbital body, not out in the ring: ' + Math.hypot(p.x - 40, p.y));
+    const far = ball(); far.x = -2000; far.moving = true; for (let i = 0; i < 240; i++) stepBall(far, course, dt);
+    assert.equal(far.deployables, ring); // untouched list
+  }
+
   // ---- test chambers: a walled box, tee (40,100), cup (360,100). Each element changes the outcome of a fixed shot.
   {
     cases++;
@@ -187,11 +205,11 @@ const assert = require('node:assert/strict');
     assert.deepEqual(shoot(0, 250, []), { sunk: true, hits: 0 });
     const blocked = shoot(0, 250, [rec('bumper', 200, 100)]);
     assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.equal(blocked.hits, 1);
-    // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the cup (robust over a range of aims).
+    // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the lane (robust over a range of aims).
     for (const aimOff of [25, 30]) {
       const angle = Math.atan2(aimOff, 320);
       assert.equal(shoot(angle, 250, []).sunk, false, `aim ${aimOff} misses without the ring`);
-      assert.equal(shoot(angle, 250, [rec('orbital', 360, 150)]).sunk, true, `aim ${aimOff} sinks with the ring`);
+      assert.equal(shoot(angle, 250, [rec('orbital', 310, 70)]).sunk, true, `aim ${aimOff} sinks with the ring (310,70)`);
     }
   }
 
