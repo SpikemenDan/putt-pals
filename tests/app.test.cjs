@@ -332,6 +332,23 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.run(300);
     assert.match(ben.text('[data-ui=hud-info]'), / · HITS LEFT: Bumper 3$/, 'the top bar shows the hits left');
     assert.match(ana.text('[data-ui=hud-info]'), / · HITS LEFT: Bumper 3$/, 'every player sees the hits left, not only the owner');
+    // Three accepted hits break it; everyone hears the break, including the hit that removed it.
+    for (let k = 0; k < 3; k++) { await act(async () => { ben.app.room.deployHit(d.id); }); await W.run(400); }
+    await W.until(() => ana.app.room.deployables.length === 0 && ben.app.room.deployables.length === 0, 3000, 'broken after three hits');
+    await W.run(300);
+    for (const c of [ana, ben]) assert.ok(tracked(c).includes('deployable_break:bumper'), c.name + ' hears the bumper break');
+    // A physical hit makes the hit sound, including the third hit, which removes the object on the host at once.
+    const me = ana.putt.player;
+    assert.equal(ana.app.room.deploy('bumper', me.x + 50, me.y), true, 'host places a bumper in its own ball path');
+    const before = tracked(ana).filter(e => e === 'deployable_hit:bumper').length;
+    for (let k = 0; k < 3; k++) {
+      await W.until(() => ana.ready(), 20000, 'ball at rest');
+      await ana.shoot(0, 0.55);
+      await W.until(() => tracked(ana).filter(e => e === 'deployable_hit:bumper').length >= before + k + 1 || ana.app.room.deployables.length === 0, 20000, 'hit sound ' + (k + 1));
+      await W.run(600);
+    }
+    assert.equal(tracked(ana).filter(e => e === 'deployable_hit:bumper').length - before, 3, 'all three hits are audible, the last one too');
+    assert.ok(tracked(ana).lastIndexOf('deployable_break:bumper') > tracked(ana).lastIndexOf('deployable_hit:bumper') - 1, 'the break follows the last hit');
     await ana.dispose(); await ben.dispose();
   });
 

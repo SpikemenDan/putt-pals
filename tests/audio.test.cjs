@@ -91,14 +91,14 @@ class Gestures {
   await run('deployable cues (G1e): Bumper and Orbital Bumper hits and placements have their own sounds', async () => {
     const f = make(); await f.adapter.unlock();
     const shapes = new Set();
-    for (const name of ['bumper_hit', 'orbital_hit', 'pu_bumper', 'pu_orbital']) {
+    for (const name of ['bumper_hit', 'orbital_hit', 'bumper_break', 'orbital_break', 'pu_bumper', 'pu_orbital']) {
       const g = make(); await g.adapter.unlock();
       assert.equal(g.adapter.play(name), true, name + ' recipe exists');
       shapes.add(JSON.stringify(signature(g.c)));
       g.c.endAll();
     }
-    assert.equal(shapes.size, 4, 'each cue is its own recipe');
-    for (const [event, ok] of [[{ type: 'deployable_hit', kind: 'bumper' }, true], [{ type: 'deployable_hit', kind: 'orbital' }, true], [{ type: 'deployable_hit', kind: 'mag' }, false], [{ type: 'powerup', id: 'bumper' }, true], [{ type: 'powerup', id: 'orbital' }, true]]) {
+    assert.equal(shapes.size, 6, 'each cue is its own recipe');
+    for (const [event, ok] of [[{ type: 'deployable_hit', kind: 'bumper' }, true], [{ type: 'deployable_hit', kind: 'orbital' }, true], [{ type: 'deployable_hit', kind: 'mag' }, false], [{ type: 'deployable_break', kind: 'bumper' }, true], [{ type: 'deployable_break', kind: 'orbital' }, true], [{ type: 'deployable_break', kind: 'mag' }, false], [{ type: 'powerup', id: 'bumper' }, true], [{ type: 'powerup', id: 'orbital' }, true]]) {
       assert.equal(f.adapter.handleEvent(event), ok, JSON.stringify(event)); f.c.endAll();
     }
     assert.equal(f.adapter.handleEvent({ type: 'deployable_hit', kind: 'bumper' }, { remote: true }), false, 'remote players never trigger local feedback');

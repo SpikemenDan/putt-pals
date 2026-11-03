@@ -64,7 +64,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   // Bumper / Orbital Bumper placement (G1e): `placing` while the player picks a spot, `awaiting` while a guest's DEPLOY_OBJECT is in flight.
   let placing = null, awaiting = null, cursor = null, unbindPlacement = null;
   const AWAIT_MS = 3000;
-  let lastBumps = '';
+  let lastBumps = '', seenKey = '', seenKinds = new Map();
   /** Top-bar text for the placed bumpers: how many hits each has left (G1e). */
   const bumpsText = list => list.map(d => (getPowerup(d.kind)?.name || d.kind) + ' ' + (DEPLOYABLE_PARAMS.maxImpacts - d.impacts)).join(' · ');
   function showBumps(list) {
@@ -373,8 +373,13 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         const placed = activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex);
         putt.setDeployables(placed);
         showBumps(placed);
+        // Sounds: the hit uses the list from before the host counted it (the last hit removes the object at once), and
+        // an object that disappears from the same putt broke, which every player hears.
+        const key = room.snapshot.roundNumber + ':' + room.snapshot.mapIndex + ':' + room.snapshot.puttIndex;
+        if (key === seenKey) for (const [id, kind] of seenKinds) if (!placed.some(d => d.id === id)) audio.handleEvent({ type: 'deployable_break', kind });
+        seenKey = key; seenKinds = new Map(placed.map(d => [d.id, d.kind]));
         const out = putt.frame(t, dt);
-        for (const id of out.deployHits) { room.deployHit(id); audio.handleEvent({ type: 'deployable_hit', kind: room.deployables.find(d => d.id === id)?.kind }, { speed: 300 }); }
+        for (const id of out.deployHits) { audio.handleEvent({ type: 'deployable_hit', kind: seenKinds.get(id) }, { speed: 300 }); room.deployHit(id); }
         checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);
