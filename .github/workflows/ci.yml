@@ -67,6 +67,8 @@ jobs:
         run: npm run test:physics
       - name: Check ported legacy smoke assertions
         run: npm run test:integration
+      - name: Check overnight backup, preflight and session limits
+        run: npm run test:overnight
 
   browser-ci:
     name: browser-ci (${{ matrix.browser }})
