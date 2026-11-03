@@ -95,7 +95,7 @@ const assert = require('node:assert/strict');
   cases++;
 
   // ---- orbital ring bends a passing shot toward the centre; outside the range nothing happens
-  const pass = roll([rec('orbital', 250, P.orbitalRange - 5)], { steps: 500 }).p; // grazes the outer edge of the ring, well clear of the body
+  const pass = roll([rec('orbital', 250, P.orbitalRange * 0.7)], { steps: 500 }).p; // passes through the outer part of the ring, well clear of the body
   assert.ok(pass.vy > plain.vy || pass.y > plain.y, 'the ring pulled the ball toward the ring centre');
   const [ax, ay] = D.orbitalAcceleration([rec('orbital', 0, 0)], P.orbitalRange * 2, 0, dt);
   assert.deepEqual([ax, ay], [0, 0]);

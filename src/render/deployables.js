@@ -11,12 +11,11 @@ import { TUNING } from '../shared/tuning.js';
 import { surfaceHeight } from '../simulation/physics.js';
 import { addInk } from './outline.js';
 
-/** body: main colour, accent: waist band and cap ring, button: centre button. */
+/** body: main colour, accent: waist band, cap ring and orbital moon. */
 export const DEPLOYABLE_COLORS = Object.freeze({
-  bumper: { body: 0xff4d6d, accent: 0xffe14d, button: 0xffffff },
-  orbital: { body: 0x4d7dff, accent: 0x7ff0ff, button: 0xffffff },
+  bumper: { body: 0xff4d6d, accent: 0xffe14d },
+  orbital: { body: 0x4d7dff, accent: 0x7ff0ff },
 });
-const HEIGHT = 12;
 
 /** Lathe profile [radius multiple, height] from the floor up: base lip, indented waist, flared barrel, domed cap. */
 export const BUMPER_PROFILE = Object.freeze([
@@ -57,7 +56,6 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
     waist.rotation.x = Math.PI / 2;
     const capRing = solid(new THREE.TorusGeometry(s * 0.9, 0.8, 8, 32), mat(palette.accent), 0, 10.2, 0);
     capRing.rotation.x = Math.PI / 2;
-    solid(new THREE.CylinderGeometry(s * 0.32, s * 0.4, 1.6, 20), mat(palette.button), 0, HEIGHT + 0.4, 0);
     let ring = null, spin = null;
     if (kind === 'orbital') {
       // A little moon circles the cap; the floor ring shows the pull range.

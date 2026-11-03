@@ -111,7 +111,7 @@ export const DEFAULT_TUNING = {
   bounce: { wallRestitution: 1.82, ledgeDamping: 0.8, ledgeHeight: 5, landingRestitution: 0.25, landingSpeed: 180 },
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
   powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
-  deployables: { bumperRadius: 14, bumperRestitution: 1.1, orbitalRestitution: 1.1, minHitSpeed: 60, maxImpacts: 3, orbitalRange: 90, orbitalPull: 1000, hitCooldownMs: 250 },
+  deployables: { bumperRadius: 14, bumperRestitution: 1.1, orbitalRestitution: 1.1, minHitSpeed: 60, maxImpacts: 3, orbitalRange: 65, orbitalPull: 1000, hitCooldownMs: 250 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
