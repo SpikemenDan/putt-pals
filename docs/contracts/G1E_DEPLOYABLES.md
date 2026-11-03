@@ -30,7 +30,7 @@ Absent means none, so snapshots from before this change stay valid. Objects are 
 
 Proposed constants in `src/shared/constants.js`:
 
-- `MAX_DEPLOYABLES = 12` (whole room). There is no per-player limit (owner decision).
+- `MAX_DEPLOYABLES = 200` is a wire safety bound, not a game limit: there is no per-player or per-room limit (owner decision), and 200 records stay about 20 KB.
 - The snapshot stays well under `MAX_MESSAGE_BYTES` (12 records is about 1.2 KB).
 
 ## 3. Command
