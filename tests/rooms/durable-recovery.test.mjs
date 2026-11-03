@@ -183,6 +183,24 @@ try {
     assert.equal(revoked.frames.at(-1).code, 'session-expired');
     for (const client of [g2, g3]) client.readyState = 3;
   }
+  // A retained empty room can admit a new controller after actor recreation.
+  {
+    const c = context();
+    const h = await fresh(c);
+    await command(h.room, h.ws, { type: 'LEAVE_ROOM' }, 1);
+    assert.equal(h.room.checkpoint().snapshot.seats.length, 0);
+    const restored = new RoomDurableObject(c, env); await restored.ready;
+    const newcomer = await join(restored, c);
+    const admitted = newcomer.frames.find(f => f.type === 'welcome');
+    assert.ok(admitted, 'a small retained room must not reject its first new member as history-full');
+    assert.equal(admitted.snapshot.sessionId, h.welcome.snapshot.sessionId);
+    assert.equal(admitted.snapshot.controllerId, admitted.playerId);
+    assert.equal(admitted.snapshot.seats.length, 1);
+    await command(restored, newcomer, { type: 'START_VOTING' }, 1);
+    assert.equal(restored.checkpoint().snapshot.session.node, 'select.waiting');
+    restored.runtime.session.dispose();
+    h.room.runtime.session.dispose();
+  }
   // Policy overrides are retained in the room; grace expiry and empty retention are durable.
   {
     const c = context();

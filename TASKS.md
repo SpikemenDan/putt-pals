@@ -1,19 +1,15 @@
 # Roadmap
 
-Coordinator snapshot of the task graph. GitHub issues own live claims, status, blockers and acceptance; discover and claim work through docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Per-task verification evidence lives in each PR and in docs/reviews/. Workers report in their issue or PR rather than editing this file.
+Roadmap and dependency snapshot from the supplied repository. Historical task states below have not been refreshed from live GitHub. Check relevant issues, PRs and code before starting. Use the two-contributor workflow in docs/ISSUES.md and docs/GITHUB_WORKFLOW.md. Keep detailed progress in one task record; update this roadmap when scope or dependencies materially change.
 
-Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (concrete blocker named), PAUSED (deliberate hold), DONE.
+Statuses: READY (eligible after dependency and overlap checks), ACTIVE, BLOCKED (concrete blocker named), PAUSED (deliberate hold), DONE.
 
 ## Open work
 
 | ID | Status | Depends on | Scope |
 | --- | --- | --- | --- |
 | [N4 #65](https://github.com/SpikemenDan/putt-pals/issues/65) | BLOCKED | children below | Parent: server-owned Cloudflare rooms replace PeerJS. Spec: docs/networking/SERVER_ROOMS.md |
-| [N4c #69](https://github.com/SpikemenDan/putt-pals/issues/69) | ACTIVE | N4a, N4b | Room coordination on a Durable Object. PRs #81 and #120 merged; the issue is still open, so confirm what remains before claiming |
-| [N4d #70](https://github.com/SpikemenDan/putt-pals/issues/70) | REVIEW | #69 | PR #122 merged; durable checkpoints, alarms and recovery implemented; issue acceptance remains open |
-| [N4e #71](https://github.com/SpikemenDan/putt-pals/issues/71) | REVIEW | #66, #69, #70 | PR #123 merged with all browser CI projects green; production browser uses WebSockets; issue acceptance remains open |
-| [N4f #72](https://github.com/SpikemenDan/putt-pals/issues/72) | REVIEW | #68-#71 | PR #129 merged (server-room series and Free-plan capacity); issue acceptance remains open |
-| [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | ACTIVE | #68, #72 and owner authorization | PR #130 merged (preview config and rollback). Connecting Cloudflare, deploying a preview and separate-network acceptance still need owner authorization |
+| [N4g #73](https://github.com/SpikemenDan/putt-pals/issues/73) | BLOCKED | admission fix preview deployment; deferred separate-network acceptance | Preview is deployed; physical-shot full map and hosted maintenance/recovery passed. Empty-room history-full fix passes locally and is delivered in PR #145 (`28072ff`), pending preview deployment. User deferred separate-network acceptance; idle metrics have no rows. Evidence: docs/reviews/N4_SERVER_ROOMS.md |
 | [N3 #14](https://github.com/SpikemenDan/putt-pals/issues/14) | PAUSED | n/a | Managed TURN; an alternative to N4, not a prerequisite |
 | [Q1 #18](https://github.com/SpikemenDan/putt-pals/issues/18) | BLOCKED | N4 #65 | Release readiness: verify a robust route within par on every putt under the final physics (replaces the hole-in-one refresh; scope to be updated on the issue), production-like preview, rollback, manual playtests |
 | [M1 #36](https://github.com/SpikemenDan/putt-pals/issues/36) | READY | V1 done | Menus, loading screen and feedback polish. Merged so far: M1b start screen over a rotating panorama (PR #114), M1e per-power-up sounds (PR #126). Confirm what remains and split into sub-issues before claiming |
@@ -27,15 +23,15 @@ Statuses: READY (eligible for a coordinator-confirmed claim), ACTIVE, BLOCKED (c
 | [CL2 #103](https://github.com/SpikemenDan/putt-pals/issues/103) | REVIEW | none | PR #128 merged (camera collision, wall fade, depth-tested aim arrow); issue acceptance remains open |
 | [G1b #89](https://github.com/SpikemenDan/putt-pals/issues/89) | REVIEW | G1a | PR #118 merged (self utility power-ups); issue acceptance remains open |
 
-On 2026-10-29 the owner left the order to the coordinator (tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. Order: S3 (merged) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4. Labels lag merges; read the issue and main before acting.
+On 2026-10-29 the owner delegated implementation ordering (tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. Order: S3 (merged) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4. Labels lag merges; read the issue and main before acting.
 
 ## Vision backlog
 
-Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), GM1 (#95) and T2 (#83) are closed; S3, C3, F1, CL2 and G1b are merged and listed under Open work. Status labels on the remaining rows can lag merges: G1c-G1f depend only on the closed G1a and SV1 only on merged S3, so their code prerequisites are met, but a coordinator-confirmed claim is still required. #34 (G1) and #35 (K1) are umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
+Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), GM1 (#95) and T2 (#83) are closed; S3, C3, F1, CL2 and G1b are merged and listed under Open work. Status labels on the remaining rows can lag merges: G1c-G1f depend only on the closed G1a and SV1 only on merged S3, so their code prerequisites are met, but dependency and overlapping-work checks are still required. #34 (G1) and #35 (K1) are umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
-| [SV1 #87](https://github.com/SpikemenDan/putt-pals/issues/87) Par-route solver | #86 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools.js` and `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Contract changes go through the integration owner |
+| [SV1 #87](https://github.com/SpikemenDan/putt-pals/issues/87) Par-route solver | #86 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools.js` and `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Coordinate contract changes with affected active work and update consumers/tests together |
 | [G1c #90](https://github.com/SpikemenDan/putt-pals/issues/90) Aim sabotage | #88 | 360° Aim and 180° Aim as aim-indicator modes applied to opponents |
 | [G1d #91](https://github.com/SpikemenDan/putt-pals/issues/91) Ball auras | #88 | Love Ball and Hate Ball, applied by each client to its own ball |
 | [G1e #92](https://github.com/SpikemenDan/putt-pals/issues/92) Deployables | #88 | Bumper and Orbital Bumper (3 impacts, visible radius rings), synced objects |
@@ -59,9 +55,31 @@ All merged to main; details in the PRs and docs/reviews/.
 | Baseline and tooling | W1 workflow and CI; B1 inventory (PR #1); B2 solver launch fix; B3 Vite and jsdom; B4 difficulty sweep (#4, PR #28); C2 root cleanup (#19) |
 | Shared core | C1 contracts (#3); S1 headless simulation (#5); S2 cup capture (#54, PR #55); D1 course data and CLI (#8, PRs #22 and #31) |
 | Application | L1 room lifecycle (#9, PR #23); A1 procedural audio (#10, PR #25); N1 transports (#11, PR #24); R1 renderer (#6, PR #27); U1 React UI and input (#7, PR #29); I1 modular app (#12, PR #31); I2 and I2b WebGL fallback (#38 PR #40, #41 PR #45) |
-| Networking | N2 guest recovery and interpolation (#13, PR #43); N2b browser specs (#47, PR #49); T1c join flake (#48, PR #50); N4a contracts (#66, PR #74); N4b local runtime (#68, PR #75) |
+| Networking | N2 guest recovery and interpolation (#13, PR #43); N2b browser specs (#47, PR #49); T1c join flake (#48, PR #50); N4a contracts (#66, PR #74); N4b local runtime (#68, PR #75); N4c coordination (#69, PRs #81/#120); N4d recovery (#70, PR #122); N4e browser adoption (#71, PR #123); N4f coverage/quota evidence (#72, PR #129) |
 | Testing | T1 Playwright suites and browser-ci (#15, PR #37) |
 | Rendering | R2 Three.js 0.186.1 (#16, PR #53); R2w Windows GPU validation (#52, PR #56); R2c shader colours (#57, PR #63) |
 | Look and feel | V1a toon foundation (#58, PR #67); V1b sky world (#59, PR #76); V1c palettes and weather (#60, PR #78); V1d comic HUD (#61, PR #79); V1 umbrella (#33) |
 | Evaluation | P1 Rapier experiment (#17, PR #80): production adoption deferred |
 | Vision backlog | T2 tuning module (#83, PR #109); G1a power-up framework (#88, PR #115); GM1 No Power-Ups flag (#95, PR #119) |
+
+
+## Developer workflow improvements
+
+These tasks are pending until implementation and verification are recorded.
+IDs below do not imply that GitHub issues have already been created.
+
+| ID | Outcome | Dependencies |
+| --- | --- | --- |
+| DX1 | Audit/extend the validated configuration entry point; reuse existing settings, preserve defaults and remove duplicated adjustable values | Existing tuning system |
+| DX2 | Development-only tuning panel: sliders, toggles, selectors, reset, validated import/export and safe restart semantics | DX1 |
+| DX3 | Done (2026-11-02, merged in PR #146): legacy consumers inventoried and migrated, `putt-pals.html`, `tools.js` and legacy-only infrastructure removed; see ARCHITECTURE.md | Replacement test coverage and build checks |
+| DX4 | Tooling done and tested (2026-11-02, merged in PR #146): backup, manifest, restore verification, Drive upload gate with receipt; see docs/OVERNIGHT.md. **Open:** owner-designated Drive destination and rclone remote; real upload unverified | Owner-designated Drive destination and authorized access |
+| DX5 | Tooling done and tested (2026-11-02, merged in PR #146): preflight, enforced limits, watchdog, handoff; the default assistant command has never been run. Blocked from starting by DX4 setup | DX4 |
+| DX6 | Inspect redundant local branches and present a named deletion list | Actual developer checkout inspection; owner approval before deletion |
+| DX7 | Retire the permanent `dev/*` contributor branches: each contributor checks their own clone for unpushed work, outstanding work becomes focused task branches, then a named cleanup list is approved (docs/GITHUB_WORKFLOW.md) | DX6, owner approval before deletion |
+
+DX1 extraction preserves current behavior. Retuning needs separate verification.
+DX2 remains disabled in ordinary production builds by default. Appearance/feel
+proposals require a local browser preview and owner feedback before acceptance.
+DX3 preserves useful regression coverage and provenance.
+DX5 has no scheduled start, remote writes or automatic restart.

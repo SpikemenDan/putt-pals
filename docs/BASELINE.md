@@ -11,12 +11,11 @@ Prepared on 2026-10-25/26 for migration review. Source: main commit b333495, wit
 
 ```sh
 npm ci
-node scripts/inventory-baseline.cjs --check
 npm run check
 npm run build
 ```
 
-To regenerate the source inventory intentionally, run `node scripts/inventory-baseline.cjs --write` and review its diff. It verifies the solver fixture's source hashes before generating traces. Do not regenerate away unexpected changes just to pass a check. The script currently loads the existing legacy tooling through a VM; replace that adapter with imports during M1.
+The source inventory (`tests/fixtures/source-inventory.json`) is historical provenance recorded from the legacy page before its retirement; nothing regenerates it. The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
 
 Trajectories use the game's actual launch and step functions. They assume a centered release, no power-ups, a fixed 1/240-second step and hazard time frozen at zero. One shot from the first putt of each starter is sampled every 240 ticks and at completion. All six end sunk with one stroke. They are useful for extraction parity, not exhaustive moving-hazard coverage, a real input replay, or a promise of bitwise equivalence across JavaScript engines. Compare positions/velocities with explicit tolerances when porting.
 
@@ -59,7 +58,7 @@ Constants observed: R=5, CUP=15, CUP_MIN=8, K_TURF=0.75, POWER=900. Historical d
 
 ## Chrome capture procedure and observations
 
-Local URL: http://127.0.0.1:5173/putt-pals.html, served through Vite. Native Chrome UI was used; no DOM evaluation, test-hook calls, injected state, stub renderer or simulated network was used for these screenshots. Installed Chrome bundle version 155.0.8059.85 and macOS 26.6.2 were read from local application/system metadata. The running Chrome build was not separately queried. Screenshots are unedited native JPEG captures at 3024×1900, including browser chrome with only the game tab visible. The exact CSS viewport/device pixel ratio were not measured.
+Local URL (historical): http://127.0.0.1:5173/putt-pals.html, served through Vite while the legacy page existed. Native Chrome UI was used; no DOM evaluation, test-hook calls, injected state, stub renderer or simulated network was used for these screenshots. Installed Chrome bundle version 155.0.8059.85 and macOS 26.6.2 were read from local application/system metadata. The running Chrome build was not separately queried. Screenshots are unedited native JPEG captures at 3024×1900, including browser chrome with only the game tab visible. The exact CSS viewport/device pixel ratio were not measured.
 
 1. Capture landing. Enter the synthetic name Baseline and click Play solo.
 2. Capture solo lobby. Inspect the mode menu: Standard, 3/6/9-map Tournament and both practice modes are present.

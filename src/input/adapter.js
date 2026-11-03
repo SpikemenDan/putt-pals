@@ -7,8 +7,9 @@
  * (src/camera), which owns view state. Every listener is removed by dispose().
  */
 
+import { DISPLAY } from '../shared/display.js';
 import { InputCommands } from './commands.js';
-import { AIM_ARROW_MAX_LENGTH, AIM_STEP, DRAG_RADIANS_PER_PX, GUIDE_MIN_CHARGE, SHOT_MIN_CHARGE, chargeFromDrag, shotAngle, spread } from './aim.js';
+import { AIM_STEP, DRAG_RADIANS_PER_PX, GUIDE_MIN_CHARGE, SHOT_MIN_CHARGE, chargeFromDrag, shotAngle, spread } from './aim.js';
 
 const isTextEntry = target => !!(target && target.matches && target.matches('input,textarea'));
 
@@ -22,8 +23,9 @@ const isTextEntry = target => !!(target && target.matches && target.matches('inp
  * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean, aimMode?:string}} options.getState
  *   active: joined a room; mode: local simulation mode (play/sunk/wait/spectator/lobby)
  * @param {(command: object) => void} options.dispatch
+ * @param {typeof DISPLAY} [options.display] Presentation settings; the aim arrow length comes from display.aim.arrowMaxLength
  */
-export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch }) {
+export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY }) {
   if (!canvas || !camera || typeof pickGround !== 'function' || typeof getState !== 'function' || typeof dispatch !== 'function') {
     throw new TypeError('canvas, camera, pickGround, getState and dispatch are required');
   }
@@ -143,7 +145,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
       const s = getState();
       if (!(s.mode === 'play' && !s.moving && charging && charge > GUIDE_MIN_CHARGE)) return null;
       swayTime = time;
-      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady, aimMode: s.aimMode || '' }), spread: s.steady ? 0 : spread(charge), length: charge * AIM_ARROW_MAX_LENGTH };
+      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady, aimMode: s.aimMode || '' }), spread: s.steady ? 0 : spread(charge), length: charge * display.aim.arrowMaxLength };
     },
     /** Power meter updates (charging, charge) on pointer changes; keeps per-frame values out of React state. */
     subscribeAim(listener) { aimListeners.add(listener); listener(charging, charge); return () => aimListeners.delete(listener); },

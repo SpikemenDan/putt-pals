@@ -1,22 +1,13 @@
 # Embedded third-party inventory
 
-This records what is actually embedded in putt-pals.html. It does not identify every transitive component in minified bundles or establish byte-for-byte identity with an upstream release archive.
+This records what was embedded in the retired putt-pals.html (The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.) It does not identify every transitive component in minified bundles or establish byte-for-byte identity with an upstream release archive.
 
 | Component | Embedded version evidence | License evidence | Reference |
 | --- | --- | --- | --- |
 | Three.js | Runtime THREE.REVISION is 128, corresponding to package version 0.128.0 | Header: Copyright 2010–2021 Three.js Authors; SPDX-License-Identifier: MIT | https://github.com/mrdoob/three.js/tree/r128 |
 | PeerJS | Embedded package JSON says name peerjs, version 1.5.4 | Same embedded metadata says license MIT | https://github.com/peers/peerjs/tree/v1.5.4 |
 
-Exact byte lengths and SHA-256 hashes of the embedded script bodies are in tests/fixtures/source-inventory.json. The script body is measured after the `/* ... (inlined) */` marker and before its closing script tag, including its own leading/trailing whitespace. These boundaries match the inventory tool; they are not hashes of downloaded npm artifacts.
-
-Generate/check with:
-
-```sh
-node scripts/inventory-baseline.cjs --write
-node scripts/inventory-baseline.cjs --check
-```
-
-The tool evaluates the trusted local Three.js bundle in an isolated VM to read its revision and parses PeerJS's embedded package metadata. It uses the existing legacy headless loader for course and simulation data. It does not contact upstream servers or execute PeerJS networking.
+Exact byte lengths and SHA-256 hashes of the embedded script bodies were recorded in tests/fixtures/source-inventory.json. They are provenance only and are no longer regenerated.
 
 ## Provenance limits and migration handling
 
@@ -31,3 +22,7 @@ Keep procedural game meshes, shaders, textures, map definitions and WebAudio cod
 ## Modular renderer upgrade (R2)
 
 The modular app's direct Three.js dependency is pinned to **0.186.1** in package.json/package-lock.json. The installed package declares MIT and supplies the complete license retained at [licenses/THREE.txt](licenses/THREE.txt). Upstream source: https://github.com/mrdoob/three.js/tree/r186 . This changes the npm renderer only; the embedded r128 inventory above and its source hashes remain historical/legacy evidence. See [R2 renderer review](reviews/R2_RENDERER.md) for migration checks and browser limits. Final hosted-distribution notices remain part of Q1's packaging review.
+
+## Test-only vendored copy
+
+`tests/vendor/three-r128.js` is the Three.js r128 body extracted unmodified from the legacy page (MIT, header retained), used only by `tests/render.test.cjs` to run the renderer parity checks against recorded legacy output. It is not part of any build.

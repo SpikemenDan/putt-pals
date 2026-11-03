@@ -461,6 +461,9 @@ export class RoomDurableObject {
         id: candidate.playerId, name: candidate.name, connected: true,
         strokes: 0, done: false, timedOut: false, score: null, scores: [],
       };
+      // The first connected member also becomes controller of a retained empty room.
+      // Reflect that transition before validating the hypothetical admission snapshot.
+      if (snapshot.controllerId === null) snapshot.controllerId = candidate.playerId;
     }
     const frame = encodeRoomFrame({ version: SERVER_ROOM_VERSION, type: 'snapshot', snapshot }, 'server');
     if (frame === null) return false;

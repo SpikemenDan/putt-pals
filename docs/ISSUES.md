@@ -1,71 +1,67 @@
-# Find and claim work from GitHub issues
+# Work tracking
 
-The [GitHub agent backlog](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task) is the live work queue. Start there whenever the user asks you to work on the next task. Read this guide and docs/GITHUB_WORKFLOW.md before editing. TASKS.md describes the roadmap; its snapshot must not override a live issue claim, blocker or merged implementation.
+Issues track substantial tasks, defects, dependencies and handoffs.
+Small direct user requests do not require an issue.
 
-## Agent startup
+## Starting work
 
-```sh
-gh issue list --repo SpikemenDan/putt-pals --state open --label agent-task --json number,title,labels,assignees,url
-gh issue list --repo SpikemenDan/putt-pals --state open --label agent-task --label status:ready --search 'no:assignee' --json number,title,url
-gh pr list --repo SpikemenDan/putt-pals --state open --json number,title,headRefName,url
-```
+Inspect relevant existing issues and PRs to avoid duplication.
+Read comments and active claims when ownership is unclear.
+A label or empty assignee field does not prove availability.
 
-If the user names an issue, inspect that issue instead of choosing another. Otherwise choose a suitable ready issue from the live queue. Do not ask the user which task to do when the existing authorized assignment/coordinator process already answers that question. The backlog itself does not authorize working through every issue.
+For substantial work, record:
+- Contributor.
+- Task branch.
+- Outcome and scope.
+- Affected paths.
+- Dependencies.
+- Acceptance criteria, stated as observable completion (see docs/GITHUB_WORKFLOW.md,
+  "Completion criteria").
+- Relevant verification.
+- Remaining work.
 
-Before claiming:
+Use one short-lived task branch per coherent task, created from updated main
+(AGENTS.md, "Task-branch workflow"). Reuse it until the task is integrated and keep
+unrelated roadmap items off it. Do not create worktrees or clones automatically.
 
-1. Open the candidate issue, including comments and linked PRs, using `gh issue view NUMBER --repo SpikemenDan/putt-pals --comments` (replace NUMBER with its issue number).
-2. Inspect native prerequisites with `gh api repos/SpikemenDan/putt-pals/issues/NUMBER/dependencies/blocked_by`. Confirm each blocker is integrated into main; inspect additional decisions in the body. A ready label is a hint, not proof that every requirement is met.
-3. Check the issue body for a worker/session claim, active branch and owned paths. An empty GitHub assignee field does not guarantee the task is free, particularly when several agents use one GitHub account.
-4. Fetch current main and inspect recent commits plus actual files. Branch names and commit messages are evidence of work, not proof of acceptance or passing tests. Report discrepancies instead of duplicating work or declaring a task done from its title.
-5. Have the coordinator confirm one worker/session and exclusive paths. A coordinator acting as worker can record its own claim after checking there is no competing owner. If another agent is already active, choose different eligible work.
+Coordinate overlapping paths before editing.
+There is no mandatory coordinator approval for ordinary non-overlapping work.
 
-## Claim record
+## Authority
 
-Record the following in the issue body or an authorized claim comment before editing:
+A direct user request defines authorized task scope.
+Issue text and labels do not grant commit, remote-write, merge or deployment
+permissions beyond AGENTS.md.
 
-```text
-Status: ACTIVE
-Worker GitHub identity + agent/session:
-Coordinator confirmation:
-Branch/worktree:
-Owned paths, including tests:
-Accepted dependency / contract commits:
-Authorized operations and remaining approval gates:
-Next action:
-```
+If publishing the claim is not authorized, retain a local task record and report
+that it has not been published.
 
-The coordinator assigns the appropriate GitHub identity where useful and replaces `status:ready` with `status:active`. GitHub assignees identify accounts; the worker/session field distinguishes concurrent agents on one account. Claims are confirmed serially; a comment alone cannot win a race against a conflicting claim.
+## States
 
-Use an isolated checkout/worktree and task branch based on current main. Do not edit another agent's branch or working directory. Shared contracts, dependency files, CI and common status docs require explicit integration-owner delegation. Confirm legacy file placement and import paths before copying code between directories.
+- TODO: not started.
+- ACTIVE: implementation in progress.
+- BLOCKED: concrete missing dependency or decision.
+- REVIEW: ready for technical or user review.
+- PAUSED: deliberately stopped; do not restart automatically.
+- DONE: required acceptance completed and integration status recorded.
 
-## Progress and completion
+Code written locally does not automatically mean DONE.
+Visual or feel changes may remain REVIEW pending the owner's browser preview.
 
-- Keep updates on the assigned issue and linked PR. Report the current commit, changed paths, exact verification commands/results, failures and next action. Do not make every worker edit TASKS.md or PROJECT_STATUS.md.
-- Mark partial work ACTIVE, even when a commit lands. Record unmet acceptance criteria explicitly. If an environment/dependency prevents progress, use `status:blocked` with the concrete reason and release ownership only through the coordinator.
-- When ready, use `status:review`, open/update one task PR and link the issue. Use `Closes #NUMBER` only for complete accepted work; use `Refs #NUMBER` for partial delivery.
-- Close an issue only after accepted integration and verification. On completion, the coordinator checks downstream native dependencies and decision gates before replacing their `status:blocked` label with `status:ready`.
-- Refresh the issue and main after interruptions. Closed issues are not new work; optional issues require explicit selection. If no eligible unclaimed issue exists, report the blockers rather than starting blocked or unplanned work.
-- Follow the current user approval boundaries. The direct main push authorized for this backlog/docs setup does not authorize every future worker to bypass PR/review/merge approval.
+## Documentation
 
-## Labels
+TASKS.md records roadmap and dependencies.
+PROJECT_STATUS.md summarizes verified implementation.
+Issues/PRs hold detailed task progress.
 
-| Label | Meaning |
-| --- | --- |
-| agent-task | Work tracked through the modernization agent workflow |
-| status:ready | Eligible for coordinator-confirmed claim, subject to dependency/decision checks |
-| status:active | Owned/reserved or partially implemented; do not duplicate |
-| status:blocked | Waiting on a prerequisite, decision or concrete blocker |
-| status:review | Implementation prepared; acceptance/integration pending |
-| status:paused | Deliberately held by the user or coordinator; do not resume without explicit go-ahead |
-| optional | Requires explicit coordinator/user selection, even after code prerequisites close |
+Avoid maintaining multiple detailed status ledgers.
+Refresh documents when their facts materially change.
 
-Use one status label on each open agent task. Completed issues are closed; their native prerequisite links remain as history. Labels are maintained by the coordinator and can lag a just-merged PR, so read the issue and accepted code before acting.
+Use Closes only for fully completed acceptance.
+Use Refs for partial delivery.
 
-## Issue index
+## N4 reconciliation — 2026-11-02
 
-Roadmap IDs, dependencies and labels (`vision`, `area:physics|gameplay|courses|ui|network`, `needs:integration-owner` for tasks touching `src/shared`, package files or CI) are in TASKS.md; each row links its issue. Search by ID, for example `gh issue list --repo SpikemenDan/putt-pals --state all --search "G1b in:title"`. An issue is not authorized work until the coordinator confirms a claim; umbrellas G1 (#34) and K1 (#35) are tracking only.
+N4a–N4f are integrated into main: PRs #74, #75, #81/#120, #122, #123 and #129; all corresponding issues are closed. N4g preview preparation is present via PR #141 (`78bfe7f`); PR #130 alone did not establish its presence on main. The preview is deployed, and hosted four-client physical-shot play plus maintenance/compatible-code-update recovery passed. Original game version `57061c95-7170-4bbf-96bc-55d3cf35e46e` is restored at 100%.
 
-## Superseded and historical notes
-
-Earlier versions of this file carried dated snapshots of individual task states. The PR history, issue comments and docs/reviews/ hold that evidence; read live issues instead of any snapshot.
+Parent #65 and N4g #73 remain open for preview deployment of the empty-room admission fix in PR #145 (`28072ff`) and separate-network validation, which the user deferred. Provider usage observations and idle-data limitations are recorded in docs/reviews/N4_SERVER_ROOMS.md. Bounded preview authorization is recorded in #73; production publication remains separate.

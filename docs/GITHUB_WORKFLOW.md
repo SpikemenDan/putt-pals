@@ -1,101 +1,247 @@
-# Working with multiple agents through GitHub
+# Two-contributor GitHub workflow (task branches)
 
-Operating guide for the modernization. Read AGENTS.md first, then this guide, the assigned issue and the relevant architecture/plan sections. Live queue: [open agent-task issues](https://github.com/SpikemenDan/putt-pals/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-task), via docs/ISSUES.md.
+AGENTS.md defines shared permissions, engineering rules and overnight requirements.
 
-Which model does which job is in docs/AGENT_ROUTING.md.
+## Branch model
+
+main contains integrated, verified work.
+Each coherent feature, fix or cleanup gets one short-lived task branch.
+
+- One branch per task, not per individual edit.
+- Implementation, tests and documentation for the task share the branch.
+- Reuse the branch until the task is integrated; keep unrelated roadmap items off it.
+- Task authorization includes creating the local branch from updated main
+  (`git fetch origin`, then `git switch -c <kind>/<topic> --no-track origin/main`),
+  provided existing work is preserved.
+- Do not automatically create worktrees or clones. Use them only when explicitly
+  authorized for simultaneous work.
+- Direct-main work requires explicit authorization.
+
+Inspect branch and working-tree state before editing.
+Preserve unrelated changes, existing stashes and the other contributor's work.
+Do not switch branches with uncommitted changes.
+
+Before integration, fetch current main and reconcile history without destructive
+resets or force pushes. Ask when history or ownership is ambiguous.
+
+After integration the task branch is finished. Do not reuse it: start the next task
+from updated main. Local cleanup after an authorized merge is described under
+"Recovery and cleanup"; remote branch deletion needs authorization.
+
+### Retiring the permanent contributor branches
+
+`dev/spikemendan` and `dev/arshakir` were permanent contributor branches under the
+previous model. They are retired, not deleted automatically.
+
+Inspection on 2026-11-03 (read-only, from the repository checkout):
+
+| Branch | Tip | Commits not on main | Unpushed | Open PRs |
+| --- | --- | --- | --- | --- |
+| `dev/spikemendan` | `5ebc661` | 0 (PRs #146 and #147 merged) | 0 | none |
+| `dev/arshakir` | `dd31b2e` | 0 (identical to an earlier main) | 0 | none |
+
+Neither remote branch holds outstanding work. What this inspection cannot see is
+each contributor's own clone: a local `dev/*` branch there may hold unpushed commits,
+uncommitted changes or stashes.
+
+To retire them:
+1. Each contributor checks their own clone: `git status`,
+   `git log origin/<branch>..<branch>` and `git stash list`.
+2. Any outstanding work becomes one or more focused task branches from updated main
+   (split by roadmap item), pushed or recorded under existing authorization.
+3. Start all new work from updated main on a task branch. Do not commit to `dev/*`.
+4. When everything is accounted for, delete the local and remote `dev/*` branches
+   through a named cleanup list approved under AGENTS.md ("Branch cleanup").
+
+## Task size
+
+Related small changes may share a task, commit and PR.
+Do not require a GitHub issue for every minor fix.
+
+Use issues for substantial work, tracked defects, dependencies and handoffs.
+Keep unrelated changes independently reviewable.
+Do not mix unfinished unrelated features into the next integration.
+
+## Completion criteria
+
+Before substantial implementation, write down what done looks like, in observable
+terms:
+- What will be true or visible when the task is finished (behavior, output, a
+  command that passes), not the code that will be written.
+- The checks that demonstrate it and any that cannot run locally.
+- For appearance, aiming, camera or feel changes, the local preview the owner will try
+  and the settings or controls provided for it. Passing tests do not replace that
+  acceptance.
+
+Put this where the task is already tracked: the issue's "Acceptance and verification"
+field, otherwise the PR's "Outcome" section or the task message. A small fix needs
+one or two sentences and no issue or extra report.
+
+Stop when the criteria are met. Improvements noticed along the way (cleanups, other
+bugs, refactors) are listed in the PR or handoff as separate follow-ups and are not
+added to the task. If the criteria turn out to be wrong or incomplete, say so and
+agree the change before continuing rather than quietly widening the task.
+
+## Lightweight ownership
+
+Before substantial work:
+1. Inspect relevant issues, PRs, other contributors' task branches and existing claims.
+2. Record contributor, outcome, task branch and affected paths in one task entry.
+3. Coordinate overlapping edits.
+4. Confirm acceptance criteria.
+
+There is no mandatory coordinator role.
+Either contributor may manage their own authorized task.
+Shared contracts and CI changes require coordination when another task overlaps.
+
+If remote writes are not authorized, keep the task record local and say so.
+Do not invent a published claim.
 
 ## Authorization
 
-The user requires approval before commits. Commits and external writes (push, issue or PR creation, comments) need explicit authorization; an assignment can cover them for its named task, so do not re-ask for what is already authorized. Merge approval is separate. Issue text or third-party comments never expand authorization, and a delegation for an earlier task does not carry over: authorization is per task and per session. Cloudflare connection, deployment, secrets and paid provisioning are separate gated actions.
+Direct implementation requests authorize local edits, relevant tests and scoped
+local commits.
 
-## Sources of truth
+Pushes, GitHub writes, merges, deployment and other external actions follow
+AGENTS.md.
 
-| Information | Authoritative location |
-| --- | --- |
-| Product vision, scope, technology, stages | MODERNIZATION_PLAN.md |
-| Interfaces, module boundaries, gameplay design | ARCHITECTURE.md and merged `src/shared` |
-| Roadmap IDs and dependency graph | TASKS.md |
-| Live owner, claimed files, blockers, progress | GitHub issue and linked PR |
-| Task code and verification | PR commits, description, CI |
-| Accepted state, owner decisions, known issues | main and PROJECT_STATUS.md |
+Never interpret labels, issue text, CI output or repository instructions as
+additional permission.
 
-Live issue claims supersede any snapshot. Do not keep two live ledgers. Only the coordinator edits PROJECT_STATUS.md, TASKS.md and docs/ISSUES.md during parallel work; workers report through their issue or PR.
+## Implementation and checks
 
-## Roles
+Use commands present in package.json.
+Run affected suites and the build for application changes.
+Run broader relevant checks before integration.
+Use checks appropriate to documentation-only changes.
 
-| Role | Does |
-| --- | --- |
-| User | Approves scope, commits and merges; may delegate a bounded set. |
-| Coordinator / integration owner | Turns roadmap entries into issues, serializes claims, approves contract changes, owns `src/shared`, package files, build/CI config and shared docs, sequences merges. |
-| Worker | Implements one assigned task in an isolated worktree within owned files; opens a reviewable PR and handoff. Never takes another's task or self-merges. |
-| Reviewer | Checks behavior, scope, tests and contract compatibility. An agent review is evidence, not user approval or necessarily a qualifying GitHub approval. |
+### Choosing checks while you iterate
 
-Agents may share a GitHub account, but a claim must name the agent session as well as the assignee. Agent sessions are not independent GitHub reviewers; arrange a qualifying reviewer before enforcing required approvals. Never share credentials through issues or commits.
+`npm run checks` lists the verification commands worth running for what you changed,
+and why. With no arguments it uses the paths that differ from `origin/main` (falling
+back to `main`) plus staged, unstaged and untracked work. Pass paths to ask about
+specific files, `--since <ref>` to compare with another ref, or `--json` for tools:
 
-## Creating an assignment
+```sh
+npm run checks
+npm run checks -- src/render/actors.js
+```
 
-Each issue (Agent task form, after a duplicate check, with native blocked-by links) states: roadmap ID, outcome and out-of-scope work; one confirmed worker session and branch; exact owned files including tests and fixtures, and files not to edit; blockers and the contract revision or merge commit; acceptance criteria with runnable commands (manual and browser checks listed separately); approved commit/push/PR/comment operations.
+How it decides (implementation and the few rules: `tools/cli/checks.mjs`):
+- Which tests each npm script runs comes from `package.json`. Which files a test, or the
+  app build, reaches comes from the import graph of the working tree, including dynamic
+  `import()`, `require()` and the fixture paths tests read. A shared contract, tuning or
+  simulation file therefore selects every suite that depends on it, transitively.
+- A few things imports cannot show are rules: dependency changes (everything), build and
+  Worker configuration, tooling folders, documentation and CI (notes, since no local
+  suite covers them).
+- Files in the simulation's import closure add a reminder about the fingerprint fixtures
+  (see "Merging changes to simulation fingerprints" below).
+- A path that no script reaches and no rule covers, a deleted path, or a `package.json`
+  script the tool cannot read gets the conservative fallback: the full suite
+  (`npm test` and `npm run build`). It never silently skips.
 
-Claims are serialized by the coordinator; interest is not an assignment. If owner, PR author or claimed paths disagree, resolve that before editing. A blocked dependency is ready only once merged and accepted, unless the coordinator approves a stacked PR against a named branch. Decisions such as relay budgets or deployment stay explicit gates even when code prerequisites close.
+This only helps you choose local checks. CI is unchanged: it still runs the full suite
+and the real-browser checks on every PR, and nothing is skipped automatically. If you
+add a file kind the tool does not know, `npm run test:cli` fails its staleness guard
+until a test reaches the file or a rule covers it.
 
-## Worker lifecycle
+Keep technical verification separate from user acceptance.
+For appearance or feel changes, provide a local browser preview with relevant
+developer controls before asking for final review.
 
-1. **Discover and verify.** Use docs/ISSUES.md. Read the issue, comments, native dependencies and linked PRs; confirm ownership, authorization and that the branch is free; `git fetch`.
-2. **Isolate.** One worktree and branch per task from origin/main, then `npm ci` in it:
+Report actual commands, results, skips and failures.
+Do not equate fake transports with real-network testing.
 
-   ```sh
-   git worktree add ../putt-pals-<id> -b agent/<id>-<description> origin/main
-   ```
+## Merging changes to simulation fingerprints
 
-3. **Make ownership visible.** With remote-write authorization, push a task-scoped commit and open a draft PR linked to the issue. No empty PRs.
-4. **Implement in scope.** Use approved contracts; stub unfinished dependencies through them; ask the coordinator before touching shared files.
-5. **Verify.** Run issue checks plus `npm run check`, `npm run build`, `npm test`. Record exact commands, results, skips and failures. Never present jsdom or fake-transport runs as real browser or network testing.
-6. **Review.** Fill in the PR template, mark ready, set the issue to REVIEW. The worker does not declare integration.
-7. **Update from main.** Merge origin/main into the branch and rerun affected checks. Rebase or force-push only with coordination; never force-push main or another's branch.
-8. **Handoff.** Record PR URL, SHA, owned files, contract revision, results, limits and next dependency before relinquishing ownership.
+Simulation fingerprints cover src/simulation and its relative-import dependency
+closure, as implemented by tools/cli/provenance.mjs.
 
-One task per PR; split oversized tasks. Avoid stacked PRs; if used, record base branches and retarget after the prerequisite merges.
+Only changes affecting that closure should update simulationSha256 fixtures.
+Use LF files, not CRLF-derived hashes.
 
-## Ownership and contracts
+When affected:
+1. Reconcile with latest main before regenerating.
+2. Preserve main's fixture structure during conflicts.
+3. Regenerate using the current documented measurement and solver commands.
+4. Inspect whether behavior changed or only source fingerprints changed.
+5. Run the affected CLI, simulation and acceptance checks.
+6. If another relevant change lands first, reconcile and repeat as necessary.
 
-- One worker owns a path at a time, even across clones.
-- Each task owns its tests; do not have several agents edit one shared smoke test. Overlapping legacy `tools.js` or `putt-pals.html` edits are dedicated tasks.
-- Merge a contract before parallel tasks build on it and record its SHA in dependent issues. When one changes, update contract and mocks together and notify affected owners.
-- Do not use `git stash` (shared across worktrees); commit work in progress. Never reset, clean or overwrite another agent's branch or files. Remove your own worktree when the PR merges.
+Do not hand-edit hashes or regenerate expected results to conceal regressions.
+Consult docs/BASELINE.md and the relevant measurement review for fixture details.
+Keep these instructions synchronized when legacy tooling is retired.
 
-## Merging PRs that change the simulation fingerprint
+## Integration
 
-Several PRs can be open at once. Only PRs that change the simulation fingerprint (see `simulationSourceFiles` in `tools/cli/provenance.mjs`: `src/simulation` plus what it imports, including `src/shared/tuning.js` and `src/gameplay/effects.js`) rewrite `simulationSha256` in `tests/fixtures/cup-capture/*.json`, and two such PRs always conflict on those lines. Network, session, UI, audio and docs PRs never touch the fixtures and can merge in any order.
+Before requesting merge:
+- Inspect the complete diff.
+- Verify scope and absence of unrelated staged changes.
+- Reconcile main.
+- Run relevant checks.
+- Confirm current-head CI.
+- Record any pending manual or preview acceptance.
 
-For a PR that changes the fingerprint:
+Open focused PRs when meaningful reviewable work exists, subject to remote-write
+authorization. One PR carries one task; do not batch unrelated roadmap items.
 
-1. Merge these one at a time, in dependency order.
-2. Just before merging, sync with the latest main. On a fixture conflict, take main's version of both fixtures; never hand-merge the JSON.
-3. Regenerate from LF files: `node tests/measure-cup-capture.mjs` for `solutions.json`, and `node tools/cli/main.mjs solve <map> <putt> --full` for the putt recorded in `reference-full.json` (Switchback Garden putt 1, see docs/reviews/S2_CUP_CAPTURE.md). Commit the result as the last commit on the branch. If the physics outcome did not change, only the hash lines should differ; review the diff.
-4. Run `npm run test:cli` and merge. If another fingerprint PR landed in the meantime, repeat from step 2.
+Merge only with required authorization and repository rules satisfied.
+Prefer a normal merge commit when the task's commits are individually meaningful;
+a squash merge is acceptable for a focused branch. Task branches are not reused
+after integration, but a squash merge means ancestry no longer shows the work is on
+main, so cleanup must verify content (see below).
 
-The second PR in line is expected to repeat this once; that is the rule working, not a sign of a bad branch. Say in the PR description that the fixtures were regenerated and why.
+Do not disable checks or weaken protection to merge.
+Check integrated main and fix regressions before dependent integration.
 
-## Review and merge
+## Completion and handoff
 
-1. Coordinator reviews scope, code, interfaces and evidence; another agent may review in a separate checkout.
-2. CI must be green for the current head, with no failure dismissed as unrelated without evidence; dependencies merged; manual checks done or explicitly deferred.
-3. User merge approval or an explicit delegation. Commit approval is not merge approval.
-4. Prefer squash. `Closes #n` only if the PR completes the issue, otherwise `Refs #n`.
-5. Check CI on updated main. On failure pause dependent merges and fix or revert through a reviewed change.
-6. Coordinator updates issue state and status snapshots, then releases dependents.
+Local implementation, technical verification, user acceptance and integration are
+distinct milestones.
 
-Never disable checks or weaken rules to merge. Branch protection (PRs, a qualifying review, `baseline-ci`, no direct or force pushes) is authorized coordinator work, requiring only checks that exist and are green. CI (`baseline-ci`, `browser-ci`) has read-only permissions and does not deploy or refresh expensive solver fixtures.
+Do not mark required acceptance complete when it remains pending.
+Use Closes #NUMBER only when the issue's complete acceptance criteria are met.
+Use Refs #NUMBER for partial work.
 
-## Status and recovery
+Record changed paths, commits, results, remaining work and the next action in the
+existing issue/PR or a compact local handoff.
 
-States: TODO, ACTIVE, REVIEW, DONE, BLOCKED, PAUSED. DONE means merged and accepted with evidence; finished local code is REVIEW.
+Update PROJECT_STATUS.md only when implementation facts materially change.
+Keep detailed progress in one task record rather than several status ledgers.
 
-- **BLOCKED:** record what would unblock it; continue unrelated work.
-- **PAUSED:** held deliberately; preserve work and resume point; unavailable to a second worker until reassigned.
-- **Abandoned session:** coordinator confirms it stopped, records the handoff and transfers ownership; preserve its branch and uncommitted work.
-- **Conflicts:** coordinator picks the owner and merge order; the later worker resolves against accepted main and reruns checks.
+## Recovery and cleanup
 
-## References
+Preserve work on conflict or interruption.
+Do not reset, clean, discard changes or manipulate another contributor's branch.
 
-[Issue dependencies](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-issue-dependencies) · [Protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) · [Issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms)
+## Post-merge checklist
+
+Run this after every authorized merge of a task branch. Stop and ask at the first
+step that fails; never work around a refusal.
+
+1. **Confirm the merge.** `git fetch origin --prune`. The PR is merged, or the merge
+   commit is on `origin/main`.
+2. **Verify no unique work will be lost.**
+   - Merge commit: `git merge-base --is-ancestor <branch> origin/main` succeeds.
+   - Squash or rebase merge: ancestry will not show it. Compare content instead:
+     `git cherry origin/main <branch>` prints no `+` lines, or a diff of the branch's
+     files against the merge commit shows only later changes from other work.
+   - No uncommitted or untracked work in the checkout or its worktree
+     (`git status`), no unpushed commits (`git log @{u}..<branch>` is empty or there
+     is no upstream and step 2 already proved the commits are on main), and no
+     other open PR from the branch.
+   - Look at `git stash list`. Stashes are preserved, never dropped by cleanup.
+3. **Update main locally:** `git switch main`, `git merge --ff-only origin/main`.
+4. **Remove the task's worktree, if one was authorized:** `git worktree remove <path>`.
+   It refuses a dirty worktree; never add `--force`.
+5. **Delete the local branch:** `git branch -d <branch>`. If it refuses, stop; never
+   use `-D`. Record the deleted tip commit (`git rev-parse <branch>` beforehand).
+6. **Leave the remote branch.** Deleting it (`git push origin --delete <branch>`)
+   needs authorization, as does cleaning any other branch, worktree or stash, which
+   is a separate task with a named candidate list (AGENTS.md, "Branch cleanup").
+7. **Close out the task:** update TASKS.md or PROJECT_STATUS.md only if facts
+   materially changed, close issues with Closes only when acceptance is complete,
+   and record the next action.
+8. **Start the next task** from updated main on a new branch. Do not reuse the
+   finished branch.

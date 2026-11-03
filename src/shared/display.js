@@ -11,6 +11,7 @@
 /** Field spec: [dotted path, min, max, description]. Drives validation and docs/DISPLAY.md. */
 export const DISPLAY_FIELDS = Object.freeze([
   ['ball.visualScale', 0.25, 4, 'Multiplier on the drawn ball size. Visual only: collision and cup fit use TUNING ball.radius.'],
+  ['aim.arrowMaxLength', 1, 2000, 'World-unit length of the aim arrow at full power (no minimum).'],
   ['aim.arrowShaftHalfWidth', 0.1, 50, 'Half the width of the aim arrow shaft.'],
   ['aim.arrowHeadHalfWidth', 0.1, 100, 'Half the width of the aim arrow head.'],
   ['aim.arrowHeadLength', 1, 200, 'Length of the aim arrow head (capped at half the arrow so short arrows stay readable).'],
@@ -20,14 +21,30 @@ export const DISPLAY_FIELDS = Object.freeze([
 /** Values the renderer used before they were parameterized. */
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
-  aim: { arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
+  aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 
-/** Returns a list of problems (empty when valid). Missing fields are errors. */
+/** Dotted paths of every object and leaf in the shape, so unknown keys can be named. */
+const KNOWN_PATHS = new Set(DISPLAY_FIELDS.flatMap(([path]) => path.split('.').map((_, i, parts) => parts.slice(0, i + 1).join('.'))));
+
+const GROUP_PATHS = new Set(DISPLAY_FIELDS.flatMap(([path]) => path.split('.').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('.'))));
+
+/** Shape problems in a (partial) display: unknown keys, and a group such as `aim` that is not an object. */
+function shapeProblems(value, prefix = '') {
+  if (!isObj(value)) return [];
+  return Object.keys(value).flatMap(k => {
+    const path = prefix + k;
+    if (!KNOWN_PATHS.has(path)) return ['unknown field ' + path];
+    if (GROUP_PATHS.has(path)) return isObj(value[k]) ? shapeProblems(value[k], path + '.') : [path + ' must be an object'];
+    return [];
+  });
+}
+
+/** Returns a list of problems (empty when valid). Missing and unknown fields are errors. */
 export function displayProblems(display) {
-  const problems = [];
+  const problems = shapeProblems(display);
   for (const [path, min, max] of DISPLAY_FIELDS) {
     const v = read(display, path);
     if (typeof v !== 'number' || !Number.isFinite(v)) problems.push(path + ' must be a finite number');
@@ -52,8 +69,10 @@ function merge(base, over) {
 }
 function deepFreeze(o) { for (const v of Object.values(o)) if (isObj(v)) deepFreeze(v); return Object.freeze(o); }
 
-/** Builds a validated, frozen display from defaults plus partial overrides. */
+/** Builds a validated, frozen display from defaults plus partial overrides. Unknown override keys throw instead of being ignored. */
 export function createDisplay(overrides = {}) {
+  const shape = shapeProblems(overrides);
+  if (shape.length) throw new Error('Invalid display: ' + shape.join('; '));
   return deepFreeze(validateDisplay(merge(DEFAULT_DISPLAY, overrides)));
 }
 

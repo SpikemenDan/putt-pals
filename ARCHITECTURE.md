@@ -1,8 +1,10 @@
 # Architecture reference
 
-## Current state
+## Implementation snapshot
 
-`index.html` loads `src/app/main.js`, which composes the modules below through `createApp()` (src/app/README.md). The app owns one animation-frame loop, one 100 ms HUD tick and explicit disposal. `putt-pals.html` is the original single-file game, kept runnable as a separate build input and parity reference; do not extend it.
+Technical descriptions below come from the supplied repository snapshot. This documentation update does not certify newer main or implement the targets added below.
+
+`index.html` loads `src/app/main.js`, which composes the modules below through `createApp()` (src/app/README.md). The app owns one animation-frame loop, one 100 ms HUD tick and explicit disposal. `index.html` and `src/` are the supported game. The legacy `putt-pals.html` and `tools.js` remain temporarily while required build, CLI and test consumers are migrated; they are scheduled for removal rather than permanent reference support.
 
 - **Simulation** (`src/simulation/`): headless, deterministic fixed-step physics at 240 Hz with explicit hazard time, domain events and no DOM, Three.js, React, PeerJS or WebAudio imports. Browser, CLI and solver share it. Simulation coordinates use x/y for the ground plane and z for height; Three.js uses y for height, so only render adapters swap axes.
 - **Courses** (`src/courses/`): validated named records for all 22 courses (six starters, six putts each), legacy adapters, per-map palettes. `tools/cli/` imports this and the simulation for check, solve, rank and arena commands. The legacy `tools.js` still extracts code from the HTML for parity checks and physics regression tests.
@@ -12,7 +14,7 @@
 - **UI and input** (`src/ui/`, `src/input/`): React 19 screens and HUD with CSS Modules; pointer and keyboard commands in their own adapter. React never drives physics ticks or mesh transforms.
 - **Audio** (`src/audio/`): procedural WebAudio adapter with injected context, storage and randomness; one context per app, gesture unlock, persistent mute, bounded voices and explicit teardown. It consumes simulation events and world-space listener positions.
 
-Physics advances through a requestAnimationFrame accumulator. Online controller departure preserves the server-owned match; the service elects another connected player. Deployment and separate-network acceptance remain N4G gates. Library versions are pinned in package.json (the source of truth). Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs guards the legacy CSS. Gameplay numbers live in `src/shared/tuning.js` (docs/TUNING.md).
+Physics advances through a requestAnimationFrame accumulator. Online controller departure preserves the server-owned match; the service elects another connected player. Deployment and separate-network acceptance remain N4G gates. Library versions are pinned in package.json (the source of truth). Production CSS is built unminified because Lightning CSS minification dropped standard `backdrop-filter` declarations; scripts/check-build.cjs currently guards legacy build output and must be migrated before that output is removed. Gameplay numbers live in `src/shared/tuning.js` (docs/TUNING.md).
 
 ## Layout
 
@@ -23,7 +25,7 @@ src/
   simulation/     state, shot application, fixed steps, collisions, events
   courses/        validated definitions, legacy adapters, generated data
   session/        XState lifecycle, voting, scoring, timers, practice
-  network/        room interface, solo/in-memory/PeerJS adapters, interpolation, server-room contracts
+  network/        room interface, solo/in-memory adapters, server-room WebSocket client and contracts, interpolation; `peer.js` is a legacy PeerJS adapter that the online room path no longer uses
   render/         Three.js scene, meshes, effects, resource ownership
   camera/         camera modes, input-independent camera state
   input/          pointer and keyboard commands
@@ -44,9 +46,25 @@ The repo is a single npm project; the Worker runtime in `services/rooms/` is bui
 
 ## Dependency direction
 
-UI/input -> application commands -> session/simulation. Render and audio consume snapshots/events. Session talks to a transport interface; its PeerJS implementation owns connections. CLI tools import simulation and courses directly. Shared schemas/types import no browser adapters.
+UI/input -> application commands -> session/simulation. Render and audio consume snapshots/events. Session talks to a transport interface; online rooms use the server-room WebSocket implementation, which owns the connection (solo and tests use in-memory transports). CLI tools import simulation and courses directly. Shared schemas/types import no browser adapters.
 
 The application owns exactly one simulation scheduler and one rendering loop per session. Adapters have explicit start/dispose lifecycles. Events such as shot, bounce, sink, timeout and putt change drive sound/UI without callbacks from physics into browser APIs.
+
+## Where to look
+
+Entry points only. Each area's own README or the code is authoritative; read it before changing the area.
+
+| Area | Start here | Also |
+| --- | --- | --- |
+| Application composition | [src/app/app.js](src/app/app.js) (`createApp`), [src/app/main.js](src/app/main.js) (browser entry) | [src/app/README.md](src/app/README.md), [src/ui/README.md](src/ui/README.md) |
+| Physics and simulation | [src/simulation/engine.js](src/simulation/engine.js) (`SimulationEngine`), [src/simulation/physics.js](src/simulation/physics.js) (collisions, cup, surfaces) | [src/shared/simulation.js](src/shared/simulation.js) (state and shot application); changes here affect the simulation fingerprint |
+| Aiming and input | [src/input/aim.js](src/input/aim.js) (spread, sway, shot angle), [src/input/adapter.js](src/input/adapter.js) (pointer and keyboard to commands) | [src/render/actors.js](src/render/actors.js) (`createAimGuide`), [src/input/README.md](src/input/README.md) |
+| Rendering and camera | [src/render/renderer.js](src/render/renderer.js) (`createGameRenderer`), [src/render/view.js](src/render/view.js), [src/camera/rig.js](src/camera/rig.js) | [src/render/course-scene.js](src/render/course-scene.js), [src/render/README.md](src/render/README.md) |
+| Rooms and networking | [src/session/machine.js](src/session/machine.js) (lifecycle, voting, scoring), [src/network/server-room.js](src/network/server-room.js) (WebSocket client) | [services/rooms/worker.mjs](services/rooms/worker.mjs) and [services/rooms/room-object.mjs](services/rooms/room-object.mjs) (Worker and Durable Object), [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md) |
+| Configuration | [src/shared/tuning.js](src/shared/tuning.js) (`TUNING`, simulation settings), [src/shared/display.js](src/shared/display.js) (`DISPLAY`, presentation settings) | [src/devtools/panel.js](src/devtools/panel.js) (development panel), [docs/TUNING.md](docs/TUNING.md), [docs/DISPLAY.md](docs/DISPLAY.md); see "Developer configuration" below |
+| Courses and solver | [src/courses/definitions.js](src/courses/definitions.js), [tools/cli/main.mjs](tools/cli/main.mjs) (`check`, `solve`, `shot`) | [src/courses/README.md](src/courses/README.md) |
+| Gameplay catalogs | [src/gameplay/catalog.js](src/gameplay/catalog.js) | [src/gameplay/README.md](src/gameplay/README.md) |
+| Tests and checks | Scripts in [package.json](package.json) and the command table in [README.md](README.md) | [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md) ("Implementation and checks") |
 
 ## Contract principles
 
@@ -56,7 +74,7 @@ The concrete contracts are in the next section; these principles govern changes 
 - Time/randomness: distinguish monotonic local time, synchronized room time and simulation ticks. Solver and tests supply deterministic hazard times and seeded randomness. Do not promise cross-browser bitwise equivalence for the custom engine.
 - Session: accept typed commands, enforce phase/host guards, expose room snapshots and events. Score calculation and timeout rules are shared pure functions.
 - Room transport: connect/create, subscribe, send commands/presence, observe connection state, close. Solo and fake adapters implement the same contract.
-- Protocol: version, session ID, round ID, sender identity bound to connection, sequence, bounded payload. Resume identity must be separate from a temporary PeerJS connection ID.
+- Protocol: version, session ID, round ID, sender identity bound to connection, sequence, bounded payload. Resume identity must be separate from a temporary socket connection.
 - Courses: stable IDs, schema version, named geometry/mechanic records. Legacy numeric indices stay in an explicit mapping during transition.
 - Rendering: explicit sim-to-world transform, snapshot interpolation, resource ownership/disposal. Visual interpolation never changes scoring or authoritative room transitions.
 - UI: cached immutable snapshots and stable subscribe/getSnapshot methods; commands for input, no direct mutations of simulation state.
@@ -78,18 +96,18 @@ Implemented in `src/shared/` and verified by `tests/contracts.test.cjs`. Signatu
 | `render.js` | Camera modes, immutable render snapshot, sightline test |
 | `mocks.js` | Sample course, mock simulation and in-memory transports for tests |
 
-Changing an agreed signature requires updating `src/shared/`, `tests/contracts.test.cjs` and notifying affected task owners.
+Changing a shared interface requires updating its implementation, consumers, mocks and relevant contract tests together. Coordinate with the other contributor when their active work depends on the interface.
 
 
 ## Gameplay systems design (power-ups, hazards, modes, cosmetics)
 
-Design rules for the product vision in MODERNIZATION_PLAN.md. These are targets, not existing APIs. Agree contracts and get integration-owner approval before changing `src/shared/`.
+Design rules for the product vision in MODERNIZATION_PLAN.md. These sections contain design targets and implementation details from the supplied snapshot; check code before assuming an API exists. Coordinate shared-contract changes with contributors working on dependent consumers and update validation, mocks and tests together.
 
 ### Power-up framework
 
 - **Catalog as data.** Each power-up is a plain record: id, name, group, whether it targets self, an opponent or the course, whether it is allowed in solo, spawn weight, duration (next shot, next turn, N impacts or seconds) and the hook it uses. The catalog is the single source for the UI, protocol validation, spawn table and solo filtering. Solo and Practice draw only from entries marked self-only.
 - **Inventory.** Three slots, activated by click or keys 1-3 before a stroke. Activation arms an effect; several armed effects stack on one shot. Tournaments keep inventory across putts and rounds; other modes reset it. The pool is chosen by mode: the No Power-Ups mode spawns no boxes at all.
-- **Effect hooks.** Effects change simulation inputs, not rendering. Hooks run at defined points of the fixed step: shot launch (Chip In adds vertical velocity; Steady Aim zeroes sway), per-tick forces (Hole Magnet, Love and Hate auras, vortices, wind), collision resolution (Ghost Ball skips wall and obstacle bounces; Sticky Ball zeroes the rebound), per-ball radius (Small and Tall Ball; the current code uses one global ball radius, so radius must become per-ball state) and global surface modifiers (rain and snow scale friction). With no effect armed, results must stay bit-identical to the current parity fixtures.
+- **Effect hooks.** Effects change simulation inputs, not rendering. Hooks run at defined points of the fixed step: shot launch (Chip In adds vertical velocity; Steady Aim zeroes sway), per-tick forces (Hole Magnet, Love and Hate auras, vortices, wind), collision resolution (Ghost Ball skips wall and obstacle bounces; Sticky Ball zeroes the rebound), per-ball radius (Small and Tall Ball use explicit effect overrides derived from the configured base radius) and global surface modifiers (rain and snow scale friction). With no effect armed, results must stay bit-identical to the current parity fixtures.
 - **Determinism.** Randomness (box contents, Lightning direction) is injected and seeded; roaming Tornado and Hurricane paths are pure functions of synchronized room time so every client agrees without streaming positions.
 - **Authority.** Physics stays client-trusted. An opponent-targeted effect travels as a validated effect message bound to the sender's connection and is applied by the target's own client; aura effects (Love, Hate) are applied by each client to its own ball while an opposing aura is active, because remote balls are non-colliding ghosts. Deployed objects (bumpers, vortices) are part of the synced room snapshot with an owner, an expiry and an impact count. Under N4 the server also validates the catalog id, inventory ownership and rate limits.
 - **Aim effects.** 360° and 180° Aim are input-layer modes of the aim indicator (continuous spin, sweep); they never alter the launch maths beyond what the indicator shows.
@@ -120,3 +138,101 @@ Every course, shipped or new, must pass `checkGeometryIntegrity` (`src/courses/i
 Rejected: walls through ramps or platforms; ramps/platforms through each other (unless coplanar platforms), over pits, or off the floor tiles; mover travel through walls, over pits or off the floor; bumper, pad and teleporter anchors off the floor or within `HAZARD_WALL_CLEARANCE` of a wall; tees within `SPAWN_WALL_CLEARANCE` and cups within cup radius + `CUP_WALL_MARGIN` of a wall; tees and cups straddling a platform ledge; ramp ends whose neighbouring surface differs by more than `RAMP_SEAM_STEP_MAX` (a gap or a step the physics ledge bounce would snag on). Launch-ramp high ends, edge-of-world drops and points inside walls are not seams. Touching faces are fine; overlap must exceed `OVERLAP_TOLERANCE` on both axes.
 
 All clearances are named exported constants in `integrity.js`. A reviewed, deliberate overlap goes in the named allow-list `GEOMETRY_INTEGRITY_EXCEPTIONS` with course id, rule, exact element ids and a reason; exceptions need owner approval and are reported in the PR. The check is static: it does not prove reachability, difficulty or dynamic hazard behaviour.
+
+
+## Developer configuration
+
+Extend the existing validated `src/shared/tuning.js` system into one documented
+developer-configuration entry point. Do not introduce competing default stores.
+
+Group configuration by domain:
+- Physics and dimensions.
+- Shot strength and input mapping.
+- Aim-arrow presentation and sway.
+- Camera behavior.
+- Session rules and timers.
+- Power-ups and hazards.
+- Rendering and audio.
+
+Each setting has one authoritative default, validation, units where relevant,
+allowed ranges, dependencies and a description of its behavior impact.
+Browser, simulation, renderer, CLI, solver and server import the same relevant
+settings instead of copying defaults.
+
+Ball dimensions agree between collision geometry and rendering. Arrow length and
+thickness are presentation settings; shot strength and drag-to-power mapping are
+separate behavior/input settings. Existing settings such as ball.radius,
+shotPower and DISPLAY aim.arrowMaxLength should be reused, not recreated.
+
+Keep course data and intentional per-ball effect overrides explicit.
+Configuration extraction preserves current shipped values and behavior.
+Retuning is separately identified and verified.
+
+Online gameplay uses a compatible gameplay-configuration identity/version.
+Reject or resolve mismatches rather than silently simulating different rules.
+Local presentation/accessibility preferences may differ without changing rules.
+Do not change authoritative settings during a shared match.
+
+Credentials, authentication and unrestricted infrastructure limits are excluded
+from developer gameplay controls. The configuration expansion is a target until
+its consumers, validation and documentation have been implemented and verified.
+
+## Developer tuning panel
+
+Provide a development-only panel with:
+- Numeric sliders showing units, ranges, current values and defaults.
+- Boolean toggles and enumerated selectors.
+- Reset controls.
+- Validated override import/export.
+- Clear indication of temporary preview overrides.
+
+Keep the panel disabled in ordinary production builds by default. Temporary
+values must not silently become shipped defaults or affect ordinary online rooms.
+
+Safe presentation settings may update live. Physics, dimensions and session-rule
+changes require preview reset/restart so existing state cannot become invalid.
+Do not mutate authoritative rules halfway through a match.
+
+For proposed appearance or feel changes, open a local Claude-browser preview,
+provide relevant controls and request owner feedback before final acceptance.
+Persist approved values and rerun affected checks. If browser access is absent,
+provide the local URL and steps and mark interactive acceptance pending.
+
+This panel is planned until implementation and verification are recorded.
+
+## Legacy retirement (DX3, complete)
+
+`putt-pals.html`, `tools.js` and the infrastructure that existed only to run or extract them were removed.
+The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
+
+What replaced each consumer:
+
+| Was | Now |
+| --- | --- |
+| `tools.js check`, `solve`, `rank`, `list`, `arena` | `tools/cli` (`npm run check`, `solve`, `rank`) |
+| `tools.js surfaces`, `cups`, `mechanics` | `tests/physics.test.cjs` |
+| `tools.js smoke`, `smoke-multi` | The modular suites mapped below; `test:smoke` and `test:multiplayer` no longer exist |
+| Parity tests that executed the legacy game | Recorded fixtures in `tests/fixtures/legacy-reference/`: course rules, starters, geometry hash, arenas and mechanic chamber (`data.json`), sound recipes (`audio-signatures.json`), r128 course layout hashes (`three-r128-course-topology.json`), aim maths and camera angles (`input.json`), HUD and scorecard strings (`ui.json`), and 552 renderer readings (`render-tape.json`) replayed on the vendored Three.js r128 (`tests/vendor/three-r128.js`, test-only) |
+| VM adapter, exporters, inventory and visual-parity scripts | Removed. `src/courses/definitions.js` and `arena-specs.js` are now the source of truth for course data |
+| Second built page, script-preservation build check, `/putt-pals.html` header rule | Removed; `scripts/check-build.cjs` checks the single app page and that no development-only code ships |
+| `tools/cli validate` live hashing | Compares the recorded provenance hashes only (`tests/fixtures/source-inventory.json`) |
+
+Smoke assertion mapping (legacy area to modular coverage):
+
+| Legacy smoke area | Modular coverage |
+| --- | --- |
+| Sway, spread, shot angle (P24 aim rules) | `input.test.cjs` aim rules and shots |
+| Lobby, Join, solo, practice and putt practice (P28, P29), multi-player disabling | `ui.test.cjs` landing, lobby, practice; `session.test.cjs` practice; `app.test.cjs` practice scenarios |
+| Voting, countdown, ties, early start, host and guest rules | `session.test.cjs`, `network.test.cjs`, `ui.test.cjs` tournament |
+| Strokes without a cap, splash, timeouts, par plus penalty, limits (P24, P26) | `integration/out-of-bounds.test.cjs`, `session.test.cjs`, `contracts.test.cjs`, `physics.test.cjs` |
+| Par, penalty and HUD countdown (P25), 10 s warning | `courses.test.cjs`, `ui.test.cjs` HUD and warning |
+| Scorecard, HIO, T/O, leader, K and Escape (P27) | `ui.test.cjs` scorecard and model, `app.test.cjs` solo |
+| Camera views, shortcuts, drag and arrow orbit (P30), free roam | `input.test.cjs`, `render.test.cjs` |
+| Putt transition arc, 1.5 s, no camera jump | `camera.test.cjs` (independent); `render.test.cjs` (recorded legacy poses) |
+| Wall fade (P31) | `render.test.cjs` wall fade scenarios |
+| Audio cues, listener, panner, mute | `audio.test.cjs`, `app.test.cjs` solo |
+| Four-client tournament, disconnect, rejoin, results | `app.test.cjs` four clients, `network.test.cjs`, `browser/multiplayer.spec.cjs`, `browser/server-room.spec.cjs` |
+| No runtime errors | Playwright page-error checks, `app.test.cjs` |
+
+Where a parity test still names the legacy game, it compares against the recorded output above, not a running copy.
+Re-recording is no longer possible without checking out b1a57c4; changing a recorded value needs the same deliberate review as any fixture regeneration.

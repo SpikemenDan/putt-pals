@@ -1,24 +1,25 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
 import { createCourseData, createCourseDocument, parseCourseDocument, toSimulationCourses } from '../../src/courses/index.js';
 import fs from 'node:fs';
 import { createDifficultyProvenance } from './provenance.mjs';
 import { parseCliArguments } from './arguments.mjs';
+import { runConfig } from './config-report.mjs';
+import { runChecks } from './checks.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runList, runValidate, runShot, runSolve, runArena, runCheck, runRank, runExport, USAGE } from './commands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const liveHashes = () => Object.fromEntries(
-  [['htmlSha256', 'putt-pals.html'], ['toolsSha256', 'tools.js']].map(([key, file]) =>
-    [key, createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]),
-);
 function finish({ code, lines }) {
   console.log(lines.join('\n'));
   process.exitCode = code;
 }
 
 function main(argv) {
+  // `config` takes its own options, so it bypasses the course-oriented argument parser.
+  if (argv[0] === 'config') return finish(runConfig(argv.slice(1)));
+  // `checks` takes its own options (--since, --json) and paths, so it bypasses the course-oriented argument parser.
+  if (argv[0] === 'checks') return finish(runChecks(argv.slice(1)));
   const { command, args, courseFile } = parseCliArguments(argv);
   if (!['list', 'validate', 'shot', 'solve', 'arena', 'check', 'rank', 'export'].includes(command)) {
     return finish({ code: command ? 1 : 0, lines: command ? [`Unknown command: ${command}`, ...USAGE] : USAGE });
@@ -27,7 +28,7 @@ function main(argv) {
   if (command === 'validate') {
     const data = createCourseData();
     const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
-    return finish(runValidate({ raw: data.rules, inventory, hashes: liveHashes(), courseHashes: data.sourceHashes }));
+    return finish(runValidate({ raw: data.rules, inventory, courseHashes: data.sourceHashes }));
   }
   const document = courseFile === undefined ? createCourseDocument()
     : parseCourseDocument(fs.readFileSync(courseFile, 'utf8'));

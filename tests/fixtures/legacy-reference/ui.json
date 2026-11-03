@@ -1,0 +1,286 @@
+{
+ "schemaVersion": 1,
+ "evidence": "recorded from the legacy single-file game before its retirement",
+ "state": "Dune Serpent putt 3, map 2 of a 3-map tournament; Ben done with a hole in one and a timeout, Cy tied, Dee spectating",
+ "meColor": 2,
+ "hud": "Dune Serpent · PUTT 3/6 · PAR 2 · STROKES 1 · 2:30",
+ "scoreboard": [
+  [
+   "",
+   "SCOREBOARD",
+   "Putt",
+   "Total"
+  ],
+  [
+   "",
+   "1. Dee",
+   "Watching",
+   "0"
+  ],
+  [
+   "",
+   "2. Ana (you)",
+   "1",
+   "7"
+  ],
+  [
+   "",
+   "3. Ben",
+   "✔ 2",
+   "11"
+  ],
+  [
+   "",
+   "3. Cy",
+   "5",
+   "11"
+  ]
+ ],
+ "dots": [
+  "rgb(153, 213, 42)",
+  "rgb(245, 166, 35)",
+  "rgb(62, 142, 247)",
+  "rgb(18, 165, 148)"
+ ],
+ "card": [
+  [
+   [
+    "Player",
+    "nm"
+   ],
+   [
+    "1",
+    ""
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "3",
+    ""
+   ],
+   [
+    "4",
+    ""
+   ],
+   [
+    "5",
+    ""
+   ],
+   [
+    "6",
+    ""
+   ],
+   [
+    "Total",
+    "st"
+   ],
+   [
+    "+/-",
+    "st"
+   ],
+   [
+    "HIO",
+    "st"
+   ],
+   [
+    "T/O",
+    "st"
+   ]
+  ],
+  [
+   [
+    "Par",
+    "nm"
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "3",
+    ""
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "3",
+    ""
+   ],
+   [
+    "3",
+    ""
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "15",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ]
+  ],
+  [
+   [
+    "1. Ana (you)",
+    "nm"
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "4",
+    "o"
+   ],
+   [
+    "1",
+    "lv"
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "7",
+    "st"
+   ],
+   [
+    "E",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ]
+  ],
+  [
+   [
+    "2. Ben",
+    "nm"
+   ],
+   [
+    "1",
+    "hio"
+   ],
+   [
+    "8*",
+    "o"
+   ],
+   [
+    "2",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "11",
+    "st"
+   ],
+   [
+    "+4",
+    "st"
+   ],
+   [
+    "1",
+    "st"
+   ],
+   [
+    "1",
+    "st"
+   ]
+  ],
+  [
+   [
+    "2. Cy",
+    "nm"
+   ],
+   [
+    "3",
+    "o"
+   ],
+   [
+    "3",
+    ""
+   ],
+   [
+    "5",
+    "lv"
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "11",
+    "st"
+   ],
+   [
+    "+4",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ],
+   [
+    "",
+    "st"
+   ]
+  ]
+ ],
+ "title": "SCORECARDDune Serpent · Map 2/3",
+ "leaders": [
+  true,
+  false,
+  false
+ ],
+ "resultsText": "Dune Serpent: Ana 14 · Ben 17 · Cy 20. Map winner: Ana. Standings after map 2/3: Ana 24 · Ben 30 · Cy 32.",
+ "againLabel": "Next map vote",
+ "errors": []
+}

@@ -15,7 +15,7 @@ npm ci
 npm run rooms:dev
 ```
 
-This builds the existing modular and legacy pages, then starts Wrangler on `127.0.0.1:8787` with remote bindings disabled. Local Durable Object state persists under `.wrangler/state` and is ignored by Git. Stop the process with Ctrl-C.
+This builds the app (`npm run build`), then starts Wrangler on `127.0.0.1:8787` with remote bindings disabled. Local Durable Object state persists under `.wrangler/state` and is ignored by Git. Stop the process with Ctrl-C.
 
 The top-level Wrangler config is the development environment. The `preview` and `production` named environments use distinct room namespaces and environment values. They can be selected locally with `npx wrangler dev --local --env preview` or `--env production`; those commands still use local emulation. No deployment script is provided by this task.
 

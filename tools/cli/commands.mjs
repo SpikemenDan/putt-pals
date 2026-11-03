@@ -27,7 +27,7 @@ export function runList(raw) {
 export function runValidate({ raw, inventory, hashes, courseHashes }) {
   const catalog = buildCourseCatalog(raw);
   const stale = detectStaleCourses(raw, inventory.courses);
-  const staleHashes = detectStaleHashes(hashes, inventory);
+  const staleHashes = hashes ? detectStaleHashes(hashes, inventory) : { differences: [] };
   const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences,
     ...(courseHashes ? detectStaleHashes(courseHashes, inventory).differences.map(message => `Imported courses: ${message}`) : [])];
   if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
@@ -115,6 +115,8 @@ export const USAGE = [
   '  export                        print versioned course JSON with persistent course/putt IDs',
   '  check                         validate imported geometry, playable positions and rules',
   '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
+  '  config [display|tuning|all] [--json] [--overrides <file>]  settings with defaults, units, restart rule and the files that read them',
+  '  checks [--since <ref>] [--json] [paths...]  recommend which verification commands to run for the changed paths, and why',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
   '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',

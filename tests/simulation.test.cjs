@@ -1,26 +1,18 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
 
 async function run() {
   console.log('--- Running Headless Simulation Test Suite (Task S1) ---');
   const sim = await import('../src/simulation/index.js');
   const shared = await import('../src/shared/index.js');
 
-  // Load legacy course definitions and arena tooling via tools.js
+  // Course data and the mechanic-chamber arena come from the shared modules and the recorded legacy reference.
   const root = path.resolve(__dirname, '..');
-  const toolsSource = fs.readFileSync(path.join(root, 'tools.js'), 'utf8');
-  const marker = 'const[,,cmd,...args]=process.argv;';
-  const context = { require, __dirname: root, process, performance, console };
-  vm.createContext(context);
-  vm.runInContext(
-    toolsSource.slice(0, toolsSource.indexOf(marker)) + '\nthis.testAPI={load,MECH,arenaData};',
-    context
-  );
-  const { load, MECH, arenaData } = context.testAPI;
-  const legacy = load();
-  const HOLES = legacy.HOLES;
+  const reference = require('./support/legacy-reference.cjs');
+  const { createCourseData } = await import('../src/courses/index.js');
+  const HOLES = createCourseData().definitions;
+  const D = reference.mechanics().geometry;
 
   // 1. Launch Initialization at 9 Combinations
   for (const angle of [0, Math.PI / 2, -Math.PI / 3]) {
@@ -96,7 +88,6 @@ async function run() {
   }
 
   // 3. Mechanic Chambers Parity (MECH arena data)
-  const D = arenaData(MECH);
   const mechArena = Object.assign({}, HOLES[0], {
     tiles: [[40, 40, 720, 420]],
     w: D.w,
