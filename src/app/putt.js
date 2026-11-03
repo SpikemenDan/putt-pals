@@ -129,7 +129,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const item = player.inventory[index];
       if (disposed || !item || player.mode !== 'play') return out;
       const activation = activatePowerup(player, item, fxCount + 1);
-      if (activation.toast) out.toasts.push(activation.toast);
+      if (activation.toast && !activation.deploy) out.toasts.push(activation.toast);
       if (!activation.ok) return out;
       if (activation.deploy) { out.placement = { kind: activation.deploy.kind, index }; return out; } // G1e: the slot is spent by consumeItem once the host accepts the placement
       out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power', item]);

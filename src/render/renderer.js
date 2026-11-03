@@ -189,6 +189,8 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     get course() { return build; },
     get localBall() { return localBall; },
     get remoteCount() { return remotes.size; },
+    /** Hit dots shown over each placed Bumper / Orbital Bumper: Map(id -> dots). */
+    deployableDots: () => deployableLayer.dotCounts(),
     /** Detached counters for profiling; no renderer or mutable GPU objects escape. */
     diagnostics() {
       return {
@@ -369,7 +371,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         for (const w of build.wallFade) if (w.mesh.userData.ink) w.mesh.userData.ink.visible = w.alpha > 0.98;
         if (renderer.getDrawingBufferSize) { renderer.getDrawingBufferSize(bufferSize); sizeInk(library.inkUniforms, bufferSize.x, bufferSize.y); }
       }
-      deployableLayer.update(deployables, placing, build.transform, build.course, t);
+      deployableLayer.update(deployables, placing, build.transform, build.course, t, camera);
       renderer.render(scene, camera);
     },
 

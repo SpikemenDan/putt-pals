@@ -51,9 +51,10 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `powerups.auraPull` | 260 | 0 to 10000 | Love Ball pull acceleration on a ball at the owner (falls off linearly to the edge of the reach). |
 | `powerups.auraPush` | 260 | 0 to 10000 | Hate Ball push acceleration on a ball at the owner (falls off linearly to the edge of the reach). |
 | `deployables.bumperRadius` | 14 | 1 to 100 | Bumper and Orbital Bumper solid radius (world units). |
-| `deployables.bumperRestitution` | 1.1 | 0 to 3 | Bumper bounce: reflected normal speed as a multiple of the incoming speed (above 1 adds a pinball kick). |
+| `deployables.bumperRestitution` | 1.5 | 0 to 3 | Bumper bounce: reflected normal speed as a multiple of the incoming speed (above 1 adds a pinball kick). |
+| `deployables.bumperKick` | 300 | 0 to 2000 | Slowest speed (units/s) a Bumper throws a ball back out at, so even a slow touch gets the pinball pop. |
 | `deployables.orbitalRestitution` | 1.1 | 0 to 3 | Orbital Bumper body bounce: reflected normal speed as a multiple of the incoming speed (above 1 kicks a ball that was pulled in back out). |
-| `deployables.minHitSpeed` | 60 | 0 to 1000 | Slowest approach speed (units/s) that counts as an impact on a Bumper or Orbital Bumper; slower contacts only push the ball out. |
+| `deployables.minHitSpeed` | 15 | 0 to 1000 | Slowest approach speed (units/s) that counts as an impact on a Bumper or Orbital Bumper; slower contacts only push the ball out. |
 | `deployables.maxImpacts` | 3 | 1 to 20 | Hits a Bumper or Orbital Bumper survives before it disappears. |
 | `deployables.orbitalRange` | 65 | 0 to 1000 | Orbital Bumper ring radius (world units). |
 | `deployables.orbitalPull` | 1000 | 0 to 10000 | Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge). |

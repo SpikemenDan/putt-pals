@@ -9,7 +9,7 @@
 
 import { MAX_DEPLOYABLES } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
-import { surfaceHeight } from '../simulation/physics.js';
+import { cupOf, surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
 /** The `deployables.*` tuning block (src/shared/tuning.js, docs/TUNING.md). Helpers take it as an argument so tests can pass their own. */
@@ -97,9 +97,12 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
     const vn = ball.vx * nx + ball.vy * ny;
     if (vn >= 0) continue;
     const restitution = d.kind === 'orbital' ? params.orbitalRestitution : params.bumperRestitution;
-    ball.vx -= (1 + restitution) * vn * nx;
-    ball.vy -= (1 + restitution) * vn * ny;
-    if (-vn >= params.minHitSpeed) events.push({ type: DEPLOYABLE_HIT, id: d.id }); // a ball settling against the body is not an impact
+    const counts = -vn >= params.minHitSpeed; // a ball settling against the body is not an impact
+    // A Bumper always pops the ball out at `bumperKick` or faster, so a slow second touch does not just rebound like a wall.
+    const out = d.kind === 'bumper' && counts ? Math.max(restitution * -vn, params.bumperKick) : restitution * -vn;
+    ball.vx += (out - vn) * nx;
+    ball.vy += (out - vn) * ny;
+    if (counts) events.push({ type: DEPLOYABLE_HIT, id: d.id });
   }
   return events;
 }
@@ -111,7 +114,7 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
 export function placementClear(course, x, y, params = DEPLOYABLE_PARAMS) {
   if (!course || surfaceHeight(course, x, y) <= -999) return false;
   const r = params.bumperRadius;
-  if (Array.isArray(course.hole) && Math.hypot(x - course.hole[0], y - course.hole[1]) < (course.cup ?? 15) + r) return false;
+  if (Array.isArray(course.hole) && Math.hypot(x - course.hole[0], y - course.hole[1]) < cupOf(course) + r) return false;
   return !(course.w || []).some(([wx, wy, ww, wh]) => Math.hypot(x - Math.max(wx, Math.min(x, wx + ww)), y - Math.max(wy, Math.min(y, wy + wh))) < r);
 }
 

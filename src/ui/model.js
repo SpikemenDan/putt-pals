@@ -149,7 +149,7 @@ export function hudView(room, local, now, courses) {
   const practice = room.mode === GameModes.PUTT_PRACTICE;
   const left = Math.max(0, Math.ceil((room.roundLimitSeconds * 1000 - Math.max(0, now - room.roundStartTime)) / 1000));
   const info = course.name + (course.hasPutts ? ' · PUTT ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' · PAR ' + putt.par + ' · '
-    + (spectating ? 'SPECTATING' : 'STROKES ' + local.strokes + (practice ? ' · PRACTICE' : ' · ' + Math.floor(left / 60) + ':' + pad2(left % 60))) + (local.bumps ? ' · ' + local.bumps : '');
+    + (spectating ? 'SPECTATING' : 'STROKES ' + local.strokes + (practice ? ' · PRACTICE' : ' · ' + Math.floor(left / 60) + ':' + pad2(left % 60)));
   const list = connectedPlayers(room).map(p => {
     const watching = p.id === local.id ? spectating : !(room.roster || []).includes(p.id);
     return { player: p, watching, total: watching ? 0 : mapTotal(p, local, room.puttIndex | 0) };
@@ -173,7 +173,6 @@ export function hudView(room, local, now, courses) {
     scoreboard,
     connection: local.roomCode ? 'Room ' + local.roomCode + ' · ' + list.length + ' players' : 'Solo practice',
     inventory,
-    placing: local.placing ? powerupName(local.placing) : '',
     viewLabel: 'View: ' + (local.viewLabel || 'Ball cam'),
     soundLabel: 'Sound: ' + (local.soundOn === false ? 'Off' : 'On'),
     qualityLabel: 'Quality: ' + (local.qualityHigh === false ? 'Low' : 'High'),

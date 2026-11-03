@@ -38,7 +38,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         </div>
         <canvas className={hud.canvas} width="800" height="500" ref={onCanvas} aria-label="Course. Drag back from the ball and release to putt." />
         <PowerMeter />
-        <div className={hud.guide} data-ui="guide">{view?.placing ? 'Click the course to place the ' + view.placing + ' · Right-click or Esc = cancel' : 'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
+        <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
         <div className={hud.inv}>
           {(view?.inventory || []).map(slot => (
             <button type="button" key={slot.index} className={slot.kind === 'empty' ? ghost : slot.kind === 'attack' ? buttons.atk : undefined}

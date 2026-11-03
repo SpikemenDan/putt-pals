@@ -17,6 +17,11 @@ export const DEPLOYABLE_COLORS = Object.freeze({
   orbital: { body: 0x4d7dff, accent: 0x7ff0ff },
 });
 
+/** Hologram colours for the placement ghost: green where it can go, red where it cannot. */
+export const HOLO_OK = 0x2dff6e, HOLO_BLOCKED = 0xff2d2d;
+/** Dots above a bumper: one per hit it has left. */
+const DOT_HEIGHT = 22, DOT_SPACING = 6;
+
 /** Lathe profile [radius multiple, height] from the floor up: base lip, indented waist, flared barrel, domed cap. */
 export const BUMPER_PROFILE = Object.freeze([
   [0.0, 0], [1.0, 0], [1.0, 1.3], [0.9, 2.0], [0.74, 3.0], [0.7, 4.2], [0.78, 5.2], [0.94, 6.6], [1.0, 8.2],
@@ -25,16 +30,17 @@ export const BUMPER_PROFILE = Object.freeze([
 
 export function createDeployableLayer({ THREE, scene, library = null, toon = false }) {
   const group = new THREE.Group();
-  const entries = new Map(); // id (or 'ghost') -> { kind, root, spin, ring, owned }
-  const pale = c => new THREE.Color(c);
-
+  const entries = new Map(); // id (or 'ghost') -> { kind, root, spin, ring, owned, holo, dots, lives }
+  const dotGeometry = new THREE.SphereGeometry(2, 14, 10);
+  
   function build(kind, ghost) {
     const p = TUNING.deployables, palette = DEPLOYABLE_COLORS[kind] ?? DEPLOYABLE_COLORS.bumper;
-    const root = new THREE.Group(), owned = [], inked = [];
+    const root = new THREE.Group(), owned = [], inked = [], holo = [];
     const geo = g => { owned.push(g); return g; };
     const mat = (color, opts = {}) => {
       const transparent = ghost || !!opts.transparent, opacity = ghost ? Math.min(opts.opacity ?? 1, 0.45) : (opts.opacity ?? 1);
       let m;
+      if (ghost) { m = new THREE.MeshBasicMaterial({ color: HOLO_OK, transparent: true, opacity: Math.min(opts.opacity ?? 1, 0.5), depthWrite: false, ...(opts.side ? { side: opts.side } : {}) }); holo.push(m); owned.push(m); return m; }
       if (library && toon) m = library.toon(color, { transparent, opacity, ...(opts.side ? { side: opts.side } : {}) });
       else m = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.1, transparent, opacity, ...(opts.side ? { side: opts.side } : {}) });
       if (opts.depthWrite === false) m.depthWrite = false;
@@ -72,10 +78,26 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
     }
     for (const mesh of inked) { const hull = addInk(THREE, mesh, library.ink.solid); hull.geometry && owned.push(hull.geometry); }
     group.add(root);
-    return { kind, root, spin, ring, owned };
+    return { kind, root, spin, ring, owned, holo, dots: null, lives: -1 };
+  }
+  /** One dot per remaining hit, in a row above the cap; rebuilt only when the count changes. */
+  function showLives(entry, lives) {
+    if (entry.lives === lives) return;
+    if (entry.dots) { entry.root.remove(entry.dots.group); for (const m of entry.dots.mats) m.dispose(); }
+    const dotGroup = new THREE.Group(), mats = [];
+    for (let i = 0; i < lives; i++) {
+      const m = library && toon ? library.toon(0xffe14d) : new THREE.MeshStandardMaterial({ color: 0xffe14d, roughness: 0.5 });
+      mats.push(m);
+      const dot = new THREE.Mesh(dotGeometry, m);
+      dot.position.set((i - (lives - 1) / 2) * DOT_SPACING, DOT_HEIGHT, 0);
+      dotGroup.add(dot);
+      if (library && toon) addInk(THREE, dot, library.ink.solid);
+    }
+    entry.root.add(dotGroup); entry.dots = { group: dotGroup, mats }; entry.lives = lives;
   }
   const release = entry => {
     group.remove(entry.root);
+    if (entry.dots) for (const m of entry.dots.mats) m.dispose();
     for (const r of entry.owned) if (!library?.isShared?.(r)) r.dispose?.();
   };
 
@@ -88,7 +110,7 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
      * @param {object} course
      * @param {number} t Seconds (animation clock)
      */
-    update(list, placing, transform, course, t) {
+    update(list, placing, transform, course, t, camera = null) {
       const wanted = new Map(list.map(d => [d.id, d]));
       if (placing) wanted.set('ghost', { id: 'ghost', ...placing });
       for (const [id, entry] of [...entries]) {
@@ -103,10 +125,17 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
         const [wx, wy, wz] = transform.ground(d.x, d.y, surfaceHeight(course, d.x, d.y));
         entry.root.position.set(wx, wy, wz);
         if (entry.spin) entry.spin.rotation.y = t * 1.6;
+        if (id === 'ghost') { const c = d.valid === false ? HOLO_BLOCKED : HOLO_OK; for (const m of entry.holo) m.color.setHex(c); }
+        else {
+          showLives(entry, Math.max(0, TUNING.deployables.maxImpacts - (d.impacts || 0)));
+          if (camera && entry.dots) entry.dots.group.rotation.y = Math.atan2(camera.position.x - wx, camera.position.z - wz); // the row faces the camera
+        }
         if (entry.ring) entry.ring.material.opacity = (id === 'ghost' ? 0.4 : 0.6) + Math.sin(t * 3) * 0.2;
       }
     },
     count: () => entries.size,
-    dispose() { for (const entry of entries.values()) release(entry); entries.clear(); scene.remove(group); },
+    /** Dots shown over each placed object (id -> number), for tests. */
+    dotCounts: () => new Map([...entries].filter(([id]) => id !== 'ghost').map(([id, e]) => [id, e.lives])),
+    dispose() { for (const entry of entries.values()) release(entry); entries.clear(); dotGeometry.dispose(); scene.remove(group); },
   };
 }

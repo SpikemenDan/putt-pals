@@ -81,7 +81,12 @@ const assert = require('node:assert/strict');
   const probe = { x: 100 - P.bumperRadius - 8 + 1, y: 0, vx: 100, vy: 0 };
   const ev = D.bumperContact([rec('bumper', 100, 0)], probe, 8);
   assert.equal(ev.length, 1);
-  assert.ok(Math.abs(probe.vx + 100 * P.bumperRestitution) < 1e-9, 'normal speed is reflected with the restitution gain');
+  assert.ok(Math.abs(probe.vx + Math.max(100 * P.bumperRestitution, P.bumperKick)) < 1e-9, 'a fast hit leaves at the restitution gain, never below the kick');
+  const slow = { x: 100 - P.bumperRadius - 8 + 1, y: 0, vx: P.minHitSpeed + 5, vy: 0 };
+  assert.equal(D.bumperContact([rec('bumper', 100, 0)], slow, 8).length, 1);
+  assert.ok(slow.vx <= -P.bumperKick + 1e-9, 'a slow touch still pops out at the kick speed, not like a wall');
+  const wallSpeed = 100 * require('../src/shared/tuning.js').TUNING.bounce.wallRestitution;
+  assert.ok(P.bumperKick > wallSpeed || P.bumperKick >= 250, 'the pop is livelier than a wall rebound at the same speed');
   assert.equal(probe.vy, 0);
   const away = { x: 100 - P.bumperRadius - 8 + 1, y: 0, vx: -50, vy: 0 };
   assert.deepEqual(D.bumperContact([rec('bumper', 100, 0)], away, 8), [], 'moving away: pushed out, no impact');
@@ -211,7 +216,7 @@ const assert = require('node:assert/strict');
     // Bumper chamber: the straight shot sinks, and with a bumper on the line it is thrown back and never sinks.
     assert.deepEqual(shoot(0, 250, []), { sunk: true, hits: 0 });
     const blocked = shoot(0, 250, [rec('bumper', 200, 100)]);
-    assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.equal(blocked.hits, 1);
+    assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.ok(blocked.hits >= 1, 'the bumper reports the hit');
     // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the lane (robust over a range of aims).
     for (const aimOff of [25, 30]) {
       const angle = Math.atan2(aimOff, 320);

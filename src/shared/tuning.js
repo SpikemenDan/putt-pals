@@ -61,6 +61,7 @@ export const TUNING_FIELDS = Object.freeze([
   ['powerups.auraPush', 0, 10000, 'Hate Ball push acceleration on a ball at the owner (falls off linearly to the edge of the reach).'],
   ['deployables.bumperRadius', 1, 100, 'Bumper and Orbital Bumper solid radius (world units).'],
   ['deployables.bumperRestitution', 0, 3, 'Bumper bounce: reflected normal speed as a multiple of the incoming speed (above 1 adds a pinball kick).'],
+  ['deployables.bumperKick', 0, 2000, 'Slowest speed (units/s) a Bumper throws a ball back out at, so even a slow touch gets the pinball pop.'],
   ['deployables.orbitalRestitution', 0, 3, 'Orbital Bumper body bounce: reflected normal speed as a multiple of the incoming speed (above 1 kicks a ball that was pulled in back out).'],
   ['deployables.minHitSpeed', 0, 1000, 'Slowest approach speed (units/s) that counts as an impact on a Bumper or Orbital Bumper; slower contacts only push the ball out.'],
   ['deployables.maxImpacts', 1, 20, 'Hits a Bumper or Orbital Bumper survives before it disappears.'],
@@ -111,7 +112,7 @@ export const DEFAULT_TUNING = {
   bounce: { wallRestitution: 1.82, ledgeDamping: 0.8, ledgeHeight: 5, landingRestitution: 0.25, landingSpeed: 180 },
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
   powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
-  deployables: { bumperRadius: 14, bumperRestitution: 1.1, orbitalRestitution: 1.1, minHitSpeed: 60, maxImpacts: 3, orbitalRange: 65, orbitalPull: 1000, hitCooldownMs: 250 },
+  deployables: { bumperRadius: 14, bumperRestitution: 1.5, bumperKick: 300, orbitalRestitution: 1.1, minHitSpeed: 15, maxImpacts: 3, orbitalRange: 65, orbitalPull: 1000, hitCooldownMs: 250 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
