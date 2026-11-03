@@ -95,6 +95,37 @@ Run affected suites and the build for application changes.
 Run broader relevant checks before integration.
 Use checks appropriate to documentation-only changes.
 
+### Choosing checks while you iterate
+
+`npm run checks` lists the verification commands worth running for what you changed,
+and why. With no arguments it uses the paths that differ from `origin/main` (falling
+back to `main`) plus staged, unstaged and untracked work. Pass paths to ask about
+specific files, `--since <ref>` to compare with another ref, or `--json` for tools:
+
+```sh
+npm run checks
+npm run checks -- src/render/actors.js
+```
+
+How it decides (implementation and the few rules: `tools/cli/checks.mjs`):
+- Which tests each npm script runs comes from `package.json`. Which files a test, or the
+  app build, reaches comes from the import graph of the working tree, including dynamic
+  `import()`, `require()` and the fixture paths tests read. A shared contract, tuning or
+  simulation file therefore selects every suite that depends on it, transitively.
+- A few things imports cannot show are rules: dependency changes (everything), build and
+  Worker configuration, tooling folders, documentation and CI (notes, since no local
+  suite covers them).
+- Files in the simulation's import closure add a reminder about the fingerprint fixtures
+  (see "Merging changes to simulation fingerprints" below).
+- A path that no script reaches and no rule covers, a deleted path, or a `package.json`
+  script the tool cannot read gets the conservative fallback: the full suite
+  (`npm test` and `npm run build`). It never silently skips.
+
+This only helps you choose local checks. CI is unchanged: it still runs the full suite
+and the real-browser checks on every PR, and nothing is skipped automatically. If you
+add a file kind the tool does not know, `npm run test:cli` fails its staleness guard
+until a test reaches the file or a rule covers it.
+
 Keep technical verification separate from user acceptance.
 For appearance or feel changes, provide a local browser preview with relevant
 developer controls before asking for final review.
