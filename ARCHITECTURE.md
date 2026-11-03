@@ -203,9 +203,10 @@ Legacy references above describe temporary dependencies, not permanent support.
 | `npm run check`, `solve`, `rank` | `tools.js check/solve/rank` | `tools/cli` | Migrated |
 | `npm run test:physics` | `tools.js surfaces/cups/mechanics` | `tests/physics.test.cjs` | Migrated |
 | `npm run test:smoke`, `test:multiplayer` | `tools.js smoke/smoke-multi`: ~140 single-player and ~60 multiplayer assertions driven through the legacy DOM | Mapped below. Modular suites cover every area; the transition camera properties now have independent coverage in `tests/camera.test.cjs` | Mapped; the command can go once the oracle-based parity tests are rebased |
-| `tests/render.test.cjs`, `audio.test.cjs`, `app.test.cjs` (library parity), `simulation.test.cjs`, `courses.test.cjs`, `cli.test.cjs` | Parity against the legacy renderer, sounds, Three r128 topology, physics and course data | Recorded fixtures with provenance | Open |
-| `tools/legacy-adapter.cjs`, `tests/support/legacy-dom.cjs`, `tests/solver-baseline.cjs`, `scripts/export-*.cjs`, `inventory-baseline.cjs`, `aggregate-difficulty.mjs` | VM and HTML extraction | Retire with the parity tests, keep recorded outputs | Open |
-| `tools/cli validate`, `tests/fixtures/source-inventory.json` | Hashes of `putt-pals.html` and `tools.js` | Hash only the exported data | Open |
+| `courses.test.cjs`, `cli.test.cjs`, `simulation.test.cjs`, `audio.test.cjs`, `app.test.cjs` (library layout) | Legacy data, arenas, sounds and Three r128 topology | `tests/fixtures/legacy-reference/` recorded by `scripts/record-legacy-reference.cjs` | Migrated |
+| `ui.test.cjs`, `input.test.cjs`, `render.test.cjs` | Live legacy game in jsdom as the oracle for HUD text, scorecards, launches, camera angles, scene graphs and poses (`tests/support/legacy-dom.cjs`) | Independent expectations or recorded values per scenario | Open: interleaved with the legacy window, needs scenario-by-scenario rewrite |
+| `tools/legacy-adapter.cjs`, `tests/support/legacy-dom.cjs`, `scripts/export-*.cjs`, `inventory-baseline.cjs`, `aggregate-difficulty.mjs` | VM and HTML extraction | Retire with the parity tests, keep recorded outputs | Open |
+| `tools/cli validate`, `tests/fixtures/source-inventory.json` | Hashes of `putt-pals.html` and `tools.js` | Recorded provenance only; live hashing removed | Migrated |
 | `vite.config.mjs`, `scripts/check-build.cjs`, `public/_headers`, `tests/rooms/local-runtime.test.mjs`, `scripts/ui-visual-parity.cjs`, `docs/THIRD_PARTY.md` | Second built page and script-preservation check | Drop the legacy page and its check | Open |
 
 Smoke assertion mapping (legacy area to modular coverage):
