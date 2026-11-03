@@ -13,9 +13,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: baseline-ci-${{ github.event.pull_request.number || github.ref }}
-  # Newer pushes cancel older pull-request runs, but never a run on main: back-to-back merges used to
-  # cancel each other and leave commits without a result of their own.
+  # A pull request shares one group, so a newer push cancels its superseded run. Every other run (main, nightly,
+  # manual) gets a group of its own: with a shared group, GitHub also cancels a run that is still *pending* behind
+  # the running one, so back-to-back merges to main left commits without a result of their own.
+  group: baseline-ci-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -28,48 +29,82 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # A pull request needs the merge commit and its parents to classify the change.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - name: Set up the verified Node version
         uses: actions/setup-node@v7
         with:
           node-version: '26.10.0'
           cache: npm
+      # Documentation-only pull requests skip the install, build and test steps below. The job and its name still
+      # report, so required checks pass. The decision comes from the same changed-path mapping as `npm run checks`
+      # (tools/cli/checks.mjs): every changed path must be documentation no code reads; an unmapped path means the
+      # full suite. Pushes to main, nightly and manual runs always run everything.
+      - name: Classify the change (documentation only?)
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            # The checkout is the PR's merge commit: its first parent is the base, so the diff is the PR's own changes.
+            node tools/cli/main.mjs checks --docs-only --since HEAD^1 | tee -a "$GITHUB_OUTPUT"
+          else
+            echo 'docs-only=false' | tee -a "$GITHUB_OUTPUT"
+          fi
       - name: Install locked dependencies
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm ci
       - name: Check syntax and course metadata
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run check
       - name: Build and verify legacy script preservation
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run build
       - name: Check shared contracts
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:contracts
       - name: Check simulation parity
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:simulation
       - name: Check room lifecycle with fake clocks
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:session
       - name: Check room transports and protocol boundaries
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:network
       - name: Check local Worker recovery, abuse boundaries and traffic measurements
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:rooms:local
       - name: Check procedural audio and resource ownership
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:audio
       - name: Check renderer and camera parity with the legacy scene
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:render
       - name: Check desktop input parity with the legacy handlers
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:input
       - name: Check React screens, UI store and cleanup
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:ui
       - name: Check the composed app flows, four clients and cleanup
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:app
       - name: Check course catalog and stale metadata
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:courses
       - name: Check CLI list, validate and shot commands
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:cli
       - name: Check physics and mechanics
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:physics
       - name: Check ported legacy smoke assertions
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:integration
       - name: Check overnight backup, preflight and session limits
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:overnight
       - name: Check bounded Gemini handoffs (fake Gemini, nothing sent)
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm run test:gemini
 
   browser-ci:
@@ -85,23 +120,48 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # A pull request needs the merge commit and its parents to classify the change.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - name: Set up the verified Node version
         uses: actions/setup-node@v7
         with:
           node-version: '26.10.0'
           cache: npm
+      # Documentation-only pull requests skip the install, build and test steps below. The job and its name still
+      # report, so required checks pass. The decision comes from the same changed-path mapping as `npm run checks`
+      # (tools/cli/checks.mjs): every changed path must be documentation no code reads; an unmapped path means the
+      # full suite. Pushes to main, nightly and manual runs always run everything.
+      - name: Classify the change (documentation only?)
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            # The checkout is the PR's merge commit: its first parent is the base, so the diff is the PR's own changes.
+            node tools/cli/main.mjs checks --docs-only --since HEAD^1 | tee -a "$GITHUB_OUTPUT"
+          else
+            echo 'docs-only=false' | tee -a "$GITHUB_OUTPUT"
+          fi
       - name: Install locked dependencies
+        if: steps.scope.outputs.docs-only != 'true'
         run: npm ci
+      # Browser binaries are cached per browser and lockfile; `install --with-deps` below then only fetches system libraries.
+      - name: Cache the Playwright browser
+        if: steps.scope.outputs.docs-only != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - name: Install the Playwright browser and its system libraries
+        if: steps.scope.outputs.docs-only != 'true'
         run: npx playwright install --with-deps ${{ matrix.browser }}
       # GPU-less runners: headless Firefox gets no WebGL and Chromium's SwiftShader is too slow for the
       # real-time putt timers, so both run headed on a virtual display with Mesa's software GL.
       - name: Install a virtual display and software OpenGL
-        if: matrix.browser != 'webkit'
+        if: matrix.browser != 'webkit' && steps.scope.outputs.docs-only != 'true'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
       # PR #51 accidentally merged the diagnostic workflow. Restore the normal gates;
       # keep the diagnostic probe available explicitly, outside the default acceptance run.
       - name: Run real-browser solo, practice and server-room WebSocket flows
+        if: steps.scope.outputs.docs-only != 'true'
         run: |
           # Tests tagged @slow (for example nine real browser windows at once) run nightly and on manual runs only.
           SKIP='join repro'
@@ -114,7 +174,7 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
       - name: Upload the Playwright report on failure
-        if: failure()
+        if: failure() && steps.scope.outputs.docs-only != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ matrix.browser }}
