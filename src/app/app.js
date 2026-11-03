@@ -11,6 +11,7 @@ import { CAMERA_VIEW_LABELS } from '../camera/index.js';
 import { loadCosmetics, saveCosmetics, selectCosmetic } from '../cosmetics/index.js';
 import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
+import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { aimModeOf, auraSourcesOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
@@ -37,9 +38,10 @@ const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
  * @param {() => number} [options.random=Math.random]
  * @param {Function} [options.createWebGLRenderer] Renderer seam (tests)
  * @param {() => object} [options.createAudio] Audio seam (tests)
+ * @param {typeof DISPLAY} [options.display] Presentation settings; development builds pass a live, tunable object
  * @param {(options: object) => object} [options.createTransport] Online transport seam (tests use the in-memory hub)
  */
-export function createApp({ root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket }) {
+export function createApp({ root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket, display = DISPLAY }) {
   const clock = { now: () => win.performance.now(), setTimeout: (f, d) => win.setTimeout(f, d), clearTimeout: id => win.clearTimeout(id) };
   const data = createCourseData();
   const courses = createCourseInfo(data);
@@ -435,7 +437,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     if (!canvas || renderer || webglFailed || disposed) return;
     // Without WebGL (disabled, blocklisted driver, GPU-less machine) the UI keeps working without the 3D view.
     try {
-      renderer = createGameRenderer({ THREE, canvas, random, devicePixelRatio: win.devicePixelRatio || 1, ...(createWebGLRenderer ? { createWebGLRenderer } : {}) });
+      renderer = createGameRenderer({ THREE, canvas, random, devicePixelRatio: win.devicePixelRatio || 1, ...(createWebGLRenderer ? { createWebGLRenderer } : {}), display });
     } catch (error) {
       webglFailed = true;
       win.console?.warn('Putt Pals: 3D view unavailable.', error);
@@ -447,7 +449,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     view = createGameView({ renderer });
     const ray = new THREE.Raycaster();
     input = createInputAdapter({
-      canvas, window: win, camera: view.rig, dispatch,
+      canvas, window: win, camera: view.rig, dispatch, display,
       pickGround(clientX, clientY) {
         if (!putt) return null;
         const r = canvas.getBoundingClientRect();

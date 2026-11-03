@@ -146,7 +146,7 @@ settings instead of copying defaults.
 Ball dimensions agree between collision geometry and rendering. Arrow length and
 thickness are presentation settings; shot strength and drag-to-power mapping are
 separate behavior/input settings. Existing settings such as ball.radius,
-shotPower and aim.arrowMaxLength should be reused, not recreated.
+shotPower and DISPLAY aim.arrowMaxLength should be reused, not recreated.
 
 Keep course data and intentional per-ball effect overrides explicit.
 Configuration extraction preserves current shipped values and behavior.
@@ -184,14 +184,39 @@ provide the local URL and steps and mark interactive acceptance pending.
 
 This panel is planned until implementation and verification are recorded.
 
-## Legacy retirement
+## Legacy retirement (DX3, complete)
 
-Inventory every active consumer of `putt-pals.html` and `tools.js`.
-Migrate required CLI commands, regression checks, test helpers, build inputs,
-script-preservation checks and documentation to the modular application.
-Preserve useful independent regression fixtures and required provenance.
+`putt-pals.html`, `tools.js` and the infrastructure that existed only to run or extract them were removed.
+The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
 
-Remove obsolete files only after replacement coverage and build checks pass.
-Do not weaken useful tests to obtain a passing migration.
-Git history preserves historical source; a second runnable game is unnecessary.
-Legacy references above describe temporary dependencies, not permanent support.
+What replaced each consumer:
+
+| Was | Now |
+| --- | --- |
+| `tools.js check`, `solve`, `rank`, `list`, `arena` | `tools/cli` (`npm run check`, `solve`, `rank`) |
+| `tools.js surfaces`, `cups`, `mechanics` | `tests/physics.test.cjs` |
+| `tools.js smoke`, `smoke-multi` | The modular suites mapped below; `test:smoke` and `test:multiplayer` no longer exist |
+| Parity tests that executed the legacy game | Recorded fixtures in `tests/fixtures/legacy-reference/`: course rules, starters, geometry hash, arenas and mechanic chamber (`data.json`), sound recipes (`audio-signatures.json`), r128 course layout hashes (`three-r128-course-topology.json`), aim maths and camera angles (`input.json`), HUD and scorecard strings (`ui.json`), and 552 renderer readings (`render-tape.json`) replayed on the vendored Three.js r128 (`tests/vendor/three-r128.js`, test-only) |
+| VM adapter, exporters, inventory and visual-parity scripts | Removed. `src/courses/definitions.js` and `arena-specs.js` are now the source of truth for course data |
+| Second built page, script-preservation build check, `/putt-pals.html` header rule | Removed; `scripts/check-build.cjs` checks the single app page and that no development-only code ships |
+| `tools/cli validate` live hashing | Compares the recorded provenance hashes only (`tests/fixtures/source-inventory.json`) |
+
+Smoke assertion mapping (legacy area to modular coverage):
+
+| Legacy smoke area | Modular coverage |
+| --- | --- |
+| Sway, spread, shot angle (P24 aim rules) | `input.test.cjs` aim rules and shots |
+| Lobby, Join, solo, practice and putt practice (P28, P29), multi-player disabling | `ui.test.cjs` landing, lobby, practice; `session.test.cjs` practice; `app.test.cjs` practice scenarios |
+| Voting, countdown, ties, early start, host and guest rules | `session.test.cjs`, `network.test.cjs`, `ui.test.cjs` tournament |
+| Strokes without a cap, splash, timeouts, par plus penalty, limits (P24, P26) | `integration/out-of-bounds.test.cjs`, `session.test.cjs`, `contracts.test.cjs`, `physics.test.cjs` |
+| Par, penalty and HUD countdown (P25), 10 s warning | `courses.test.cjs`, `ui.test.cjs` HUD and warning |
+| Scorecard, HIO, T/O, leader, K and Escape (P27) | `ui.test.cjs` scorecard and model, `app.test.cjs` solo |
+| Camera views, shortcuts, drag and arrow orbit (P30), free roam | `input.test.cjs`, `render.test.cjs` |
+| Putt transition arc, 1.5 s, no camera jump | `camera.test.cjs` (independent); `render.test.cjs` (recorded legacy poses) |
+| Wall fade (P31) | `render.test.cjs` wall fade scenarios |
+| Audio cues, listener, panner, mute | `audio.test.cjs`, `app.test.cjs` solo |
+| Four-client tournament, disconnect, rejoin, results | `app.test.cjs` four clients, `network.test.cjs`, `browser/multiplayer.spec.cjs`, `browser/server-room.spec.cjs` |
+| No runtime errors | Playwright page-error checks, `app.test.cjs` |
+
+Where a parity test still names the legacy game, it compares against the recorded output above, not a running copy.
+Re-recording is no longer possible without checking out b1a57c4; changing a recorded value needs the same deliberate review as any fixture regeneration.

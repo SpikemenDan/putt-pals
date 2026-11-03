@@ -5,7 +5,7 @@ const { spawnSync } = require('node:child_process');
 const os = require('node:os');
 const vm = require('node:vm');
 const { pathToFileURL } = require('node:url');
-const { loadLegacy, legacyRawCourses, sourceHashes } = require('../tools/legacy-adapter.cjs');
+const reference = require('./support/legacy-reference.cjs');
 
 const root = path.resolve(__dirname, '..');
 const currentShots = require('./fixtures/cup-capture/solutions.json');
@@ -16,8 +16,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
 
 (async () => {
   const commands = await import(pathToFileURL(path.join(root, 'tools/cli/commands.mjs')).href);
-  const legacy = loadLegacy();
-  const raw = legacyRawCourses(legacy);
+  const raw = reference.rules();
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const { createCourseData, validateCourseGeometry, createCourseDocument, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
@@ -158,26 +157,20 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(rank.status, 2, rank.stderr);
     assert.match(rank.stdout, /Current difficulty remains unverified/);
   });
-  run('all six arena transforms and resolved rules match legacy generation exactly', () => {
-    const source = fs.readFileSync(path.join(root, 'tools.js'), 'utf8');
-    const marker = 'const[,,cmd,...args]=process.argv;';
-    assert.equal(source.split(marker).length, 2);
-    const context = { require, __dirname: root, process, performance, console };
-    vm.createContext(context);
-    vm.runInContext(source.slice(0, source.indexOf(marker)) + '\nthis.ref={SPECS,arenaData,arenaLine};', context);
+  run('all six arena transforms and resolved rules match the recorded legacy generation exactly', () => {
+    const recorded = reference.arenas();
     assert.equal(arenaNames.length, 6);
+    assert.deepEqual([...arenaNames].sort(), Object.keys(recorded).sort());
     for (const name of arenaNames) {
-      const chambers = JSON.parse(JSON.stringify(context.ref.SPECS[name][1]));
+      const { chambers: recordedChambers, geometry, course: expected } = recorded[name];
+      const chambers = JSON.parse(JSON.stringify(recordedChambers));
       const before = structuredClone(chambers);
-      assert.deepEqual(JSON.parse(JSON.stringify(buildArenaGeometry(chambers))), JSON.parse(JSON.stringify(context.ref.arenaData(chambers))));
+      assert.deepEqual(JSON.parse(JSON.stringify(buildArenaGeometry(chambers))), geometry, name + ' geometry');
       assert.deepEqual(chambers, before, 'transform must not mutate input');
-      const course = (name, desc, tee, hole, tiles, extra) => ({ name, desc, tee, hole, tiles,
-        q: [], pl: [], rp: [], movers: [], ice: [], slime: [], pd: [], tp: [], fan: [], tornado: [], ...extra });
-      const expected = vm.runInNewContext(context.ref.arenaLine(name).trim().replace(/,$/, ''), { course });
-      assert.deepEqual(generateArena(name), JSON.parse(JSON.stringify(expected)), name);
+      assert.deepEqual(generateArena(name), expected, name);
       const changed = generateArena(name);
       changed.w[0][0] += 100;
-      assert.deepEqual(generateArena(name), JSON.parse(JSON.stringify(expected)), 'output must not share mutable data');
+      assert.deepEqual(generateArena(name), expected, 'output must not share mutable data');
     }
   });
   run('arena input validation rejects malformed or unsupported chamber data', () => {
@@ -190,18 +183,17 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(commands.runArena('__proto__').code, 1);
     assert.equal(commands.runArena().code, 1);
   });
-  run('arena command emits course JSON without modifying game source', () => {
-    const before = fs.readFileSync(path.join(root, 'putt-pals.html'));
+  run('arena command emits course JSON', () => {
     const out = cli('arena', 'Grand Finale');
     assert.equal(out.status, 0, out.stderr);
     assert.deepEqual(JSON.parse(out.stdout), generateArena('Grand Finale'));
-    assert.deepEqual(fs.readFileSync(path.join(root, 'putt-pals.html')), before);
     assert.equal(cli('arena', 'unknown').status, 1);
   });
   run('imported geometry and resolved rules exactly match all legacy courses', () => {
-    assert.deepEqual(data.definitions, JSON.parse(JSON.stringify(legacy.HOLES)));
+    assert.equal(data.definitions.length, reference.holeCount);
+    assert.equal(reference.canonicalSha256(data.definitions), reference.holesCanonicalSha256, 'geometry matches the recorded legacy HOLES');
     assert.deepEqual(data.rules, JSON.parse(JSON.stringify(raw)));
-    assert.deepEqual(data.sourceHashes, sourceHashes());
+    assert.deepEqual(data.sourceHashes, reference.sources());
     const fresh = createCourseData();
     fresh.definitions[0].w[0][0] += 99;
     fresh.rules[0].putts[0].tee[0] += 99;
@@ -243,7 +235,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     bad[0].putts[0].par = 0;
     assert.equal(commands.runList(bad).code, 1);
   });
-  run('process: list and shot work without legacy HTML, tools.js or VM adapter', () => {
+  run('process: list and shot work from the shared modules alone', () => {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-cli-imports-'));
     try {
       fs.cpSync(path.join(root, 'src'), path.join(temp, 'src'), { recursive: true });
@@ -257,7 +249,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   });
   run('validate detects stale exported source provenance', () => {
-    const out = commands.runValidate({ raw: data.rules, inventory, hashes: sourceHashes(), courseHashes: { ...data.sourceHashes, htmlSha256: 'stale' } });
+    const out = commands.runValidate({ raw: data.rules, inventory, courseHashes: { ...data.sourceHashes, htmlSha256: 'stale' } });
     assert.equal(out.code, 1);
     assert.ok(out.lines.some(line => line.includes('Imported courses:')));
   });
@@ -302,30 +294,30 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(lines.filter(l => l.includes('starter')).length, 6);
   });
   run('validate passes on the live data', () => {
-    const { code, lines } = commands.runValidate({ raw, inventory, hashes: sourceHashes() });
+    const { code, lines } = commands.runValidate({ raw, inventory });
     assert.equal(code, 0, lines.join('\n'));
   });
   run('validate fails on stale data', () => {
     const edited = JSON.parse(JSON.stringify(raw));
     edited[0].putts[0].par += 1;
-    const { code, lines } = commands.runValidate({ raw: edited, inventory, hashes: sourceHashes() });
+    const { code, lines } = commands.runValidate({ raw: edited, inventory });
     assert.equal(code, 1);
     assert.ok(lines.some(l => /putt 0: par/.test(l)));
   });
-  run('shot results match between imported and legacy course DATA under S2 physics', () => {
+  run('recorded reference shots run to a legal end state and are deterministic under S2 physics', () => {
     const refs = inventory.simulationReferences.shots;
     assert.equal(refs.length, 6);
     for (const ref of refs) {
-      const out = commands.runShot(legacy.HOLES, ref.map, ref.putt, ref.shot.deg, ref.shot.power);
+      const out = commands.runShot(data.definitions, ref.map, ref.putt, ref.shot.deg, ref.shot.power);
       assert.equal(out.code, 0);
-      // Historical sink ticks are intentionally obsolete after S2; the data adapters must still agree.
+      // Historical sink ticks are intentionally obsolete after S2; the result must still be a legal end state.
       assert.ok(['play', 'sunk'].includes(out.result.mode));
       assert.deepEqual(commands.runShot(data.definitions, ref.map, ref.putt, ref.shot.deg, ref.shot.power), out, `map ${ref.map} imported trajectory result`);
     }
   });
   run('shot rejects bad arguments', () => {
     for (const args of [[0, '', 0, 0.5], [0, 0, '', 0.5], [0, 0, 0, ''], [99, 0, 0, 0.5], [0, 9, 0, 0.5], [0, 0, 'x', 0.5], [0, 0, 0, 0], [0, 0, 0, 1.5]]) {
-      assert.equal(commands.runShot(legacy.HOLES, ...args).code, 1, JSON.stringify(args));
+      assert.equal(commands.runShot(data.definitions, ...args).code, 1, JSON.stringify(args));
     }
   });
   run('process: list exits 0 and prints 22 lines', () => {

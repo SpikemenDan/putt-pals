@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
 import { createCourseData, createCourseDocument, parseCourseDocument, toSimulationCourses } from '../../src/courses/index.js';
 import fs from 'node:fs';
 import { createDifficultyProvenance } from './provenance.mjs';
@@ -9,10 +8,6 @@ import { fileURLToPath } from 'node:url';
 import { runList, runValidate, runShot, runSolve, runArena, runCheck, runRank, runExport, USAGE } from './commands.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const liveHashes = () => Object.fromEntries(
-  [['htmlSha256', 'putt-pals.html'], ['toolsSha256', 'tools.js']].map(([key, file]) =>
-    [key, createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]),
-);
 function finish({ code, lines }) {
   console.log(lines.join('\n'));
   process.exitCode = code;
@@ -27,7 +22,7 @@ function main(argv) {
   if (command === 'validate') {
     const data = createCourseData();
     const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
-    return finish(runValidate({ raw: data.rules, inventory, hashes: liveHashes(), courseHashes: data.sourceHashes }));
+    return finish(runValidate({ raw: data.rules, inventory, courseHashes: data.sourceHashes }));
   }
   const document = courseFile === undefined ? createCourseDocument()
     : parseCourseDocument(fs.readFileSync(courseFile, 'utf8'));

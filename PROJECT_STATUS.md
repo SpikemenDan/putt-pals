@@ -23,8 +23,7 @@ The product vision (MODERNIZATION_PLAN.md) is only partly built. Not built: Putt
 1. **Difficulty is not certified, and the acceptance rule is changing.** The solver, `rank` ladder and par defaults all assume every putt has a robust single-shot hole-in-one, and S2's cup-capture change already left five hard putts (Cyclone Ring putts 3 and 5, Grand Finale putts 1, 3 and 5) without one. The owner has dropped that requirement: every putt must instead be completable in par (2 to 6). S3 (forgiving physics) and SV1 (par solver) replace the old measures; until then recorded counts are stale. Details: docs/reviews/S2_CUP_CAPTURE.md and B4_DIFFICULTY.md.
 2. **Client-trusted gameplay.** Each browser simulates its own ball; there is no anti-cheat. The service now owns room continuity and controller election. The retained empty-room admission fix is delivered in PR #145 (`28072ff`), pending preview deployment; separate-network acceptance is deferred. Namespace usage observations are recorded, but no hosted quota-exhaustion or zero-idle-cost claim is made.
 3. **Real-world validation gaps.** Hosted same-network browser play and recovery are verified; independent-network play/recovery is deferred. Actual audio listening and broader hosted browser/hardware coverage remain separate acceptance work.
-4. **Legacy tooling.** `tools.js` and the migration exporters still extract code from the legacy HTML; modern CLI commands import the shared simulation directly.
-5. **Renderer evidence.** Frame times were measured on a Mac M1 Pro probe and validated on two Windows laptop GPUs (docs/reviews/R2_WINDOWS_GPU.md); there is no broader hardware matrix.
+4. **Renderer evidence.** Frame times were measured on a Mac M1 Pro probe and validated on two Windows laptop GPUs (docs/reviews/R2_WINDOWS_GPU.md); there is no broader hardware matrix.
 
 ## Verification
 

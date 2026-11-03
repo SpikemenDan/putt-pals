@@ -318,6 +318,23 @@ const { JSDOM } = require('jsdom');
       assert.deepEqual(toonLayout, legacyLayout, `toon layout of ${course.name}`);
     }
   }
+  {
+    // DISPLAY ball.visualScale multiplies the drawn size of local and remote balls and their resting height; the default is 1.
+    const { createDisplay } = await import('../src/shared/display.js');
+    const frameOf = display => {
+      const scaled = createGameRenderer({ THREE: namespace, canvas, random: () => .37, createWebGLRenderer: () => backend, ...(display ? { display } : {}) });
+      const v = createGameView({ renderer: scaled });
+      v.setCourse(definitions[0], 0);
+      v.frame({ now: 16, dt: 0.016, local: { x: 10, y: 20, z: 0, vx: 0, vy: 0, moving: false, mode: 'play', color: 0 } });
+      const out = { scale: scaled.localBall.scale.x, y: scaled.localBall.position.y };
+      v.dispose();
+      return out;
+    };
+    const normal = frameOf(), big = frameOf(createDisplay({ ball: { visualScale: 2 } }));
+    assert.equal(normal.scale, 1);
+    assert.equal(big.scale, 2);
+    assert.ok(Math.abs((big.y - normal.y) - 5) < 1e-9, 'a doubled ball rests one radius higher');
+  }
   const fallback = createGameRenderer({ THREE: fallbackNamespace, canvas, createWebGLRenderer: () => backend, style: 'legacy' });
   assert.equal(failedGeneratorReleased, 1); assert.equal(temporaryReleased, 1);
   fallback.setCourse(definitions[0]); fallback.dispose();

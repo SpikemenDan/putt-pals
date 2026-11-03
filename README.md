@@ -2,7 +2,7 @@
 
 A fast-paced 3D multiplayer mini-golf game for desktop browsers. It blends arcade party chaos (power-ups, hazards, trick shots) with skill-based putting: easy to jump into with friends, with real depth for competitive players. Modes today: solo practice, single-putt replay, private friend rooms, and 3-, 6- and 9-map tournaments. Planned: Putt Pong, a No Power-Ups mode, a full power-up and hazard catalog, vertical courses and cosmetics. See [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md) for the vision and plan.
 
-The modular app (`index.html` and `src/`) is the game. The original single-file version, `putt-pals.html`, remains temporarily because legacy tools and tests depend on it. It will be removed after those consumers are migrated.
+The modular app (`index.html` and `src/`) is the game. The original single-file version was retired. The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
 
 ## Setup
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Vite prints the local URL (normally `http://127.0.0.1:5173/`). The modular app is served at the root path; the legacy game is at `/putt-pals.html` (not opened by default). `dev` and `preview` open the root page. Use solo mode to develop without any online service.
+Vite prints the local URL (normally `http://127.0.0.1:5173/`). The app is served at the root path, and `dev` and `preview` open it. In `npm run dev` a "Display tuning" panel (development only, docs/DISPLAY.md) adjusts presentation settings live. Use solo mode to develop without any online service.
 
 ## Commands
 
@@ -35,8 +35,6 @@ These commands describe the supplied repository snapshot. Workflow documentation
 | `npm run test:cli` | Course, solver and arena commands, file inputs and failure paths |
 | `npm run test:physics` | Legacy surface, cup and mechanic checks; may take around a minute |
 | `npm run test:integration` | Integration checks such as out-of-bounds handling |
-| `npm run test:smoke` | Legacy solo, tournament, practice, scorecard and camera flows in jsdom |
-| `npm run test:multiplayer` | Legacy four-client flow over an in-memory PeerJS substitute |
 | `npm run test:browser` | Playwright real-browser suites (`npx playwright test --project=chromium` for Chromium only) |
 | `npm run test:rooms:local` | Build, then check the local Cloudflare Worker and Durable Object runtime |
 | `npm test` | The main suites above, sequentially; allow several minutes |
@@ -46,7 +44,6 @@ These commands describe the supplied repository snapshot. Workflow documentation
 | `npm run rooms:dev` | Run the local Worker room runtime (see [Cloudflare setup](docs/networking/CLOUDFLARE_SETUP.md)) |
 | `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; add `--full` for an exhaustive search |
 | `npm run rank` | Print recorded difficulty counts; these are stale and do not certify current difficulty |
-| `npm run baseline:solver` | Regenerate the solver baseline fixture (several minutes; overwrites it) |
 
 jsdom suites stub WebGL, canvas and audio and use fake networks. They do not prove real rendering, audio quality or WebRTC connectivity; use the Playwright suites and manual playtests for those. Exhaustive difficulty sweeps run separately from pull-request checks. Solver and fixture details are in [docs/BASELINE.md](docs/BASELINE.md) and [docs/reviews/B4_DIFFICULTY.md](docs/reviews/B4_DIFFICULTY.md).
 

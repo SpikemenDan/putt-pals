@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs');
-const { legacyRawCourses, legacyStarters, sourceHashes } = require('../tools/legacy-adapter.cjs');
+const reference = require('./support/legacy-reference.cjs');
 
 const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
 
@@ -15,7 +15,7 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     catch (error) { failed++; console.log('FAIL:', name, '\n  ', error.message); }
   };
 
-  const raw = legacyRawCourses();
+  const raw = reference.rules();
   const catalog = buildCourseCatalog(raw);
 
   run('all 22 legacy maps pass the shared course schema', () => {
@@ -24,7 +24,7 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     assert.equal(catalog.courses.length, 22);
   });
   run('legacy STARTERS list equals the shared constant', () => {
-    assert.deepEqual(legacyStarters(), [...STARTER_COURSE_INDICES]);
+    assert.deepEqual(reference.starters(), [...STARTER_COURSE_INDICES]);
   });
   run('six starter maps are flagged and have exactly six putts', () => {
     const starters = catalog.courses.filter(c => c.starter);
@@ -58,8 +58,8 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     const result = detectStaleCourses(raw, inventory.courses);
     assert.deepEqual(result.differences, []);
   });
-  run('live source hashes match the recorded inventory', () => {
-    const result = detectStaleHashes(sourceHashes(), inventory);
+  run('recorded legacy source hashes match the recorded inventory', () => {
+    const result = detectStaleHashes(reference.sources(), inventory);
     assert.deepEqual(result.differences, []);
   });
   run('stale detection reports changed par, tee, name, putt count and course count', () => {

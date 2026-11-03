@@ -7,6 +7,7 @@ import { displayColor } from './materials.js';
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
+import { DISPLAY } from '../shared/display.js';
 import { EFFECT_COLORS, EFFECT_KINDS } from './materials.js';
 import { addInk } from './outline.js';
 
@@ -178,18 +179,16 @@ export function createConfetti(THREE, random) {
   };
 }
 
-/** Aim arrow width and head proportions (world units). */
-const ARROW_SHAFT_HALF_WIDTH = 1.3, ARROW_HEAD_HALF_WIDTH = 3.6, ARROW_HEAD_LENGTH = 8, ARROW_FALLBACK_MAX_LENGTH = 180;
-
 /**
  * Aim guide: one flat arrow from the ball along the swayed shot direction. Its length is
  * proportional to the pull from zero (no minimum). It shows direction and power only, not a landing spot.
+ * Width, head and opacity come from `display.aim` (read on every show(), so a live display object takes effect at once).
  */
-export function createAimGuide(THREE) {
+export function createAimGuide(THREE, display = DISPLAY) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(27), 3));
   // Depth-tested (CL2 #103): walls, ramps and other balls hide the arrow instead of it drawing over them.
-  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.92, depthWrite: false }));
+  const arrow = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: display.aim.arrowOpacity, depthWrite: false }));
   arrow.frustumCulled = false;
   arrow.renderOrder = 10;
   arrow.visible = false;
@@ -198,20 +197,22 @@ export function createAimGuide(THREE) {
     hide() { arrow.visible = false; },
     /**
      * @param {{x:number,y:number,z:number}} bp Ball centre (world)
-     * @param {{charge:number, angle:number, length?:number}} aim angle is the swayed shot direction; length defaults to charge * 180.
+     * @param {{charge:number, angle:number, length?:number}} aim angle is the swayed shot direction; length defaults to charge * display.aim.arrowMaxLength.
      */
     show(bp, aim) {
-      const L = aim.length ?? aim.charge * ARROW_FALLBACK_MAX_LENGTH;
-      const head = Math.min(ARROW_HEAD_LENGTH, L * 0.5), shaft = L - head;
+      const a = display.aim;
+      const L = aim.length ?? aim.charge * a.arrowMaxLength;
+      const head = Math.min(a.arrowHeadLength, L * 0.5), shaft = L - head;
       const dx = Math.cos(aim.angle), dz = Math.sin(aim.angle), px = -dz, pz = dx;
       const pos = geometry.attributes.position;
       const v = (i, along, side) => pos.setXYZ(i, bp.x + dx * along + px * side, bp.y, bp.z + dz * along + pz * side);
-      const w = ARROW_SHAFT_HALF_WIDTH, hw = ARROW_HEAD_HALF_WIDTH;
+      const w = a.arrowShaftHalfWidth, hw = a.arrowHeadHalfWidth;
       v(0, 0, -w); v(1, shaft, -w); v(2, shaft, w);
       v(3, 0, -w); v(4, shaft, w); v(5, 0, w);
       v(6, shaft, -hw); v(7, L, 0); v(8, shaft, hw);
       pos.needsUpdate = true;
       geometry.computeBoundingSphere();
+      arrow.material.opacity = a.arrowOpacity;
       arrow.material.color.setHSL((120 - aim.charge * 120) / 360, 0.85, 0.6);
       arrow.visible = true;
     },
