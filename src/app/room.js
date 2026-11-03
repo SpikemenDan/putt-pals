@@ -172,6 +172,8 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
     command(event) { return transport.send({ type: 'command', payload: event }); },
     /** Deployed objects for this room: the host's own list, or what the host's last snapshot carried. */
     get deployables() { return transport.isHost ? unbind?.list() ?? [] : last?.deployables ?? []; },
+    /** Why the host's own last placement was refused ('' when it was not). */
+    get deployReason() { return unbind?.reason?.() ?? ''; },
     /** Place a Bumper or Orbital Bumper (G1e). The host applies it directly; a guest sends DEPLOY_OBJECT. Returns whether it was accepted (host) or sent (guest). */
     deploy(kind, x, y) { return transport.isHost ? !!unbind?.deploy({ type: 'DEPLOY_OBJECT', kind, x, y }) : transport.send({ type: 'command', payload: { type: 'DEPLOY_OBJECT', kind, x, y } }); },
     /** Report that this client's ball hit a deployed object (G1e). */

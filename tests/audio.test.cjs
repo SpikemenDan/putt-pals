@@ -88,6 +88,21 @@ class Gestures {
       await f.adapter.dispose(); assert.equal(f.c.closeCalls, 1);
     }
   });
+  await run('deployable cues (G1e): Bumper and Orbital Bumper hits and placements have their own sounds', async () => {
+    const f = make(); await f.adapter.unlock();
+    const shapes = new Set();
+    for (const name of ['bumper_hit', 'orbital_hit', 'pu_bumper', 'pu_orbital']) {
+      const g = make(); await g.adapter.unlock();
+      assert.equal(g.adapter.play(name), true, name + ' recipe exists');
+      shapes.add(JSON.stringify(signature(g.c)));
+      g.c.endAll();
+    }
+    assert.equal(shapes.size, 4, 'each cue is its own recipe');
+    for (const [event, ok] of [[{ type: 'deployable_hit', kind: 'bumper' }, true], [{ type: 'deployable_hit', kind: 'orbital' }, true], [{ type: 'deployable_hit', kind: 'mag' }, false], [{ type: 'powerup', id: 'bumper' }, true], [{ type: 'powerup', id: 'orbital' }, true]]) {
+      assert.equal(f.adapter.handleEvent(event), ok, JSON.stringify(event)); f.c.endAll();
+    }
+    assert.equal(f.adapter.handleEvent({ type: 'deployable_hit', kind: 'bumper' }, { remote: true }), false, 'remote players never trigger local feedback');
+  });
   await run('menu, turn-ready and ring cues (M1d) play as short voices and route through handleEvent', async () => {
     for (const [name, event] of [['menu_hover', { type: 'ui', kind: 'hover' }], ['menu_click', { type: 'ui', kind: 'click' }], ['ready', { type: 'turn_ready' }], ['ring', { type: 'ring' }]]) {
       const f = make(); await f.adapter.unlock();

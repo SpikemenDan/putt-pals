@@ -107,6 +107,15 @@ const assert = require('node:assert/strict');
   // ---- host reducers: placement caps and the impact rate limit
   const ctx = (extra = {}) => ({ playerId: 'p1', map: 0, putt: 0, time: 5, sequence: 1, ...extra });
   const put = (list, kind, extra) => D.placeDeployable(list, { kind, x: 30, y: 40 }, ctx(extra));
+  // Bodies may sit close, but not inside each other; the cup stays uncovered.
+  {
+    const R = D.DEPLOYABLE_PARAMS.bumperRadius, base = [D.placeDeployable([], { kind: 'bumper', x: 100, y: 100 }, ctx()).placed];
+    assert.equal(D.placeDeployable(base, { kind: 'bumper', x: 100 + 2 * R - 1, y: 100 }, ctx({ sequence: 2 })).reason, 'overlap', 'bodies would overlap');
+    assert.equal(D.placeDeployable(base, { kind: 'orbital', x: 100 + 2 * R, y: 100 }, ctx({ sequence: 2 })).placed?.id, 'd2', 'touching bodies are fine');
+    const arena = { tiles: [[0, 0, 400, 200]], hole: [200, 100], cup: 15, w: [] };
+    assert.equal(D.placementClear(arena, 200 + 15 + R - 1, 100), false, 'covers the cup');
+    assert.equal(D.placementClear(arena, 200 + 15 + R + 1, 100), true, 'just beside the cup');
+  }
   let placed = put([], 'bumper');
   assert.deepEqual(placed.placed, { id: 'd1', kind: 'bumper', x: 30, y: 40, owner: 'p1', impacts: 0, placedAt: 5, map: 0, putt: 0 });
   assert.equal(put([], 'mag').reason, 'invalid', 'only course items can be deployed');
@@ -154,7 +163,7 @@ const assert = require('node:assert/strict');
   cmd('g1', { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 5, y: 6 });
   assert.ok(last().deployables.every(d => D.validDeployable(d)), 'every published record passes the wire validator');
   assert.equal(last().deployables.length, 1); assert.equal(last().deployables[0].owner, 'g1'); assert.equal(last().deployables[0].placedAt, 2);
-  assert.equal(unbind.deploy({ kind: 'orbital', x: 9, y: 9 }), true, 'the host places for itself');
+  assert.equal(unbind.deploy({ kind: 'orbital', x: 9 + 3 * D.DEPLOYABLE_PARAMS.bumperRadius, y: 9 }), true, 'the host places for itself');
   assert.equal(last().deployables.length, 2);
   cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' }); assert.equal(last().deployables.find(d => d.id === 'd1').impacts, 1);
   cmd('g2', { type: 'DEPLOY_HIT', id: 'd1' }); assert.equal(last().deployables.find(d => d.id === 'd1').impacts, 1, 'rate-limited');

@@ -14,7 +14,7 @@ import { createInputAdapter } from '../input/index.js';
 import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView, resolveRenderCourse } from '../render/index.js';
-import { activeDeployables, addToInventory, placementClear, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -64,6 +64,19 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   // Bumper / Orbital Bumper placement (G1e): `placing` while the player picks a spot, `awaiting` while a guest's DEPLOY_OBJECT is in flight.
   let placing = null, awaiting = null, cursor = null, unbindPlacement = null;
   const AWAIT_MS = 3000;
+  let lastBumps = '';
+  /** Top-bar text for the placed bumpers: how many hits each has left (G1e). */
+  const bumpsText = list => list.map(d => (getPowerup(d.kind)?.name || d.kind) + ' ' + (DEPLOYABLE_PARAMS.maxImpacts - d.impacts)).join(' · ');
+  function showBumps(list) {
+    const text = list.length ? 'HITS LEFT: ' + bumpsText(list) : '';
+    if (text !== lastBumps) { lastBumps = text; setLocal({ bumps: text }); }
+  }
+  const PLACE_REFUSED = {
+    blocked: "Can't place it there: it needs open floor, clear of walls and the cup. Your item is kept.",
+    overlap: "Can't place it there: it would overlap another bumper. Your item is kept.",
+    'player-full': 'You already have the most bumpers allowed on the course. Your item is kept.',
+    'room-full': 'The course is full of bumpers. Your item is kept.',
+  };
 
   // The power meter subscribes before the canvas exists; forward to the input adapter once it does.
   const aim = { subscribeAim(listener) { aimListeners.add(listener); listener(false, 0); return () => aimListeners.delete(listener); } };
@@ -168,7 +181,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   function endPutt() {
     if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
-    stopPlacing(); awaiting = null;
+    stopPlacing(); awaiting = null; showBumps([]);
     input?.cancel();
     lastSound = null;
   }
@@ -337,7 +350,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     const known = new Set(room.deployables.map(d => d.id));
     stopPlacing();
     const sent = room.deploy(kind, point.x, point.y);
-    if (!sent) { toast('Could not place it there. Your item is kept.'); return; }
+    if (!sent) { toast(PLACE_REFUSED[room.deployReason] || 'Could not place it there. Your item is kept.'); return; }
     if (room.isHost) acceptPlacement(kind); // the host applied it synchronously
     else awaiting = { kind, known, deadline: win.performance.now() + AWAIT_MS };
   }
@@ -358,9 +371,11 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       panoramaBuilt = false;
       if (room.connected) {
         putt.setAuras(auraSourcesOf(remoteBalls()));
-        putt.setDeployables(activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex));
+        const placed = activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex);
+        putt.setDeployables(placed);
+        showBumps(placed);
         const out = putt.frame(t, dt);
-        for (const id of out.deployHits) { room.deployHit(id); audio.handleEvent({ type: 'bounce' }, { origin: [0, 0], speed: 300 }); }
+        for (const id of out.deployHits) { room.deployHit(id); audio.handleEvent({ type: 'deployable_hit', kind: room.deployables.find(d => d.id === id)?.kind }, { speed: 300 }); }
         checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);

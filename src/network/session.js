@@ -22,7 +22,7 @@ import { hitDeployable, placeDeployable } from '../gameplay/deployables.js';
 export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, validPlacement } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
   const positions = new Map(); let dirty = false, stopped = false, timer;
-  let deployables = [], deploySequence = 0; const lastHit = new Map();
+  let deployables = [], deploySequence = 0, deployReason = ''; const lastHit = new Map();
   // The host's own commands arrive locally (no link), so the host is always verified.
   const tokens = new Map(), verified = new Set([transport.peerId]), grace = new Map();
   const endGrace = id => { if (grace.has(id)) { clock.clearTimeout(grace.get(id)); grace.delete(id); } };
@@ -55,6 +55,7 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
       playerId: id, map: snapshot.mapIndex, putt: snapshot.puttIndex, time: transport.localNow() / 1000, sequence: ++deploySequence,
       validPlacement: validPlacement && ((x, y) => validPlacement(snapshot.mapIndex, snapshot.puttIndex, x, y)),
     });
+    deployReason = result.placed ? '' : result.reason;
     if (!result.placed) return false;
     deployables = result.list; publish(); return true;
   };
@@ -108,6 +109,7 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     tokens.clear(); verified.clear(); deployables = []; lastHit.clear();
   };
   unbind.deploy = command => deploy(transport.peerId, command);
+  unbind.reason = () => deployReason; // why the last placement was refused (host's own feedback)
   unbind.list = () => deployables; // the host's own view of the list; guests read it from the snapshot
   unbind.hit = objectId => hit(transport.peerId, objectId);
   return unbind;

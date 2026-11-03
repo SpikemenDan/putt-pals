@@ -329,6 +329,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const [d] = ana.app.room.deployables;
     assert.equal(d.kind, 'bumper'); assert.equal(d.owner, ben.app.room.localId); assert.equal(d.impacts, 0);
     await W.until(() => ben.app.room.deployables.length === 1, 3000, 'guest snapshot carries it');
+    await W.run(300);
+    assert.match(ben.text('[data-ui=hud-info]'), / · HITS LEFT: Bumper 3$/, 'the top bar shows the hits left');
+    assert.match(ana.text('[data-ui=hud-info]'), / · HITS LEFT: Bumper 3$/, 'every player sees the hits left, not only the owner');
     await ana.dispose(); await ben.dispose();
   });
 

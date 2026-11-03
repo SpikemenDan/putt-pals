@@ -90,12 +90,13 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
 }
 
 /**
- * Course check for a placement (host side): the point is on the floor, not over a pit, and the whole body clears
- * every wall by `bumperRadius`. `course` is a resolved course (tiles, pit, w as [x, y, w, h] rows).
+ * Course check for a placement (host side): the point is on the floor, not over a pit, the whole body clears
+ * every wall by `bumperRadius`, and it does not cover the cup. `course` is a resolved course (tiles, pit, w as [x, y, w, h] rows).
  */
 export function placementClear(course, x, y, params = DEPLOYABLE_PARAMS) {
   if (!course || surfaceHeight(course, x, y) <= -999) return false;
   const r = params.bumperRadius;
+  if (Array.isArray(course.hole) && Math.hypot(x - course.hole[0], y - course.hole[1]) < (course.cup ?? 15) + r) return false;
   return !(course.w || []).some(([wx, wy, ww, wh]) => Math.hypot(x - Math.max(wx, Math.min(x, wx + ww)), y - Math.max(wy, Math.min(y, wy + wh))) < r);
 }
 
@@ -117,6 +118,7 @@ export function placeDeployable(list, command, ctx, catalog = POWERUP_CATALOG, p
   if (list.length >= MAX_DEPLOYABLES) return { list, reason: 'room-full' };
   if (list.filter(d => d.owner === ctx.playerId).length >= MAX_DEPLOYABLES_PER_PLAYER) return { list, reason: 'player-full' };
   if (ctx.validPlacement && !ctx.validPlacement(command.x, command.y)) return { list, reason: 'blocked' };
+  if (list.some(d => Math.hypot(d.x - command.x, d.y - command.y) < 2 * params.bumperRadius)) return { list, reason: 'overlap' }; // bodies may sit close, but not inside each other
   const placed = { id: `d${ctx.sequence}`, kind: command.kind, x: command.x, y: command.y, owner: ctx.playerId, impacts: 0, placedAt: ctx.time, map: ctx.map, putt: ctx.putt };
   return validDeployable(placed, catalog, params) ? { list: [...list, placed], placed } : { list, reason: 'invalid' };
 }

@@ -53,8 +53,8 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `deployables.bumperRadius` | 14 | 1 to 100 | Bumper and Orbital Bumper solid radius (world units). |
 | `deployables.bumperRestitution` | 1.1 | 0 to 3 | Bumper bounce: reflected normal speed as a multiple of the incoming speed (above 1 adds a pinball kick). |
 | `deployables.maxImpacts` | 3 | 1 to 20 | Hits a Bumper or Orbital Bumper survives before it disappears. |
-| `deployables.orbitalRange` | 90 | 0 to 1000 | Orbital Bumper ring radius (world units). |
-| `deployables.orbitalPull` | 220 | 0 to 10000 | Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge). |
+| `deployables.orbitalRange` | 60 | 0 to 1000 | Orbital Bumper ring radius (world units). |
+| `deployables.orbitalPull` | 450 | 0 to 10000 | Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge). |
 | `deployables.hitCooldownMs` | 250 | 0 to 5000 | Minimum milliseconds between impact reports for one deployed object. |
 | `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
 | `powerups.tallBallScale` | 1.5 | 1 to 1.6 | Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup). |

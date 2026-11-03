@@ -28,6 +28,11 @@ export function createRecipes({ tone, puff, random }) {
   pu_aim180:(c,t,o)=>{tone(c,o,'sine',500,900,t,.2,.25);tone(c,o,'sine',900,500,t+.2,.2,.25);},
   pu_love:(c,t,o)=>{tone(c,o,'sine',520,780,t,.2,.3);tone(c,o,'sine',660,990,t+.08,.2,.25);},
   pu_hate:(c,t,o)=>{tone(c,o,'sawtooth',300,120,t,.25,.25);puff(c,o,'bandpass',300,150,t,.2,.25);},
+  // G1e: placement stingers and impact sounds for the deployables; the Bumper is a dry pinball thwack, the Orbital Bumper a ringing, higher chime.
+  pu_bumper:(c,t,o)=>{tone(c,o,'triangle',220,440,t,.14,.45);tone(c,o,'square',440,660,t+.06,.08,.1);},
+  pu_orbital:(c,t,o)=>{tone(c,o,'sine',330,990,t,.22,.35);tone(c,o,'sine',335,1000,t+.05,.22,.25);},
+  bumper_hit:(c,t,o)=>{tone(c,o,'triangle',720+random()*60,340,t,.09,.7);tone(c,o,'square',1100,520,t,.05,.1);puff(c,o,'bandpass',1800,900,t,.03,.35);},
+  orbital_hit:(c,t,o)=>{tone(c,o,'sine',560+random()*60,1120,t,.16,.55);tone(c,o,'sine',845,1690,t+.02,.16,.3);puff(c,o,'highpass',4500,4500,t,.03,.18);},
   pu_sticky:(c,t,o)=>{puff(c,o,'bandpass',500,250,t,.2,.5);tone(c,o,'sine',200,110,t,.18,.3);}
   });
 }
