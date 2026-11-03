@@ -1,37 +1,40 @@
-// U1 input adapter parity: the legacy game and the extracted adapter run in one jsdom window.
-// Keyboard events go to the shared window, so both see the identical event; pointer events go to each
-// one's canvas with identical coordinates, and the adapter picks ground points through the legacy
-// camera exactly like the legacy planePoint(). Shots are compared bit for bit.
+// U1 input adapter: pointer and keyboard events in a jsdom window drive the extracted adapter and camera rig.
+// Aim maths and camera angles are checked against values recorded from the legacy game before its retirement
+// (tests/fixtures/legacy-reference/input.json, from scripts/record-legacy-input-reference.cjs); everything else
+// is asserted directly. No real-browser claim.
 const assert = require('node:assert/strict');
-const { bootLegacy } = require('./support/legacy-dom.cjs');
+const { JSDOM } = require('jsdom');
+const recorded = require('./fixtures/legacy-reference/input.json');
 
 let passed = 0;
 async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + name); }
 
 (async () => {
-  const legacy = await bootLegacy();
-  const { w, P } = legacy;
-  const THREE = w.THREE;
+  const dom = new JSDOM('<!doctype html><body><input id="nm"></body>', { pretendToBeVisual: true, url: 'http://localhost/' });
+  const w = dom.window;
+  const THREE = await import('three');
+  w.HTMLCanvasElement.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, x: 0, y: 0, width: 800, height: 500, right: 800, bottom: 500 });
+  w.HTMLCanvasElement.prototype.setPointerCapture = function () {};
+  Object.defineProperty(w.HTMLCanvasElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
+  // The local player as the adapter's getState sees it.
+  const me = { mode: 'play', moving: false, steady: 0 };
   const [{ createInputAdapter, InputCommands, spread, sway, shotAngle, accuracyText, chargeFromDrag, FULL_PULL_PX, FULL_PULL_CANVAS_FRACTION, AIM_ARROW_MAX_LENGTH }, { createCameraRig }] = await Promise.all([
     import('../src/input/index.js'), import('../src/camera/index.js'),
   ]);
-  await legacy.play(0, 0, 'standard');
-
-  const legacyCanvas = legacy.$('cv');
+  const { CAMERA_VIEW_LABELS } = await import('../src/camera/rig.js');
   const canvas = w.document.createElement('canvas');
   w.document.body.appendChild(canvas);
   const rig = createCameraRig();
   const ray = new THREE.Raycaster();
-  // Legacy planePoint(): ray from the legacy camera onto the horizontal plane through the ball.
+  // A fixed camera behind and above the ball looking at the cup; the ray meets the horizontal plane through the ball.
+  const cam = new THREE.PerspectiveCamera(60, 800 / 500, 1, 3000);
+  cam.position.set(0, 120, 160); cam.lookAt(0, 0, 0); cam.updateMatrixWorld(true);
   const pickGround = (clientX, clientY) => {
-    ray.setFromCamera(new THREE.Vector2(clientX / 800 * 2 - 1, -clientY / 500 * 2 + 1), P().cam);
-    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -(P().me.z + 5)), new THREE.Vector3());
+    ray.setFromCamera(new THREE.Vector2(clientX / 800 * 2 - 1, -clientY / 500 * 2 + 1), cam);
+    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -5), new THREE.Vector3());
   };
   let active = true, connected = true, forceTransition = false;
-  const getState = () => {
-    const me = P().me;
-    return { active, mode: me.mode, moving: me.moving, connected, transitioning: forceTransition || P().trans, steady: !!me.arm.steady };
-  };
+  const getState = () => ({ active, mode: me.mode, moving: me.moving, connected, transitioning: forceTransition, steady: !!me.steady });
   const commands = [];
   const dispatch = c => commands.push(c);
 
@@ -51,32 +54,27 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   const registered = live.size;
 
   const pointer = (target, type, init) => target.dispatchEvent(new w.PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, button: 0, ...init }));
-  const both = (type, init) => { pointer(canvas, type, init); pointer(legacyCanvas, type, init); };
   const key = (type, k, target = w.document.body) => target.dispatchEvent(new w.KeyboardEvent(type, { key: k, bubbles: true, cancelable: true }));
   let now = 5000;
-  // Let the legacy camera settle behind the ball before aiming (the game draws frames first, too).
-  for (let i = 0; i < 30; i++) legacy.frame(now += 16);
-  const resetBall = () => { const me = P().me; me.moving = false; me.vx = me.vy = 0; me.pend.rev = me.pend.zany = 0; me.arm.steady = 0; };
+  const resetBall = () => { me.moving = false; me.steady = 0; me.mode = 'play'; };
 
-  /** One drag-and-release on both sides; returns the legacy velocity and the adapter command. */
-  function shot({ from = [400, 250], to, frameAt, rev = false, steady = false }) {
+  /** One drag-and-release; returns the dispatched shot command and the guide shown just before release. */
+  function shot({ from = [400, 250], to, frameAt, steady = false }) {
     resetBall();
-    const me = P().me;
-    me.pend.rev = rev ? 1 : 0; me.arm.steady = steady ? 1 : 0;
+    me.steady = steady ? 1 : 0;
     commands.length = 0;
-    both('pointerdown', { clientX: from[0], clientY: from[1] });
-    both('pointermove', { clientX: to[0], clientY: to[1] });
-    legacy.frame(frameAt);
+    pointer(canvas, 'pointerdown', { clientX: from[0], clientY: from[1] });
+    pointer(canvas, 'pointermove', { clientX: to[0], clientY: to[1] });
     const guide = input.frameAim(frameAt / 1000);
     pointer(canvas, 'pointerup', { clientX: to[0], clientY: to[1] });
-    pointer(legacyCanvas, 'pointerup', { clientX: to[0], clientY: to[1] });
-    return { vx: me.vx, vy: me.vy, moving: me.moving, command: commands.find(c => c.type === InputCommands.SHOT), guide };
+    return { command: commands.find(c => c.type === InputCommands.SHOT), guide };
   }
 
-  await scenario('aim rules: spread, sway and the shot angle match the legacy functions exactly', async () => {
-    for (let p = 0; p <= 1.0001; p += 0.0625) {
-      assert.equal(spread(p), P().spread(p));
-      for (const t of [0, 0.35, 0.7, 1.05, 1.4, 3.3, 12.345]) assert.equal(sway(p, t), P().sway(p, t));
+  await scenario('aim rules: spread, sway and the shot angle match the values recorded from the legacy functions exactly', async () => {
+    assert.equal(recorded.aim.length, 17);
+    for (const row of recorded.aim) {
+      assert.equal(spread(row.power), row.spread, `spread(${row.power})`);
+      recorded.times.forEach((t, i) => assert.equal(sway(row.power, t), row.sway[i], `sway(${row.power}, ${t})`));
     }
     assert.ok([0, 0.7, 1.4].every(t => Math.abs(sway(1, t)) < 1e-9), 'zero crossings give a straight shot (legacy smoke tolerance)');
     assert.equal(chargeFromDrag(100, 0, 1600), 100 / FULL_PULL_PX);
@@ -88,7 +86,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(accuracyText(true, 0.5), '50% power · ±' + (spread(0.5) * 180 / Math.PI).toFixed(1) + '° spread');
   });
 
-  await scenario('shots: drag direction, power, sway phase and steady match legacy launches bit for bit', async () => {
+  await scenario('shots: drag direction, power, sway phase and steady produce the shown, bounded launch command', async () => {
     const cases = [
       { to: [300, 330], frameAt: now += 16 },
       { to: [520, 120], frameAt: now += 517 },
@@ -100,10 +98,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     ];
     for (const c of cases) {
       const r = shot(c);
-      assert.equal(r.moving, true, 'legacy launched');
       assert.ok(r.command, 'adapter dispatched a shot');
-      // U2 intentionally changed the drag-to-power mapping (FULL_PULL_PX), so the legacy launch speed and sway
-      // phase no longer match bit for bit. Launch scaling, the aim direction and the sway maths still do.
+      // U2 intentionally changed the drag-to-power mapping (FULL_PULL_PX), so launch speeds differ from the legacy game.
       assert.equal(r.command.power, r.guide.charge, `power is the shown charge for ${JSON.stringify(c)}`);
       assert.ok(r.command.power > 0 && r.command.power <= 1);
       assert.ok(r.guide.charge <= Math.min(1, Math.hypot(c.to[0] - 400, c.to[1] - 250) / 260), 'no more sensitive than the legacy pull (260 px)');
@@ -111,46 +107,36 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     }
   });
 
-  await scenario('aim guide: the swayed direction shown is the one released, and matches the legacy guide dots', async () => {
+  await scenario('aim guide: the swayed direction shown is the one released', async () => {
     resetBall();
-    both('pointerdown', { clientX: 400, clientY: 250 });
-    both('pointermove', { clientX: 280, clientY: 380 });
+    pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 });
+    pointer(canvas, 'pointermove', { clientX: 280, clientY: 380 });
     const t = now += 444;
-    legacy.frame(t);
     const guide = input.frameAim(t / 1000);
-    const dots = [];
-    P().ball.parent.traverse(o => { if (o.isMesh && o.geometry.type === 'SphereGeometry' && o.geometry.parameters.radius === 2.8 && o.visible) dots.push(o); });
-    assert.equal(dots.length, 12, 'legacy shows twelve guide dots');
-    const ball = P().ball.position, lc = Math.min(1, Math.hypot(120, 130) / 260), L = 50 + lc * 250, la = shotAngle({ aimAngle: guide.aimAngle, charge: lc, time: t / 1000 });
-    // U2: the legacy guide used the legacy 260 px charge, so it is recomputed with that charge; the aim direction is shared.
     assert.equal(guide.angle, shotAngle({ aimAngle: guide.aimAngle, charge: guide.charge, time: t / 1000 }));
-    assert.ok(Math.abs(dots[0].position.x - (ball.x + Math.cos(la) * L / 12)) < 1e-9, 'first dot x');
-    assert.ok(Math.abs(dots[0].position.z - (ball.z + Math.sin(la) * L / 12)) < 1e-9, 'first dot z');
     assert.equal(guide.spread, spread(guide.charge));
-    // Release later without a new frame: legacy and adapter both reuse the last shown sway time.
+    // Release later without a new frame: the adapter reuses the last shown sway time.
     now += 300;
     commands.length = 0;
     pointer(canvas, 'pointerup', { clientX: 280, clientY: 380 });
-    pointer(legacyCanvas, 'pointerup', { clientX: 280, clientY: 380 });
     assert.equal(commands[0].angle, guide.angle);
-    assert.equal(commands[0].power, guide.charge, 'release uses the charge shown (U2 mapping; legacy launch speed differs)');
+    assert.equal(commands[0].power, guide.charge, 'release uses the charge shown (U2 mapping)');
   });
 
   await scenario('cancel: small pulls, Escape, pointer cancel, lost capture and blur never shoot', async () => {
     const attempts = [
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 403, clientY: 252 }); legacy.frame(now += 16); input.frameAim(now / 1000); both('pointerup', { clientX: 403, clientY: 252 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 403, clientY: 252 }); input.frameAim(now / 1000); pointer(canvas, 'pointerup', { clientX: 403, clientY: 252 }); },
       // Between the guide threshold (0.015) and the shot threshold (0.025): guide shown, release cancels. // U2: slightly longer pull on the adapter canvas to clear the guide threshold under the gentler mapping.
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 407, clientY: 252 }); pointer(legacyCanvas, 'pointermove', { clientX: 405, clientY: 252 }); legacy.frame(now += 16); assert.ok(input.frameAim(now / 1000), 'guide shown'); pointer(canvas, 'pointerup', { clientX: 407, clientY: 252 }); pointer(legacyCanvas, 'pointerup', { clientX: 405, clientY: 252 }); },
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); key('keydown', 'Escape'); key('keyup', 'Escape'); both('pointerup', { clientX: 300, clientY: 330 }); },
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('pointercancel', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); both('lostpointercapture', {}); both('pointerup', { clientX: 300, clientY: 330 }); },
-      () => { both('pointerdown', { clientX: 400, clientY: 250 }); both('pointermove', { clientX: 300, clientY: 330 }); w.dispatchEvent(new w.Event('blur')); both('pointerup', { clientX: 300, clientY: 330 }); },
-      () => { both('pointerdown', { clientX: 400, clientY: 250, button: 1 }); both('pointermove', { clientX: 300, clientY: 330 }); both('pointerup', { clientX: 300, clientY: 330 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 407, clientY: 252 }); assert.ok(input.frameAim(now / 1000), 'guide shown'); pointer(canvas, 'pointerup', { clientX: 407, clientY: 252 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); key('keydown', 'Escape'); key('keyup', 'Escape'); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointercancel', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'lostpointercapture', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); w.dispatchEvent(new w.Event('blur')); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250, button: 1 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
     ];
     for (const attempt of attempts) {
       resetBall(); commands.length = 0;
       attempt();
-      assert.equal(P().me.moving, false, 'legacy did not shoot');
       assert.equal(commands.filter(c => c.type === InputCommands.SHOT).length, 0, 'adapter did not shoot');
       assert.equal(input.charging, false);
       assert.equal(input.charge, 0);
@@ -160,8 +146,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
 
   await scenario('guards: no shot while moving, spectating, disconnected, inactive or transitioning', async () => {
     const blockers = [
-      () => { P().me.moving = true; return () => { P().me.moving = false; }; },
-      () => { P().me.mode = 'spectator'; return () => { P().me.mode = 'play'; }; },
+      () => { me.moving = true; return () => { me.moving = false; }; },
+      () => { me.mode = 'spectator'; return () => { me.mode = 'play'; }; },
       () => { connected = false; return () => { connected = true; }; },
       () => { active = false; return () => { active = true; }; },
       () => { forceTransition = true; return () => { forceTransition = false; }; },
@@ -178,19 +164,19 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     }
   });
 
-  await scenario('camera input: right-drag orbit and arrow keys track the legacy camera angles exactly', async () => {
+  await scenario('camera input: right-drag orbit and arrow keys track the recorded legacy camera angles exactly', async () => {
     resetBall();
-    both('pointerdown', { clientX: 400, clientY: 250, button: 2 });
-    both('pointermove', { clientX: 470, clientY: 300 });
-    both('pointerup', { clientX: 470, clientY: 300 });
-    assert.equal(rig.state.azimuth, P().camAz);
-    assert.equal(rig.state.elevation, P().camEl);
+    const { camera: legacyAngles } = recorded;
+    assert.deepEqual([rig.state.azimuth, rig.state.elevation], legacyAngles.initial, 'the rig starts where the legacy camera did');
+    pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250, button: 2 });
+    pointer(canvas, 'pointermove', { clientX: 470, clientY: 300 });
+    pointer(canvas, 'pointerup', { clientX: 470, clientY: 300 });
+    assert.deepEqual([rig.state.azimuth, rig.state.elevation], legacyAngles.afterOrbit);
     for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowRight']) { key('keydown', k); key('keyup', k); }
-    assert.equal(rig.state.azimuth, P().camAz);
-    assert.equal(rig.state.elevation, P().camEl);
+    assert.deepEqual([rig.state.azimuth, rig.state.elevation], legacyAngles.afterKeys);
     // Elevation clamps exactly like legacy.
     for (let i = 0; i < 40; i++) { key('keydown', 'ArrowDown'); key('keyup', 'ArrowDown'); }
-    assert.equal(rig.state.elevation, P().camEl);
+    assert.deepEqual([rig.state.azimuth, rig.state.elevation], legacyAngles.afterClamp);
     const before = rig.state.distance;
     canvas.dispatchEvent(new w.WheelEvent('wheel', { deltaY: 120, cancelable: true }));
     assert.equal(rig.state.distance, Math.min(300, before + 18));
@@ -205,9 +191,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       { type: InputCommands.TOGGLE_SOUND },
     ]);
     assert.ok(commands.some(c => c.type === InputCommands.USER_GESTURE), 'key presses count as user gestures (audio unlock)');
-    // C must cycle the legacy view too: both listen to the same window event.
-    assert.equal(legacy.$('vw').textContent, 'View: Hole view');
+    // The adapter only dispatches CYCLE_CAMERA; the app applies it to the rig.
     rig.cycleView();
+    assert.equal(CAMERA_VIEW_LABELS[rig.state.view], 'Hole view');
     // Hole view: arrows rotate the aim instead of the camera, as in legacy.
     const az = rig.state.azimuth, aim = input.aimAngle;
     key('keydown', 'ArrowLeft'); key('keyup', 'ArrowLeft');
@@ -215,10 +201,10 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(input.aimAngle, aim - 0.06);
     // Hole view: right-drag also rotates the aim, adding the whole drag distance on every move (legacy quirk).
     const before = input.aimAngle;
-    both('pointerdown', { clientX: 400, clientY: 250, button: 2 });
-    both('pointermove', { clientX: 410, clientY: 250 });
-    both('pointermove', { clientX: 420, clientY: 250 });
-    both('pointerup', { clientX: 420, clientY: 250 });
+    pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250, button: 2 });
+    pointer(canvas, 'pointermove', { clientX: 410, clientY: 250 });
+    pointer(canvas, 'pointermove', { clientX: 420, clientY: 250 });
+    pointer(canvas, 'pointerup', { clientX: 420, clientY: 250 });
     assert.equal(input.aimAngle, before + 10 * 0.006 + 20 * 0.006);
     assert.equal(rig.state.azimuth, az, 'hole view camera does not orbit');
     // Typing in a text field: no shortcut, no held key.
@@ -227,9 +213,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     for (const k of ['c', 'k', '1', 'm', 'w']) key('keydown', k, field);
     assert.deepEqual(commands.filter(c => c.type !== InputCommands.USER_GESTURE), []);
     assert.equal(input.keys.has('w'), false);
-    // Back to Ball cam on both sides.
+    // Back to Ball cam after the remaining presses (three in all).
     for (let i = 0; i < 2; i++) { key('keydown', 'c'); key('keyup', 'c'); rig.cycleView(); }
-    assert.equal(legacy.$('vw').textContent, 'View: Ball cam');
+    assert.equal(CAMERA_VIEW_LABELS[rig.state.view], 'Ball cam');
   });
 
   await scenario('free roam: held keys, look drag and wheel dolly drive the camera rig', async () => {
@@ -311,7 +297,6 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.throws(() => createInputAdapter({ canvas }), /required/);
   });
 
-  assert.deepEqual(legacy.errors, [], 'legacy game reported no errors');
-  console.log(`Input: ${passed} scenarios passed (jsdom pointer/keyboard events against the legacy handlers; no real-browser claim).`);
+  console.log(`Input: ${passed} scenarios passed (jsdom pointer/keyboard events; legacy aim maths and camera angles from recorded values; no real-browser claim).`);
   process.exit(0);
 })().catch(error => { console.error(error); process.exit(1); });
