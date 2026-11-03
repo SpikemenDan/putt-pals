@@ -358,6 +358,206 @@ report.env = { session: !!process.env.PUTT_PALS_OVERNIGHT, end: process.env.PUTT
     assert.throws(() => sessionLib.abandonSession({ root: second.root }), /No session lock/);
   });
 
+  // ---------------------------------------------------------------- enforced limits (guard wrappers, budgets, blocker)
+  const guard = await load('tools/overnight/guard.mjs');
+  const fakeTool = path.join(temp, 'fake-tool.cjs');
+  // Exits 1 when any argument is "boom" (or when asked to, via FAKE_FAIL), 0 otherwise; counts its own runs.
+  fs.writeFileSync(fakeTool, `
+const fs = require('fs');
+const file = process.env.FAKE_TOOL_COUNT;
+if (file) { let n = 0; try { n = Number(fs.readFileSync(file, 'utf8')); } catch {} fs.writeFileSync(file, String(n + 1)); }
+process.exit(process.argv.includes('boom') && !process.env.FAKE_FORCE_OK ? 1 : 0);
+`);
+  const realMap = JSON.stringify({ npm: [process.execPath, fakeTool], node: [process.execPath, fakeTool], gemini: [process.execPath, fakeTool, 'boom'], npx: [process.execPath, fakeTool] });
+  const guardFile = path.join(__dirname, '..', 'tools/overnight/guard.mjs');
+  const budgetDir = () => fresh('budget');
+  const runGuard = (dir, limits, tool, args, extraEnv = {}) => spawnSync(process.execPath, [guardFile, tool, ...args], {
+    encoding: 'utf8', env: { ...process.env, PUTT_PALS_GUARD_DIR: dir, PUTT_PALS_GUARD_LIMITS: JSON.stringify(limits), PUTT_PALS_GUARD_REAL: realMap, FAKE_TOOL_COUNT: path.join(dir, 'ran'), ...extraEnv },
+  });
+  const ran = dir => { try { return Number(fs.readFileSync(path.join(dir, 'ran'), 'utf8')); } catch { return 0; } };
+  const stopOf = dir => guard.readStop(dir);
+
+  await scenario('limits: the spec accepts bounded integer limits and rejects unknown, fractional and out-of-range ones', async () => {
+    assert.deepEqual(guard.validateLimits(undefined), []);
+    assert.deepEqual(guard.validateLimits({ maxRepeatedFailures: 3, maxGeminiAttempts: 0, maxFullSolverRuns: 1 }), []);
+    assert.match(guard.validateLimits({ maxCake: 1 })[0], /unknown limit "maxCake"/);
+    assert.match(guard.validateLimits({ maxRepeatedFailures: 0 })[0], /integer from 1 to 20/);
+    assert.match(guard.validateLimits({ maxGeminiAttempts: 2.5 })[0], /limits.maxGeminiAttempts must be an integer/);
+    assert.match(guard.validateLimits({ maxSolverRuns: 1000 })[0], /from 0 to 100/);
+    assert.match(guard.validateLimits([])[0], /must be an object/);
+    assert.deepEqual(guard.resolveLimits({ maxGeminiAttempts: 1 }), { ...guard.DEFAULT_LIMITS, maxGeminiAttempts: 1 });
+    const { root, dir } = await readyRepo();
+    assert.equal(sessionLib.preflight({ root, spec: goodSpec({ limits: { maxRepeatedFailures: 3 } }), backupDir: dir, confirmPhrase: PHRASE }).ok, true);
+    assert.match(problems(root, goodSpec({ limits: { maxRepeatedFailures: 99 } }), dir), /limits.maxRepeatedFailures must be an integer from 1 to 20/);
+  });
+
+  await scenario('limits: commands are classified (Gemini, solver, exhaustive solver) from the tool and its arguments', async () => {
+    assert.deepEqual(guard.classify('gemini', ['-p', 'x']), { kind: 'gemini', full: false });
+    assert.deepEqual(guard.classify('npm', ['run', 'solve', '--', '0', '0']), { kind: 'solver', full: false });
+    assert.deepEqual(guard.classify('npm', ['run', 'solve', '--', '0', '0', '--full']), { kind: 'solver', full: true });
+    assert.deepEqual(guard.classify('node', ['tools/cli/main.mjs', 'solve', '0', '0', '--full']), { kind: 'solver', full: true });
+    assert.deepEqual(guard.classify('node', ['C:\\repo\\tools\\cli\\main.mjs', 'solve', '1', '2']), { kind: 'solver', full: false });
+    for (const other of [['npm', ['run', 'test:render']], ['npm', ['run', 'rank']], ['node', ['tests/physics.test.cjs']], ['node', ['tools/cli/main.mjs', 'check']], ['npx', ['vite', 'build']]]) {
+      assert.equal(guard.classify(...other).kind, 'other', other.join(' '));
+    }
+  });
+
+  await scenario('guard: the same command failing repeatedly stops after the allowed attempts, counts every retry and refuses further runs', async () => {
+    const dir = budgetDir(), limits = guard.resolveLimits({ maxRepeatedFailures: 3 });
+    assert.equal(runGuard(dir, limits, 'npm', ['run', 'ok']).status, 0);
+    assert.equal(stopOf(dir), null);
+    assert.equal(runGuard(dir, limits, 'npm', ['run', 'boom']).status, 1);
+    assert.equal(runGuard(dir, limits, 'npm', ['run', 'boom']).status, 1);
+    assert.equal(runGuard(dir, limits, 'npm', ['run', 'ok']).status, 0, 'a different command is independent');
+    assert.equal(stopOf(dir), null, 'two failures of the same command are within the limit of three');
+    assert.equal(runGuard(dir, limits, 'npm', ['run', 'boom']).status, 1);
+    const stop = stopOf(dir);
+    assert.equal(stop.limit, 'repeated-failures');
+    assert.match(stop.detail, /"npm run boom" failed 3 time\(s\) in a row/);
+    const before = ran(dir);
+    const refused = runGuard(dir, limits, 'npm', ['run', 'anything']);
+    assert.equal(refused.status, guard.REFUSED_EXIT);
+    assert.match(refused.stderr, /the session is stopping/);
+    assert.equal(ran(dir), before, 'a refused command is never run');
+    assert.equal(guard.loadState(dir).counters.totalFailures, 3);
+    // A success of the same command resets its streak, so an intermittent failure does not stop a session.
+    const dir2 = budgetDir();
+    for (const forceOk of [false, false, true, false, false]) runGuard(dir2, limits, 'npm', ['boom'], forceOk ? { FAKE_FORCE_OK: '1' } : {});
+    assert.equal(stopOf(dir2), null);
+    assert.equal(fs.readFileSync(path.join(dir2, 'commands.jsonl'), 'utf8').trim().split(String.fromCharCode(10)).length, 5, 'every command is logged');
+    runGuard(dir2, limits, 'npm', ['boom']);
+    assert.equal(stopOf(dir2).limit, 'repeated-failures', 'a third failure in a row after the reset stops the session');
+  });
+
+  await scenario('guard: total failures, Gemini attempts, solver runs and exhaustive solver runs each have their own budget', async () => {
+    let dir = budgetDir();
+    const total = guard.resolveLimits({ maxTotalFailures: 3, maxRepeatedFailures: 9 });
+    for (const arg of ['a', 'b']) runGuard(dir, total, 'npm', ['run', 'boom', arg]);
+    assert.equal(stopOf(dir), null);
+    runGuard(dir, total, 'npm', ['run', 'boom', 'c']);
+    assert.equal(stopOf(dir).limit, 'total-failures');
+
+    dir = budgetDir();
+    const gem = guard.resolveLimits({ maxGeminiAttempts: 2, maxRepeatedFailures: 9 });
+    assert.equal(runGuard(dir, gem, 'gemini', ['-p', 'x']).status, 1, 'the fake Gemini fails, and the attempt still counts');
+    assert.equal(runGuard(dir, gem, 'gemini', ['-p', 'x']).status, 1, 'an identical automatic retry counts too');
+    assert.equal(stopOf(dir), null);
+    const before = ran(dir);
+    const third = runGuard(dir, gem, 'gemini', ['-p', 'x']);
+    assert.equal(third.status, guard.REFUSED_EXIT);
+    assert.match(third.stderr, /gemini-attempts.*2 Gemini attempts used of 2, retries included/);
+    assert.equal(stopOf(dir).limit, 'gemini-attempts');
+    assert.equal(ran(dir), before);
+    assert.equal(guard.loadState(dir).counters.gemini, 2);
+
+    dir = budgetDir();
+    const solver = guard.resolveLimits({ maxSolverRuns: 3, maxFullSolverRuns: 1 });
+    const full = ['tools/cli/main.mjs', 'solve', '0', '0', '--full'], fast = ['tools/cli/main.mjs', 'solve', '0', '0'];
+    assert.equal(runGuard(dir, solver, 'node', full).status, 0);
+    assert.equal(runGuard(dir, solver, 'node', fast).status, 0);
+    const secondFull = runGuard(dir, solver, 'node', full);
+    assert.equal(secondFull.status, guard.REFUSED_EXIT);
+    assert.equal(stopOf(dir).limit, 'solver-full-runs');
+    assert.equal(guard.loadState(dir).counters.solverFull, 1);
+    dir = budgetDir();
+    for (let i = 0; i < 3; i++) assert.equal(runGuard(dir, solver, 'npm', ['run', 'solve', '--', String(i), '0']).status, 0);
+    assert.equal(runGuard(dir, solver, 'npm', ['run', 'solve', '--', '9', '0']).status, guard.REFUSED_EXIT);
+    assert.equal(stopOf(dir).limit, 'solver-runs');
+    // A budget of zero forbids the whole kind.
+    dir = budgetDir();
+    assert.equal(runGuard(dir, guard.resolveLimits({ maxGeminiAttempts: 0 }), 'gemini', ['-p', 'x']).status, guard.REFUSED_EXIT);
+  });
+
+  await scenario('guard: programs started by a guarded command pass through uncounted, but not once the session is stopping', async () => {
+    const dir = budgetDir(), limits = guard.resolveLimits({ maxRepeatedFailures: 2 });
+    for (let i = 0; i < 5; i++) assert.equal(runGuard(dir, limits, 'node', ['inner', 'boom'], { PUTT_PALS_GUARD_DEPTH: '1' }).status, 1);
+    assert.equal(guard.loadState(dir).counters.commands, 0, 'nested commands are not counted again');
+    assert.equal(stopOf(dir), null);
+    fs.writeFileSync(path.join(dir, 'stop.json'), JSON.stringify({ limit: 'repeated-failures', detail: 'x' }));
+    assert.equal(runGuard(dir, limits, 'node', ['inner'], { PUTT_PALS_GUARD_DEPTH: '1' }).status, guard.REFUSED_EXIT);
+  });
+
+  await scenario('shims: npm, npx, node and gemini wrappers route through the guard', async () => {
+    const dir = budgetDir();
+    const bin = guard.writeShims(path.join(dir, 'bin'), guardFile);
+    for (const tool of guard.GUARDED_TOOLS) {
+      assert.ok(fs.readFileSync(path.join(bin, tool), 'utf8').includes('guard.mjs'), tool);
+      if (process.platform === 'win32') assert.ok(fs.readFileSync(path.join(bin, `${tool}.cmd`), 'utf8').includes(`guard.mjs" ${tool} %*`), `${tool}.cmd`);
+    }
+    // Run a real wrapper the way an assistant's shell would.
+    const pathKey = Object.keys(process.env).find(k => k.toLowerCase() === 'path') ?? 'PATH';
+    const env = { ...process.env, [pathKey]: bin + path.delimiter + process.env[pathKey], PUTT_PALS_GUARD_DIR: dir, PUTT_PALS_GUARD_BIN: bin, PUTT_PALS_GUARD_LIMITS: JSON.stringify(guard.resolveLimits({ maxRepeatedFailures: 2 })), PUTT_PALS_GUARD_REAL: realMap, FAKE_TOOL_COUNT: path.join(dir, 'ran') };
+    const viaShell = spawnSync('npm run boom', { shell: true, env, encoding: 'utf8' });
+    assert.equal(viaShell.status, 1);
+    assert.equal(guard.loadState(dir).counters.commands, 1, 'the wrapper, not the real npm, handled the command');
+    spawnSync('npm run boom', { shell: true, env, encoding: 'utf8' });
+    assert.equal(stopOf(dir).limit, 'repeated-failures');
+  });
+
+  /** A fake assistant that works on an owned file, then runs the given commands through the wrappers on PATH. */
+  const budgetAssistant = (commands, { ignoreRefusals = true } = {}) => assistantScript(`
+fs.mkdirSync('src', { recursive: true });
+fs.writeFileSync('src/a.js', 'export const a = 5; // work in progress\\n');
+const codes = [];
+for (const c of ${JSON.stringify(commands)}) codes.push(spawnSync(c, { shell: true, stdio: 'ignore' }).status);
+report.codes = codes;
+${ignoreRefusals ? 'setInterval(() => {}, 1000); // keeps running after refusals, to prove the launcher stops it' : ''}
+`);
+
+  for (const [name, limits, commands, expectedLimit] of [
+    ['the same failing command', { maxRepeatedFailures: 3 }, ['npm run boom', 'npm run boom', 'npm run boom', 'npm run boom'], 'limit:repeated-failures'],
+    ['Gemini retries', { maxGeminiAttempts: 2 }, ['gemini -p x', 'gemini -p x', 'gemini -p x'], 'limit:gemini-attempts'],
+    ['an exhaustive solver run', { maxFullSolverRuns: 1 }, ['node tools/cli/main.mjs solve 0 0 --full', 'node tools/cli/main.mjs solve 0 0 --full'], 'limit:solver-full-runs'],
+  ]) {
+    await scenario(`session: ${name} stops the assistant at the limit, preserves its work and records the blocker and resume point`, async () => {
+      const { root, bare, dir } = await readyRepo();
+      process.env.REPORT = path.join(temp, `report-limit-${++counter}.json`);
+      process.env.PUTT_PALS_GUARD_REAL = realMap;
+      process.env.FAKE_TOOL_COUNT = path.join(temp, `fake-count-${counter}`);
+      const remoteBefore = sh(bare, 'for-each-ref');
+      const spec = goodSpec({ limits, assistantCommand: [process.execPath, budgetAssistant(commands)] });
+      const started = Date.now();
+      const result = await sessionLib.startSession({ root, spec, backupDir: dir, confirmPhrase: PHRASE, pollMs: 200 });
+      delete process.env.PUTT_PALS_GUARD_REAL; delete process.env.FAKE_TOOL_COUNT;
+      assert.equal(result.reason, expectedLimit);
+      assert.ok(Date.now() - started < 30_000, 'stopped promptly even though the assistant kept running');
+      const sessionDir = path.dirname(result.handoff);
+      const blocker = JSON.parse(fs.readFileSync(path.join(sessionDir, 'blocker.json'), 'utf8'));
+      assert.equal(blocker.reason, expectedLimit);
+      assert.equal(blocker.limit, expectedLimit.replace('limit:', ''));
+      assert.ok(blocker.detail && blocker.command !== undefined);
+      assert.equal(blocker.resumePoint.branch, 'dev/tester');
+      assert.deepEqual(blocker.resumePoint.uncommittedPaths.filter(l => l.includes('src/a.js')).length, 1, 'the assistant\'s unfinished edit is listed as uncommitted work');
+      assert.equal(fs.readFileSync(path.join(root, 'src/a.js'), 'utf8').includes('work in progress'), true, 'the work is still on disk, untouched');
+      assert.equal(sh(root, 'rev-parse', 'HEAD'), blocker.resumePoint.head, 'the launcher committed, reset and removed nothing');
+      assert.ok(blocker.resumePoint.nextSteps.length >= 2 && blocker.resumePoint.nextSteps.some(s => /preserved exactly/.test(s)));
+      assert.ok(blocker.lastCommands.length >= 1);
+      const text = fs.readFileSync(result.handoff, 'utf8');
+      assert.match(text, /## Blocker and resume point/);
+      assert.match(text, new RegExp('Stopped by: ' + expectedLimit.replace(':', ':')));
+      assert.equal(fs.existsSync(path.join(sessionLib.overnightDir(root), 'lock.json')), false, 'the lock is released; nothing restarts');
+      assert.equal(sh(bare, 'for-each-ref'), remoteBefore, 'no remote writes');
+      assert.equal(JSON.parse(fs.readFileSync(path.join(sessionDir, 'ended.json'), 'utf8')).reason, expectedLimit);
+    });
+  }
+
+  await scenario('session: time-limit stops also record a blocker and resume point, and the prompt states the budgets', async () => {
+    const { root, dir } = await readyRepo();
+    process.env.REPORT = path.join(temp, 'report-time-blocker.json');
+    const result = await sessionLib.startSession({ root, spec: goodSpec({ endTime: iso(3500), limits: { maxGeminiAttempts: 3 }, assistantCommand: [process.execPath, assistantScript('setInterval(() => {}, 1000);')] }), backupDir: dir, confirmPhrase: PHRASE, pollMs: 300 });
+    assert.equal(result.reason, 'time-limit');
+    const sessionDir = path.dirname(result.handoff);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(sessionDir, 'blocker.json'), 'utf8')).reason, 'time-limit');
+    assert.match(fs.readFileSync(path.join(sessionDir, 'prompt.md'), 'utf8'), /3 Gemini attempts, 12 solver runs of which 2 may use --full/);
+    assert.ok(fs.existsSync(path.join(sessionDir, 'bin', 'npm')), 'the wrappers were created for this session');
+    // A clean completion writes no blocker.
+    const second = await readyRepo();
+    process.env.REPORT = path.join(temp, 'report-clean.json');
+    const clean = await sessionLib.startSession({ root: second.root, spec: goodSpec({ assistantCommand: [process.execPath, assistantScript('')] }), backupDir: second.dir, confirmPhrase: PHRASE, pollMs: 300 });
+    assert.equal(clean.reason, 'completed');
+    assert.equal(fs.existsSync(path.join(path.dirname(clean.handoff), 'blocker.json')), false);
+  });
+
   await scenario('assistant command and prompt: the default forbids pushing, merging, installs and remote tools, and states every limit', async () => {
     const spec = goodSpec();
     const command = sessionLib.buildAssistantCommand(spec);

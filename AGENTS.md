@@ -318,7 +318,9 @@ During the session:
 - Do not install or upgrade dependencies unless included in session scope.
 - Do not expand into unrelated tasks.
 - Stop on conflicting edits, unclear requirements, failed recovery, repeated
-  failures without progress or the time limit.
+  failures without progress or the time limit. The launcher enforces the runtime
+  limit and the session's budgets for repeated command failures, Gemini attempts
+  and solver runs (every retry counts), and records the blocker and resume point.
 - Preserve unfinished work and provide a handoff.
 - Visual/feel changes remain pending user preview acceptance.
 
