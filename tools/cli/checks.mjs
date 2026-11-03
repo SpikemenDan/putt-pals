@@ -141,6 +141,7 @@ export const RULES = [
 
 /** Applied only to a path nothing else covers: reference or manual material that no suite reads. */
 export const LAST_RESORT = [
+  { test: f => /^src\/devtools\/[a-z-]+-preview\.js$/.test(f), note: 'development-only interactive chamber: exercise its controls and inspect browser errors manually' },
   { test: f => f.startsWith('tests/fixtures/') || f.startsWith('tests/render/') || /^tests\/(?:measure-cup-capture|cup-capture-browser)\.mjs$/.test(f), note: 'manual measurement tool or recorded reference material that no suite reads' },
 ];
 

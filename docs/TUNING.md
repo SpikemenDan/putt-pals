@@ -1,6 +1,6 @@
 # Gameplay tuning
 
-The existing T2 gameplay configuration is implemented in `src/shared/tuning.js` (`TUNING`, frozen, validated at load). Defaults are the shipped values; T2 changed no behavior. S3 (forgiving physics) lowered turf, sand, ice and slime friction and added the cup fillet; recorded difficulty from before S3 is stale. Edit `DEFAULT_TUNING` for deliberate retuning; provide a local browser preview for owner feedback and run affected checks before acceptance. Invalid values (non-finite, out of range, `cup.minRadius > cup.defaultRadius`) throw at load; `createTuning(overrides)` builds a validated variant for tests. Old names (`SHOT_POWER`, `TURF_FRICTION`, `GRAVITY`, `FULL_PULL_PX`, ...) remain exported as aliases.
+The existing T2 gameplay configuration is implemented in `src/shared/tuning.js` (`TUNING`, frozen, validated at load). Defaults are the shipped values; T2 changed no behavior. S3 (forgiving physics) lowered turf, sand, ice and slime friction and added the cup fillet. U2 intentionally reduced full-power launch speed and the canvas-relative full-pull distance after owner approval in the local preview; current solver evidence is regenerated for these values. Edit `DEFAULT_TUNING` for deliberate retuning; provide a local browser preview for owner feedback and run affected checks before acceptance. Invalid values (non-finite, out of range, `cup.minRadius > cup.defaultRadius`) throw at load; `createTuning(overrides)` builds a validated variant for tests. Old names (`SHOT_POWER`, `TURF_FRICTION`, `GRAVITY`, `FULL_PULL_PX`, ...) remain exported as aliases.
 
 Units: distances in world units (ball radius 5), time in seconds, friction in 1/s, drag in units/s^2. Sand uses turf constant drag.
 
@@ -10,7 +10,7 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | --- | --- | --- | --- |
 | `ball.radius` | 5 | 1 to 50 | Ball radius. Collision and cup-fit geometry. |
 | `gravity` | 700 | 0 to 5000 | Vertical gravity, units/s^2; also drives slope acceleration. |
-| `shotPower` | 900 | 1 to 10000 | Launch speed at full charge (speed = charge * shotPower). |
+| `shotPower` | 600 | 1 to 10000 | Launch speed at full charge (speed = charge * shotPower). |
 | `wallHeight` | 28 | 1 to 500 | Wall height; the ball clears walls above this z. |
 | `cup.defaultRadius` | 15 | 1 to 100 | Largest cup radius (also the default). |
 | `cup.minRadius` | 8 | 1 to 100 | Smallest cup radius a course may request. |
@@ -64,7 +64,7 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `aim.spreadGain` | 0.14 | 0 to 3 | Added spread (radians) at full power. |
 | `aim.spreadExponent` | 2.6 | 0.1 to 10 | How sharply spread grows with power. |
 | `aim.fullPullPx` | 380 | 10 to 5000 | Drag distance (CSS px) for full power. |
-| `aim.canvasPullFraction` | 0.6 | 0.01 to 1 | Full pull is also capped at this fraction of canvas width. |
+| `aim.canvasPullFraction` | 0.18 | 0.01 to 1 | Full pull is also capped at this fraction of canvas width. |
 | `aim.arrowMaxLength` | 300 | 1 to 2000 | Unused. The arrow length is `DISPLAY.aim.arrowMaxLength` (180, docs/DISPLAY.md); this field is slated for removal with a fingerprint regeneration. |
 | `aim.dragRadiansPerPx` | 0.006 | 0 to 1 | Aim rotation per pixel of orbit-less drag. |
 | `aim.keyStep` | 0.06 | 0 to 1 | Aim rotation per arrow-key press (radians). |
