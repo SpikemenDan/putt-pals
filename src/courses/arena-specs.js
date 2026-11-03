@@ -1,4 +1,4 @@
-// Migration snapshot; check/regenerate with scripts/export-arenas.cjs [--write].
+// Arena chamber specifications, exported from the legacy game and now maintained here directly. tests/cli.test.cjs compares the generated arenas with recorded legacy output.
 export const arenaSourceData = {
   "cells": [
     [46, 46],

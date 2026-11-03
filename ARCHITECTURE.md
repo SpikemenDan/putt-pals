@@ -184,32 +184,22 @@ provide the local URL and steps and mark interactive acceptance pending.
 
 This panel is planned until implementation and verification are recorded.
 
-## Legacy retirement
+## Legacy retirement (DX3, complete)
 
-Inventory every active consumer of `putt-pals.html` and `tools.js`.
-Migrate required CLI commands, regression checks, test helpers, build inputs,
-script-preservation checks and documentation to the modular application.
-Preserve useful independent regression fixtures and required provenance.
+`putt-pals.html`, `tools.js` and the infrastructure that existed only to run or extract them were removed.
+The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
 
-Remove obsolete files only after replacement coverage and build checks pass.
-Do not weaken useful tests to obtain a passing migration.
-Git history preserves historical source; a second runnable game is unnecessary.
-Legacy references above describe temporary dependencies, not permanent support.
+What replaced each consumer:
 
-### Legacy consumer inventory and migration status (DX3)
-
-| Consumer | Uses legacy for | Replacement | Status |
-| --- | --- | --- | --- |
-| `npm run check`, `solve`, `rank` | `tools.js check/solve/rank` | `tools/cli` | Migrated |
-| `npm run test:physics` | `tools.js surfaces/cups/mechanics` | `tests/physics.test.cjs` | Migrated |
-| `npm run test:smoke`, `test:multiplayer` | `tools.js smoke/smoke-multi`: ~140 single-player and ~60 multiplayer assertions driven through the legacy DOM | Mapped below. Modular suites cover every area; the transition camera properties now have independent coverage in `tests/camera.test.cjs` | Mapped; the command can go once the oracle-based parity tests are rebased |
-| `courses.test.cjs`, `cli.test.cjs`, `simulation.test.cjs`, `audio.test.cjs`, `app.test.cjs` (library layout) | Legacy data, arenas, sounds and Three r128 topology | `tests/fixtures/legacy-reference/` recorded by `scripts/record-legacy-reference.cjs` | Migrated |
-| `input.test.cjs` | Legacy aim maths, camera angles | `tests/fixtures/legacy-reference/input.json` (`scripts/record-legacy-input-reference.cjs`) plus direct assertions | Migrated |
-| `ui.test.cjs` | Legacy HUD line, scoreboard, scorecard and results label | `tests/fixtures/legacy-reference/ui.json` (`scripts/record-legacy-ui-reference.cjs`) | Migrated |
-| `render.test.cjs` | Live legacy game as the oracle for scene graphs, camera poses and wall fade | 552 recorded legacy readings (`render-tape.json`, hashed per scene child) replayed against the modular renderer on the vendored r128 (`tests/vendor/three-r128.js`); `RENDER_RECORD=1` re-records while the legacy page exists | Migrated |
-| `tools/legacy-adapter.cjs`, `tests/support/legacy-dom.cjs`, `scripts/export-*.cjs`, `inventory-baseline.cjs`, `aggregate-difficulty.mjs` | VM and HTML extraction | Retire with the parity tests, keep recorded outputs | Open |
-| `tools/cli validate`, `tests/fixtures/source-inventory.json` | Hashes of `putt-pals.html` and `tools.js` | Recorded provenance only; live hashing removed | Migrated |
-| `vite.config.mjs`, `scripts/check-build.cjs`, `public/_headers`, `tests/rooms/local-runtime.test.mjs`, `scripts/ui-visual-parity.cjs`, `docs/THIRD_PARTY.md` | Second built page and script-preservation check | Drop the legacy page and its check | Open |
+| Was | Now |
+| --- | --- |
+| `tools.js check`, `solve`, `rank`, `list`, `arena` | `tools/cli` (`npm run check`, `solve`, `rank`) |
+| `tools.js surfaces`, `cups`, `mechanics` | `tests/physics.test.cjs` |
+| `tools.js smoke`, `smoke-multi` | The modular suites mapped below; `test:smoke` and `test:multiplayer` no longer exist |
+| Parity tests that executed the legacy game | Recorded fixtures in `tests/fixtures/legacy-reference/`: course rules, starters, geometry hash, arenas and mechanic chamber (`data.json`), sound recipes (`audio-signatures.json`), r128 course layout hashes (`three-r128-course-topology.json`), aim maths and camera angles (`input.json`), HUD and scorecard strings (`ui.json`), and 552 renderer readings (`render-tape.json`) replayed on the vendored Three.js r128 (`tests/vendor/three-r128.js`, test-only) |
+| VM adapter, exporters, inventory and visual-parity scripts | Removed. `src/courses/definitions.js` and `arena-specs.js` are now the source of truth for course data |
+| Second built page, script-preservation build check, `/putt-pals.html` header rule | Removed; `scripts/check-build.cjs` checks the single app page and that no development-only code ships |
+| `tools/cli validate` live hashing | Compares the recorded provenance hashes only (`tests/fixtures/source-inventory.json`) |
 
 Smoke assertion mapping (legacy area to modular coverage):
 
@@ -222,12 +212,11 @@ Smoke assertion mapping (legacy area to modular coverage):
 | Par, penalty and HUD countdown (P25), 10 s warning | `courses.test.cjs`, `ui.test.cjs` HUD and warning |
 | Scorecard, HIO, T/O, leader, K and Escape (P27) | `ui.test.cjs` scorecard and model, `app.test.cjs` solo |
 | Camera views, shortcuts, drag and arrow orbit (P30), free roam | `input.test.cjs`, `render.test.cjs` |
-| Putt transition arc, 1.5 s, no camera jump | `camera.test.cjs` (independent); `render.test.cjs` (legacy oracle) |
+| Putt transition arc, 1.5 s, no camera jump | `camera.test.cjs` (independent); `render.test.cjs` (recorded legacy poses) |
 | Wall fade (P31) | `render.test.cjs` wall fade scenarios |
 | Audio cues, listener, panner, mute | `audio.test.cjs`, `app.test.cjs` solo |
 | Four-client tournament, disconnect, rejoin, results | `app.test.cjs` four clients, `network.test.cjs`, `browser/multiplayer.spec.cjs`, `browser/server-room.spec.cjs` |
 | No runtime errors | Playwright page-error checks, `app.test.cjs` |
 
-Caveat: several of those modular tests (`ui.test.cjs` legacy parity, `render.test.cjs` scene and pose parity, `input.test.cjs` legacy launches, `audio.test.cjs` sound recipes) use the legacy game as the oracle. They must be rebased onto recorded fixtures, not deleted, before `putt-pals.html` can go.
-
-Nothing is removed until the open rows have replacement coverage.
+Where a parity test still names the legacy game, it compares against the recorded output above, not a running copy.
+Re-recording is no longer possible without checking out b1a57c4; changing a recorded value needs the same deliberate review as any fixture regeneration.

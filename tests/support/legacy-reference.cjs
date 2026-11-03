@@ -1,5 +1,5 @@
-// Recorded output of the legacy single-file game (see scripts/record-legacy-reference.cjs), used by the parity
-// tests in place of executing putt-pals.html or tools.js. Every accessor returns a fresh copy.
+// Recorded output of the legacy single-file game (recorded before its retirement), used by the parity
+// tests in place of executing the legacy game. Every accessor returns a fresh copy.
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');

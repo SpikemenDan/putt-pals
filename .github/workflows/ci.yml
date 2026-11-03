@@ -67,10 +67,6 @@ jobs:
         run: npm run test:physics
       - name: Check ported legacy smoke assertions
         run: npm run test:integration
-      - name: Check solo and practice flows in jsdom
-        run: npm run test:smoke
-      - name: Check four clients over the fake transport
-        run: npm run test:multiplayer
 
   browser-ci:
     name: browser-ci (${{ matrix.browser }})

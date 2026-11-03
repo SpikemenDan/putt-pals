@@ -206,9 +206,6 @@ async function main() {
   const indexPage = await fetch(`${baseUrl}/index.html`);
   assert.equal(indexPage.status, 200);
   assert.match(indexPage.headers.get('cache-control'), /no-cache|max-age=0/);
-  const legacyPage = await fetch(`${baseUrl}/putt-pals.html`);
-  assert.equal(legacyPage.status, 200);
-  assert.match(legacyPage.headers.get('cache-control'), /no-cache|max-age=0/);
 
   const assets = await readdir(assetsDir);
   const script = assets.find(file => file.endsWith('.js'));

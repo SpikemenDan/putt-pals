@@ -1,4 +1,4 @@
-// Browser entry for the modular game (index.html). The legacy single-file game remains at putt-pals.html.
+// Browser entry for the modular game (index.html).
 import * as THREE from 'three';
 import { createApp } from './app.js';
 import { createDisplayTuner } from '../devtools/display-tuner.js';

@@ -66,7 +66,7 @@ class Gestures {
       onError: error => errors.push(error.message), ...options });
     return { adapter, contexts, errors, values, get c() { return contexts[0]; } };
   };
-  // Recorded node chains of the legacy sound recipes (scripts/record-legacy-reference.cjs era; production audio never reads legacy source).
+  // Recorded node chains of the legacy sound recipes (tests/fixtures/legacy-reference/audio-signatures.json); production audio never reads legacy source.
   const recorded = require('./fixtures/legacy-reference/audio-signatures.json');
   const signature = c => c.sources().map(source => {
     const chain = []; let node = source;

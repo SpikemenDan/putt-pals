@@ -2,7 +2,7 @@
 // (tests/support/build-ui.cjs) and rendered with React DOM in jsdom. Part A compares view text with the
 // recorded legacy strings for the same state; part B drives the real L1 room session through complete flows with a
 // fake clock; part C checks store caching, notifications, focus, the power meter and cleanup.
-// Visual (pixel) parity is a separate real-browser check: scripts/ui-visual-parity.cjs.
+// Visual (pixel) parity with the retired legacy page is no longer checked; see ARCHITECTURE.md.
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const { buildUi } = require('./support/build-ui.cjs');
@@ -78,7 +78,7 @@ function fakeClock() {
 
   // ------------------------------------------------------------------ Part A: legacy text parity
   await scenario('legacy parity: HUD line, scoreboard, scorecard and results text match the strings recorded from the legacy game for the same state', async () => {
-    // Legacy output for this state was recorded from the legacy game (scripts/record-legacy-ui-reference.cjs):
+    // Legacy output for this state was recorded from the legacy game (tests/fixtures/legacy-reference/ui.json):
     // putt 3 of Dune Serpent, second map of a 3-map tournament; Ben has a hole in one and a timeout and is
     // done; Cy is still putting and ties Ben; Dee spectates.
     const { meColor } = recorded;

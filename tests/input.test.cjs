@@ -1,6 +1,6 @@
 // U1 input adapter: pointer and keyboard events in a jsdom window drive the extracted adapter and camera rig.
 // Aim maths and camera angles are checked against values recorded from the legacy game before its retirement
-// (tests/fixtures/legacy-reference/input.json, from scripts/record-legacy-input-reference.cjs); everything else
+// (tests/fixtures/legacy-reference/input.json, recorded from the legacy game); everything else
 // is asserted directly. No real-browser claim.
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');

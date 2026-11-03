@@ -2,7 +2,7 @@
 // (tests/vendor/three-r128.js) and are compared with what the legacy game produced for the same scripted
 // states, replayed from tests/fixtures/legacy-reference/render-tape.json. WebGL output is stubbed, so this
 // compares scene graphs, materials, shader sources, canvas drawing commands and camera poses, not pixels.
-// Recording (needs putt-pals.html, only possible before the legacy page is retired): RENDER_RECORD=1 node tests/render.test.cjs
+// The tape was recorded from the legacy page; `git show b1a57c4:tests/render.test.cjs` has the recording mode.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,12 +10,9 @@ const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
-const RECORD = process.env.RENDER_RECORD === '1';
 const TAPE_FILE = path.join(__dirname, 'fixtures/legacy-reference/render-tape.json');
-const html = RECORD ? fs.readFileSync(path.join(root, 'putt-pals.html'), 'utf8') : '<!doctype html><html><body><canvas id="cv"></canvas></body></html>';
+const html = '<!doctype html><html><body><canvas id="cv"></canvas></body></html>';
 const threeSource = fs.readFileSync(path.join(__dirname, 'vendor/three-r128.js'), 'utf8');
-const gameSource = RECORD ? html.match(/<script id="game">([\s\S]*?)<\/script>/)[1] : null;
-if (RECORD) assert.ok(threeSource.endsWith(html.match(/<script>\/\* three\.js \(inlined\) \*\/([\s\S]*?)<\/script>/)[1]), 'the vendored r128 is the legacy one');
 const RANDOM = 0.37;
 const sha = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex').slice(0, 16);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -24,20 +21,16 @@ async function until(fn, ms = 8000) { const t = Date.now(); while (Date.now() - 
 let passed = 0;
 async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + name); }
 
-// ---- legacy oracle tape: every value read from the legacy game goes through ora(), in a fixed order ----
-const tape = RECORD ? [] : JSON.parse(fs.readFileSync(TAPE_FILE, 'utf8')).tape;
+// ---- legacy oracle tape: every value the legacy game produced is replayed from the recording, in a fixed order ----
+const tape = JSON.parse(fs.readFileSync(TAPE_FILE, 'utf8')).tape;
 let cursor = 0;
-/** Records (RENDER_RECORD=1) or replays one legacy reading. Values are JSON-roundtripped so both modes behave alike. */
-async function ora(label, read) {
-  if (RECORD) { const value = JSON.parse(JSON.stringify((await read()) ?? null)); tape.push([label, value]); return value; }
+async function ora(label) {
   const entry = tape[cursor++];
   assert.ok(entry && entry[0] === label, `legacy tape out of step at ${cursor - 1}: expected ${label}, found ${entry && entry[0]}`);
   return entry[1];
 }
-/** Runs a legacy-only action (driving the legacy game); does nothing when replaying. */
-const live = fn => (RECORD ? fn() : undefined);
 
-// ---- jsdom window shared by the legacy game and the extracted modules ----
+// ---- jsdom window for the extracted modules ----
 function createWindow() {
   const dom = new JSDOM(html.replace(/<script[\s\S]*?<\/script>/g, ''), { runScripts: 'outside-only', pretendToBeVisual: true, url: 'http://localhost/' });
   const w = dom.window, errors = [];
@@ -62,41 +55,12 @@ function createWindow() {
   };
   w.matchMedia = () => ({ matches: false, addEventListener() {}, addListener() {} });
   w.Math.random = () => RANDOM;
-  // Controlled clocks and a manual animation frame queue.
-  const clock = { now: 1000, epoch: 1_700_000_000_000 };
-  w.performance.now = () => clock.now;
-  const RealDate = w.Date;
-  w.Date = class extends RealDate { static now() { return clock.epoch + clock.now; } };
-  let pending = null;
-  w.requestAnimationFrame = cb => { pending = cb; return 1; };
   w.eval(threeSource);
   const renders = [];
   w.THREE.WebGLRenderer = function () {
     return { capabilities: { getMaxAnisotropy: () => 1 }, shadowMap: {}, setSize() {}, setPixelRatio() {}, render(scene, camera) { renders.push({ scene, camera }); }, dispose() {} };
   };
-  return {
-    w, errors, clock, renders,
-    tick(now) { clock.now = now; const cb = pending; pending = null; assert.ok(cb, 'legacy requested an animation frame'); cb(now); },
-  };
-}
-
-async function bootLegacy(env) {
-  env.w.AudioContext = undefined;
-  env.w.Peer = function () { throw new Error('no network in render parity tests'); };
-  env.w.__PP_TEST = true;
-  env.w.eval(gameSource);
-  const P = () => env.w.__pp;
-  assert.ok(P(), 'legacy test hook');
-  env.w.document.getElementById('solo').click();
-  assert.ok(await until(() => P().room && P().room.phase === 'lobby'), 'solo lobby');
-  return P;
-}
-
-/** Puts the legacy game on a map/putt through its own room path, then waits for the build. */
-async function legacyPlay(env, P, map, putt, mode = 'puttprac') {
-  const R = P().R, r = R.room();
-  R.setRoom({ phase: 'play', map, putt, mode, round: r.round + 1, startAt: R.now(), roster: [R.id()], card: {} });
-  assert.ok(await until(() => P().active === r.round + 1 && P().me.mode === 'play'), `legacy plays map ${map} putt ${putt}`);
+  return { w, errors };
 }
 
 // ---- scene serialization ----
@@ -158,15 +122,12 @@ const same = (actual, expected, label) => { const d = firstDifference(actual, ex
 // static-scene parity comparisons exclude the guide on both sides (the arrow has its own test).
 const isAimGuide = c => c.geometry?.type === 'RingGeometry' /* M1a active-ball ring */ || c.geometry?.parameters?.radius === 2.8 || (c.isMesh && c.geometry?.type === 'BufferGeometry' && [3, 9].includes(c.geometry.attributes.position?.count) && c.material?.side === 2);
 
-const legacyCourseGroup = scene => scene.children.find(c => c.isGroup && c.children.length > 20 && c.children.some(x => x.userData.fade || x.geometry?.type === 'BoxGeometry'));
-
 let TUNING;
 (async () => {
   ({ TUNING } = await import('../src/shared/tuning.js'));
   const env = createWindow();
   const { w } = env;
   const THREE = w.THREE;
-  const P = RECORD ? await bootLegacy(env) : null;
   const [{ createCourseData }, render, camera, physics, coords] = await Promise.all([
     import('../src/courses/index.js'), import('../src/render/index.js'), import('../src/camera/index.js'), import('../src/simulation/physics.js'), import('../src/shared/coords.js'),
   ]);
@@ -198,14 +159,7 @@ let TUNING;
       if (n.material) { delete n.material.color; delete n.material.opacity; delete n.material.uniforms; }
       return n;
     };
-    const expected = await ora('static-env', async () => {
-      await legacyPlay(env, P, 0, 0);
-      env.tick(2000);
-      const legacy = env.renders.at(-1).scene;
-      // Legacy draw() has run, so compare only construction-time state of the per-frame objects.
-      const nodes = legacy.children.filter(c => c !== legacyCourseGroup(legacy) && !isAimGuide(c)).map(c => clean(node(c, { skipChildren: true })));
-      return { types: nodes.map(n => n.type), hashes: nodes.map(sha), fog: [legacy.fog.color.getHex(), legacy.fog.near, legacy.fog.far] };
-    });
+    const expected = await ora('static-env');
     const view = makeView();
     view.setCourse(definitions[0], 0);
     const mine = view.renderer.scene;
@@ -222,15 +176,7 @@ let TUNING;
     for (let map = 0; map < definitions.length; map++) {
       const putts = definitions[map].putts ? definitions[map].putts.length : 1;
       for (let putt = 0; putt < putts; putt++) {
-        const expected = await ora('course', async () => {
-          await legacyPlay(env, P, map, putt);
-          const legacyGroup = legacyCourseGroup(P().ball.parent);
-          assert.ok(legacyGroup, `legacy course group for ${map}/${putt}`);
-          // Shared time uniform: legacy has animated frames already; the frame scenarios compare it live.
-          let time = null;
-          legacyGroup.traverse(o => { if (time === null && o.material?.uniforms?.t) time = o.material.uniforms.t.value; });
-          return { time, hash: sha(node(legacyGroup)), children: legacyGroup.children.map(c => sha(node(c))), wallFade: P().wallFade.length };
-        });
+        const expected = await ora('course');
         const build = view.setCourse(definitions[map], putt);
         if (expected.time !== null) view.renderer.library.time.value = expected.time;
         const label = `course ${map} (${definitions[map].name}) putt ${putt}`;
@@ -246,27 +192,9 @@ let TUNING;
     view.dispose();
   });
 
-  const effectOf = me => me.pend.rev ? 'rev' : me.pend.zany ? 'zany' : me.arm.mag ? 'mag' : me.arm.steady ? 'steady' : me.flashUntil > w.performance.now() ? me.flashType : '';
-  const snapshot = me => ({ x: me.x, y: me.y, z: me.z, vx: me.vx, vy: me.vy, moving: me.moving, mode: me.mode, color: me.c, effect: effectOf(me), collected: { ...me.got } });
-  const hazardTime = () => Math.max(0, (P().R.now() - P().room.startAt) / 1000);
-  const wallState = () => P().wallFade.map(e => [e.a, e.m.material.opacity, e.m.material.depthWrite]);
-
-  /** Advances the legacy game one frame (record mode only) and reads everything the comparison needs. */
-  function legacyFrame(now) {
-    const last = env.clock.now;
-    env.tick(now);
-    const me = P().me;
-    const ls = P().ball.parent, cam = P().cam;
-    return {
-      dt: Math.min(0.05, (now - last) / 1000), hazard: hazardTime(), local: snapshot(me),
-      cam: [...cam.position.toArray(), ...cam.quaternion.toArray()], wall: wallState(),
-      types: [], children: ls.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === legacyCourseGroup(ls))).map(c => sha(node(c))),
-    };
-  }
-
   /** Advances the modular renderer one frame and compares everything the frame touched with the legacy frame. Returns the legacy frame. */
   async function stepBoth(view, now, { keys = new Set(), remotes = [], label = '' } = {}) {
-    const frame = await ora('frame', () => legacyFrame(now));
+    const frame = await ora('frame');
     const me = frame.local;
     view.frame({ now, dt: frame.dt, hazardTime: frame.hazard, local: me, remotes, free: me.mode === 'wait' || me.mode === 'spectator', keys });
     const mineCam = view.renderer.camera;
@@ -294,11 +222,7 @@ let TUNING;
     const view = sharedView;
     // Dream shapes and the ball spin a little every frame since boot; the legacy game has drawn more
     // frames than this new view, so copy those accumulated rotations once. Everything else is compared.
-    const start = await ora('resting-start', async () => {
-      await legacyPlay(env, P, target, 0);
-      const statics = scene => scene.children.filter(c => !c.isGroup && !isAimGuide(c));
-      return { now: env.clock.now, rotations: statics(P().ball.parent).map(o => o.rotation.toArray().slice(0, 3)) };
-    });
+    const start = await ora('resting-start');
     view.setCourse(definitions[target], 0);
     {
       const M = view.renderer.scene.children.filter(c => !c.isGroup && !isAimGuide(c));
@@ -311,18 +235,10 @@ let TUNING;
     view.rig.zoom(120);
     assert.equal(view.rig.orbitKey('ArrowLeft'), true);
     view.rig.orbitKey('ArrowUp');
-    await live(() => {
-      canvas.dispatchEvent(new w.WheelEvent('wheel', { deltaY: 120, cancelable: true }));
-      for (const key of ['ArrowLeft', 'ArrowUp']) {
-        w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles: true }));
-        w.document.body.dispatchEvent(new w.KeyboardEvent('keyup', { key, bubbles: true }));
-      }
-    });
-    const angles = await ora('cam-angles', () => [P().camAz, P().camEl]);
+    const angles = await ora('cam-angles');
     assert.deepEqual([view.rig.state.azimuth, view.rig.state.elevation], angles);
     for (let i = 0; i < 10; i++) await stepBoth(view, now += 16.7, { label: 'follow orbit' });
     for (const label of ['hole', 'strategic', 'follow']) {
-      await live(() => w.document.getElementById('vw').click());
       const r = view.rig.cycleView();
       assert.equal(r.view, label); assert.equal(r.label, { hole: 'Hole view', strategic: 'World view', follow: 'Ball cam' }[label]);
       for (let i = 0; i < 15; i++) await stepBoth(view, now += 16.7 + (i % 3), { label });
@@ -333,89 +249,70 @@ let TUNING;
   await scenario('frames: moving ball spins, trails and follows; sinking bursts confetti', async () => {
     const target = 0;
     const view = sharedView;
-    let now = await ora('moving-start', async () => { await legacyPlay(env, P, target, 0); return env.clock.now; });
+    let now = await ora('moving-start');
     view.setCourse(definitions[target], 0);
     await stepBoth(view, now += 16.7, { label: 'before shot' });
-    // Recorded robust solution for Switchback Garden putt 1 (tests/fixtures/solver-baseline.json): 31 degrees, power 0.8.
-    await live(() => {
-      const me = P().me, angle = 31 * Math.PI / 180, speed = 0.8 * 900;
-      me.str++; me.vx = Math.cos(angle) * speed; me.vy = Math.sin(angle) * speed; me.moving = true; me.mt = 0;
-    });
     // Roll in hole view: the short putt keeps the hole camera inside its distance clamps.
-    await live(() => w.document.getElementById('vw').click()); assert.equal(view.rig.cycleView().view, 'hole');
+    assert.equal(view.rig.cycleView().view, 'hole');
     let sank = false;
     for (let i = 0; i < 900 && !sank; i++) { const f = await stepBoth(view, now += 16.7, { label: 'rolling' }); sank = f.local.mode === 'sunk'; }
-    for (const expected of ['strategic', 'follow']) { await live(() => w.document.getElementById('vw').click()); assert.equal(view.rig.cycleView().view, expected); }
+    for (const expected of ['strategic', 'follow']) assert.equal(view.rig.cycleView().view, expected);
     assert.ok(sank, 'the straight putt sinks');
     for (let i = 0; i < 20; i++) await stepBoth(view, now += 16.7, { label: 'confetti' });
   });
 
   await scenario('frames: spectators fly the free-roam camera with held keys', async () => {
     const view = sharedView;
-    let now = await ora('free-start', async () => { await legacyPlay(env, P, 8, 0); return env.clock.now; });
+    let now = await ora('free-start');
     view.setCourse(definitions[8], 0);
     await stepBoth(view, now += 16.7, { label: 'before free roam' });
-    await live(() => { P().me.mode = 'spectator'; });
     const keys = new Set();
-    const press = key => { live(() => w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles: true }))); keys.add(key.toLowerCase()); };
-    const release = key => { live(() => w.document.body.dispatchEvent(new w.KeyboardEvent('keyup', { key, bubbles: true }))); keys.delete(key.toLowerCase()); };
+    const press = key => keys.add(key.toLowerCase());
+    const release = key => keys.delete(key.toLowerCase());
     await stepBoth(view, now += 16.7, { keys, label: 'enter free roam' });
-    assert.equal(await ora('free', () => P().free), true); assert.equal(view.rig.state.freeRoam, true);
+    assert.equal(await ora('free'), true); assert.equal(view.rig.state.freeRoam, true);
     press('w'); press('Shift');
     for (let i = 0; i < 8; i++) await stepBoth(view, now += 16.7, { keys, label: 'fly forward fast' });
     release('Shift'); press('d'); press('e');
     for (let i = 0; i < 8; i++) await stepBoth(view, now += 16.7, { keys, label: 'strafe and rise' });
     release('w'); release('d'); release('e');
-    await live(() => { P().me.mode = 'play'; });
     for (let i = 0; i < 6; i++) await stepBoth(view, now += 16.7, { keys, label: 'leave free roam' });
     assert.equal(view.rig.state.freeRoam, false);
   });
 
   await scenario('frames: remote players ease toward snapshots, show names, auras and shadows', async () => {
     const view = sharedView;
-    let now = await ora('remote-start', async () => { await legacyPlay(env, P, 8, 0); return env.clock.now; });
+    let now = await ora('remote-start');
     view.setCourse(definitions[8], 0);
-    const ghost = { n: 'Ghost Rider With A Long Name', h: 8, round: 0, mode: 'play', x: 120, y: 140, z: 0, c: 3, effect: 'mag' };
-    let own = null;
-    await live(() => {
-      const R = P().R;
-      own = R.peers; ghost.round = P().active;
-      R.peers = () => [...own(), { peer: 'ghost', isMe: false, presence: ghost }];
-    });
+    const ghost = { n: 'Ghost Rider With A Long Name', x: 120, y: 140, z: 0, c: 3, effect: 'mag' };
     const remote = () => [{ id: 'ghost', name: ghost.n, x: ghost.x, y: ghost.y, z: ghost.z, color: ghost.c, effect: ghost.effect }];
     for (let i = 0; i < 5; i++) await stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost appears' });
     ghost.x += 60; ghost.y += 20; ghost.z = 12;
     for (let i = 0; i < 6; i++) await stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost eases' });
     ghost.x += 400; ghost.n = 'Renamed'; ghost.effect = 'steady';
     for (let i = 0; i < 3; i++) await stepBoth(view, now += 16.7, { remotes: remote(), label: 'ghost teleports and renames' });
-    await live(() => { P().R.peers = own; });
     await stepBoth(view, now += 16.7, { remotes: [], label: 'ghost leaves' });
     assert.equal(view.renderer.remoteCount, 1, 'remote actors are hidden, not rebuilt');
   });
 
   await scenario('frames: putt-to-putt transition arcs the ball and hands back to the camera', async () => {
     const view = sharedView;
-    let now = await ora('transition-start', async () => { await legacyPlay(env, P, 0, 0, 'standard'); return env.clock.now; });
+    let now = await ora('transition-start');
     view.setCourse(definitions[0], 0);
     for (let i = 0; i < 10; i++) await stepBoth(view, now += 16.7, { label: 'putt 1' });
-    const clock = await ora('transition-begin', async () => {
-      const R = P().R, r = R.room();
-      R.setRoom({ putt: 1, round: r.round + 1, startAt: R.now() });
-      assert.ok(await until(() => P().trans), 'legacy transition started');
-      return env.clock.now;
-    });
+    const clock = await ora('transition-begin');
     view.setCourse(definitions[0], 1);
     view.startPuttTransition({ previousHole: definitions[0].putts[0].hole, nextTee: definitions[0].putts[1].tee, now: clock });
     assert.equal(view.rig.transitioning, true);
     let frames = 0;
-    while (await ora('transitioning', () => !!P().trans)) { await stepBoth(view, now += 16.7, { label: 'transition' }); frames++; assert.ok(frames < 200, 'transition ends'); }
+    while (await ora('transitioning')) { await stepBoth(view, now += 16.7, { label: 'transition' }); frames++; assert.ok(frames < 200, 'transition ends'); }
     assert.equal(view.rig.transitioning, false);
     for (let i = 0; i < 10; i++) await stepBoth(view, now += 16.7, { label: 'after transition' });
   });
 
   await scenario('wall fade: walls between camera and ball, and the wall around the camera, fade like legacy', async () => {
     const map = definitions.findIndex(d => d.name === 'Fortress Spiral');
-    const legacyCount = await ora('wall-entries', async () => { await legacyPlay(env, P, map, 0); return P().wallFade.length; });
+    const legacyCount = await ora('wall-entries');
     const view = makeView();
     const build = view.setCourse(definitions[map], 0);
     const fade = render.createWallFade(THREE);
@@ -431,7 +328,7 @@ let TUNING;
     let blockedFrames = 0, minimum = 1;
     for (const [from, to, label] of cases) {
       for (const dt of [0.016, 0.033, 0.05, 0.2]) {
-        const L = await ora('wall-fade', () => { P().updateWallFade(dt, from, to); return wallState(); });
+        const L = await ora('wall-fade');
         fade(build.wallFade, dt, from, to);
         const M = build.wallFade.map(e => [e.alpha, e.mesh.material.opacity, e.mesh.material.depthWrite]);
         // Platforms fade exactly like legacy; walls also fade for the lower-half ray, so never less than legacy (CL2 #103).
@@ -623,8 +520,7 @@ let TUNING;
 
   sharedView.dispose();
   assert.deepEqual(env.errors, [], 'the window reported no errors');
-  if (RECORD) { fs.writeFileSync(TAPE_FILE, JSON.stringify({ schemaVersion: 1, evidence: 'recorded from the legacy single-file game (Three.js r128) before its retirement', tape })); console.log('recorded', tape.length, 'legacy readings'); }
-  else assert.equal(cursor, tape.length, 'every recorded legacy reading was consumed');
+  assert.equal(cursor, tape.length, 'every recorded legacy reading was consumed');
   console.log(`Render: ${passed} scenarios passed (scene graphs, shaders, canvas commands and camera poses; no pixel or real-WebGL claim).`);
   process.exit(0);
 })().catch(error => { console.error(error); process.exit(1); });
