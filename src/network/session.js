@@ -108,6 +108,7 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     tokens.clear(); verified.clear(); deployables = []; lastHit.clear();
   };
   unbind.deploy = command => deploy(transport.peerId, command);
+  unbind.list = () => deployables; // the host's own view of the list; guests read it from the snapshot
   unbind.hit = objectId => hit(transport.peerId, objectId);
   return unbind;
 }

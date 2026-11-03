@@ -300,6 +300,39 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   });
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('deployables (G1e): a guest places a Bumper by clicking the course; the slot is spent only after the host accepts, and right-click cancels', async () => {
+    const W = world();
+    const ana = await W.client('Ana');
+    await ana.join('duo');
+    const ben = await W.client('Ben'); await ben.join('duo');
+    await W.run(300);
+    await ana.select('tournament_3');
+    await ana.click('Start Game');
+    await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'guest voting');
+    for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
+    await W.until(() => ana.ready() && ben.ready(), 10000, 'putt start');
+    const canvas = ben.$('canvas');
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 500, right: 800, bottom: 500 });
+    const click = async (c, button) => act(async () => { c.dispatchEvent(new ben.win.w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 400, clientY: 300, button })); });
+    ben.putt.player.inventory.push('bumper');
+    await ben.useItem(0);
+    assert.deepEqual(ben.putt.player.inventory, ['bumper'], 'activating only asks for a spot');
+    assert.match(ben.text('[data-ui=guide]'), /place the Bumper/);
+    await click(canvas, 2);
+    assert.deepEqual(ben.putt.player.inventory, ['bumper'], 'right-click cancels and keeps the item');
+    assert.doesNotMatch(ben.text('[data-ui=guide]'), /place the Bumper/);
+    assert.equal(ana.app.room.deployables.length, 0);
+    await ben.useItem(0);
+    await click(canvas, 0);
+    await W.until(() => ana.app.room.deployables.length === 1, 3000, 'host holds the bumper');
+    await W.until(() => ben.putt.player.inventory.length === 0, 3000, 'slot spent after the host accepted');
+    const [d] = ana.app.room.deployables;
+    assert.equal(d.kind, 'bumper'); assert.equal(d.owner, ben.app.room.localId); assert.equal(d.impacts, 0);
+    await W.until(() => ben.app.room.deployables.length === 1, 3000, 'guest snapshot carries it');
+    await ana.dispose(); await ben.dispose();
+  });
+
+  // ---------------------------------------------------------------------------------------------
   await scenario('four clients: a three-map tournament with an attack, a guest leaving and rejoining as a spectator, and host loss', async () => {
     const W = world();
     const ana = await W.client('Ana');

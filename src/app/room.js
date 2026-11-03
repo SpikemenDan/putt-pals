@@ -169,6 +169,12 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
     onStatus(listener) { statusListeners.add(listener); return () => statusListeners.delete(listener); },
     /** An L1 command without playerId; the transport binds the sender. */
     command(event) { return transport.send({ type: 'command', payload: event }); },
+    /** Deployed objects for this room: the host's own list, or what the host's last snapshot carried. */
+    get deployables() { return transport.isHost ? unbind?.list() ?? [] : last?.deployables ?? []; },
+    /** Place a Bumper or Orbital Bumper (G1e). The host applies it directly; a guest sends DEPLOY_OBJECT. Returns whether it was accepted (host) or sent (guest). */
+    deploy(kind, x, y) { return transport.isHost ? !!unbind?.deploy({ type: 'DEPLOY_OBJECT', kind, x, y }) : transport.send({ type: 'command', payload: { type: 'DEPLOY_OBJECT', kind, x, y } }); },
+    /** Report that this client's ball hit a deployed object (G1e). */
+    deployHit(id) { return transport.isHost ? !!unbind?.hit(id) : transport.send({ type: 'command', payload: { type: 'DEPLOY_HIT', id } }); },
     /** Local ball state for other players: {x, y, z, mode, strokes, effect?, fx?}. */
     presence(payload) { return transport.send({ type: 'presence', payload }); },
     /** Leaves the room and releases the transport, session bridge and timers. Idempotent. */

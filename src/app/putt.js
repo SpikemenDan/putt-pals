@@ -11,6 +11,7 @@ import { SimulationEventTypes } from '../shared/simulation.js';
 import { outOfBounds, sinkBall, surfaceHeight } from '../simulation/physics.js';
 import { SimulationEngine } from '../simulation/index.js';
 import { activatePowerup, addToInventory, armedState, auraOf, ballRadiusOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
+import { DEPLOYABLE_HIT } from '../gameplay/deployables.js';
 import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
@@ -44,7 +45,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   player.flashUntil = 0; player.flashType = '';
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
 
-  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null });
+  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null, deployHits: [] });
   const finish = (out, event, now) => {
     waitUntil = now + SINK_WAIT_MS;
     completion = { strokes: player.strokes, timedOut: !!event.timedOut };
@@ -96,6 +97,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
             for (const event of engine.step(FIXED_TIMESTEP).events) {
               if (event.type === SimulationEventTypes.SINK) finish(out, event, now);
               else if (event.type === SimulationEventTypes.OUT_OF_BOUNDS) { out.toasts.push('Splash! Back to your last spot. That stroke still counts.'); out.aim = aimAtHole(course, player); }
+              else if (event.type === DEPLOYABLE_HIT) out.deployHits.push(event.id);
               else if (event.type === SimulationEventTypes.REST) out.aim = aimAtHole(course, player);
             }
             accumulator -= FIXED_TIMESTEP;
@@ -136,6 +138,9 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       takeFromInventory(player.inventory, index);
       return out;
     },
+
+    /** Active Bumper / Orbital Bumper records the physics step applies to this client's ball (G1e). Cleared outside play. */
+    setDeployables(list) { player.deployables = disposed || player.mode !== 'play' ? [] : list; },
 
     /** Spends the slot of a placed deployable (G1e) after the host accepted DEPLOY_OBJECT. Returns false when the slot no longer holds `kind`. */
     consumeItem(kind) {

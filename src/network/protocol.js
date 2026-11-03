@@ -92,7 +92,7 @@ export function validSnapshot(s) {
     || !Array.isArray(s.last.winners) || !s.last.winners.every(id => Object.hasOwn(s.last.scores, id)))) return false;
   if (s.presence !== undefined && (!record(s.presence) || Object.keys(s.presence).length > MAX_PLAYERS
     || !Object.entries(s.presence).every(([id, p]) => Object.hasOwn(s.players, id) && s.players[id].connected && validPresence(p)))) return false;
-  if (s.deployables !== undefined && (!Array.isArray(s.deployables) || s.deployables.length > MAX_DEPLOYABLES || !s.deployables.every(validDeployable)
+  if (s.deployables !== undefined && (!Array.isArray(s.deployables) || s.deployables.length > MAX_DEPLOYABLES || !s.deployables.every(d => validDeployable(d))
     || new Set(s.deployables.map(d => d.id)).size !== s.deployables.length || !s.deployables.every(d => Object.hasOwn(s.players, d.owner)))) return false;
   return Object.hasOwn(s.players, s.hostId) && s.roster.every(id => validId(id) && Object.hasOwn(s.players, id));
 }

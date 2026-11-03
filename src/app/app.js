@@ -14,7 +14,7 @@ import { createInputAdapter } from '../input/index.js';
 import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
-import { aimModeOf, auraSourcesOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { activeDeployables, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -61,6 +61,9 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   let joining = null, joinGeneration = 0, reloadRecovery = false;
   const aimListeners = new Set();
   let unsubscribeInputAim = null;
+  // Bumper / Orbital Bumper placement (G1e): `placing` while the player picks a spot, `awaiting` while a guest's DEPLOY_OBJECT is in flight.
+  let placing = null, awaiting = null, cursor = null, unbindPlacement = null;
+  const AWAIT_MS = 3000;
 
   // The power meter subscribes before the canvas exists; forward to the input adapter once it does.
   const aim = { subscribeAim(listener) { aimListeners.add(listener); listener(false, 0); return () => aimListeners.delete(listener); } };
@@ -165,6 +168,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   function endPutt() {
     if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
+    stopPlacing(); awaiting = null;
     input?.cancel();
     lastSound = null;
   }
@@ -305,6 +309,44 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     });
   }
 
+  // ---------------------------------------------------------------- deployable placement (G1e)
+  function startPlacing(kind) {
+    if (room?.serverOwned) { toast('Bumpers are not available in this room yet.'); return; }
+    placing = kind; cursor = null;
+    setLocal({ placing: kind });
+  }
+  function stopPlacing() {
+    if (placing === null) return;
+    placing = null; cursor = null;
+    setLocal({ placing: '' });
+  }
+  /** The owner's slot is spent only once the host has accepted the placement. */
+  function acceptPlacement(kind) {
+    awaiting = null;
+    if (!putt?.consumeItem(kind)) return;
+    const entry = getPowerup(kind);
+    store.announce(s0name(), (entry?.banner || kind) + ' PLACED', 'power');
+    audio.handleEvent({ type: 'powerup', id: kind });
+    setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+    publish(true);
+  }
+  const s0name = () => room?.snapshot?.players?.[room.localId]?.name || 'Player';
+  function confirmPlacing(point) {
+    const kind = placing;
+    if (!kind || !point || !room) return;
+    const known = new Set(room.deployables.map(d => d.id));
+    stopPlacing();
+    const sent = room.deploy(kind, point.x, point.y);
+    if (!sent) { toast('Could not place it there. Your item is kept.'); return; }
+    if (room.isHost) acceptPlacement(kind); // the host applied it synchronously
+    else awaiting = { kind, known, deadline: win.performance.now() + AWAIT_MS };
+  }
+  function checkAwaiting(now) {
+    if (!awaiting) return;
+    if (room.deployables.some(d => d.owner === room.localId && d.kind === awaiting.kind && !awaiting.known.has(d.id))) acceptPlacement(awaiting.kind);
+    else if (now > awaiting.deadline) { awaiting = null; toast('The host did not accept that spot. Your item is kept.'); }
+  }
+
   function frame(t) {
     frameId = null;
     if (disposed) return;
@@ -316,7 +358,10 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       panoramaBuilt = false;
       if (room.connected) {
         putt.setAuras(auraSourcesOf(remoteBalls()));
+        putt.setDeployables(activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex));
         const out = putt.frame(t, dt);
+        for (const id of out.deployHits) { room.deployHit(id); audio.handleEvent({ type: 'bounce' }, { origin: [0, 0], speed: 300 }); }
+        checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);
         for (const message of out.toasts) toast(message);
@@ -341,6 +386,8 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         local: { ...state, color },
         remotes: remotesForRender(t),
         aim: input.frameAim(t / 1000),
+        deployables: activeDeployables(room.deployables, s.mapIndex, s.puttIndex),
+        placing: placing && cursor ? { kind: placing, x: cursor.x, y: cursor.y } : null,
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
       });
@@ -382,7 +429,9 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         break;
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
+        stopPlacing();
         const out = putt.useItem(command.index, win.performance.now());
+        if (out.placement) startPlacing(out.placement.kind);
         for (const [text, sub, kind, powerup] of out.banners) { store.announce(text, sub, kind); if (powerup) audio.handleEvent({ type: 'powerup', id: powerup }); }
         for (const message of out.toasts) toast(message);
         setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
@@ -461,6 +510,29 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '',
       }),
     });
+    // Placement mode takes the pointer before the shot handlers see it (capture phase).
+    const planeNormal = new THREE.Vector3(0, 1, 0);
+    const simPoint = (clientX, clientY) => {
+      if (!putt || !renderer.course) return null;
+      const r = canvas.getBoundingClientRect(), { transform } = renderer.course;
+      ray.setFromCamera(new THREE.Vector2((clientX - r.left) / r.width * 2 - 1, -(clientY - r.top) / r.height * 2 + 1), renderer.camera);
+      const hit = ray.ray.intersectPlane(new THREE.Plane(planeNormal, -transform.ground(putt.player.x, putt.player.y, putt.player.z)[1]), new THREE.Vector3());
+      if (!hit) return null;
+      const p = transform.toSim(hit.x, hit.y, hit.z);
+      return { x: p.x, y: p.y };
+    };
+    const onPlacementDown = e => {
+      if (placing === null) return;
+      e.stopImmediatePropagation(); e.preventDefault();
+      if (e.button === 2) { stopPlacing(); toast('Placement cancelled. Your item is kept.'); }
+      else if (e.button === 0) confirmPlacing(simPoint(e.clientX, e.clientY) || cursor);
+    };
+    const onPlacementMove = e => { if (placing !== null) cursor = simPoint(e.clientX, e.clientY) || cursor; };
+    const onPlacementKey = e => { if (placing !== null && e.key === 'Escape') { stopPlacing(); toast('Placement cancelled. Your item is kept.'); } };
+    canvas.addEventListener('pointerdown', onPlacementDown, true);
+    canvas.addEventListener('pointermove', onPlacementMove, true);
+    win.addEventListener('keydown', onPlacementKey, true);
+    unbindPlacement = () => { canvas.removeEventListener('pointerdown', onPlacementDown, true); canvas.removeEventListener('pointermove', onPlacementMove, true); win.removeEventListener('keydown', onPlacementKey, true); };
     unsubscribeInputAim = input.subscribeAim((charging, charge) => { for (const l of [...aimListeners]) l(charging, charge); });
     if (putt && room?.snapshot) { view.setCourse(data.definitions[room.snapshot.mapIndex], putt.puttIndex); input.setAimAngle(putt.aimAngle()); }
     lastFrame = win.performance.now();
@@ -495,6 +567,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       win.clearInterval(tick);
       stopBannerAudio();
       unsubscribeInputAim?.();
+      unbindPlacement?.();
       input?.dispose();
       view?.dispose();
       root.removeEventListener('pointerover', onHover);

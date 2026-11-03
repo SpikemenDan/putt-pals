@@ -167,6 +167,16 @@ async function run() {
   assert.equal(placer.consumeItem('bumper'), true);
   assert.deepEqual(placer.player.inventory, ['mag'], 'accepted placement spends exactly that slot');
   placer.dispose();
+  // A bumper in the ball's path throws it back and the putt reports the contact by object id (G1e).
+  const rolling = make({ random: () => 0.5, powerups: solo });
+  const rp = rolling.player;
+  rp.vx = 120; rp.vy = 0; rp.moving = true; rp.z = surfaceHeight(rolling.course, rp.x, rp.y);
+  rolling.setDeployables([{ id: 'd1', kind: 'bumper', x: rp.x + 40, y: rp.y, owner: 'someone', impacts: 0, placedAt: 0, map: 0, putt: 0 }]);
+  const hits = [];
+  for (let i = 0; i < 60 && !hits.length; i++) hits.push(...rolling.frame(i * 16, 0.016).deployHits);
+  assert.deepEqual(hits, ['d1'], 'the contact is reported by object id');
+  assert.ok(rp.vx < 0, 'the ball is thrown back off the bumper, owner or not');
+  rolling.dispose();
 
   picker.useItem(0, 0); assert.equal(picker.player.armedPowerups.mag, 1, 'two effects armed together');
   assert.equal(picker.useItem(5, 0).toasts.length, 0, 'empty slot does nothing');

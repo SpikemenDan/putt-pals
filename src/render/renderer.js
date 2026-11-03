@@ -13,6 +13,7 @@ import { movingRect, surfaceHeight } from '../simulation/physics.js';
 import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
 import { cosmeticRecord, DEFAULT_COSMETICS, rainbowHex } from '../cosmetics/catalog.js';
+import { createDeployableLayer } from './deployables.js';
 import { applyBallSkin, createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
@@ -160,6 +161,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   scene.add(actor(aimGuide.arrow));
 
   const remotes = new Map();
+  const deployableLayer = createDeployableLayer({ THREE, scene });
   const updateWallFade = createWallFade(THREE);
   let build = null, lastMode = '', width = 0, disposed = false;
   const bufferSize = new THREE.Vector2();
@@ -257,9 +259,11 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
      * @param {object|null} frame.local {x,y,z,vx,vy,moving,mode,color,effect,collected}
      * @param {object[]} [frame.remotes=[]] Players to show: {id,name,x,y,z,color,effect}
      * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread} while charging
+     * @param {object[]} [frame.deployables=[]] Active Bumper / Orbital Bumper records (G1e)
+     * @param {{kind:string,x:number,y:number}|null} [frame.placing=null] Placement ghost
      * @param {object} frame.camera Pose from createCameraRig().update()
      */
-    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, camera: pose }) {
+    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, deployables = [], placing = null, camera: pose }) {
       if (disposed) throw new Error('Renderer has been disposed');
       const t = now / 1000;
       library.time.value = t;
@@ -365,6 +369,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         for (const w of build.wallFade) if (w.mesh.userData.ink) w.mesh.userData.ink.visible = w.alpha > 0.98;
         if (renderer.getDrawingBufferSize) { renderer.getDrawingBufferSize(bufferSize); sizeInk(library.inkUniforms, bufferSize.x, bufferSize.y); }
       }
+      deployableLayer.update(deployables, placing, build.transform, build.course, t);
       renderer.render(scene, camera);
     },
 
@@ -379,6 +384,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const object of ownedActors) { scene.remove(object); disposeObject(object); }
       for (const resource of owned) resource.dispose();
       owned.clear();
+      deployableLayer.dispose();
       weather?.dispose();
       skyWorld?.dispose();
       sun.shadow.dispose?.();

@@ -173,6 +173,7 @@ export function hudView(room, local, now, courses) {
     scoreboard,
     connection: local.roomCode ? 'Room ' + local.roomCode + ' · ' + list.length + ' players' : 'Solo practice',
     inventory,
+    placing: local.placing ? powerupName(local.placing) : '',
     viewLabel: 'View: ' + (local.viewLabel || 'Ball cam'),
     soundLabel: 'Sound: ' + (local.soundOn === false ? 'Off' : 'On'),
     qualityLabel: 'Quality: ' + (local.qualityHigh === false ? 'Low' : 'High'),
