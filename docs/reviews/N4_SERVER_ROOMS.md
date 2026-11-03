@@ -2,6 +2,63 @@
 
 Starting revision: `3cbee66` (2026-10-31). N4D #122, N4E #123, and GM1 #119 are merged. This report covers local evidence; N4G deployment and separate-network acceptance remain gates.
 
+## Hosted continuation and admission fix — 2026-11-02
+
+This section supersedes the earlier unresolved full-map timeout and unauthenticated-provider status below. Separate-network validation was explicitly deferred by the user; Firefox was on the same Mac/internet connection as the automated Chromium clients.
+
+### Hosted results
+
+- `NODE_PATH=/private/tmp/putt-pals-n4-status/node_modules node /private/tmp/putt-pals-n4-status/node_modules/@playwright/test/cli.js test --config /private/tmp/putt-pals-n4-hosted/playwright.config.cjs multiplayer --project chromium`: **PASS**, one test, 2.8 minutes. Four isolated clients completed six physical simulated shots each, all clients agreed on scores/results, and traffic used hosted same-origin WSS. Run by itself after closing the other browser runs. Earlier concurrent-run timeout did not reproduce; resource contention is a plausible cause, not a proved diagnosis.
+- Manual Firefox/macOS plus three automated Chromium clients, room `N4G9275`: six-putt map completed. Automated scores were `[1,1,1,1,1,1]`; manual scores were `[3,3,1,3,5,1]`, including a timeout on putt five. User confirmed reload/rejoin retained scores `[3,3,1,3]`. All clients used one internet connection; this does not fulfill the independent-network criterion.
+- `NODE_PATH=/private/tmp/putt-pals-n4-status/node_modules node /private/tmp/putt-pals-n4-hosted/recovery-rollout.cjs`: final **PASS**, 22:53:04–22:53:32 UTC. Two browser clients completed a synthetic-score putt, then crossed immediate maintenance/game Durable Object code updates with forced socket closure. Both resumed on new sockets with identical player/session identities, completed scores, putt/round and absolute round start. One connected controller was consistently elected; automatic succession may change the controller after both sockets disconnect. The restored backend accepted score commands and advanced another putt. This verifies compatible hosted code-update recovery, not every possible provider crash.
+- Maintenance API admission returned **503**, `Cache-Control: no-store`, `Retry-After: 60`; bounded polling allowed approximately 2.37 seconds for rollout propagation. Static HTML remains asset-served under the current routing rules; do not expect `/` to return 503.
+- Harness iterations: an initial connected-socket-only comparison passed but was insufficient proof of fresh recovery; a stronger iteration hit propagation delay and safely restored the game; another incorrectly required the previous controller despite both clients disconnecting. The final test explicitly requires new sockets, one valid elected controller, and successful post-recovery commands. No runtime source was changed for these hosted checks.
+
+### Deployment record
+
+| Item | Verified value |
+| --- | --- |
+| Account / Worker | SpikemenDan / `putt-pals-rooms-preview` |
+| Origin | https://putt-pals-rooms-preview.spikemendan.workers.dev |
+| Original game version, restored at 100% | `57061c95-7170-4bbf-96bc-55d3cf35e46e` |
+| Maintenance version uploaded for acceptance | `56829c13-2e98-4d0f-846c-14bc6137d7ea` (`n4g-maintenance-check`) |
+| Final maintenance deployment | `7d4a393a-0b7c-4ddc-89e4-44c09b8f7bab` |
+| Final restored game deployment | `d1efb74a-c19b-451e-8204-2c9199377d12` |
+| Unchanged SQLite namespace / class | `3bf1f90737004e2186569fad5d7451b4` / `RoomDurableObject` |
+
+The maintenance artifact came from accepted main source; existing deployed backend source-map content matched the checkout's course, physics tuning, room protocol, session and recovery modules after newline normalization. `npm run build`, `node tests/rooms/preview-config.test.mjs`, and `node node_modules/wrangler/bin/wrangler.js deploy --dry-run --config .wrangler/deploy/preview-maintenance.json --outdir .wrangler/deploy/maintenance-bundle` passed before upload. `versions upload --config .wrangler/deploy/preview-maintenance.json --tag n4g-maintenance-check` changed no traffic. The exercise used `rollback 56829c13-2e98-4d0f-846c-14bc6137d7ea --yes --durable-objects-code-update-mode immediate` and restored with `versions deploy 57061c95-7170-4bbf-96bc-55d3cf35e46e@100 --yes --durable-objects-code-update-mode immediate`, both with the generated preview config. No production/custom-domain/paid-plan changes occurred. Final readback confirmed the original game at 100%; HTTPS returned 200.
+
+### Provider observations
+
+Read-only GraphQL queries used the existing Wrangler OAuth login in memory; credentials were never printed or persisted in evidence. Official dataset/units reference: https://developers.cloudflare.com/durable-objects/observability/metrics-and-analytics/.
+
+Namespace-filtered window **22:30–22:54 UTC**: 16,457 invocation requests, 55.112873856 GB-s duration, 18.973148 CPU seconds, 14 rows read and 253 rows written, with zero exceeded-CPU, exceeded-memory or fatal-internal errors reported. Daily maximum SQLite storage returned **225,280 bytes**. These sampled/aggregated namespace observations include multiple tests and retained rooms; invocation requests are not asserted to be billed request units, and they do not establish a per-human-match cost or an upper capacity guarantee. The idle window 22:54–22:55 returned no rows; treat this as missing/potentially delayed evidence, not zero idle cost. No quota was deliberately exhausted and no paid upgrade was enabled.
+
+### Retained empty-room regression
+
+Room `N4G6342` rejected admission as `history-full`. Local reproduction isolated the cause: `hasSnapshotCapacity` adds the hypothetical connected candidate while retaining a null controller, making the otherwise small snapshot fail protocol validation. A valid successor snapshot was only 1,063 bytes. The local fix selects the candidate as controller in the capacity preflight when the retained room has no controller; existing controller and capacity rules remain intact.
+
+Changed runtime paths: `services/rooms/room-object.mjs`, `tests/rooms/durable-recovery.test.mjs`. The new regression recreates the durable actor after its final member leaves, then verifies new admission, retained session, controller authority and the ability to start voting. `node tests/rooms/durable-recovery.test.mjs` failed at the new admission assertion before the fix and passed afterward. `npm run test:rooms:local` then passed, including build, deterministic storage/admission/queue cases, actual Workerd hibernation/socket-loss recovery, local eight-seat capacity and a four-player six-putt game. The existing build-size warning and local alarm-cancellation diagnostic remain non-failing. `git diff --check` passed. **PR #145 delivers the user-approved fix (`28072ff`); the hosted evidence above is for the original deployment. The fix still needs preview deployment and hosted verification.**
+
+Remaining acceptance: deploy and verify the empty-room fix delivered in PR #145; run four clients across at least two independent internet connections when the user resumes that deferred check; obtain a usable idle-retention measurement if provider data remains absent. N4g #73 and parent #65 remain open.
+
+## Hosted preview checks — 2026-11-02
+
+Target: https://putt-pals-rooms-preview.spikemendan.workers.dev/. The owner confirms deployment. This run used headless Chromium on macOS, with isolated browser contexts on one machine/network. It does **not** establish separate-network acceptance, Firefox/WebKit hosted coverage, or real background throttling.
+
+Temporary harness: `/private/tmp/putt-pals-n4-hosted`, copied from main `6ccbc3d`. The config points directly at HTTPS, disables the local webServer, uses one worker and no retries, and disables traces/screenshots to avoid retaining resume credentials. Existing specs were adapted to WSS and same-origin hosted URL assertions. The join helper recognizes the spectator HUD and allows 30 seconds for hosted admission. A dedicated reconnect check counts connected players rather than historical player records. No production source was changed or redeployed.
+
+Commands (prefix each Playwright invocation with `NODE_PATH=/Users/arshakir/git/putt-pals/node_modules node /Users/arshakir/git/putt-pals/node_modules/@playwright/test/cli.js`):
+
+- `test --config /private/tmp/putt-pals-n4-hosted/playwright.config.cjs --project chromium`: 2 passed, 2 failed, 3.3 minutes. Protocol rejection and delayed-frame synchronization passed. Full physical-shot map timed out waiting for putt 2 after 90 seconds; its cause is unresolved (including deployed build/physics versus fixture compatibility). The tournament initially failed its spectator visibility helper despite a visible spectator HUD.
+- `test --config /private/tmp/putt-pals-n4-hosted/playwright.config.cjs server-room --grep tournament --project chromium`: passed in 2.8 minutes after recognizing the spectator HUD. Three-map tournament completed with a late spectator and controller departure; scores were synthetic protocol reports, not physical strokes.
+- `test --config /private/tmp/putt-pals-n4-hosted/playwright.config.cjs hosted-reconnect --project chromium`: passed in 39.2 seconds after correcting the connected-player assertion. Four isolated clients joined; controller departure transferred control; a guest went offline for two seconds with socket closure, then reconnected on a new socket with the same identity/session. Three connected players remained; historical departed-player records were preserved. This is a client-side interruption, not a provider restart.
+- `curl -I --max-time 20 https://putt-pals-rooms-preview.spikemendan.workers.dev/`: HTTP 200, HTML `Cache-Control: no-cache`.
+- `curl -I --max-time 20 https://putt-pals-rooms-preview.spikemendan.workers.dev/assets/index-BCaf2XbM.js`: HTTP 200, `public, max-age=31536000, immutable`. HTML also references `index-CoOa71FS.css`; asset names are observations, not a verified deployed commit/version ID.
+- `node /Users/arshakir/git/putt-pals/node_modules/wrangler/bin/wrangler.js whoami`: reports **not authenticated**. No login, restart, rollback, publication or account change was attempted.
+
+Remaining gates: successful full-map physical-shot acceptance (investigate the putt-2 timeout); four players over at least two independent networks; hosted restart/deploy recovery and schema-compatible rollback; deployed version IDs and provider request/duration/storage observations. N4g #73 and parent #65 remain open.
+
 ## Evidence map
 
 | Concern | Repeatable check | Evidence type |
