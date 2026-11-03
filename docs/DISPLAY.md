@@ -39,4 +39,6 @@ npm run config:report -- display --overrides exported-overrides.json   # validat
 
 Units and the restart rule are the only things written by hand (`config-meta.js`); `tests/config-meta.test.cjs` fails if a setting has none, if a setting is read by nothing (the one known exception is the superseded `TUNING.aim.arrowMaxLength`), or if the derivation stops following a supported pattern. `tests/config-reach.test.cjs` checks that every DISPLAY setting changes its real consumers and that representative TUNING settings reach the simulation, input and effects code.
 
+The traceability view (units, live notes, readers, the differences list and the read-only simulation section) was tried in the local preview and approved by the owner on 2026-11-03.
+
 History: the first defaults (length 180, widths 1.3/3.6, head 8) were the pre-panel look. The owner found that arrow too narrow and far too long, so the defaults became length 100 and widths 2.6/7, head 14 (tried in the tuning panel and approved by the owner on 2026-11-02).
