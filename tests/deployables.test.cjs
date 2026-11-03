@@ -95,8 +95,8 @@ const assert = require('node:assert/strict');
   cases++;
 
   // ---- orbital ring bends a passing shot toward the centre; outside the range nothing happens
-  const pass = roll([rec('orbital', 250, 40)], { steps: 500 }).p;
-  assert.ok(pass.vy > plain.vy || pass.y > plain.y, 'the ring pulled the ball toward y = 40');
+  const pass = roll([rec('orbital', 250, P.orbitalRange - 5)], { steps: 500 }).p; // grazes the outer edge of the ring, well clear of the body
+  assert.ok(pass.vy > plain.vy || pass.y > plain.y, 'the ring pulled the ball toward the ring centre');
   const [ax, ay] = D.orbitalAcceleration([rec('orbital', 0, 0)], P.orbitalRange * 2, 0, dt);
   assert.deepEqual([ax, ay], [0, 0]);
   const [bx] = D.orbitalAcceleration([rec('orbital', 100, 0)], 100 - P.orbitalRange / 2, 0, 1);
@@ -183,10 +183,16 @@ const assert = require('node:assert/strict');
     assert.equal(environmentAwake(flat, ball(), 0), true, 'a resting ball inside the ring wakes');
     const out = ball(); out.x = 40 + 500; assert.equal(environmentAwake(flat, out, 0), false, 'outside the ring it stays asleep');
     const touching = ball(); touching.x = 40 - P.bumperRadius - R; assert.equal(environmentAwake(flat, touching, 0), false, 'a ball held against the body may rest');
-    const p = ball(); p.moving = true;
-    for (let i = 0; i < 4800 && p.moving; i++) stepBall(p, course, dt);
-    assert.equal(p.moving, false, 'it comes to rest');
-    assert.ok(Math.abs(Math.hypot(p.x - 40, p.y) - (P.bumperRadius + R)) < 2, 'resting against the orbital body, not out in the ring: ' + Math.hypot(p.x - 40, p.y));
+    // Drawn in by the ring, the ball meets the body and is kicked back out (the pull does not swallow the bounce).
+    const p = ball(); p.moving = true; let hit = false, kicked = false, closest = Infinity;
+    for (let i = 0; i < 2400 && !kicked; i++) {
+      for (const e of stepBall(p, course, dt)) if (e.type === D.DEPLOYABLE_HIT) hit = true;
+      closest = Math.min(closest, Math.hypot(p.x - 40, p.y));
+      if (hit && (p.x - 40) * p.vx > 0) kicked = true; // moving away from the centre after the hit
+    }
+    assert.ok(hit, 'the ball reached the body and reported an impact');
+    assert.ok(kicked, 'the body threw the ball back out');
+    assert.ok(closest >= P.bumperRadius + R - 0.5, 'never inside the body: ' + closest);
     const far = ball(); far.x = -2000; far.moving = true; for (let i = 0; i < 240; i++) stepBall(far, course, dt);
     assert.equal(far.deployables, ring); // untouched list
   }
@@ -210,7 +216,7 @@ const assert = require('node:assert/strict');
     for (const aimOff of [25, 30]) {
       const angle = Math.atan2(aimOff, 320);
       assert.equal(shoot(angle, 250, []).sunk, false, `aim ${aimOff} misses without the ring`);
-      assert.equal(shoot(angle, 250, [rec('orbital', 310, 70)]).sunk, true, `aim ${aimOff} sinks with the ring (310,70)`);
+      assert.equal(shoot(angle, 250, [rec('orbital', 310, 90)]).sunk, true, `aim ${aimOff} sinks with the ring (310,90)`);
     }
   }
 

@@ -161,7 +161,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   scene.add(actor(aimGuide.arrow));
 
   const remotes = new Map();
-  const deployableLayer = createDeployableLayer({ THREE, scene });
+  const deployableLayer = createDeployableLayer({ THREE, scene, library, toon });
   const updateWallFade = createWallFade(THREE);
   let build = null, lastMode = '', width = 0, disposed = false;
   const bufferSize = new THREE.Vector2();

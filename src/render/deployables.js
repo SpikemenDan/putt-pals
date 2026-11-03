@@ -1,43 +1,85 @@
 /**
  * Deployed Bumpers and Orbital Bumpers, and the placement ghost (G1e). Presentation only: sizes come from the
  * `deployables.*` tuning block, positions from the synced records, and nothing here touches simulation state.
+ *
+ * The body is a pinball pop bumper: a wide base lip, an indented waist low on the body, a flared barrel and a
+ * domed cap with a centre button. In the toon style it uses the shared cel-shaded material and ink outline, so it
+ * reads like the rest of the comic-book course; the legacy style falls back to plain standard materials.
  * Meshes are pooled by record id and released when the record disappears or the layer is disposed.
  */
 import { TUNING } from '../shared/tuning.js';
 import { surfaceHeight } from '../simulation/physics.js';
+import { addInk } from './outline.js';
 
-export const DEPLOYABLE_COLORS = Object.freeze({ bumper: 0xff5fa2, orbital: 0x6c8bff });
-const BODY_HEIGHT = 9;
+/** body: main colour, accent: waist band and cap ring, button: centre button. */
+export const DEPLOYABLE_COLORS = Object.freeze({
+  bumper: { body: 0xff4d6d, accent: 0xffe14d, button: 0xffffff },
+  orbital: { body: 0x4d7dff, accent: 0x7ff0ff, button: 0xffffff },
+});
+const HEIGHT = 12;
 
-export function createDeployableLayer({ THREE, scene }) {
+/** Lathe profile [radius multiple, height] from the floor up: base lip, indented waist, flared barrel, domed cap. */
+export const BUMPER_PROFILE = Object.freeze([
+  [0.0, 0], [1.0, 0], [1.0, 1.3], [0.9, 2.0], [0.74, 3.0], [0.7, 4.2], [0.78, 5.2], [0.94, 6.6], [1.0, 8.2],
+  [0.98, 9.8], [0.84, 11.0], [0.6, 11.8], [0.3, 12.2], [0.0, 12.3],
+]);
+
+export function createDeployableLayer({ THREE, scene, library = null, toon = false }) {
   const group = new THREE.Group();
-  const entries = new Map(); // id (or 'ghost') -> { kind, root, ring, mats }
-  let ghostKind = '';
+  const entries = new Map(); // id (or 'ghost') -> { kind, root, spin, ring, owned }
+  const pale = c => new THREE.Color(c);
 
   function build(kind, ghost) {
-    const p = TUNING.deployables, color = DEPLOYABLE_COLORS[kind] ?? 0xffffff;
-    const root = new THREE.Group();
-    const mats = [];
-    const mat = (opts) => { const m = new THREE.MeshBasicMaterial({ color, ...opts, transparent: !!(ghost || opts.transparent), opacity: ghost ? Math.min(opts.opacity ?? 1, 0.45) : (opts.opacity ?? 1) }); mats.push(m); return m; };
-    const geos = [];
-    const geo = g => { geos.push(g); return g; };
-    const body = new THREE.Mesh(geo(new THREE.CylinderGeometry(p.bumperRadius, p.bumperRadius, BODY_HEIGHT, 24)), mat({}));
-    body.position.y = BODY_HEIGHT / 2;
-    const cap = new THREE.Mesh(geo(new THREE.TorusGeometry(p.bumperRadius * 0.7, 1.6, 8, 24)), mat({ color: 0xffffff }));
-    cap.rotation.x = Math.PI / 2; cap.position.y = BODY_HEIGHT + 0.5;
-    root.add(body, cap);
-    let ring = null;
+    const p = TUNING.deployables, palette = DEPLOYABLE_COLORS[kind] ?? DEPLOYABLE_COLORS.bumper;
+    const root = new THREE.Group(), owned = [], inked = [];
+    const geo = g => { owned.push(g); return g; };
+    const mat = (color, opts = {}) => {
+      const transparent = ghost || !!opts.transparent, opacity = ghost ? Math.min(opts.opacity ?? 1, 0.45) : (opts.opacity ?? 1);
+      let m;
+      if (library && toon) m = library.toon(color, { transparent, opacity, ...(opts.side ? { side: opts.side } : {}) });
+      else m = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.1, transparent, opacity, ...(opts.side ? { side: opts.side } : {}) });
+      if (opts.depthWrite === false) m.depthWrite = false;
+      owned.push(m);
+      return m;
+    };
+    const solid = (geometry, material, x = 0, y = 0, z = 0) => {
+      const mesh = new THREE.Mesh(geo(geometry), material);
+      mesh.position.set(x, y, z); mesh.castShadow = !ghost; mesh.receiveShadow = false;
+      root.add(mesh);
+      if (toon && library && !ghost) inked.push(mesh);
+      return mesh;
+    };
+    const R = p.bumperRadius, s = R * 1.0;
+    // Pinball body: one lathe with the indented waist, then an accent band in the waist and a cap ring.
+    const lathe = new THREE.LatheGeometry(BUMPER_PROFILE.map(([r, y]) => new THREE.Vector2(r * s, y)), 32);
+    solid(lathe, mat(palette.body));
+    const waist = solid(new THREE.TorusGeometry(s * 0.72, 0.9, 8, 32), mat(palette.accent), 0, 3.7, 0);
+    waist.rotation.x = Math.PI / 2;
+    const capRing = solid(new THREE.TorusGeometry(s * 0.9, 0.8, 8, 32), mat(palette.accent), 0, 10.2, 0);
+    capRing.rotation.x = Math.PI / 2;
+    solid(new THREE.CylinderGeometry(s * 0.32, s * 0.4, 1.6, 20), mat(palette.button), 0, HEIGHT + 0.4, 0);
+    let ring = null, spin = null;
     if (kind === 'orbital') {
-      ring = new THREE.Mesh(geo(new THREE.RingGeometry(p.orbitalRange - 2, p.orbitalRange, 48)), mat({ transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
-      ring.rotation.x = -Math.PI / 2; ring.position.y = 1;
-      const disc = new THREE.Mesh(geo(new THREE.CircleGeometry(p.orbitalRange, 48)), mat({ transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
-      disc.rotation.x = -Math.PI / 2; disc.position.y = 0.6;
-      root.add(ring, disc);
+      // A little moon circles the cap; the floor ring shows the pull range.
+      spin = new THREE.Group(); spin.position.y = 7; root.add(spin);
+      const moon = new THREE.Mesh(geo(new THREE.SphereGeometry(3.2, 16, 12)), mat(palette.accent));
+      moon.position.set(s * 1.25, 0, 0); moon.castShadow = !ghost; spin.add(moon);
+      if (toon && library && !ghost) inked.push(moon);
+      const track = new THREE.Mesh(geo(new THREE.TorusGeometry(s * 1.25, 0.35, 6, 40)), mat(palette.accent, { transparent: true, opacity: 0.6 }));
+      track.rotation.x = Math.PI / 2; spin.add(track);
+      ring = new THREE.Mesh(geo(new THREE.RingGeometry(p.orbitalRange - 2.5, p.orbitalRange, 56)), mat(palette.accent, { transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.8; root.add(ring);
+      const disc = new THREE.Mesh(geo(new THREE.CircleGeometry(p.orbitalRange, 56)), mat(palette.body, { transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }));
+      disc.rotation.x = -Math.PI / 2; disc.position.y = 0.5; root.add(disc);
     }
+    for (const mesh of inked) { const hull = addInk(THREE, mesh, library.ink.solid); hull.geometry && owned.push(hull.geometry); }
     group.add(root);
-    return { kind, root, ring, mats, geos };
+    return { kind, root, spin, ring, owned };
   }
-  const release = entry => { group.remove(entry.root); entry.geos.forEach(g => g.dispose()); entry.mats.forEach(m => m.dispose()); };
+  const release = entry => {
+    group.remove(entry.root);
+    for (const r of entry.owned) if (!library?.isShared?.(r)) r.dispose?.();
+  };
 
   return {
     group,
@@ -55,15 +97,15 @@ export function createDeployableLayer({ THREE, scene }) {
         const d = wanted.get(id);
         if (!d || d.kind !== entry.kind) { release(entry); entries.delete(id); }
       }
-      if (!wanted.size && group.parent) scene.remove(group);
+      if (!wanted.size && group.parent) scene.remove(group); // attached only while something is shown, so an empty layer leaves the scene untouched
       for (const [id, d] of wanted) {
         let entry = entries.get(id);
         if (!entry) { entry = build(d.kind, id === 'ghost'); entries.set(id, entry); }
+        if (!group.parent) scene.add(group);
         const [wx, wy, wz] = transform.ground(d.x, d.y, surfaceHeight(course, d.x, d.y));
-        if (!group.parent) scene.add(group); // attached only while something is shown, so an empty layer leaves the scene untouched
         entry.root.position.set(wx, wy, wz);
-        entry.root.rotation.y = id === 'ghost' ? 0 : t * 0.8;
-        if (entry.ring) entry.ring.material.opacity = (id === 'ghost' ? 0.4 : 0.55) + Math.sin(t * 3) * 0.2;
+        if (entry.spin) entry.spin.rotation.y = t * 1.6;
+        if (entry.ring) entry.ring.material.opacity = (id === 'ghost' ? 0.4 : 0.6) + Math.sin(t * 3) * 0.2;
       }
     },
     count: () => entries.size,
