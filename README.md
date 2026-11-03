@@ -4,16 +4,59 @@ A fast-paced 3D multiplayer mini-golf game for desktop browsers. It blends arcad
 
 The modular app (`index.html` and `src/`) is the game. The original single-file version was retired. The legacy page and tools.js were removed after commit b1a57c4; `git show b1a57c4:putt-pals.html` (or `:tools.js`) recovers them.
 
+This README is the single guide for the two contributors: setup, running and hosting the website, commands, the working agreement and overnight sessions.
+
+## Contents
+
+- [Who works where](#who-works-where)
+- [Setup](#setup)
+- [Commands](#commands)
+- [Running the website](#running-the-website)
+- [Online rooms and hosting](#online-rooms-and-hosting)
+- [Contributing and AI workflow](#contributing-and-ai-workflow)
+- [Overnight sessions](#overnight-sessions)
+- [References](#references)
+
+## Who works where
+
+| Contributor | Branch |
+| --- | --- |
+| SpikemenDan | `dev/spikemendan` |
+| Partner | `dev/arshakir` |
+
+- One reusable branch each. `main` holds integrated, verified work. Do not create a branch per task.
+- Work only on your own branch and your own checkout. Never overwrite the other person's work, and tell each other before editing the same paths.
+- Integrate through a pull request into `main`. After it merges, bring your branch up to date so old changes don't reappear:
+
+```sh
+git fetch origin
+git switch dev/<your-branch>
+git merge --ff-only origin/main
+```
+
+If `--ff-only` refuses because you have unmerged commits, use `git merge origin/main` and resolve any conflicts. Do not reset, clean or force-push.
+
 ## Setup
 
-Use Node.js 22.22.2+ on the 22.x line, 24.15.0+ on the 24.x line, or 26+ (the pinned jsdom runtime requires these). Install the exact dependency tree from the lockfile:
+Both contributors, once per machine:
+
+1. Install Node.js: 22.22.2 or later on the 22.x line, 24.15.0 or later on 24.x, or 26+ (the pinned jsdom runtime requires these). Install Git. Install the GitHub CLI (`gh`) if you want to open PRs from the terminal.
+2. Clone the repository and switch to your branch:
+
+```sh
+git clone https://github.com/SpikemenDan/putt-pals.git
+cd putt-pals
+git switch dev/<your-branch>
+```
+
+3. Install the exact dependency tree from the lockfile and start the game:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Vite prints the local URL (normally `http://127.0.0.1:5173/`). The app is served at the root path, and `dev` and `preview` open it. In `npm run dev` a "Display tuning" panel (development only, docs/DISPLAY.md) adjusts presentation settings live. Use solo mode to develop without any online service. Contributors: see [README_DEV.md](README_DEV.md) for the full setup (website, online rooms, hosting) and the overnight-session procedure.
+Vite prints the local URL (normally `http://127.0.0.1:5173/`). The app is served at the root path, and `dev` and `preview` open it. In `npm run dev` a "Display tuning" panel (development only, [docs/DISPLAY.md](docs/DISPLAY.md)) adjusts presentation settings live. Use solo mode to develop without any online service.
 
 ## Commands
 
@@ -45,25 +88,39 @@ Commands are listed as they exist in `package.json`; keep this table in sync whe
 | `npm run rooms:dev` | Run the local Worker room runtime (see [Cloudflare setup](docs/networking/CLOUDFLARE_SETUP.md)) |
 | `npm run solve -- 0 0` | Find a robust shot for map 0, putt 0; add `--full` for an exhaustive search |
 | `npm run rank` | Print recorded difficulty counts; these are stale and do not certify current difficulty |
-| `npm run overnight:backup` | Create and verify a local recovery backup (see [docs/OVERNIGHT.md](docs/OVERNIGHT.md)) |
+| `npm run overnight:backup` | Create and verify a local recovery backup (see [Overnight sessions](#overnight-sessions)) |
 | `npm run overnight:readiness` | Check the Google Drive upload setup for overnight backups |
 
 jsdom suites stub WebGL, canvas and audio and use fake networks. They do not prove real rendering, audio quality or WebRTC connectivity; use the Playwright suites and manual playtests for those. Exhaustive difficulty sweeps run separately from pull-request checks. Solver and fixture details are in [docs/BASELINE.md](docs/BASELINE.md) and [docs/reviews/B4_DIFFICULTY.md](docs/reviews/B4_DIFFICULTY.md).
 
-## Online rooms
+## Running the website
 
-The modular app's online rooms are server-owned: the browser connects over WebSockets to a Cloudflare Worker with a SQLite Durable Object per room (contract in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md), local runtime in [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md)). Ball physics is still client-trusted. A hosted preview is deployed (see [docs/networking/CLOUDFLARE_DEPLOY.md](docs/networking/CLOUDFLARE_DEPLOY.md)); testing across separate networks and any production deployment still need owner authorization. PeerJS survives only as a legacy adapter (`src/network/peer.js`) that online rooms no longer use.
+| Goal | Command | Notes |
+| --- | --- | --- |
+| Develop with hot reload | `npm run dev` | Solo play. The Display tuning panel is only here |
+| Check the production build | `npm run build`, then `npm run preview` | Preview serves `dist/` at `http://127.0.0.1:4173/` |
+| Online rooms on your machine | `npm run rooms:dev` | Builds, then runs the Worker and room objects at `http://127.0.0.1:8787`. Open two browser tabs with the same room code. No Cloudflare account or login needed |
+| Verify the room runtime | `npm run test:rooms:local` | Runs a real local Worker. On the Windows machine used so far, Wrangler exited early; if it does the same for you, rely on CI for this check |
+| Real-browser checks | `npm run test:browser` | Playwright. `npx playwright test --project=chromium` runs Chromium only |
+| Everything else | `npm test` | Several minutes. Run focused suites (`npm run test:render`, and so on) while you work |
 
-## Build and hosting
+## Online rooms and hosting
 
-Deploy only the generated `dist/` directory to static HTTPS hosting. Development and preview servers bind to loopback and are not production hosts. Production deployment is a Q1 task and needs the owner's authorization.
+The modular app's online rooms are server-owned: the browser connects over WebSockets to a Cloudflare Worker with a SQLite Durable Object per room (contract in [docs/networking/SERVER_ROOMS.md](docs/networking/SERVER_ROOMS.md), local runtime in [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md), recovery in [docs/networking/DURABLE_RECOVERY.md](docs/networking/DURABLE_RECOVERY.md), browser client in [docs/networking/WEBSOCKET_CLIENT.md](docs/networking/WEBSOCKET_CLIENT.md)). Ball physics is still client-trusted. PeerJS survives only as a legacy adapter (`src/network/peer.js`) that online rooms no longer use.
+
+### Hosting it online (Cloudflare)
+
+- A hosted **preview** exists on Cloudflare Workers Free (Worker `putt-pals-rooms-preview`). It was deployed under the owner's authorization and recorded in [docs/networking/CLOUDFLARE_DEPLOY.md](docs/networking/CLOUDFLARE_DEPLOY.md), together with what was and was not verified. Separate-network play is still unverified. There is **no production** deployment, and any production deployment is a Q1 task that needs the owner's authorization.
+- Deploying or redeploying needs the owner's explicit approval of the account, plan, resource names and scopes. Do not run `wrangler login`, `whoami`, deploy, or create tokens before that approval, and never put tokens in source, chat, GitHub or logs. The step-by-step procedure, rollback and approval worksheet are in the deploy doc.
+- The pieces you can prepare without any account: `npm run build`, `node scripts/prepare-cloudflare-preview.mjs ...` (writes ignored local config, makes no network call) and `npx wrangler deploy --dry-run`. The deploy doc lists the exact commands.
+- The static site is the generated `dist/` folder over HTTPS. The Worker serves it and routes `/api/rooms/<code>/socket` to the room object. Development and preview servers bind to loopback and are not production hosts.
 
 ## Contributing and AI workflow
 
 Start with [AGENTS.md](AGENTS.md) and
 [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md).
 
-Two contributors use one reusable development branch each. Main contains
+Two contributors use one reusable development branch each (see [Who works where](#who-works-where)). Main contains
 integrated, verified changes. Do not create a branch or worktree per small task.
 Direct implementation requests authorize scoped local commits; remote writes,
 merges and deployment follow AGENTS.md.
@@ -81,24 +138,108 @@ reset, validated import/export); it is not in production builds. For appearance
 or game-feel proposals, present a local browser preview with relevant controls
 before owner acceptance.
 
-The legacy single-file game was retired (see ARCHITECTURE.md, "Legacy retirement").
+The legacy single-file game was retired (see [ARCHITECTURE.md](ARCHITECTURE.md), "Legacy retirement").
 
-Overnight work starts only on a fresh explicit user command, with bounded scope,
-runtime limit and a verified private Google Drive recovery backup. It does not
-push, merge, deploy or automatically restart. Procedure and limits:
-[docs/OVERNIGHT.md](docs/OVERNIGHT.md); contributor quick start:
-[README_DEV.md](README_DEV.md).
+## Overnight sessions
 
-References:
+An overnight session lets Claude work unattended on your own branch within strict limits. It starts only on a fresh explicit command from you, with bounded scope, a runtime limit and a verified private Google Drive recovery backup. It never pushes, merges, deploys, installs dependencies or restarts itself. Code: `tools/overnight/`; checks: `npm run test:overnight`. Full details and limits: [docs/OVERNIGHT.md](docs/OVERNIGHT.md).
+
+### One-time setup (each of you, on your own machine)
+
+Each person sets up their own rclone remote and their own private Drive folder. Never share the rclone login between machines.
+
+1. Install rclone (`winget install Rclone.Rclone` on Windows) and open a new terminal.
+2. `rclone config`: new remote named `putt-drive`, storage type `drive`, scope **`drive.file`** (rclone can only see files it created), leave client id and secret blank, sign in with your own Google account in the browser.
+3. `rclone mkdir putt-drive:PuttPalsBackups`
+4. Tell the tools where to upload, then open a new terminal:
+
+```sh
+setx PUTT_PALS_BACKUP_REMOTE "putt-drive:PuttPalsBackups"
+```
+
+5. Check: `npm run overnight:readiness` should say "Google Drive upload is configured."
+
+Notes: rclone's login token is in `%APPDATA%\rclone\rclone.conf`; keep it out of the repository and out of chat. If a token ever shows up somewhere it shouldn't, remove "rclone" at myaccount.google.com/permissions and sign in again. rclone's shared Google client id is being retired during 2026; if uploads suddenly fail, create your own client id (rclone.org/drive/#making-your-own-client-id).
+
+### Each session
+
+1. **Be ready.** You are on your own branch. Agree with your partner that they won't touch the paths you will own tonight.
+2. **Write a session file outside the repository** (an untracked file inside it would change the working tree and invalidate the backup), for example `../putt-pals-sessions/tonight.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "contributor": "your-name",
+  "branch": "dev/your-branch",
+  "tasks": [{ "id": "T1", "outcome": "what done looks like", "ownedPaths": ["src/render/", "tests/render.test.cjs"] }],
+  "endTime": "2026-11-04T06:00:00Z",
+  "verifyCommands": ["npm run test:render", "npm run build"],
+  "permittedOperations": ["edit", "test", "local-commit", "gemini-draft"],
+  "otherContributorConfirmed": true
+}
+```
+
+`endTime` can be at most 12 hours away. `ownedPaths` must be specific files or folders, never the whole repository.
+
+3. **Back up and upload.** The backup is valid for 2 hours and only for exactly this commit and working tree:
+
+```sh
+npm run overnight:backup
+node tools/overnight/main.mjs upload "<backup folder it printed>"
+```
+
+4. **Dry run.** Starts nothing:
+
+```sh
+node tools/overnight/main.mjs preflight --session "<session file>" --backup "<backup folder>"
+```
+
+5. **Start.** Typing this command is your explicit start. It blocks until the session ends, so use a terminal you leave open and keep the computer awake:
+
+```sh
+node tools/overnight/main.mjs start --session "<session file>" --backup "<backup folder>" --confirm "Start overnight work"
+```
+
+### What is enforced
+
+- No start without a fresh, verified, uploaded backup that matches the current state.
+- The assistant's git (set up through environment variables for that process only) refuses pushes and merge commits, refuses any ref update except your branch, requires "overnight checkpoint" in every commit message, and has every remote's push URL disabled.
+- A watchdog stops it at the end time, when it edits outside your owned paths, when the branch changes, or when nothing changes for 90 minutes.
+- One assistant process per start. Nothing restarts it after a stop, crash or power loss.
+
+Not enforced: a process can still use the network, and the tools cannot see your partner editing your paths. Review everything yourself afterwards.
+
+### After a session
+
+- Read `.git/putt-pals-overnight/<session id>/handoff.md`: commits, anything outside the owned paths, uncommitted work and the real results of your verify commands.
+- Review the commits. Visual or feel changes stay pending your preview acceptance. Push, merge and deploy are still manual decisions.
+- If the computer crashed mid-session, a lock blocks the next start. Close it with `node tools/overnight/main.mjs handoff`.
+- The first real session should be short (30 to 60 minutes) and watched; the default Claude Code command has not been run unattended yet.
+
+### Troubleshooting
+
+| Message | Fix |
+| --- | --- |
+| "HEAD changed since the backup" or "the working tree changed" | Make a new backup and upload it |
+| "the backup is N minutes old" | Same: new backup, upload, then start within 2 hours |
+| "a session lock exists" | `node tools/overnight/main.mjs handoff` |
+| "Google Drive upload is NOT ready" | Redo the setup above; open a new terminal after `winget` or `setx` |
+| "Possible credentials found" | Remove the secret from the named file or add `--exclude <path>` to the backup command; the value is never printed |
+| Backups pile up | Each is about 200 MB and growing. Local ones are in `../putt-pals-backups`; delete old ones by hand, and old Drive folders in `PuttPalsBackups` when you no longer need them |
+
+Credentials (`.env*`, keys, tokens) are never backed up. On a recovery you must re-supply them yourself.
+
+## References
+
+- [AGENTS.md](AGENTS.md): rules, permissions and overnight policy.
+- [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md): branches, PRs, CI and fingerprints.
 - [MODERNIZATION_PLAN.md](MODERNIZATION_PLAN.md): product vision and stages.
-- [ARCHITECTURE.md](ARCHITECTURE.md): technical design.
+- [ARCHITECTURE.md](ARCHITECTURE.md): technical design and the legacy retirement record.
 - [TASKS.md](TASKS.md): roadmap and dependencies.
 - [PROJECT_STATUS.md](PROJECT_STATUS.md): implementation summary.
 - [docs/ISSUES.md](docs/ISSUES.md): substantial work tracking.
 - [docs/AGENT_ROUTING.md](docs/AGENT_ROUTING.md): model responsibilities.
 - [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md): library provenance.
-- [README_DEV.md](README_DEV.md): contributor setup, hosting and overnight sessions.
 - [docs/DISPLAY.md](docs/DISPLAY.md) and [docs/TUNING.md](docs/TUNING.md): presentation and simulation settings.
-- [docs/OVERNIGHT.md](docs/OVERNIGHT.md): overnight backup and session tooling.
-- [docs/networking/CLOUDFLARE_DEPLOY.md](docs/networking/CLOUDFLARE_DEPLOY.md): hosted preview preparation, deployment record and rollback.
-- [docs/networking/DURABLE_RECOVERY.md](docs/networking/DURABLE_RECOVERY.md) and [docs/networking/WEBSOCKET_CLIENT.md](docs/networking/WEBSOCKET_CLIENT.md): room recovery and the browser WebSocket client.
+- [docs/OVERNIGHT.md](docs/OVERNIGHT.md): overnight backup and session tooling in depth.
+- [docs/networking/CLOUDFLARE_SETUP.md](docs/networking/CLOUDFLARE_SETUP.md) and [docs/networking/CLOUDFLARE_DEPLOY.md](docs/networking/CLOUDFLARE_DEPLOY.md): local runtime, hosted preview preparation, deployment record and rollback.
