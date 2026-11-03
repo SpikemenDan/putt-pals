@@ -56,3 +56,9 @@ Refresh documents when their facts materially change.
 
 Use Closes only for fully completed acceptance.
 Use Refs for partial delivery.
+
+## N4 reconciliation — 2026-11-02
+
+N4a–N4f are integrated into main: PRs #74, #75, #81/#120, #122, #123 and #129; all corresponding issues are closed. N4g preview preparation is present via PR #141 (`78bfe7f`); PR #130 alone did not establish its presence on main. The preview is deployed, and hosted four-client physical-shot play plus maintenance/compatible-code-update recovery passed. Original game version `57061c95-7170-4bbf-96bc-55d3cf35e46e` is restored at 100%.
+
+Parent #65 and N4g #73 remain open for preview deployment of the empty-room admission fix in PR #145 (`28072ff`) and separate-network validation, which the user deferred. Provider usage observations and idle-data limitations are recorded in docs/reviews/N4_SERVER_ROOMS.md. Bounded preview authorization is recorded in #73; production publication remains separate.

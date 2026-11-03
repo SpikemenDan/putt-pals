@@ -1,6 +1,6 @@
 # Cloudflare preview preparation and deployment
 
-N4G preparation only. N4F PR #129 is a prerequisite and its CI/acceptance is pending owner confirmation. This runbook and the local artifacts do not authorize account connection, resource creation or publication. No account has been selected by this work.
+N4F PR #129 is accepted. Preview deployment and hosted maintenance/compatible-code-update recovery were exercised under the bounded owner authorization in #73 on 2026-11-02. The deployment record below names the tested versions. Separate-network validation is deferred, and a discovered admission fix remains local pending review. This runbook grants no additional account, production or paid-plan authorization.
 
 ## Proposed preview
 
@@ -13,7 +13,7 @@ N4G preparation only. N4F PR #129 is a prerequisite and its CI/acceptance is pen
 | App | Built `dist/` assets and same-origin `/api/rooms/<code>/socket` WSS |
 | Origin allowlist | Exactly the approved preview origin; no wildcard |
 | Room namespace | `preview`, protocol 2; isolated from development and future production |
-| Policy | 4 seats, 30-second grace, immediate controller transfer, 15-minute empty retention |
+| Policy | 8 seats, 30-second grace, immediate controller transfer, 15-minute empty retention |
 | Repository integration | None; manual reviewed deployments; no GitHub deploy credentials |
 | Logging | Persisted observability disabled initially; inspect only approved/redacted diagnostics |
 | Production | No production route, custom domain or production deployment in this proposal |
@@ -64,7 +64,7 @@ Only after the exact worksheet is approved and N4F is accepted:
    npx wrangler deployments list --config .wrangler/deploy/preview.json
    ```
 
-4. Confirm the exact HTTPS origin returns `503`, `Cache-Control: no-store`, and no game admission. Then publish the approved game:
+4. Confirm `/api/rooms/<test-code>/socket` returns `503`, `Cache-Control: no-store`, and no game admission; static HTML still returns 200 because assets route before the Worker. Then publish the approved game:
 
    ```sh
    npx wrangler deploy --config .wrangler/deploy/preview.json
@@ -91,17 +91,17 @@ Preserve version IDs and redacted logs, never raw resume tokens, hashes, WebSock
 
 ## Deployment record
 
-All remote rows remain **not performed** until explicitly authorized and executed.
+Owner deployment confirmation and hosted checks were recorded on 2026-11-02; see [the acceptance report](../reviews/N4_SERVER_ROOMS.md). Deployment is complete. Provider-authenticated recovery/rollback passed; separate-network acceptance and integration of the discovered admission fix remain outstanding.
 
 | Gate | Evidence |
 | --- | --- |
-| Exact account / plan / scopes approved | Not performed |
-| N4F accepted with current-head CI | Awaiting owner confirmation |
-| Maintenance baseline version / namespace | Not performed |
-| Game version / deployment / origin | Not performed |
+| Exact account / plan / scopes approved | Owner authorization recorded in #73 |
+| N4F accepted with current-head CI | Complete: PR #129, issue #72 closed |
+| Maintenance version / namespace | `56829c13-2e98-4d0f-846c-14bc6137d7ea` / `3bf1f90737004e2186569fad5d7451b4` |
+| Game version / deployment / origin | Restored `57061c95-7170-4bbf-96bc-55d3cf35e46e`, deployment `d1efb74a-c19b-451e-8204-2c9199377d12`; HTTPS 200 |
 | Four-player separate-network game | Not performed |
-| Controller leave / retry / restart recovery | Not performed |
-| Rollback and restored checkpoint | Not performed |
-| Measured hosted quota and idle cost | Not performed |
+| Controller leave / retry / compatible code-update recovery | Passed on hosted preview, including fresh-socket resume and post-recovery round advancement; see acceptance report |
+| Rollback and restored checkpoint | Passed immediate maintenance/game updates; identities, scores and deadlines retained |
+| Measured hosted quota and idle cost | Namespace request/duration/rows/storage observations recorded; idle window has no rows, not a zero-cost claim |
 
 N4G and the parent N4/Q1 network gate remain incomplete until this record is accepted. Production publication requires its own decision.
