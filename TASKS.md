@@ -72,10 +72,11 @@ IDs below do not imply that GitHub issues have already been created.
 | --- | --- | --- |
 | DX1 | Audit/extend the validated configuration entry point; reuse existing settings, preserve defaults and remove duplicated adjustable values | Existing tuning system |
 | DX2 | Development-only tuning panel: sliders, toggles, selectors, reset, validated import/export and safe restart semantics | DX1 |
-| DX3 | Done (2026-11-02, local branch `dev/spikemendan`, not yet merged): legacy consumers inventoried and migrated, `putt-pals.html`, `tools.js` and legacy-only infrastructure removed; see ARCHITECTURE.md | Replacement test coverage and build checks |
-| DX4 | Tooling done and tested (2026-11-02, `dev/spikemendan`, unmerged): backup, manifest, restore verification, Drive upload gate with receipt; see docs/OVERNIGHT.md. **Open:** owner-designated Drive destination and rclone remote; real upload unverified | Owner-designated Drive destination and authorized access |
-| DX5 | Tooling done and tested (2026-11-02, `dev/spikemendan`, unmerged): preflight, enforced limits, watchdog, handoff; the default assistant command has never been run. Blocked from starting by DX4 setup | DX4 |
+| DX3 | Done (2026-11-02, merged in PR #146): legacy consumers inventoried and migrated, `putt-pals.html`, `tools.js` and legacy-only infrastructure removed; see ARCHITECTURE.md | Replacement test coverage and build checks |
+| DX4 | Tooling done and tested (2026-11-02, merged in PR #146): backup, manifest, restore verification, Drive upload gate with receipt; see docs/OVERNIGHT.md. **Open:** owner-designated Drive destination and rclone remote; real upload unverified | Owner-designated Drive destination and authorized access |
+| DX5 | Tooling done and tested (2026-11-02, merged in PR #146): preflight, enforced limits, watchdog, handoff; the default assistant command has never been run. Blocked from starting by DX4 setup | DX4 |
 | DX6 | Inspect redundant local branches and present a named deletion list | Actual developer checkout inspection; owner approval before deletion |
+| DX7 | Retire the permanent `dev/*` contributor branches: each contributor checks their own clone for unpushed work, outstanding work becomes focused task branches, then a named cleanup list is approved (docs/GITHUB_WORKFLOW.md) | DX6, owner approval before deletion |
 
 DX1 extraction preserves current behavior. Retuning needs separate verification.
 DX2 remains disabled in ordinary production builds by default. Appearance/feel

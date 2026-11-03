@@ -41,7 +41,7 @@ export function validateSessionSpec(spec, now = new Date()) {
   if (spec.schemaVersion !== SESSION_VERSION) problems.push(`schemaVersion must be ${SESSION_VERSION}`);
   if (typeof spec.contributor !== 'string' || !spec.contributor.trim()) problems.push('contributor is required');
   if (typeof spec.branch !== 'string' || !SAFE_BRANCH.test(spec.branch)) problems.push('branch is required and may only contain letters, digits and ._/-');
-  else if (PROTECTED_BRANCHES.includes(spec.branch)) problems.push('overnight work must use the contributor branch, never main');
+  else if (PROTECTED_BRANCHES.includes(spec.branch)) problems.push('overnight work must use a dedicated task branch, never main');
   if (!Array.isArray(spec.tasks) || !spec.tasks.length) problems.push('at least one bounded task is required');
   else spec.tasks.forEach((task, i) => {
     if (!task || typeof task.id !== 'string' || !task.id) problems.push(`task ${i}: id is required`);
@@ -86,7 +86,7 @@ export function preflight({ root, spec, backupDir, now = new Date(), confirmPhra
   let state;
   try { state = currentState(root, backupDir && fs.existsSync(path.join(backupDir, 'manifest.json')) ? readJson(path.join(backupDir, 'manifest.json')).excluded?.explicit ?? [] : []); } catch (error) { problems.push(`cannot read the repository state: ${error.message}`); }
   if (state) {
-    if (!state.branch) problems.push('HEAD is detached; check out the contributor branch');
+    if (!state.branch) problems.push('HEAD is detached; check out the task branch for this session');
     else if (spec && spec.branch && state.branch !== spec.branch) problems.push(`the checkout is on "${state.branch}" but the session is for "${spec.branch}"`);
   }
 
@@ -146,7 +146,7 @@ export function writeHooks(dir, branch) {
 while read old new ref; do
   case "$ref" in
     refs/heads/${branch})
-      case "$new" in 0000000000000000000000000000000000000000*) echo "Overnight session: the contributor branch cannot be deleted." >&2; exit 1;; esac;;
+      case "$new" in 0000000000000000000000000000000000000000*) echo "Overnight session: the session's task branch cannot be deleted." >&2; exit 1;; esac;;
     refs/stash|refs/remotes/*|HEAD|ORIG_HEAD|FETCH_HEAD|MERGE_HEAD|CHERRY_PICK_HEAD|REVERT_HEAD|AUTO_MERGE) ;;
     *) echo "Overnight session: updating $ref is not permitted." >&2; exit 1;;
   esac

@@ -21,7 +21,7 @@ Return a draft, proposed patch text or findings for Claude to verify.
 
 Do not:
 - Edit the active checkout.
-- Create branches, worktrees or clones.
+- Create, switch or delete branches, worktrees or clones.
 - Commit, push, merge or deploy.
 - Write GitHub comments or change issues.
 - Change configuration permissions.

@@ -49,7 +49,7 @@ Write a session file (JSON):
 {
   "schemaVersion": 1,
   "contributor": "name",
-  "branch": "dev/name",
+  "branch": "<kind>/<session-topic>",
   "tasks": [{ "id": "T1", "outcome": "what done looks like", "ownedPaths": ["src/render/", "tests/render.test.cjs"] }],
   "endTime": "2026-11-03T06:00:00Z",
   "verifyCommands": ["npm run test:render", "npm run build"],
@@ -70,7 +70,7 @@ The exact phrase must come from the owner's fresh command in the current convers
 ### Enforced by the launcher
 
 - **Backup gate:** a fresh (at most 2 hours old), locally verified, uploaded backup whose HEAD and working-tree digest equal the current state. Any change since the backup needs a new one.
-- **Bounded scope:** at least one task with a concrete outcome and specific owned paths (never the whole repository), at least one verification command, an end time at most 12 hours away, confirmation that the other contributor will not edit those paths, the contributor branch (never `main`, never detached). Operations outside `edit`, `test`, `local-commit`, `gemini-draft` are rejected, and push, merge, deploy, publish, branch deletion, credential changes, provisioning, repository protection and dependency installs or upgrades are rejected by name.
+- **Bounded scope:** at least one task with a concrete outcome and specific owned paths (never the whole repository), at least one verification command, an end time at most 12 hours away, confirmation that the other contributor will not edit those paths, the session's dedicated task branch (never `main`, never detached). Operations outside `edit`, `test`, `local-commit`, `gemini-draft` are rejected, and push, merge, deploy, publish, branch deletion, credential changes, provisioning, repository protection and dependency installs or upgrades are rejected by name.
 - **Git limits on the assistant** (set through environment variables for that process only, nothing persistent): hooks refuse pushes and merge commits, commit messages must contain "overnight checkpoint", updates to any ref other than the contributor branch (new branches, tags, branch deletion) are refused, and every remote's push URL is disabled.
 - **Watchdog:** stops the assistant and its child processes at the end time, when files outside the owned paths change, when the branch changes, or when nothing changes for the stall limit.
 - **No restart:** one assistant process per `start`. A normal end, a stop, a failure or a crash releases or leaves a lock; a leftover lock blocks the next start until `handoff` closes it. The launcher has no loop and no scheduler hook.
@@ -80,6 +80,6 @@ The exact phrase must come from the owner's fresh command in the current convers
 
 - The prompt and the default tool allowlist ask the assistant to avoid network and remote tools, but a process can still reach the network. The tool allowlist is Claude Code configuration, not a sandbox.
 - An edit by the other contributor inside your owned paths cannot be detected from one checkout; the confirmation flag is a promise, not a check.
-- Merges that fast-forward do not create a merge commit, but they still move the contributor branch; the handoff lists every commit for review.
+- Merges that fast-forward do not create a merge commit, but they still move the session's task branch; the handoff lists every commit for review.
 - Visual or feel changes made overnight remain pending the owner's preview acceptance.
 - The launcher cannot tell whether a fresh start command really came from the owner; running `start` yourself is that command.

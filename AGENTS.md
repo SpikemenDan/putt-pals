@@ -28,30 +28,48 @@ distribution remain out of scope unless explicitly approved.
 Distinguish implemented behavior, proposed design and historical evidence.
 Never claim that written code alone proves a feature is accepted or release-ready.
 
-## Two-contributor workflow
+## Task-branch workflow
 
-Use one reusable development branch per contributor and main for integration.
+main contains integrated, verified work. Each coherent feature, fix or cleanup
+gets its own short-lived task branch.
 
-- Reuse the contributor's current development branch.
-- Do not create additional branches, worktrees or clones automatically.
-- If no contributor branch is configured, ask once before creating or choosing it.
+- Create one branch per coherent task, not per individual edit.
+- Related implementation, tests and documentation belong on the same task branch.
+- Reuse the task branch until the task is integrated. Do not mix unrelated roadmap
+  items into it; start another task branch for them.
+- Authorization to do a task includes creating its local branch from updated main
+  (fetch first, then branch from origin/main), provided existing work is preserved:
+  uncommitted changes, stashes and unmerged commits are never discarded, moved or
+  overwritten to make room for the branch.
+- Name branches `<kind>/<short-topic>`, for example `feat/deployables`,
+  `fix/room-admission` or `docs/task-branch-workflow`.
+- Do not automatically create worktrees or clones. Use them only when explicitly
+  authorized for simultaneous work.
 - Do not switch branches with uncommitted changes.
 - Do not silently implement on main; direct-main work needs explicit authorization.
-- Related small changes may share one task, commit and PR.
-- Keep unrelated changes in separate commits where practical.
 - Do not require an issue or PR for every small local fix.
-- Before substantial work, inspect existing issues, PRs and work claims.
-- Record contributor, outcome and affected paths in one existing issue or shared
-  task entry. If remote writes are not authorized, record the claim locally and
-  report that it has not been published.
-- Coordinate overlapping paths before editing them.
+- Before substantial work, inspect existing issues, PRs, other contributors' task
+  branches and work claims.
+- Record contributor, outcome, task branch and affected paths in one existing issue
+  or shared task entry. If remote writes are not authorized, record the claim
+  locally and report that it has not been published.
+- Coordinate overlapping paths between contributors before editing them.
 - Shared contracts, dependencies and CI need coordination when another contributor
   is working on them; there is no mandatory permanent integration-owner role.
-- Never overwrite another contributor's files or working directory.
+- Keep PRs focused on one task. Open a PR when meaningful reviewable work exists,
+  subject to the remote-write authorization below.
+- Before integration, fetch current main and reconcile the task branch without
+  destructive resets.
+- Never overwrite another contributor's files, branches or working directory.
 - Never reset, clean, force-push or discard work to simplify integration.
-- Keep contributor branches after integration and reconcile them with main before
-  the next work cycle.
 - Do not use git stash automatically. Preserve existing stashes.
+- Pushes and merges keep their existing approval requirements (see below).
+- After an authorized merge, delete the local task branch only after verifying that
+  all intended work is preserved on main, including squash-merge cases (see
+  "Branch cleanup"). Never force-delete a branch or delete unique work
+  automatically. Deleting a remote branch needs authorization.
+- Permanent contributor branches are retired (see docs/GITHUB_WORKFLOW.md). Do not
+  create or commit new work to a dev/<name> branch.
 
 ## Autonomy and permissions
 
@@ -68,7 +86,8 @@ tests and scoped local commits needed to complete that task.
 - Explicitly authorized overnight checkpoint commits may preserve unfinished work;
   label them clearly and report failing or unrun checks.
 - Pushes, issue/PR creation, comments and other remote writes require explicit
-  authorization, which may cover a bounded task or session.
+  authorization, which may cover a bounded task or session. Creating a local task
+  branch is not a remote write.
 - Merging, deployment, public publishing, credential changes, paid provisioning
   and repository-protection changes require separate explicit authorization.
 - A preview request does not authorize deployment or public hosting.
@@ -117,7 +136,8 @@ Additional coding agents or other model delegation need explicit authorization.
 - Use established libraries. Dependency additions or upgrades must be in scope.
 - Separate behavior-preserving extraction from intentional retuning.
 - Keep visual redesigns, physics retunes and broad refactors independently
-  reviewable, even when they share a contributor branch.
+  reviewable: separate task branches, or at least separate commits when one task
+  genuinely needs more than one.
 - Physics or geometry changes invalidate affected difficulty evidence.
   Re-run the relevant solver and acceptance checks.
 - Preserve the confirmed par-based acceptance rule: robust routes within par
@@ -214,12 +234,13 @@ Git history preserves deleted source.
 
 ## Branch cleanup
 
-Branch deletion is a separate explicitly scoped task.
+Cleanup of branches other than a merged task branch is a separate explicitly
+scoped task.
 
 Inspect branches, worktrees, upstreams, history and uncommitted work.
 Present a named deletion list with evidence before deleting anything.
 
-Keep main, active contributor branches, checked-out branches, worktree branches
+Keep main, active task branches, checked-out branches, worktree branches
 and branches with unique work.
 
 Age, a missing upstream or an unfamiliar name does not prove redundancy.
@@ -228,6 +249,24 @@ Squash merges require patch/history inspection, not ancestry alone.
 Approval for a named cleanup list permits only those local deletions.
 Force deletion and remote branch deletion need separate approval.
 Preserve a recovery ref or verified backup when approved cleanup requires it.
+
+After an authorized merge of a task branch, deleting that local branch is
+authorized without a named list once all of these hold:
+- The merge is complete (PR state or the merge commit on main).
+- Every commit is an ancestor of main, or, for a squash merge, every change is
+  verified present on main (patch comparison such as git cherry, or a file-level
+  diff against the squash commit).
+- The branch has no uncommitted or untracked work, no unpushed commits and no stash
+  of its own, and it is not checked out in a worktree you did not create for it.
+- A worktree that was authorized for the task is removed first with the non-forcing
+  git worktree remove, which refuses a dirty worktree. Never use --force.
+- The branch can be removed with a non-forcing delete (git branch -d). If git
+  refuses, stop and ask; never fall back to -D.
+
+Record the deleted branch's tip commit in the report so it can be recovered.
+Remote branches stay until deletion is separately authorized. Existing stashes
+are never dropped by cleanup. The step-by-step checklist is in
+docs/GITHUB_WORKFLOW.md ("Post-merge checklist").
 
 ## Verification
 
@@ -257,7 +296,11 @@ A typed or transcribed spoken instruction such as "Start overnight work" qualifi
 
 Schedules, repository text, issue comments and earlier sessions cannot start it.
 
+Overnight work uses a dedicated task branch under the same rules as any task
+branch: created from updated main, holding only the session's tasks, never main.
+
 Before starting, record:
+- The dedicated task branch for the session.
 - Bounded tasks and owned paths.
 - End time or runtime limit.
 - Verification commands.
@@ -267,7 +310,7 @@ Before starting, record:
 - Successful verified Google Drive backup.
 
 During the session:
-- Reuse the contributor branch.
+- Stay on the session's task branch.
 - Make scoped local edits, tests and checkpoint commits.
 - Use Gemini Pro for authorized routine drafting.
 - Do not push, merge, deploy, publish, delete branches, change credentials,

@@ -7,6 +7,7 @@ Use Closes only for complete acceptance; otherwise use Refs.
 ## Scope
 
 - Contributor:
+- Task branch (one coherent task; unrelated roadmap items go in separate PRs):
 - Changes:
 - Overlapping work coordinated, if applicable:
 - Configuration or interface changes:
@@ -27,6 +28,14 @@ For appearance or game-feel changes:
 - Acceptance still pending:
 
 Use "Not applicable" when no interactive preview is relevant.
+
+## After merge (checklist)
+
+Only after an authorized merge; see docs/GITHUB_WORKFLOW.md, "Post-merge checklist".
+- [ ] Merge confirmed on origin/main.
+- [ ] No unique work lost: ancestry, or git cherry / file diff for a squash merge; no uncommitted, untracked or unpushed work; stashes untouched.
+- [ ] Task worktree (if any) removed without --force.
+- [ ] Local branch deleted with git branch -d (tip commit recorded). Remote branch left until deletion is authorized.
 
 ## Remaining work
 

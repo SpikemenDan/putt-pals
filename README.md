@@ -8,7 +8,7 @@ This README is the single guide for the two contributors: setup, running and hos
 
 ## Contents
 
-- [Who works where](#who-works-where)
+- [Branch workflow](#branch-workflow)
 - [Setup](#setup)
 - [Commands](#commands)
 - [Running the website](#running-the-website)
@@ -17,36 +17,36 @@ This README is the single guide for the two contributors: setup, running and hos
 - [Overnight sessions](#overnight-sessions)
 - [References](#references)
 
-## Who works where
+## Branch workflow
 
-| Contributor | Branch |
-| --- | --- |
-| SpikemenDan | `dev/spikemendan` |
-| Partner | `dev/arshakir` |
+`main` holds integrated, verified work. Everything else happens on short-lived task branches.
 
-- One reusable branch each. `main` holds integrated, verified work. Do not create a branch per task.
-- Work only on your own branch and your own checkout. Never overwrite the other person's work, and tell each other before editing the same paths.
-- Integrate through a pull request into `main`. After it merges, bring your branch up to date so old changes don't reappear:
+- One branch per coherent feature, fix or cleanup, not per edit. Name it `<kind>/<short-topic>`, for example `feat/deployables`, `fix/room-admission` or `docs/task-branch-workflow`.
+- Implementation, tests and documentation for a task share one branch. Reuse it until the task is merged, and keep unrelated roadmap items off it.
+- Start each task from updated `main`, keeping any existing work safe:
 
 ```sh
 git fetch origin
-git switch dev/<your-branch>
-git merge --ff-only origin/main
+git switch -c <kind>/<topic> --no-track origin/main
 ```
 
-If `--ff-only` refuses because you have unmerged commits, use `git merge origin/main` and resolve any conflicts. Do not reset, clean or force-push.
+- Open a focused PR when there is meaningful work to review. Pushes and merges still need your explicit say-so (or the AI's explicit authorization from you); see [AGENTS.md](AGENTS.md).
+- After a merge, run the post-merge checklist in [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md): verify nothing unique is lost (for a squash merge, `git cherry origin/main <branch>` must show no `+` lines), remove the task's worktree if there was one, then `git branch -d <branch>`. Never `-D` or `--force`, and leave the remote branch until deletion is approved. Start the next task from updated `main` instead of reusing the old branch.
+- Tell each other before editing the same paths. Never overwrite the other person's work, and never reset, clean or force-push to resolve a conflict.
+- No worktrees or clones unless you both agree to work on two things at once.
+
+The permanent `dev/spikemendan` and `dev/arshakir` branches are being retired. Do not add new work to them; check your own clone for unpushed work first (steps in [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md)).
 
 ## Setup
 
 Both contributors, once per machine:
 
 1. Install Node.js: 22.22.2 or later on the 22.x line, 24.15.0 or later on 24.x, or 26+ (the pinned jsdom runtime requires these). Install Git. Install the GitHub CLI (`gh`) if you want to open PRs from the terminal.
-2. Clone the repository and switch to your branch:
+2. Clone the repository (you start on `main`; make a task branch before you edit, see [Branch workflow](#branch-workflow)):
 
 ```sh
 git clone https://github.com/SpikemenDan/putt-pals.git
 cd putt-pals
-git switch dev/<your-branch>
 ```
 
 3. Install the exact dependency tree from the lockfile and start the game:
@@ -120,8 +120,9 @@ The modular app's online rooms are server-owned: the browser connects over WebSo
 Start with [AGENTS.md](AGENTS.md) and
 [docs/GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md).
 
-Two contributors use one reusable development branch each (see [Who works where](#who-works-where)). Main contains
-integrated, verified changes. Do not create a branch or worktree per small task.
+Two contributors use short-lived task branches (see [Branch workflow](#branch-workflow)). Main contains
+integrated, verified changes. Create one branch per coherent task, not per small edit, and no
+worktrees or clones unless you both authorize them.
 Direct implementation requests authorize scoped local commits; remote writes,
 merges and deployment follow AGENTS.md.
 
@@ -142,7 +143,7 @@ The legacy single-file game was retired (see [ARCHITECTURE.md](ARCHITECTURE.md),
 
 ## Overnight sessions
 
-An overnight session lets Claude work unattended on your own branch within strict limits. It starts only on a fresh explicit command from you, with bounded scope, a runtime limit and a verified private Google Drive recovery backup. It never pushes, merges, deploys, installs dependencies or restarts itself. Code: `tools/overnight/`; checks: `npm run test:overnight`. Full details and limits: [docs/OVERNIGHT.md](docs/OVERNIGHT.md).
+An overnight session lets Claude work unattended on a dedicated task branch within strict limits. It starts only on a fresh explicit command from you, with bounded scope, a runtime limit and a verified private Google Drive recovery backup. It never pushes, merges, deploys, installs dependencies or restarts itself. Code: `tools/overnight/`; checks: `npm run test:overnight`. Full details and limits: [docs/OVERNIGHT.md](docs/OVERNIGHT.md).
 
 ### One-time setup (each of you, on your own machine)
 
@@ -163,14 +164,14 @@ Notes: rclone's login token is in `%APPDATA%\rclone\rclone.conf`; keep it out of
 
 ### Each session
 
-1. **Be ready.** You are on your own branch. Agree with your partner that they won't touch the paths you will own tonight.
+1. **Be ready.** Create a dedicated task branch for the session from updated `main` (see [Branch workflow](#branch-workflow)) and switch to it; it must not be `main` and should hold nothing but tonight's tasks. Agree with your partner that they won't touch the paths you will own tonight.
 2. **Write a session file outside the repository** (an untracked file inside it would change the working tree and invalidate the backup), for example `../putt-pals-sessions/tonight.json`:
 
 ```json
 {
   "schemaVersion": 1,
   "contributor": "your-name",
-  "branch": "dev/your-branch",
+  "branch": "<kind>/<session-topic>",
   "tasks": [{ "id": "T1", "outcome": "what done looks like", "ownedPaths": ["src/render/", "tests/render.test.cjs"] }],
   "endTime": "2026-11-04T06:00:00Z",
   "verifyCommands": ["npm run test:render", "npm run build"],

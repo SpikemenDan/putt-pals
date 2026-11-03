@@ -1,11 +1,11 @@
 name: Development task
-description: Track substantial work for the two-contributor workflow.
+description: Track substantial work for the two-contributor task-branch workflow.
 title: "[TASK-ID] Concrete outcome"
 body:
   - type: markdown
     attributes:
       value: |
-        Follow AGENTS.md. Reuse your contributor branch.
+        Follow AGENTS.md. One short-lived task branch per coherent task, created from updated main.
         Small fixes do not require an issue.
         This form does not grant additional permissions.
   - type: input
@@ -26,7 +26,7 @@ body:
       label: Contributor and affected paths
       value: |
         Contributor:
-        Existing contributor branch:
+        Task branch (kind/topic, from updated main):
         Affected paths:
         Overlapping work checked:
     validations:

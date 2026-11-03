@@ -36,8 +36,9 @@ When implementation facts materially change, the integrating contributor updates
 
 ## Confirmed development-workflow decisions
 
-- Two contributors use reusable development branches; no automatic per-task
-  branches, worktrees or clones.
+- Two contributors use short-lived task branches (one per coherent feature, fix or
+  cleanup, created from updated main); no automatic worktrees or clones. The earlier
+  permanent contributor branches are retired (docs/GITHUB_WORKFLOW.md).
 - Direct implementation requests authorize scoped local commits of the task's
   own changes. Remote writes and merges retain AGENTS.md's boundaries.
 - Claude leads. Gemini Pro supplies worthwhile routine drafts/summaries for
