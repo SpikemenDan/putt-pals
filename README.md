@@ -180,11 +180,12 @@ Notes: rclone's login token is in `%APPDATA%\rclone\rclone.conf`; keep it out of
   "endTime": "2026-11-04T06:00:00Z",
   "verifyCommands": ["npm run test:render", "npm run build"],
   "permittedOperations": ["edit", "test", "local-commit", "gemini-draft"],
-  "otherContributorConfirmed": true
+  "otherContributorConfirmed": true,
+  "limits": { "maxRepeatedFailures": 4, "maxGeminiAttempts": 8, "maxFullSolverRuns": 2 }
 }
 ```
 
-`endTime` can be at most 12 hours away. `ownedPaths` must be specific files or folders, never the whole repository.
+`limits` is optional. Besides `endTime` (at most 12 hours away), the launcher enforces how often the same command may fail in a row, total failures, Gemini attempts (retries included) and solver runs; the full list and defaults are in [docs/OVERNIGHT.md](docs/OVERNIGHT.md). `ownedPaths` must be specific files or folders, never the whole repository.
 
 3. **Back up and upload.** The backup is valid for 2 hours and only for exactly this commit and working tree:
 
@@ -209,6 +210,7 @@ node tools/overnight/main.mjs start --session "<session file>" --backup "<backup
 
 - No start without a fresh, verified, uploaded backup that matches the current state.
 - The assistant's git (set up through environment variables for that process only) refuses pushes and merge commits, refuses any ref update except your branch, requires "overnight checkpoint" in every commit message, and has every remote's push URL disabled.
+- Budgets on repeated command failures, total failures, Gemini attempts and solver runs are enforced by wrappers around `npm`, `npx`, `node` and `gemini`; every retry counts. Reaching one stops the session and records the blocker and a resume point.
 - A watchdog stops it at the end time, when it edits outside your owned paths, when the branch changes, or when nothing changes for 90 minutes.
 - One assistant process per start. Nothing restarts it after a stop, crash or power loss.
 

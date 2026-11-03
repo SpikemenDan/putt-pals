@@ -15,6 +15,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadState, readStop, resolveLimits, validateLimits, writeShims } from './guard.mjs';
 import { git, hashProjectFiles, listProjectFiles, readJson, sha256, sha256File, workingTreeDigest, writeJson } from './lib.mjs';
 
 export const SESSION_VERSION = 1;
@@ -60,6 +62,7 @@ export function validateSessionSpec(spec, now = new Date()) {
   }
   if (spec.otherContributorConfirmed !== true) problems.push('otherContributorConfirmed must be true: the other contributor will not edit the owned paths');
   if (spec.maxStallMinutes !== undefined && !(spec.maxStallMinutes >= 10 && spec.maxStallMinutes <= 480)) problems.push('maxStallMinutes must be between 10 and 480');
+  problems.push(...validateLimits(spec.limits));
   if (spec.assistantCommand !== undefined && (!Array.isArray(spec.assistantCommand) || !spec.assistantCommand.every(a => typeof a === 'string'))) problems.push('assistantCommand must be an array of strings');
   return problems;
 }
@@ -163,7 +166,15 @@ export function gitEnvironment(root, hooksDir, sessionId, spec) {
   return env;
 }
 
+/** Environment that routes the assistant's npm, npx, node and gemini through the budget guard. */
+export function guardEnvironment(dir, spec, baseEnv = process.env) {
+  const bin = writeShims(path.join(dir, 'bin'), fileURLToPath(new URL('./guard.mjs', import.meta.url)));
+  const pathKey = Object.keys(baseEnv).find(k => k.toLowerCase() === 'path') ?? 'PATH';
+  return { [pathKey]: `${bin}${path.delimiter}${baseEnv[pathKey] ?? ''}`, PUTT_PALS_GUARD_DIR: dir, PUTT_PALS_GUARD_BIN: bin, PUTT_PALS_GUARD_LIMITS: JSON.stringify(resolveLimits(spec.limits)) };
+}
+
 export function buildPrompt(spec) {
+  const limits = resolveLimits(spec.limits);
   const tasks = spec.tasks.map(t => `- ${t.id}: ${t.outcome}\n  Owned paths: ${t.ownedPaths.join(', ')}`).join('\n');
   return `You are running an unattended overnight session for ${spec.contributor} on branch ${spec.branch}. Follow AGENTS.md and CLAUDE.md.
 
@@ -174,6 +185,7 @@ Permitted: ${spec.permittedOperations.join(', ')}. Local checkpoint commits only
 Never: push, merge, deploy, publish, delete branches, change credentials, provision services, alter repository protection, install or upgrade dependencies, or expand into other work.
 Verification commands to run before finishing: ${spec.verifyCommands.join(' ; ')}
 Hard stop at ${spec.endTime}. Stop early on conflicting edits, unclear requirements, or repeated failures without progress, leaving unfinished work committed or in the working tree.
+Budgets are enforced by wrappers around npm, npx, node and gemini (every attempt counts, retries included): the same command may fail ${limits.maxRepeatedFailures} times in a row, at most ${limits.maxTotalFailures} commands may fail in total, ${limits.maxGeminiAttempts} Gemini attempts, ${limits.maxSolverRuns} solver runs of which ${limits.maxFullSolverRuns} may use --full. When a budget is reached the session stops and your work is preserved; do not try to get around it, and diagnose a failing command instead of re-running it unchanged.
 Visual or feel changes stay pending the owner's preview acceptance. Finish with a brief summary; the launcher writes the handoff.`;
 }
 
@@ -210,7 +222,7 @@ export async function startSession({ root, spec, backupDir, confirmPhrase, now =
   fs.writeFileSync(lockFile(root), JSON.stringify({ id, startedAt: session.startedAt, endTime: spec.endTime }), { flag: 'wx' });
 
   const hooks = writeHooks(dir, spec.branch);
-  const env = gitEnvironment(root, hooks, id, spec);
+  const env = { ...gitEnvironment(root, hooks, id, spec), ...guardEnvironment(dir, spec) };
   const prompt = buildPrompt(spec);
   fs.writeFileSync(path.join(dir, 'prompt.md'), prompt);
   const [command, ...args] = buildAssistantCommand(spec);
@@ -226,6 +238,8 @@ export async function startSession({ root, spec, backupDir, confirmPhrase, now =
   const endTimer = setTimeout(() => stop('time-limit'), Math.max(0, Date.parse(spec.endTime) - now().getTime()));
   const watchdog = setInterval(() => {
     try {
+      const budget = readStop(dir);
+      if (budget) { fs.writeSync(log, `\nlauncher: stopping (limit:${budget.limit}: ${budget.detail})\n`); stop(`limit:${budget.limit}`); return; }
       const verdict = checkSession({ root, session, now: now(), lastChangeAt: lastChange });
       if (verdict.stop) { fs.writeSync(log, `\nlauncher: stopping (${verdict.stop}${verdict.detail ? ': ' + verdict.detail : ''})\n`); stop(verdict.stop); }
       else if (verdict.signature !== lastChange.signature) lastChange = { signature: verdict.signature, at: now().getTime() };
@@ -236,12 +250,50 @@ export async function startSession({ root, spec, backupDir, confirmPhrase, now =
   clearInterval(watchdog);
   fs.closeSync(log);
 
-  reason ??= exitCode === 0 ? 'completed' : 'assistant-failed';
+  const budgetStop = readStop(dir);
+  reason ??= budgetStop ? `limit:${budgetStop.limit}` : exitCode === 0 ? 'completed' : 'assistant-failed';
   writeJson(path.join(dir, 'ended.json'), { reason, exitCode, endedAt: now().toISOString() });
+  if (reason !== 'completed') writeBlocker({ root, dir, session, reason, now: now() });
   fs.rmSync(lockFile(root), { force: true });
   const results = runVerification(root, spec.verifyCommands, verifyTimeoutMs);
   writeJson(path.join(dir, 'verification-results.json'), results);
   return { id, reason, handoff: writeHandoff({ root, id, now: now() }) };
+}
+
+const NEXT_STEPS = {
+  'time-limit': ['The end time was reached. Review the handoff, then start a new session (fresh backup and start command) only if more time is wanted.'],
+  'scope-violation': ['Files outside the owned paths changed. Review and revert or move them yourself before resuming.'],
+  'branch-switched': ['The branch changed during the session. Switch back to the session branch and check the working tree before resuming.'],
+  stalled: ['Nothing changed for the stall limit. Read assistant.log for where it was stuck before resuming.'],
+  'assistant-failed': ['The assistant process exited with an error. Read assistant.log before resuming.'],
+  'failed-to-start': ['The assistant could not be started. Check the assistant command and that it is installed.'],
+  'limit:repeated-failures': ['The same command kept failing. Diagnose it by hand (see lastCommands) before any new session; re-running it will not help.'],
+  'limit:total-failures': ['Too many commands failed overall. Read lastCommands and assistant.log to find the common cause first.'],
+  'limit:gemini-attempts': ['The Gemini attempt budget (retries included) is spent. Continue the remaining drafting directly, or check Gemini availability.'],
+  'limit:solver-runs': ['The solver budget is spent. Run any further solver checks yourself, deliberately, outside a session.'],
+  'limit:solver-full-runs': ['The exhaustive solver budget is spent. Run the --full sweep yourself, deliberately, outside a session.'],
+};
+
+/** Records why a session stopped early and where to pick up. Preserves work: nothing is committed, reset or removed. */
+export function writeBlocker({ root, dir, session, reason, now = new Date() }) {
+  const stop = readStop(dir);
+  const state = loadState(dir);
+  const lines = (() => { try { return fs.readFileSync(path.join(dir, 'commands.jsonl'), 'utf8').trim().split('\n').filter(Boolean).slice(-10).map(l => JSON.parse(l)); } catch { return []; } })();
+  const head = git(root, ['rev-parse', 'HEAD']).trim();
+  const blocker = {
+    schemaVersion: 1, sessionId: session.id, reason, at: now.toISOString(),
+    ...(stop ? { limit: stop.limit, detail: stop.detail, command: stop.command } : {}),
+    counters: state.counters, limits: resolveLimits(session.spec.limits),
+    resumePoint: {
+      branch: git(root, ['branch', '--show-current']).trim(), startHead: session.start.head, head, lastCommit: git(root, ['log', '-1', '--format=%h %s']).trim(),
+      uncommittedPaths: git(root, ['status', '--porcelain=v1', '--untracked-files=all']).split('\n').filter(Boolean),
+      tasks: session.spec.tasks.map(t => ({ id: t.id, outcome: t.outcome, ownedPaths: t.ownedPaths })),
+      nextSteps: [...(NEXT_STEPS[reason] ?? ['Read assistant.log and the handoff before resuming.']), 'Work in progress is preserved exactly as it was; nothing was committed, reset or deleted by the launcher.'],
+    },
+    lastCommands: lines,
+  };
+  writeJson(path.join(dir, 'blocker.json'), blocker);
+  return blocker;
 }
 
 function runVerification(root, commands, timeout) {
@@ -277,8 +329,9 @@ export function writeHandoff({ root, id, now = new Date() }) {
     return { hash, subject, labeledCheckpoint: subject.toLowerCase().includes(CHECKPOINT_TOKEN), files: git(root, ['show', '--name-only', '--format=', hash]).split('\n').filter(Boolean) };
   });
   const committedOutside = outsideOwned([...new Set(log.flatMap(c => c.files))], owned);
+  const blocker = fs.existsSync(path.join(dir, 'blocker.json')) ? readJson(path.join(dir, 'blocker.json')) : null;
   const handoff = {
-    schemaVersion: 1, sessionId: id, contributor: session.spec.contributor, branch: session.spec.branch, startedAt: session.startedAt, endedAt: ended.endedAt ?? now.toISOString(),
+    schemaVersion: 1, sessionId: id, blocker, contributor: session.spec.contributor, branch: session.spec.branch, startedAt: session.startedAt, endedAt: ended.endedAt ?? now.toISOString(),
     endReason: ended.reason, backup: session.backup, startHead: session.start.head, endHead: state.head, commits: log,
     unlabeledCommits: log.filter(c => !c.labeledCheckpoint).map(c => c.hash),
     changedSinceStart: changed, outsideOwnedPaths: outsideOwned(changed, owned), committedOutsideOwnedPaths: committedOutside,
@@ -289,6 +342,7 @@ export function writeHandoff({ root, id, now = new Date() }) {
   const md = [
     `# Overnight handoff ${id}`, '', `- Contributor: ${handoff.contributor}, branch \`${handoff.branch}\``, `- Ended: ${handoff.endedAt} (${handoff.endReason})`, `- Backup: ${handoff.backup.id} at ${handoff.backup.destination}`,
     `- Start HEAD ${handoff.startHead.slice(0, 7)}, end HEAD ${handoff.endHead.slice(0, 7)}`, '', `## Commits (${log.length})`, ...log.map(c => `- ${c.hash.slice(0, 7)} ${c.subject}${c.labeledCheckpoint ? '' : '  (NOT labeled as an overnight checkpoint)'}`), '',
+    ...(blocker ? ['## Blocker and resume point', `- Stopped by: ${blocker.reason}${blocker.detail ? ` (${blocker.detail})` : ''}`, `- Resume on \`${blocker.resumePoint.branch}\` at ${blocker.resumePoint.lastCommit}; uncommitted paths: ${blocker.resumePoint.uncommittedPaths.length}`, ...blocker.resumePoint.nextSteps.map(n => `- ${n}`), `- Budgets used: ${blocker.counters.commands} commands, ${blocker.counters.totalFailures} failures, ${blocker.counters.gemini} Gemini attempts, ${blocker.counters.solver} solver runs (${blocker.counters.solverFull} full)`, ''] : []),
     '## Scope', handoff.outsideOwnedPaths.length ? `Changed outside the owned paths: ${handoff.outsideOwnedPaths.join(', ')}` : 'All changes are inside the owned paths.', '',
     '## Uncommitted', ...(handoff.uncommittedPaths.length ? handoff.uncommittedPaths.map(l => `- ${l}`) : ['- none']), '', '## Verification',
     ...(Array.isArray(verification) ? verification.map(v => `- ${v.exitCode === 0 ? 'PASS' : v.timedOut ? 'TIMED OUT' : 'FAIL'} \`${v.command}\` (${v.seconds}s)`) : ['- not run']), '', ...handoff.notes.map(n => `> ${n}`), '',
