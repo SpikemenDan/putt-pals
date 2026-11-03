@@ -143,6 +143,10 @@ process.exit(2);
   const fakeRclone = [process.execPath, fakeScript];
   const store = fresh('drive');
   process.env.FAKE_RCLONE_STORE = store;
+  // Every upload gets its own folder: backup ids are time + HEAD, and two fixture repositories built in the same second
+  // have identical commits, so a shared folder would (correctly) report an existing backup on a fast machine.
+  let remotes = 0;
+  const nextRemote = () => 'fake:Backups' + (++remotes);
 
   async function verifiedBackup(root, now = new Date()) {
     const { dir } = backupLib.createBackup({ root, outDir: fresh('out'), now });
@@ -154,32 +158,33 @@ process.exit(2);
     assert.deepEqual(uploadLib.uploadReadiness({ remote: undefined, rclone: ['definitely-not-installed-rclone'] }).problems.length, 2);
     assert.match(uploadLib.uploadReadiness({ remote: 'nocolon', rclone: fakeRclone }).problems[0], /<rclone-remote>:<folder>/);
     assert.match(uploadLib.uploadReadiness({ remote: 'other:folder', rclone: fakeRclone }).problems[0], /no remote named other:/);
-    assert.equal(uploadLib.uploadReadiness({ remote: 'fake:Backups', rclone: fakeRclone }).ok, true);
+    assert.equal(uploadLib.uploadReadiness({ remote: nextRemote(), rclone: fakeRclone }).ok, true);
     const { root } = makeRepo();
     const dir = await verifiedBackup(root);
-    const receipt = uploadLib.uploadBackup({ dir, remote: 'fake:Backups', rclone: fakeRclone });
+    const remote = nextRemote();
+    const receipt = uploadLib.uploadBackup({ dir, remote, rclone: fakeRclone });
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
     assert.equal(receipt.backupId, manifest.backupId);
     assert.equal(receipt.head, manifest.git.head);
     assert.equal(receipt.workingTreeDigest, manifest.workingTree.digest);
     assert.match(receipt.verification, /rclone check --download/);
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'receipt.json'), 'utf8')), receipt);
-    assert.ok(fs.existsSync(path.join(store, 'Backups', manifest.backupId, 'repo.bundle')));
-    assert.throws(() => uploadLib.uploadBackup({ dir, remote: 'fake:Backups', rclone: fakeRclone }), /already exists/);
-    assert.ok(!fs.readdirSync(path.join(store, 'Backups', manifest.backupId)).includes('receipt.json'), 'the local receipt is not uploaded');
+    assert.ok(fs.existsSync(path.join(store, remote.split(':')[1], manifest.backupId, 'repo.bundle')));
+    assert.throws(() => uploadLib.uploadBackup({ dir, remote, rclone: fakeRclone }), /already exists/);
+    assert.ok(!fs.readdirSync(path.join(store, remote.split(':')[1], manifest.backupId)).includes('receipt.json'), 'the local receipt is not uploaded');
   });
 
   await scenario('upload: an unverified, tampered or corrupted-in-transit backup is refused and leaves no receipt', async () => {
     const { root } = makeRepo();
     const unverified = backupLib.createBackup({ root, outDir: fresh('out') }).dir;
-    assert.throws(() => uploadLib.uploadBackup({ dir: unverified, remote: 'fake:Backups', rclone: fakeRclone }), /not been verified/);
+    assert.throws(() => uploadLib.uploadBackup({ dir: unverified, remote: nextRemote(), rclone: fakeRclone }), /not been verified/);
     const tampered = await verifiedBackup(root, new Date(Date.now() + 1000));
     const manifest = JSON.parse(fs.readFileSync(path.join(tampered, 'manifest.json'), 'utf8')); manifest.git.branch = 'edited';
     fs.writeFileSync(path.join(tampered, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-    assert.throws(() => uploadLib.uploadBackup({ dir: tampered, remote: 'fake:Backups', rclone: fakeRclone }), /manifest changed after verification/);
+    assert.throws(() => uploadLib.uploadBackup({ dir: tampered, remote: nextRemote(), rclone: fakeRclone }), /manifest changed after verification/);
     const transit = await verifiedBackup(root, new Date(Date.now() + 2000));
     process.env.FAKE_RCLONE_CORRUPT = '1';
-    try { assert.throws(() => uploadLib.uploadBackup({ dir: transit, remote: 'fake:Backups', rclone: fakeRclone }), /Upload verification failed/); } finally { delete process.env.FAKE_RCLONE_CORRUPT; }
+    try { assert.throws(() => uploadLib.uploadBackup({ dir: transit, remote: nextRemote(), rclone: fakeRclone }), /Upload verification failed/); } finally { delete process.env.FAKE_RCLONE_CORRUPT; }
     assert.equal(fs.existsSync(path.join(transit, 'receipt.json')), false, 'no receipt for a failed upload');
     const noRemote = await verifiedBackup(root, new Date(Date.now() + 3000));
     assert.throws(() => uploadLib.uploadBackup({ dir: noRemote, remote: undefined, rclone: fakeRclone }), /destination is missing/);
@@ -195,7 +200,7 @@ process.exit(2);
   async function readyRepo() {
     const { root, bare } = makeRepo();
     const dir = await verifiedBackup(root);
-    uploadLib.uploadBackup({ dir, remote: 'fake:Backups', rclone: fakeRclone, now: new Date() });
+    uploadLib.uploadBackup({ dir, remote: nextRemote(), rclone: fakeRclone, now: new Date() });
     return { root, bare, dir };
   }
   const PHRASE = sessionLib.START_PHRASE;
