@@ -96,3 +96,9 @@ controller/recovery, capacity and four-player six-putt game checks.
 Chrome (installed channel) passed `tests/browser/input.spec.cjs` and the new
 `tests/browser/deployables.spec.cjs`. Firefox, WebKit, deployed play and actual
 audio listening were not run for this task.
+
+Final provenance verification confirmed all 36 measured inactive outcomes are
+identical to main, with 34 robust shots and the same two gaps. CLI tests passed.
+The check-selection guard initially flagged the isolated preview as unmapped;
+a manual-browser note now covers development-only preview modules, and all eight
+check-selection scenarios pass.
