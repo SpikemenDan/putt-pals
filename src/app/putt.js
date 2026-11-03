@@ -44,7 +44,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   player.flashUntil = 0; player.flashType = '';
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
 
-  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false });
+  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null });
   const finish = (out, event, now) => {
     waitUntil = now + SINK_WAIT_MS;
     completion = { strokes: player.strokes, timedOut: !!event.timedOut };
@@ -129,11 +129,20 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const activation = activatePowerup(player, item, fxCount + 1);
       if (activation.toast) out.toasts.push(activation.toast);
       if (!activation.ok) return out;
+      if (activation.deploy) { out.placement = { kind: activation.deploy.kind, index }; return out; } // G1e: the slot is spent by consumeItem once the host accepts the placement
       out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power', item]);
       if (activation.message) { fx = activation.message; fxCount = fx.id; }
       player.flashType = item; player.flashUntil = now + EFFECT_FLASH_MS;
       takeFromInventory(player.inventory, index);
       return out;
+    },
+
+    /** Spends the slot of a placed deployable (G1e) after the host accepted DEPLOY_OBJECT. Returns false when the slot no longer holds `kind`. */
+    consumeItem(kind) {
+      const at = player.inventory.indexOf(kind);
+      if (disposed || at < 0) return false;
+      takeFromInventory(player.inventory, at);
+      return true;
     },
 
     /** Another player's opponent-targeted effect message lands on this player; returns the toast, or null when it cannot. */

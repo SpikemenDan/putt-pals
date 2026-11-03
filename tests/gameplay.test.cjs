@@ -158,6 +158,16 @@ async function run() {
   assert.deepEqual(used.banners, [['Me', 'STEADY AIM ACTIVATED', 'power', 'steady']]);
   assert.deepEqual(picker.player.inventory, ['mag']);
   assert.equal(picker.effect, 'steady');
+  const placer = make({ random: () => 0.5, powerups: solo, inventory: ['bumper', 'mag'] });
+  const ask = placer.useItem(0, 0);
+  assert.deepEqual(ask.placement, { kind: 'bumper', index: 0 }, 'a course item asks for a spot');
+  assert.equal(ask.banners.length, 0, 'no activation banner until the host accepts');
+  assert.deepEqual(placer.player.inventory, ['bumper', 'mag'], 'the slot is kept while placement is pending');
+  assert.equal(placer.consumeItem('orbital'), false, 'only the pending kind can be spent');
+  assert.equal(placer.consumeItem('bumper'), true);
+  assert.deepEqual(placer.player.inventory, ['mag'], 'accepted placement spends exactly that slot');
+  placer.dispose();
+
   picker.useItem(0, 0); assert.equal(picker.player.armedPowerups.mag, 1, 'two effects armed together');
   assert.equal(picker.useItem(5, 0).toasts.length, 0, 'empty slot does nothing');
   assert.equal(picker.fx, null);
