@@ -11,6 +11,7 @@ A label or empty assignee field does not prove availability.
 
 For substantial work, record:
 - Contributor.
+- Task branch.
 - Outcome and scope.
 - Affected paths.
 - Dependencies.
@@ -18,8 +19,9 @@ For substantial work, record:
 - Relevant verification.
 - Remaining work.
 
-Reuse the contributor's development branch.
-Do not create a branch or worktree automatically.
+Use one short-lived task branch per coherent task, created from updated main
+(AGENTS.md, "Task-branch workflow"). Reuse it until the task is integrated and keep
+unrelated roadmap items off it. Do not create worktrees or clones automatically.
 
 Coordinate overlapping paths before editing.
 There is no mandatory coordinator approval for ordinary non-overlapping work.

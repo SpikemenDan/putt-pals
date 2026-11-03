@@ -10,9 +10,16 @@ preparation and final verification.
 Complete authorized local work, including scoped local commits, without repeated
 permission requests for routine decisions.
 
-Reuse the contributor's development branch.
-Do not create branches, worktrees or clones automatically.
+Use one short-lived task branch per coherent feature, fix or cleanup (AGENTS.md,
+"Task-branch workflow"). A task request authorizes creating its local branch from
+updated main, provided existing work is preserved. Reuse that branch until the task
+is integrated and keep unrelated roadmap items off it.
+Do not create worktrees or clones automatically.
 Do not overwrite or stage another contributor's work.
+After an authorized merge, run the post-merge checklist in
+docs/GITHUB_WORKFLOW.md: verify no unique work is lost, remove the task's worktree
+if any, then delete the local branch with a non-forcing delete. Never force, and
+leave remote branches until authorized.
 
 ## Gemini Pro
 
@@ -44,6 +51,7 @@ Do not deploy merely to provide a preview.
 ## Overnight
 
 Follow AGENTS.md.
+Use a dedicated task branch for the session.
 Require a fresh explicit start command, bounded scope and verified Drive backup.
 Prepare tooling without starting a session.
 Never push, merge, deploy or automatically restart overnight.

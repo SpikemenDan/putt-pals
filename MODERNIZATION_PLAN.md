@@ -144,8 +144,9 @@ M6 exit gate: a fresh checkout has documented setup, test and build commands; a 
 Preserve the product vision and confirmed gameplay decisions in this document.
 
 AGENTS.md defines operating rules. docs/GITHUB_WORKFLOW.md defines integration.
-Use one reusable development branch per contributor. Do not create a branch,
-worktree or issue for every small fix. Coordinate overlapping edits.
+Use one short-lived task branch per coherent feature, fix or cleanup, created from
+updated main. Do not create a branch, worktree or issue for every small edit.
+Coordinate overlapping edits.
 
 Direct implementation requests authorize scoped local commits. Remote writes,
 merges, deployment and public publishing follow AGENTS.md's permission boundaries.
