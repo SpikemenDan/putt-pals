@@ -115,6 +115,7 @@ export const USAGE = [
   '  export                        print versioned course JSON with persistent course/putt IDs',
   '  check                         validate imported geometry, playable positions and rules',
   '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
+  '  config [display|tuning|all] [--json] [--overrides <file>]  settings with defaults, units, restart rule and the files that read them',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
   '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',

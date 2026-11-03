@@ -4,6 +4,8 @@ The existing T2 gameplay configuration is implemented in `src/shared/tuning.js` 
 
 Units: distances in world units (ball radius 5), time in seconds, friction in 1/s, drag in units/s^2. Sand uses turf constant drag.
 
+Traceability: every setting's units, how a change takes effect and the source files that read it are available with `npm run config:report -- tuning` (consumers are derived from the source, not listed by hand; see docs/DISPLAY.md, "Traceability"). All `TUNING` settings are read when the modules load, so a change needs a reload and a new match, and editing `src/shared/tuning.js` changes the simulation fingerprint (docs/GITHUB_WORKFLOW.md). The development panel shows these values read-only; it cannot edit them.
+
 | Field | Default | Allowed range | Effect |
 | --- | --- | --- | --- |
 | `ball.radius` | 5 | 1 to 50 | Ball radius. Collision and cup-fit geometry. |

@@ -12,7 +12,7 @@ const app = createApp({ root: document.getElementById('root'), THREE,
 });
 if (tuner) {
   window.__ppTuner = tuner;
-  import('../devtools/panel.js').then(({ mountTuningPanel }) => mountTuningPanel(document, tuner));
+  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js')]).then(([{ mountTuningPanel }, { sources, tuning }]) => mountTuningPanel(document, tuner, { sources, tuning }));
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
 if (window.__PP_APP_HOOK) window.__ppApp = app;

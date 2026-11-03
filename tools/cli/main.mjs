@@ -3,6 +3,7 @@ import { createCourseData, createCourseDocument, parseCourseDocument, toSimulati
 import fs from 'node:fs';
 import { createDifficultyProvenance } from './provenance.mjs';
 import { parseCliArguments } from './arguments.mjs';
+import { runConfig } from './config-report.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runList, runValidate, runShot, runSolve, runArena, runCheck, runRank, runExport, USAGE } from './commands.mjs';
@@ -14,6 +15,8 @@ function finish({ code, lines }) {
 }
 
 function main(argv) {
+  // `config` takes its own options, so it bypasses the course-oriented argument parser.
+  if (argv[0] === 'config') return finish(runConfig(argv.slice(1)));
   const { command, args, courseFile } = parseCliArguments(argv);
   if (!['list', 'validate', 'shot', 'solve', 'arena', 'check', 'rank', 'export'].includes(command)) {
     return finish({ code: command ? 1 : 0, lines: command ? [`Unknown command: ${command}`, ...USAGE] : USAGE });
