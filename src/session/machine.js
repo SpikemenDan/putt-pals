@@ -16,7 +16,7 @@ const ids = c => Object.keys(c.players).filter(id => c.players[id].connected);
 const validCount = n => Number.isSafeInteger(n) && n >= 0;
 const validIdentity = e => typeof e.playerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(e.playerId);
 const validName = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
-const seriesLength = mode => ({ tournament_3: 3, tournament_6: 6, tournament_9: 9 })[mode] ?? 1;
+const seriesLength = mode => ({ tournament_3: 3, tournament_5: 5, tournament_7: 7 })[mode] ?? 1;
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */

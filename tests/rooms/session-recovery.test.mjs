@@ -66,7 +66,7 @@ const sendScore = f => {
   assert.equal(f.state().roundNumber, 2);
   f.session.dispose();
 }
-for (const mode of ['standard', 'tournament_3', 'tournament_6', 'tournament_9', 'practice']) {
+for (const mode of ['standard', 'tournament_3', 'tournament_5', 'tournament_7', 'practice']) {
   const f = fixture({ mode });
   f.send('START_VOTING'); f.send('CAST_VOTE', { mapIndex: 0 });
   for (let putt = 0; putt < 6; putt++) {
