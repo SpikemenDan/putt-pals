@@ -72,6 +72,21 @@ const sh = (cwd, ...args) => { const r = spawnSync('git', args, { cwd, encoding:
     assert.ok(manual.notes.length >= 2);
   });
 
+  await scenario('docsOnly: true only when every changed path is documentation that no code reads; anything else, or nothing, is false', async () => {
+    assert.equal(pick(['docs/DISPLAY.md']).docsOnly, false, 'a docs file that a test names is an input to that test');
+    assert.equal(pick(['README.md']).docsOnly, false, 'README.md text is asserted by the Gemini handoff tests');
+    const unreferenced = files.find(f => /^docs\/[^/]+\.md$/.test(f) && !checks.referencedByCode(root, files, [f]));
+    if (unreferenced) {
+      assert.equal(pick([unreferenced]).docsOnly, true);
+      assert.equal(pick([unreferenced, 'src/shared/tuning.js']).docsOnly, false, 'one code path makes it a code change');
+      assert.equal(pick([unreferenced, 'package.json']).docsOnly, false);
+    }
+    assert.equal(pick(['.github/workflows/ci.yml']).docsOnly, false, 'workflow changes are not documentation');
+    assert.equal(pick(['docs/never-seen-before.md', 'unknown/file.xyz']).docsOnly, false, 'an unmapped path falls back to the full suite');
+    assert.equal(pick([]).docsOnly, false);
+    assert.equal(checks.runChecks(['--docs-only', 'package.json'], root).lines[0], 'docs-only=false');
+  });
+
   await scenario('fallback: an unknown path, a deleted file or an unreadable script gets the full suite, never silence', async () => {
     const unknown = pick(['totally/new/area.xyz', 'README.md']);
     assert.equal(unknown.fallback, true);
