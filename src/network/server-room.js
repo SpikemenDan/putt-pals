@@ -6,6 +6,7 @@ import { createCourseDocument } from '../courses/document.js';
 import { sessionValue } from '../session/recovery.js';
 
 const fatalErrors = new Set(['incompatible-version', 'checkpoint-incompatible', 'session-expired', 'identity-rejected', 'room-full', 'history-full', 'invalid-message', 'course-incompatible']);
+const NO_DEPLOYABLES = Object.freeze([]);
 export const validServerIdentity = identity => !!identity && validRoomId(identity.sessionId)
   && validRoomId(identity.playerId) && validRoomSecret(identity.token);
 const loopback = hostname => ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
@@ -111,7 +112,8 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     revision = s.revision; wireSnapshot = s;
     sync(s.serverTime, clock.now());
     snapshot = { ...structuredClone(s.session.context), controllerId: s.controllerId,
-      state: sessionValue(s.session.node), phase: s.session.node.split('.')[0] };
+      state: sessionValue(s.session.node), phase: s.session.node.split('.')[0],
+      ...(s.deployables ? { deployables: structuredClone(s.deployables) } : {}) }; // placed Bumpers and Orbital Bumpers (G1e)
     positions = Object.fromEntries(Object.entries(positions).filter(([id]) => s.session.context.players[id]?.connected && s.session.context.roster.includes(id)));
     emit('snapshot', snapshot);
     emit('presence', positions);
@@ -202,6 +204,8 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     get isController() { return connected && localId !== null && snapshot?.controllerId === localId; },
     get identity() { return identity ? { ...identity } : null; },
     get snapshot() { return snapshot ? structuredClone(snapshot) : null; },
+    /** Placed Bumpers and Orbital Bumpers for the putt in play (read-only; the snapshot carries them). */
+    get deployables() { return snapshot?.deployables ?? NO_DEPLOYABLES; },
     get connected() { return connected && !closed; }, now, send,
     sendPresence(payload) {
       if (!connected || !wireSnapshot) return false;

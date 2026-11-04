@@ -69,6 +69,15 @@ A public snapshot contains `roomCode, sessionId, rulesVersion, courseHash, revis
 
 Statuses are `connecting`, `connected`, `reconnecting`, `disconnected`, `closed`, with structured allowlisted error code where relevant. Local feedback is immediate; connection loss cancels input and pauses local simulation publication. Retry with bounded exponential backoff plus jitter (0.5, 1, 2, 4, max 5 seconds), until grace expires or an unrecoverable response occurs. No auto-fresh join on expired resume, stale-code room replacement, or double-tab conflict. Leave/dispose abort pending joins and retries, closes sockets, removes listeners and prevents a late async welcome from resurrecting the room.
 
+## Bumper and Orbital Bumper (G1e, wire version 4)
+
+`SERVER_ROOM_VERSION` is 4. The room snapshot may carry an optional `deployables` array (records with `id, kind, x, y, z, owner, impacts, placedAt, map, putt`), and clients may send two more commands (full rules in `docs/contracts/G1E_DEPLOYABLES.md`):
+
+- `DEPLOY_OBJECT {kind, x, y}`: the room checks the phase, roster, power-up flag and the placement rules (`placementFloor` on the putt's course: floor, flat footprint, walls, cup, no overlap), assigns `id`, `owner` and `z`, and appends the record. A client can never send `z`. Inventory is client-held in this build, so the room cannot check the player holds the item.
+- `DEPLOY_HIT {id}`: counted only when the reporter's latest presence is fresh, for this round and putt, and within `bumperRadius + ball radius + hitReportTolerance` horizontally and inside the body band vertically; rate-limited per object by `hitCooldownMs`; the object is removed after `maxImpacts` hits.
+
+The list lives in the room snapshot, so every checkpoint contains it and a reconstructed room keeps it. It is cleared when the putt, map or phase changes or the owner leaves. A refused command is acknowledged and changes nothing.
+
 ## Identity and connection handling
 
 Backend uses Web Crypto to generate player/session/socket IDs and 32 random bytes encoded as 43 base64url characters for resume tokens. Persist only a SHA-256 token hash bound to environment/code/session/player. Compare hashes without leaking them; never broadcast or log raw tokens or hashes. Name or claimed player ID alone is never proof of identity. Tokens remain stable until explicit leave or grace expiry so ack/welcome loss cannot strand the previously issued token. Hash issuance and seat reservation are committed before welcome. No unacknowledged welcome token retry is guaranteed on first-ever admission; abandoned pending joins release their seat after liveness/grace bounds.

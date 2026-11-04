@@ -67,7 +67,7 @@ const { EventEmitter } = require('node:events');
   await run('reject spoofed identities, host commands, internal events, stale tokens, oversized data and incompatible versions', async () => {
     const f = await fixture();
     try {
-      const make = (changes = {}) => ({ version: 2, sessionId: 'session-1', senderId: 'a', sequence: 100, roundNumber: 0, puttIndex: 0, now: 0, type: 'command', payload: { type: 'CAST_VOTE', mapIndex: 0 }, ...changes });
+      const make = (changes = {}) => ({ version: 3, sessionId: 'session-1', senderId: 'a', sequence: 100, roundNumber: 0, puttIndex: 0, now: 0, type: 'command', payload: { type: 'CAST_VOTE', mapIndex: 0 }, ...changes });
       const receive = m => f.host.receive('a', JSON.stringify(m));
       for (const m of [make({ senderId: 'host' }), make({ version: 1 }), make({ sessionId: 'old' }), make({ roundNumber: 99 }),
         make({ payload: { type: 'START_VOTING' } }), make({ payload: { type: 'xstate.after.fake' } }),
@@ -402,7 +402,7 @@ const { EventEmitter } = require('node:events');
       const received = (f.snapshots.length - before) / 7;
       const last = f.snapshots.at(-1);
       assert.equal(Object.keys(last.payload.presence).length, 7, 'every moving guest is in the snapshot');
-      const bytes = new TextEncoder().encode(encode({ version: 2, sessionId: 'session-1', senderId: 'host', sequence: 1e9, roundNumber: last.payload.roundNumber, puttIndex: last.payload.puttIndex, now: 1e12, type: 'snapshot', payload: last.payload })).byteLength;
+      const bytes = new TextEncoder().encode(encode({ version: 3, sessionId: 'session-1', senderId: 'host', sequence: 1e9, roundNumber: last.payload.roundNumber, puttIndex: last.payload.puttIndex, now: 1e12, type: 'snapshot', payload: last.payload })).byteLength;
       console.log(`  measured: 8-player snapshot ${bytes} bytes (limit ${MAX_MESSAGE_BYTES}); ${received} snapshots per guest in 1 s of play with all 7 guests moving`);
       assert.ok(bytes < MAX_MESSAGE_BYTES / 4, `snapshot ${bytes} B leaves headroom under the ${MAX_MESSAGE_BYTES} B message limit`);
       assert.ok(received >= 13 && received <= 16, `about one snapshot per 70 ms (got ${received})`);

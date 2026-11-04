@@ -13,9 +13,9 @@ import { createCourseData } from '../courses/index.js';
 import { createInputAdapter } from '../input/index.js';
 import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
-import { createGameRenderer, createGameView } from '../render/index.js';
-import { aimModeOf, auraSourcesOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
-import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { createGameRenderer, createGameView, resolveRenderCourse } from '../render/index.js';
+import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, placementFloor, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { BALL_RADIUS, MAX_DEPLOYABLES, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -64,6 +64,10 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   let joining = null, joinGeneration = 0, reloadRecovery = false;
   const aimListeners = new Set();
   let unsubscribeInputAim = null;
+  // Bumper / Orbital Bumper placement (G1e): `placing` while the player picks a spot, `awaiting` while a guest's DEPLOY_OBJECT is in flight.
+  let placing = null, awaiting = null, cursor = null, unbindPlacement = null;
+  const AWAIT_MS = 3000;
+  let seenKey = '', seenKinds = new Map();
 
   // The power meter subscribes before the canvas exists; forward to the input adapter once it does.
   const aim = { subscribeAim(listener) { aimListeners.add(listener); listener(false, 0); return () => aimListeners.delete(listener); } };
@@ -90,7 +94,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, clock, random, createTransport, identity: stored, endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, clock, random, createTransport, identity: stored, floorAt: (map, puttIndex, x, y) => placementFloor(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
       if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
       joining = null;
       reloadRecovery = !!opened.resumed;
@@ -168,6 +172,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   function endPutt() {
     if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
+    stopPlacing(); awaiting = null;
     input?.cancel();
     lastSound = null;
   }
@@ -308,6 +313,49 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     });
   }
 
+  // ---------------------------------------------------------------- deployable placement (G1e)
+  function startPlacing(kind) {
+    placing = kind; cursor = null;
+  }
+  function stopPlacing() {
+    if (placing === null) return;
+    placing = null; cursor = null;
+  }
+  /** The owner's slot is spent only once the host has accepted the placement. */
+  function acceptPlacement(kind) {
+    awaiting = null;
+    if (!putt?.consumeItem(kind)) return;
+    const entry = getPowerup(kind);
+    store.announce(s0name(), (entry?.banner || kind) + ' PLACED', 'power');
+    audio.handleEvent({ type: 'powerup', id: kind });
+    setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+    publish(true);
+  }
+  const s0name = () => room?.snapshot?.players?.[room.localId]?.name || 'Player';
+  /** Whether a bumper fits at this spot right now: the hologram is green exactly when this is true, and an invalid click does nothing. */
+  function placeable(point) {
+    const s = room?.snapshot;
+    if (!point || !putt || !s || !placementClear(putt.course, point.x, point.y)) return false;
+    const list = room.deployables;
+    return list.length < MAX_DEPLOYABLES
+      && !activeDeployables(list, s.mapIndex, s.puttIndex).some(d => Math.hypot(d.x - point.x, d.y - point.y) < 2 * DEPLOYABLE_PARAMS.bumperRadius);
+  }
+  function confirmPlacing(point) {
+    const kind = placing;
+    if (!kind || !point || !room || !placeable(point)) return;
+    const known = new Set(room.deployables.map(d => d.id));
+    stopPlacing();
+    const sent = room.deploy(kind, point.x, point.y);
+    if (!sent) return; // refused (it changed since the hologram last showed green): the item is simply kept
+    if (room.isHost && !room.serverOwned) acceptPlacement(kind); // the peer-to-peer host applied it synchronously; a server room answers in its next snapshot
+    else awaiting = { kind, known, deadline: win.performance.now() + AWAIT_MS };
+  }
+  function checkAwaiting(now) {
+    if (!awaiting) return;
+    if (room.deployables.some(d => d.owner === room.localId && d.kind === awaiting.kind && !awaiting.known.has(d.id))) acceptPlacement(awaiting.kind);
+    else if (now > awaiting.deadline) awaiting = null; // not accepted: the item is simply kept
+  }
+
   function frame(t) {
     frameId = null;
     if (disposed) return;
@@ -319,7 +367,16 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       panoramaBuilt = false;
       if (room.connected) {
         putt.setAuras(auraSourcesOf(remoteBalls()));
+        const placed = activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex);
+        putt.setDeployables(placed);
+        // Sounds: the hit uses the list from before the host counted it (the last hit removes the object at once), and
+        // an object that disappears from the same putt broke, which every player hears.
+        const key = room.snapshot.roundNumber + ':' + room.snapshot.mapIndex + ':' + room.snapshot.puttIndex;
+        if (key === seenKey) for (const [id, kind] of seenKinds) if (!placed.some(d => d.id === id)) audio.handleEvent({ type: 'deployable_break', kind });
+        seenKey = key; seenKinds = new Map(placed.map(d => [d.id, d.kind]));
         const out = putt.frame(t, dt);
+        for (const id of out.deployHits) { audio.handleEvent({ type: 'deployable_hit', kind: seenKinds.get(id) }, { speed: 300 }); room.deployHit(id); }
+        checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);
         for (const message of out.toasts) toast(message);
@@ -344,6 +401,8 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         local: { ...state, color },
         remotes: remotesForRender(t),
         aim: input.frameAim(t / 1000),
+        deployables: activeDeployables(room.deployables, s.mapIndex, s.puttIndex).map(d => ({ ...d, color: colorOf(s, {}, d.owner) })), // each bumper wears its owner's colour
+        placing: placing && cursor ? { kind: placing, x: cursor.x, y: cursor.y, valid: placeable(cursor) } : null,
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
       });
@@ -385,7 +444,9 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         break;
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
+        stopPlacing();
         const out = putt.useItem(command.index, win.performance.now());
+        if (out.placement) startPlacing(out.placement.kind);
         for (const [text, sub, kind, powerup] of out.banners) { store.announce(text, sub, kind); if (powerup) audio.handleEvent({ type: 'powerup', id: powerup }); }
         for (const message of out.toasts) toast(message);
         setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
@@ -471,6 +532,29 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '',
       }),
     });
+    // Placement mode takes the pointer before the shot handlers see it (capture phase).
+    const planeNormal = new THREE.Vector3(0, 1, 0);
+    const simPoint = (clientX, clientY) => {
+      if (!putt || !renderer.course) return null;
+      const r = canvas.getBoundingClientRect(), { transform } = renderer.course;
+      ray.setFromCamera(new THREE.Vector2((clientX - r.left) / r.width * 2 - 1, -(clientY - r.top) / r.height * 2 + 1), renderer.camera);
+      const hit = ray.ray.intersectPlane(new THREE.Plane(planeNormal, -transform.ground(putt.player.x, putt.player.y, putt.player.z)[1]), new THREE.Vector3());
+      if (!hit) return null;
+      const p = transform.toSim(hit.x, hit.y, hit.z);
+      return { x: p.x, y: p.y };
+    };
+    const onPlacementDown = e => {
+      if (placing === null) return;
+      e.stopImmediatePropagation(); e.preventDefault();
+      if (e.button === 2) stopPlacing();
+      else if (e.button === 0) confirmPlacing(simPoint(e.clientX, e.clientY) || cursor);
+    };
+    const onPlacementMove = e => { if (placing !== null) cursor = simPoint(e.clientX, e.clientY) || cursor; };
+    const onPlacementKey = e => { if (placing !== null && e.key === 'Escape') stopPlacing(); };
+    canvas.addEventListener('pointerdown', onPlacementDown, true);
+    canvas.addEventListener('pointermove', onPlacementMove, true);
+    win.addEventListener('keydown', onPlacementKey, true);
+    unbindPlacement = () => { canvas.removeEventListener('pointerdown', onPlacementDown, true); canvas.removeEventListener('pointermove', onPlacementMove, true); win.removeEventListener('keydown', onPlacementKey, true); };
     unsubscribeInputAim = input.subscribeAim((charging, charge) => { for (const l of [...aimListeners]) l(charging, charge); });
     if (putt && room?.snapshot) { view.setCourse(data.definitions[room.snapshot.mapIndex], putt.puttIndex); input.setAimAngle(putt.aimAngle()); }
     lastFrame = win.performance.now();
@@ -491,6 +575,12 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     store,
     get room() { return room; },
     get putt() { return putt; },
+    /** Development preview only (src/devtools/deployables-preview.js): puts a power-up in the local inventory. Returns whether it fit. */
+    grantItem(kind) {
+      if (!putt || !room?.connected || putt.player.mode !== 'play' || !addToInventory(putt.player.inventory, kind)) return false;
+      setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+      return true;
+    },
     get view() { return view; },
     get input() { return input; },
     get renderer() { return renderer; },
@@ -505,6 +595,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
       win.clearInterval(tick);
       stopBannerAudio();
       unsubscribeInputAim?.();
+      unbindPlacement?.();
       input?.dispose();
       view?.dispose();
       root.removeEventListener('pointerover', onHover);

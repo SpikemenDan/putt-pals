@@ -19,14 +19,14 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
-  assert.deepEqual(G.auraIds(), ['', ...G.powerupIds()]);
+  assert.deepEqual(G.auraIds(), ['', ...G.powerupIds().filter(id => id !== 'bumper' && id !== 'orbital')], 'deployables are objects, not auras');
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
   assert.equal(G.powerupName('nope'), 'nope');
   assert.equal(G.isPowerupId('steady'), true);
   for (const id of ['rew', 'rev', 'zany', '', null]) assert.equal(G.isPowerupId(id), false, String(id));
-  const bad = [entry('aa'), entry('aa'), entry('Bad'), entry('cc', { target: 'course' }), entry('dd', { weight: 0 }), entry('ee', { target: 'opponent', solo: true }),
+  const bad = [entry('aa'), entry('aa'), entry('Bad'), entry('cc', { target: 'ground' }), entry('dd', { weight: 0 }), entry('ee', { target: 'opponent', solo: true }),
     entry('ff', { duration: { kind: 'forever' } }), entry('gg', { hook: '' })];
   const problems = G.catalogProblems(bad);
   for (const re of [/duplicate id aa/, /id must be/, /target must be/, /weight must be positive/, /only self-targeted/, /duration\.kind/, /hook required/]) {
@@ -112,7 +112,7 @@ async function run() {
   assert.equal(G.validEffectMessage({ id: 1, t: 'mag' }), false, 'self power-ups cannot travel as effect messages');
   for (const t of ['aim360', 'aim180']) assert.equal(G.validEffectMessage({ id: 1, t }), true, t);
   const base = { x: 1, y: 2, z: 0, mode: 'play', strokes: 1 };
-  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds()]);
+  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds().filter(id => !G.isDeployablePowerup(id))]);
   for (const fx of [{ id: 1, t: 'rev' }, { id: 1, t: 'zany' }]) assert.equal(protocol.validPresence({ ...base, fx }), false);
 
   // ---- putt integration: boxes, inventory carryover, activation
@@ -158,6 +158,26 @@ async function run() {
   assert.deepEqual(used.banners, [['Me', 'STEADY AIM ACTIVATED', 'power', 'steady']]);
   assert.deepEqual(picker.player.inventory, ['mag']);
   assert.equal(picker.effect, 'steady');
+  const placer = make({ random: () => 0.5, powerups: solo, inventory: ['bumper', 'mag'] });
+  const ask = placer.useItem(0, 0);
+  assert.deepEqual(ask.placement, { kind: 'bumper', index: 0 }, 'a course item asks for a spot');
+  assert.equal(ask.banners.length, 0, 'no activation banner until the host accepts');
+  assert.deepEqual(placer.player.inventory, ['bumper', 'mag'], 'the slot is kept while placement is pending');
+  assert.equal(placer.consumeItem('orbital'), false, 'only the pending kind can be spent');
+  assert.equal(placer.consumeItem('bumper'), true);
+  assert.deepEqual(placer.player.inventory, ['mag'], 'accepted placement spends exactly that slot');
+  placer.dispose();
+  // A bumper in the ball's path throws it back and the putt reports the contact by object id (G1e).
+  const rolling = make({ random: () => 0.5, powerups: solo });
+  const rp = rolling.player;
+  rp.vx = 120; rp.vy = 0; rp.moving = true; rp.z = surfaceHeight(rolling.course, rp.x, rp.y);
+  rolling.setDeployables([{ id: 'd1', kind: 'bumper', x: rp.x + 40, y: rp.y, owner: 'someone', impacts: 0, placedAt: 0, map: 0, putt: 0 }]);
+  const hits = [];
+  for (let i = 0; i < 60 && !hits.length; i++) hits.push(...rolling.frame(i * 16, 0.016).deployHits);
+  assert.deepEqual(hits, ['d1'], 'the contact is reported by object id');
+  assert.ok(rp.vx < 0, 'the ball is thrown back off the bumper, owner or not');
+  rolling.dispose();
+
   picker.useItem(0, 0); assert.equal(picker.player.armedPowerups.mag, 1, 'two effects armed together');
   assert.equal(picker.useItem(5, 0).toasts.length, 0, 'empty slot does nothing');
   assert.equal(picker.fx, null);

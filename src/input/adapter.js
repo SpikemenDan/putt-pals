@@ -47,6 +47,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
   // ---- shot charge, orbit drag and release (legacy pointer handlers) ----
   on(canvas, 'contextmenu', e => e.preventDefault());
   on(canvas, 'pointerdown', e => {
+    if (e.button === 2 && pull) { cancel(); return; } // right-click while pulling cancels the shot
     if (!canStartShot(getState())) return;
     canvas.setPointerCapture?.(e.pointerId);
     if (e.button === 2) { orbit = { x: e.clientX, y: e.clientY, azimuth: camera.state.azimuth, elevation: camera.state.elevation }; return; }

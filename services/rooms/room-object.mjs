@@ -1,4 +1,7 @@
 import { createCourseDocument } from '../../src/courses/document.js';
+import { createCourseData } from '../../src/courses/index.js';
+import { resolvePuttCourse } from '../../src/simulation/engine.js';
+import { hitDeployable, hitPlausible, placeDeployable, placementFloor } from '../../src/gameplay/deployables.js';
 import { createRoomSession } from '../../src/session/index.js';
 import {
   SERVER_ROOM_LIMITS, SERVER_ROOM_VERSION, ROOM_RULES_VERSION,
@@ -6,6 +9,8 @@ import {
   encodeRoomFrame, validRoomCode, validRoomId,
 } from '../../src/network/contracts/server-room.js';
 
+// Bumper and Orbital Bumper placement (G1e) needs the course floor, so the Worker holds the same course data as the clients.
+const courseDefinitions = createCourseData().definitions;
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
   'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
@@ -358,6 +363,7 @@ export class RoomDurableObject {
       revision: 0, presenceSequence: 0, pendingPresence: new Map(), presenceTimer: null,
       emptyAt: null, controllerAt: null, roomTimer: null, suppress: 0, dirty: false,
       logicalTime: Date.now(),
+      deployables: [], deploySeq: 0, hitTimes: new Map(), latestPresence: new Map(),
     };
     room.session = this.makeSession(room, {
       controllerId: playerId, hostName: name, hostColor: color ?? undefined, serverOwned: true, isReserved: id => {
@@ -437,8 +443,16 @@ export class RoomDurableObject {
     });
   }
 
+  /** Placed objects belong to the putt in play: they are cleared when the putt, map or phase changes or their owner leaves the room. */
+  syncDeployables(room, state) {
+    if (room.deployables.length === 0) return;
+    room.deployables = room.deployables.filter(d => state.phase === 'play' && d.map === state.mapIndex && d.putt === state.puttIndex && Object.hasOwn(state.players, d.owner));
+    for (const id of [...room.hitTimes.keys()]) if (!room.deployables.some(d => d.id === id)) room.hitTimes.delete(id);
+  }
+
   snapshot(room) {
     const state = room.session.getSnapshot();
+    this.syncDeployables(room, state);
     const context = Object.fromEntries(CONTEXT_FIELDS.map(field => [field, state[field]]));
     const snapshot = {
       roomCode: room.roomCode, sessionId: room.sessionId, rulesVersion: ROOM_RULES_VERSION,
@@ -446,6 +460,7 @@ export class RoomDurableObject {
       controllerId: state.controllerId, policy: room.policy,
       seats: [...room.seats.values()].sort((a, b) => a.joinOrder - b.joinOrder).map(seat => ({ ...seat })),
       session: { node: nodeFor(state.state), context },
+      ...(room.deployables.length ? { deployables: structuredClone(room.deployables) } : {}),
     };
     return snapshot;
   }
@@ -562,7 +577,9 @@ export class RoomDurableObject {
       type: payload.type, playerId: identity.playerId,
       roundNumber: frame.roundNumber, puttIndex: frame.puttIndex, ...payload,
     };
-    const changed = room.session.send(event);
+    const changed = payload.type === 'DEPLOY_OBJECT' || payload.type === 'DEPLOY_HIT'
+      ? this.deployCommand(room, identity, payload, now)
+      : room.session.send(event);
     if (!changed) room.dirty = true;
     if (payload.type === 'LEAVE_ROOM') {
       room.seats.delete(identity.playerId);
@@ -588,6 +605,39 @@ export class RoomDurableObject {
     this.setRoomTimer(room);
   }
 
+  /**
+   * DEPLOY_OBJECT and DEPLOY_HIT (G1e). Placement runs the shared pure rules with the course floor, assigns id, owner and z and
+   * keeps the list in the room snapshot (so it is part of every checkpoint). An impact report must match the reporter's latest
+   * presence (distance and height band) and is rate-limited per object; an object is removed after maxImpacts. A refused command
+   * is acknowledged and changes nothing. Inventory is client-held in this build, so the room cannot check that the item is held.
+   * @returns {boolean} whether the object list changed
+   */
+  deployCommand(room, identity, payload, now) {
+    const state = room.session.getSnapshot();
+    this.syncDeployables(room, state);
+    const playerId = identity.playerId;
+    if (state.phase !== 'play' || state.powerups === false || !state.roster.includes(playerId) || !state.players[playerId]?.connected) return false;
+    if (payload.type === 'DEPLOY_OBJECT') {
+      const course = resolvePuttCourse(courseDefinitions[state.mapIndex], state.puttIndex);
+      for (const d of room.deployables) room.deploySeq = Math.max(room.deploySeq, Number(String(d.id).slice(1)) || 0);
+      const result = placeDeployable(room.deployables, payload, {
+        playerId, map: state.mapIndex, putt: state.puttIndex, time: now / 1000, sequence: ++room.deploySeq,
+        floorAt: (x, y) => placementFloor(course, x, y),
+      });
+      if (!result.placed) return false;
+      room.deployables = result.list; room.dirty = true;
+      return true;
+    }
+    const seen = room.latestPresence.get(playerId);
+    const fresh = seen && seen.roundNumber === state.roundNumber && seen.puttIndex === state.puttIndex && now - seen.at <= SERVER_ROOM_LIMITS.linkTimeoutMs;
+    const object = room.deployables.find(d => d.id === payload.id);
+    if (!object || !fresh || !hitPlausible(object, seen.payload)) return false;
+    const result = hitDeployable(room.deployables, payload.id, now, room.hitTimes);
+    if (!result.counted) return false;
+    room.deployables = result.list; room.dirty = true;
+    return true;
+  }
+
   presence(room, connection, identity, frame) {
     const now = this.now(room);
     if (!consume(identity.presenceBucket, presenceRate, now)) {
@@ -602,6 +652,7 @@ export class RoomDurableObject {
       return;
     }
     identity.lastPresenceSequence = frame.sequence;
+    room.latestPresence.set(identity.playerId, { payload: frame.payload, roundNumber: frame.roundNumber, puttIndex: frame.puttIndex, at: now });
     room.pendingPresence.set(identity.playerId, {
       payload: frame.payload, roundNumber: frame.roundNumber, puttIndex: frame.puttIndex,
     });

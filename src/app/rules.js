@@ -6,6 +6,7 @@
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
+import { orbitalHolds } from '../simulation/deployables.js';
 import { inside, movingRect, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 
 /** Legacy multiplayer room namespace was "puttpals-circuit-v5-"; the modular protocol is incompatible, so it gets its own. */
@@ -28,7 +29,8 @@ export const hostIdFor = roomCode => ROOM_PREFIX + roomCode;
  * hazard, which then sets it moving again (legacy environmentAwake()).
  */
 export function environmentAwake(course, player, hazardTime) {
-  return course.fan.some(f => inside(f, player.x, player.y) && player.z < 80)
+  return orbitalHolds(player.deployables, player.x, player.y, BALL_RADIUS, undefined, player.z) // G1e: an orbital ring pulls a resting ball
+    || course.fan.some(f => inside(f, player.x, player.y) && player.z < 80)
     || course.tornado.some(v => Math.hypot(player.x - v[0], player.y - v[1]) < v[2] && player.z < 130)
     || course.movers.some(v => {
       const r = movingRect(v, hazardTime);
