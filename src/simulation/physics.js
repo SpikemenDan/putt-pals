@@ -16,7 +16,7 @@ import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { auraAcceleration, ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
-import { bumperContact, orbitalAcceleration, orbitalHolds } from '../gameplay/deployables.js';
+import { bumperContact, orbitalAcceleration, orbitalHolds } from './deployables.js';
 
 export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;

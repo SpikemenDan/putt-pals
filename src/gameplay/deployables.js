@@ -8,15 +8,12 @@
  */
 
 import { MAX_DEPLOYABLES } from '../shared/constants.js';
-import { TUNING } from '../shared/tuning.js';
 import { cupOf, surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
-/** The `deployables.*` tuning block (src/shared/tuning.js, docs/TUNING.md). Helpers take it as an argument so tests can pass their own. */
-export const DEPLOYABLE_PARAMS = TUNING.deployables;
-
-/** Domain event a bumper contact adds to the step events; the app turns it into a DEPLOY_HIT report. */
-export const DEPLOYABLE_HIT = 'deployable-hit';
+import { DEPLOYABLE_PARAMS, DEPLOYABLE_HIT } from '../simulation/deployables.js';
+// The pure contact maths lives in the simulation (no gameplay or catalog imports there); re-exported for existing callers.
+export { DEPLOYABLE_PARAMS, DEPLOYABLE_HIT, bumperContact, orbitalAcceleration, orbitalHolds } from '../simulation/deployables.js';
 
 const COORD_LIMIT = 1000000;
 const count = n => Number.isSafeInteger(n) && n >= 0;
@@ -46,67 +43,6 @@ export const activeDeployables = (list, map, putt, catalog = POWERUP_CATALOG, pa
 export function recordImpact(list, id, params = DEPLOYABLE_PARAMS) {
   if (!list.some(d => d.id === id)) return list;
   return list.flatMap(d => d.id !== id ? [d] : d.impacts + 1 >= params.maxImpacts ? [] : [{ ...d, impacts: d.impacts + 1 }]);
-}
-
-/**
- * Orbital hook: the acceleration (x/y, world units per second squared, already scaled by dt) that every orbital ring
- * exerts on a ball at (x, y). It pulls toward the centre and falls off linearly to zero at the ring edge.
- * A ball faster than `orbitalSpeedRef` is pulled harder, by (speed / ref) squared, so a fast shot still bends by about
- * the angle a ref-speed shot does instead of sailing straight through. Returns [0, 0] with no orbitals.
- */
-export function orbitalAcceleration(list, x, y, dt, params = DEPLOYABLE_PARAMS, speed = 0) {
-  let ax = 0, ay = 0;
-  if (!list?.length) return [ax, ay];
-  const boost = Math.max(1, (speed / params.orbitalSpeedRef) ** 2);
-  for (const d of list) {
-    if (d.kind !== 'orbital') continue;
-    const dx = d.x - x, dy = d.y - y, dist = Math.hypot(dx, dy);
-    if (!(dist > 1e-6 && dist < params.orbitalRange)) continue;
-    const strength = params.orbitalPull * boost * (1 - dist / params.orbitalRange) * dt;
-    ax += dx / dist * strength; ay += dy / dist * strength;
-  }
-  return [ax, ay];
-}
-
-/**
- * True while an orbital ring is pulling a ball that is not yet touching the orbital's body. Such a ball must not come
- * to rest (physics rest check) and a resting one must start moving (environment wake), so the pull applies at all
- * times. A ball touching the body is held there and may rest. False with no orbitals.
- */
-export function orbitalHolds(list, x, y, radius, params = DEPLOYABLE_PARAMS) {
-  if (!list?.length) return false;
-  return list.some(d => {
-    if (d.kind !== 'orbital') return false;
-    const dist = Math.hypot(d.x - x, d.y - y);
-    return dist < params.orbitalRange && dist > params.bumperRadius + radius + 0.5;
-  });
-}
-
-/**
- * Bumper hook: bounces a ball (player-like, with x, y, vx, vy) off the first solid it overlaps and moving into.
- * Pushes the ball out to the surface, reflects the normal velocity with the restitution gain and returns the
- * contact events. Mutates `ball`. A ball moving away from the centre is only pushed out, with no event and no impact.
- * @returns {{type:string, id:string}[]}
- */
-export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
-  const events = [];
-  if (!list?.length) return events;
-  for (const d of list) {
-    const dx = ball.x - d.x, dy = ball.y - d.y, dist = Math.hypot(dx, dy), reach = params.bumperRadius + radius;
-    if (!(dist < reach)) continue;
-    const nx = dist > 1e-9 ? dx / dist : 1, ny = dist > 1e-9 ? dy / dist : 0;
-    ball.x = d.x + nx * reach; ball.y = d.y + ny * reach;
-    const vn = ball.vx * nx + ball.vy * ny;
-    if (vn >= 0) continue;
-    const restitution = d.kind === 'orbital' ? params.orbitalRestitution : params.bumperRestitution;
-    const counts = -vn >= params.minHitSpeed; // a ball settling against the body is not an impact
-    // Both bodies always pop the ball out at `bumperKick` or faster, so a slow second touch does not just rebound like a wall.
-    const out = counts ? Math.max(restitution * -vn, params.bumperKick) : restitution * -vn;
-    ball.vx += (out - vn) * nx;
-    ball.vy += (out - vn) * ny;
-    if (counts) events.push({ type: DEPLOYABLE_HIT, id: d.id });
-  }
-  return events;
 }
 
 /**

@@ -6,7 +6,7 @@
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
-import { orbitalHolds } from '../gameplay/deployables.js';
+import { orbitalHolds } from '../simulation/deployables.js';
 import { inside, movingRect, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 
 /** Legacy multiplayer room namespace was "puttpals-circuit-v5-"; the modular protocol is incompatible, so it gets its own. */
