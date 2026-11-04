@@ -315,7 +315,6 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
 
   // ---------------------------------------------------------------- deployable placement (G1e)
   function startPlacing(kind) {
-    if (room?.serverOwned) { toast('Bumpers are not available in this room yet.'); return; }
     placing = kind; cursor = null;
   }
   function stopPlacing() {
@@ -348,7 +347,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     stopPlacing();
     const sent = room.deploy(kind, point.x, point.y);
     if (!sent) return; // refused (it changed since the hologram last showed green): the item is simply kept
-    if (room.isHost) acceptPlacement(kind); // the host applied it synchronously
+    if (room.isHost && !room.serverOwned) acceptPlacement(kind); // the peer-to-peer host applied it synchronously; a server room answers in its next snapshot
     else awaiting = { kind, known, deadline: win.performance.now() + AWAIT_MS };
   }
   function checkAwaiting(now) {

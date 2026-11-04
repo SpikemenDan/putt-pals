@@ -60,6 +60,7 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `deployables.orbitalRange` | 40.625 | 0 to 1000 | Orbital Bumper ring radius (world units). |
 | `deployables.orbitalPull` | 1150 | 0 to 10000 | Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge). |
 | `deployables.hitCooldownMs` | 250 | 0 to 5000 | Minimum milliseconds between impact reports for one deployed object. |
+| `deployables.hitReportTolerance` | 80 | 0 to 500 | Allowance (world units) for network lag when a server room checks a Bumper impact report against the reporter's last position. |
 | `deployables.bodyHeight` | 12 | 1 to 200 | Height of the solid Bumper or Orbital Bumper body above the floor it stands on (world units); a ball whose underside is above it passes over. |
 | `deployables.orbitalReach` | 40 | 1 to 500 | Height of the Orbital Bumper pull volume above its floor (world units); a ball above it is not pulled. |
 | `deployables.placementSlopeTolerance` | 2 | 0 to 50 | Largest floor-height difference allowed across a Bumper footprint when it is placed (world units); rejects ramps, ledges and pit edges. |

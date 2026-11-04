@@ -7,7 +7,7 @@
  * the parity fixtures.
  */
 
-import { MAX_DEPLOYABLES } from '../shared/constants.js';
+import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { cupOf, surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
@@ -89,6 +89,20 @@ export function placeDeployable(list, command, ctx, catalog = POWERUP_CATALOG, p
   if (list.some(d => Math.hypot(d.x - command.x, d.y - command.y) < 2 * params.bumperRadius)) return { list, reason: 'overlap' }; // bodies may sit close, but not inside each other
   const placed = { id: `d${ctx.sequence}`, kind: command.kind, x: command.x, y: command.y, z, owner: ctx.playerId, impacts: 0, placedAt: ctx.time, map: ctx.map, putt: ctx.putt };
   return validDeployable(placed, catalog, params) ? { list: [...list, placed], placed } : { list, reason: 'invalid' };
+}
+
+/**
+ * Server-room check of a DEPLOY_HIT against the reporter's latest presence (contract section 4): the reporter was playing, within
+ * `bumperRadius + ball radius + hitReportTolerance` of the object horizontally, and inside its body band vertically (widened by the
+ * same tolerance). A client cannot kill an object from the other side of the course or from far above it.
+ * @param {{x:number,y:number,z:number}} d The object
+ * @param {{x:number,y:number,z:number,mode:string}|null} presence The reporter's latest presence, or null when it is stale or missing
+ */
+export function hitPlausible(d, presence, params = DEPLOYABLE_PARAMS, ballRadius = BALL_RADIUS) {
+  if (!presence || presence.mode !== 'play') return false;
+  const tol = params.hitReportTolerance;
+  if (Math.hypot(presence.x - d.x, presence.y - d.y) > params.bumperRadius + ballRadius + tol) return false;
+  return presence.z < d.z + params.bodyHeight + tol && presence.z + 2 * ballRadius > d.z - tol;
 }
 
 /**

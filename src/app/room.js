@@ -213,6 +213,11 @@ export async function openRoom(options) {
     get snapshot() { return server.snapshot; },
     get connected() { return server.connected; },
     now: server.now, command: server.send, presence: server.sendPresence,
+    /** Placed Bumpers and Orbital Bumpers; the room service owns the list and every client reads it from the snapshot (G1e). */
+    get deployables() { return server.deployables; },
+    get deployReason() { return ''; },
+    deploy: (kind, x, y) => server.send({ type: 'DEPLOY_OBJECT', kind, x, y }),
+    deployHit: id => server.send({ type: 'DEPLOY_HIT', id }),
     onSnapshot: server.onSnapshot, onPresence: server.onPresence, onStatus: server.onStatus,
     close: options => server.close(options),
   };

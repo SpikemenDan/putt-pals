@@ -29,6 +29,28 @@ for (const endpoint of ['http://golf.example', 'wss://evil.example', 'wss://x:y@
   assert.throws(() => serverRoomUrl('friends', { location: { href: 'https://golf.example/' }, endpoint }), /invalid-endpoint/);
 }
 {
+  // Bumpers and Orbital Bumpers (G1e): the client reads placed objects from snapshots and sends the two commands.
+  const f = start(); f.socket.open(); f.socket.receive(welcome());
+  const room = await f.promise;
+  assert.deepEqual([...room.deployables], [], 'no deployables until the room sends some');
+  assert.equal(room.send({ type: 'DEPLOY_OBJECT', kind: 'bumper', x: 10, y: 20 }), true);
+  assert.deepEqual(f.socket.frames.at(-1).payload, { type: 'DEPLOY_OBJECT', kind: 'bumper', x: 10, y: 20 });
+  assert.equal(room.send({ type: 'DEPLOY_OBJECT', kind: 'bumper', x: 10, y: 20, z: 5 }), false, 'the client cannot choose z');
+  assert.equal(room.send({ type: 'DEPLOY_OBJECT', kind: 'mag', x: 10, y: 20 }), false);
+  assert.equal(room.send({ type: 'DEPLOY_HIT', id: 'd1' }), true);
+  assert.deepEqual(f.socket.frames.at(-1).payload, { type: 'DEPLOY_HIT', id: 'd1' });
+  const s = createServerRoomFixture(); s.revision = 5;
+  const owner = Object.keys(s.session.context.players)[0];
+  s.deployables = [{ id: 'd1', kind: 'orbital', x: 1, y: 2, z: 0, owner, impacts: 1, placedAt: 9, map: s.session.context.mapIndex, putt: s.session.context.puttIndex }];
+  f.socket.receive({ version: SERVER_ROOM_VERSION, type: 'snapshot', snapshot: s });
+  assert.equal(room.deployables.length, 1); assert.equal(room.deployables[0].kind, 'orbital');
+  assert.equal(room.snapshot.deployables[0].impacts, 1, 'the L1 snapshot carries them too');
+  const bad = structuredClone(s); bad.revision = 6; bad.deployables[0].owner = 'ghost';
+  f.socket.receive({ version: SERVER_ROOM_VERSION, type: 'snapshot', snapshot: bad });
+  assert.equal(room.deployables[0].owner, owner, 'an invalid snapshot is not applied');
+  f.socket.close();
+}
+{
   const f = start(); f.socket.open();
   assert.equal(f.socket.frames[0].resume, null);
   f.socket.receive(welcome());
@@ -39,9 +61,9 @@ for (const endpoint of ['http://golf.example', 'wss://evil.example', 'wss://x:y@
   assert.equal(room.send({ type: 'REPORT_SCORE', strokes: 1, timedOut: false, roundNumber: 9 }), false);
   assert.equal(room.send({ type: 'START_VOTING', playerId: 'forged' }), false);
   const s = createServerRoomFixture(); s.revision = 2; s.controllerId = 'p2';
-  f.socket.receive({ version: 3, type: 'snapshot', snapshot: s });
+  f.socket.receive({ version: 4, type: 'snapshot', snapshot: s });
   assert.equal(room.isController, false);
-  f.socket.receive({ version: 3, type: 'snapshot', snapshot: createServerRoomFixture() });
+  f.socket.receive({ version: 4, type: 'snapshot', snapshot: createServerRoomFixture() });
   assert.equal(room.isController, false, 'stale snapshots cannot reclaim controls');
   const modified = room.snapshot; modified.players.p1.name = 'mutated';
   assert.equal(room.snapshot.players.p1.name, 'Controller');
@@ -67,9 +89,9 @@ for (const endpoint of ['http://golf.example', 'wss://evil.example', 'wss://x:y@
   const f = start(); f.socket.open(); f.socket.receive(welcome()); const room = await f.promise;
   const before = room.now(); f.clock.increment(15000);
   const ping = f.socket.frames.at(-1); assert.equal(ping.type, 'ping');
-  f.socket.receive({ version: 3, type: 'pong', nonce: 'unknown', clientTime: 0, serverTime: 1 });
+  f.socket.receive({ version: 4, type: 'pong', nonce: 'unknown', clientTime: 0, serverTime: 1 });
   assert.ok(room.now() >= before + 15000);
-  f.socket.receive({ version: 3, type: 'pong', nonce: ping.nonce, clientTime: ping.clientTime, serverTime: before + 15000 });
+  f.socket.receive({ version: 4, type: 'pong', nonce: ping.nonce, clientTime: ping.clientTime, serverTime: before + 15000 });
   room.close({ leave: false });
   assert.ok(!f.socket.frames.some(frame => frame.type === 'command'), 'disposal preserves the resume seat');
 }
@@ -78,8 +100,8 @@ for (const endpoint of ['http://golf.example', 'wss://evil.example', 'wss://x:y@
   const seen = []; room.onPresence(p => seen.push(p));
   const s = createServerRoomFixture(); s.revision = 2; s.session.node = 'play.active.running'; s.session.context.roundNumber = 1;
   s.session.context.roster = ['p1', 'p2'];
-  f.socket.receive({ version: 3, type: 'snapshot', snapshot: s });
-  const frame = { version: 3, type: 'presence', sessionId: s.sessionId, roundNumber: 1, puttIndex: 0, sequence: 1,
+  f.socket.receive({ version: 4, type: 'snapshot', snapshot: s });
+  const frame = { version: 4, type: 'presence', sessionId: s.sessionId, roundNumber: 1, puttIndex: 0, sequence: 1,
     serverTime: s.serverTime, players: { p2: { x: 10, y: 12, z: 5, mode: 'play', strokes: 1 } } };
   f.socket.receive(frame); assert.equal(seen.at(-1).p2.x, 10);
   f.socket.receive({ ...frame, players: { p2: { ...frame.players.p2, x: 99 } } });
@@ -87,7 +109,7 @@ for (const endpoint of ['http://golf.example', 'wss://evil.example', 'wss://x:y@
   f.socket.receive({ ...frame, sequence: 2, roundNumber: 0 });
   assert.equal(seen.at(-1).p2.x, 10, 'old-round presence rejected');
   s.revision = 3; s.session.context.roundNumber = 2; s.session.context.puttIndex = 1;
-  f.socket.receive({ version: 3, type: 'snapshot', snapshot: s });
+  f.socket.receive({ version: 4, type: 'snapshot', snapshot: s });
   assert.deepEqual(seen.at(-1), {}, 'new round drops old positions');
   room.close();
 }

@@ -229,6 +229,20 @@ const assert = require('node:assert/strict');
     assert.equal(D.placeDeployable([], { kind: 'bumper', x: 150, y: 100, z: 999 }, ctx({ floorAt: () => 30 })).placed?.z, 30, 'a client-sent z is ignored');
   }
 
+  // ---- server-room impact check: the reporter's presence must be near the body, horizontally and in height
+  {
+    cases++;
+    const obj = { ...rec('bumper', 100, 100), z: 20 }, tol = P.hitReportTolerance, R = require('../src/shared/constants.js').BALL_RADIUS;
+    const at = (dx, dz, mode = 'play') => ({ x: 100 + dx, y: 100, z: 20 + dz, mode });
+    assert.equal(D.hitPlausible(obj, at(P.bumperRadius + R, 0)), true, 'touching the body');
+    assert.equal(D.hitPlausible(obj, at(P.bumperRadius + R + tol, 0)), true, 'within the lag allowance');
+    assert.equal(D.hitPlausible(obj, at(P.bumperRadius + R + tol + 1, 0)), false, 'too far away');
+    assert.equal(D.hitPlausible(obj, at(0, P.bodyHeight + tol - 1)), true); assert.equal(D.hitPlausible(obj, at(0, P.bodyHeight + tol + 1)), false, 'too high above the body');
+    assert.equal(D.hitPlausible(obj, at(0, -tol - 2 * R - 1)), false, 'too far below the floor');
+    assert.equal(D.hitPlausible(obj, at(0, 0, 'spectator')), false, 'only a playing ball can hit');
+    assert.equal(D.hitPlausible(obj, null), false, 'no presence, no hit');
+  }
+
   // ---- a fast ball still bends: the deflection angle does not collapse as the speed goes up
   {
     cases++;

@@ -1,11 +1,13 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
 import { GameModes } from '../../shared/session.js';
-import { MAX_PLAYERS } from '../../shared/constants.js';
+import { MAX_PLAYERS, MAX_DEPLOYABLES } from '../../shared/constants.js';
 import { isColorIndex } from '../../shared/colors.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
+import { validDeployable, validDeployCommand } from '../../gameplay/deployables.js';
 
-export const SERVER_ROOM_VERSION = 3;
+// 4: the room snapshot may carry `deployables` and clients may send DEPLOY_OBJECT / DEPLOY_HIT (G1e).
+export const SERVER_ROOM_VERSION = 4;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-2';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -49,7 +51,8 @@ export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'SET_POWERUPS', 'S
 export function validServerCommand(c) {
   if (!object(c)) return false;
   const fields = { LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
-    RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'] }[c.type];
+    RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'],
+    DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'] }[c.type];
   if (!Array.isArray(fields) || !exact(c, ['type', ...fields])) return false;
   switch (c.type) {
     case 'SET_COLOR': return isColorIndex(c.color);
@@ -60,6 +63,8 @@ export function validServerCommand(c) {
     case 'PRACTICE_STEP': return [-1, 0, 1].includes(c.step);
     case 'UPDATE_STROKES': return count(c.strokes);
     case 'REPORT_SCORE': return count(c.strokes) && typeof c.timedOut === 'boolean';
+    case 'DEPLOY_OBJECT': return validDeployCommand(c);
+    case 'DEPLOY_HIT': return validRoomId(c.id);
     default: return true;
   }
 }
@@ -102,12 +107,17 @@ const seat = s => exact(s,['playerId','joinOrder','connectedSince','resumeUntil'
   && nullable(s.connectedSince,time) && nullable(s.resumeUntil,time) && ((s.connectedSince !== null) !== (s.resumeUntil !== null));
 const session = s => exact(s,['node','context']) && SESSION_NODES.includes(s.node) && validSessionContext(s.context)
   && (!['select.choosingPutt','play.active.replaying'].includes(s.node) || s.context.mode === GameModes.PUTT_PRACTICE);
+const ROOM_SNAPSHOT_KEYS = ['roomCode','sessionId','rulesVersion','courseHash','revision','serverTime','controllerId','policy','seats','session'];
+/** Placed Bumpers and Orbital Bumpers (G1e): valid records for the putt in play, owners in the room, unique ids. */
+const roomDeployables = (list, context) => Array.isArray(list) && list.length <= MAX_DEPLOYABLES && new Set(list.map(d => d?.id)).size === list.length
+  && list.every(d => validDeployable(d) && Object.hasOwn(context.players, d.owner) && d.map === context.mapIndex && d.putt === context.puttIndex);
 export function validRoomSnapshot(s) {
-  if (!exact(s,['roomCode','sessionId','rulesVersion','courseHash','revision','serverTime','controllerId','policy','seats','session']) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
+  if (!(exact(s,ROOM_SNAPSHOT_KEYS) || exact(s,[...ROOM_SNAPSHOT_KEYS,'deployables'])) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
     || s.rulesVersion !== ROOM_RULES_VERSION || !validHash(s.courseHash) || !count(s.revision) || !time(s.serverTime) || !validRoomPolicy(s.policy) || !session(s.session) || !Array.isArray(s.seats) || s.seats.length > MAX_PLAYERS
     || !s.seats.every(seat) || new Set(s.seats.map(s => s.playerId)).size !== s.seats.length || new Set(s.seats.map(s => s.joinOrder)).size !== s.seats.length
     || !s.seats.every(seat => (seat.connectedSince === null || seat.connectedSince <= s.serverTime) && Object.hasOwn(s.session.context.players,seat.playerId) && s.session.context.players[seat.playerId].connected === (seat.connectedSince !== null))
     || !Object.entries(s.session.context.players).every(([id,p]) => !p.connected || s.seats.some(seat => seat.playerId === id))) return false;
+  if (s.deployables !== undefined && !roomDeployables(s.deployables, s.session.context)) return false;
   const controller = s.seats.find(seat => seat.playerId === s.controllerId);
   return s.controllerId === null ? !s.seats.some(seat => seat.connectedSince !== null)
     : validRoomId(s.controllerId) && !!controller && (controller.connectedSince !== null || s.policy.controllerTransferDelayMs > 0);

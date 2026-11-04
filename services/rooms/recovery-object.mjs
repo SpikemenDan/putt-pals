@@ -314,6 +314,7 @@ export class RoomDurableObject extends RoomCoordinator {
       presenceSequence: checkpoint.presenceSequence, presenceReserved: checkpoint.presenceSequence,
       emptyAt: checkpoint.deadlines.emptyAt, controllerAt: checkpoint.deadlines.controllerAt,
       replayAt: checkpoint.deadlines.replayAt,
+      deployables: structuredClone(s.deployables ?? []),
     });
     room.session = this.makeSession(room, {
       controllerId: s.controllerId, hostName: s.session.context.players[first]?.name ?? 'Host',
