@@ -2,6 +2,7 @@ import { setup, assign, createActor } from 'xstate';
 import { sessionDomain, sessionValue, sessionNode } from './recovery.js';
 import { createInitialSessionState, GameModes, resolveVote, SessionCommands } from '../shared/session.js';
 import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
+import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { createCourseDocument, validateCourseDocument } from '../courses/document.js';
 
@@ -16,11 +17,11 @@ const ids = c => Object.keys(c.players).filter(id => c.players[id].connected);
 const validCount = n => Number.isSafeInteger(n) && n >= 0;
 const validIdentity = e => typeof e.playerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(e.playerId);
 const validName = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
-const seriesLength = mode => ({ tournament_3: 3, tournament_6: 6, tournament_9: 9 })[mode] ?? 1;
+const seriesLength = mode => ({ tournament_3: 3, tournament_5: 5, tournament_7: 7 })[mode] ?? 1;
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
-export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
+export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', hostColor, serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
   const initialControllerId = (serverOwned ? controllerId : hostId) ?? (restore ? Object.keys(restore.context?.players ?? {})[0] : undefined);
   if (!validIdentity({ playerId: initialControllerId }) || !validName(hostName)) throw new Error('Valid room controller identity and name required');
   if (typeof isReserved !== 'function') throw new Error('A reservation lookup is required');
@@ -52,7 +53,19 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     ...(serverOwned ? c.roster.filter(id => isReserved(id)) : []),
     ...ids(c),
   ])];
-  const fresh = (id, name) => ({ id, name, connected: true, strokes: 0, done: false, timedOut: false, score: null, scores: [] });
+  const fresh = (id, name, color) => ({ id, name, color, connected: true, strokes: 0, done: false, timedOut: false, score: null, scores: [] });
+  // Colours held by other players: connected, reserved (server seats), or on the current roster. A disconnected
+  // player's colour stays reserved while they can still return; long-gone history does not block the palette.
+  const heldColors = (c, exceptId) => new Set(Object.entries(c.players)
+    .filter(([id, p]) => id !== exceptId && (p.connected || c.roster.includes(id) || (serverOwned && isReserved(id))))
+    .map(([, p]) => p.color));
+  // The wanted colour when it is valid and free, otherwise the lowest free palette index.
+  const pickColor = (c, id, wanted) => {
+    const held = heldColors(c, id);
+    if (isColorIndex(wanted) && !held.has(wanted)) return wanted;
+    for (let i = 0; i < PLAYER_COLOR_COUNT; i++) if (!held.has(i)) return i;
+    return 0;
+  };
   const resetPlayers = (c, clearScores) => Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, { ...p, strokes: 0, done: false, timedOut: false, score: null, scores: clearScores ? [] : p.scores }]));
   const round = (c, mapIndex, puttIndex, newMap) => ({
     mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
@@ -96,6 +109,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       host: ({ context: c, event: e }) => host(c, e),
       canJoin: ({ context: c, event: e }) => validIdentity(e) && validName(e.name) && !(own(c.players, e.playerId) && c.players[e.playerId].connected) && ids(c).length < MAX_PLAYERS && (!practice(c) || ids(c).length === 0),
       canLeave: ({ context: c, event: e }) => member(c, e),
+      canSetColor: ({ context: c, event: e }) => member(c, e) && isColorIndex(e.color) && !heldColors(c, e.playerId).has(e.color),
       powerups: ({ context: c, event: e }) => host(c, e) && typeof e.enabled === 'boolean',
       mode: ({ context: c, event: e }) => host(c, e) && modes.includes(e.mode) && (![GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(e.mode) || ids(c).length === 1),
       vote: ({ context: c, event: e }) => validVote(c, e),
@@ -118,7 +132,8 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       canAbandonRoom: ({ context: c }) => serverOwned && active(c).length === 0,
     },
     actions: {
-      join: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: own(c.players, e.playerId) ? { ...c.players[e.playerId], name: e.name, connected: true } : fresh(e.playerId, e.name) } })),
+      join: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: own(c.players, e.playerId) ? { ...c.players[e.playerId], name: e.name, connected: true } : fresh(e.playerId, e.name, pickColor(c, e.playerId, e.color)) } })),
+      setColor: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], color: e.color } } })),
       leave: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], connected: false } }, votes: Object.fromEntries(Object.entries(c.votes).filter(([id]) => id !== e.playerId)) })),
       mode: assign(({ event: e }) => ({ mode: e.mode })),
       powerups: assign(({ event: e }) => ({ powerups: e.enabled })),
@@ -154,7 +169,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     context: {
       ...createInitialSessionState(),
       ...(serverOwned ? { controllerId: initialControllerId } : { hostId: initialControllerId }),
-      players: { [initialControllerId]: fresh(initialControllerId, hostName) }, totals: {}, last: null,
+      players: { [initialControllerId]: fresh(initialControllerId, hostName, isColorIndex(hostColor) ? hostColor : 0) }, totals: {}, last: null,
     },
     on: {
       JOIN_ROOM: { guard: 'canJoin', actions: 'join' },
@@ -166,7 +181,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       } : {}),
     },
     states: {
-      lobby: { on: { SET_MODE: { guard: 'mode', actions: 'mode' }, SET_POWERUPS: { guard: 'powerups', actions: 'powerups' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
+      lobby: { on: { SET_COLOR: { guard: 'canSetColor', actions: 'setColor' }, SET_MODE: { guard: 'mode', actions: 'mode' }, SET_POWERUPS: { guard: 'powerups', actions: 'powerups' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
       select: {
         initial: 'waiting',
         states: {

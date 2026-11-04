@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PLAYER_COLORS } from '../shared/constants.js';
+import { colorHex } from '../shared/colors.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import styles from './Scorecard.module.css';
@@ -28,7 +28,7 @@ export function Paper({ card }) {
           <tbody>
             {card.rows.map(row => (
               <tr key={row.id} className={row.lead ? styles.lead : undefined}>
-                <td className={styles.nm}><i style={{ background: PLAYER_COLORS[row.color % 8] }} />{row.label}</td>
+                <td className={styles.nm}><i style={{ background: colorHex(row.color) }} />{row.label}</td>
                 {row.cells.map((cell, k) => <td key={k} className={cell ? CELL_CLASS[cell.kind] : undefined}>{cell && <span>{cell.text}</span>}</td>)}
                 <td className={styles.st}>{row.total}</td><td className={styles.st}>{row.diff}</td><td className={styles.st}>{row.hio}</td><td className={styles.st}>{row.timeouts}</td>
               </tr>

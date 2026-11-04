@@ -20,7 +20,7 @@
     "test:simulation": "node tests/simulation.test.cjs && node tests/cup-capture.test.cjs && node tests/selfutility.test.cjs && node tests/aimsabotage.test.cjs && node tests/ballauras.test.cjs",
     "test:audio": "node tests/audio.test.cjs",
     "test:render": "node tests/render.test.cjs && node tests/render-modern.test.cjs",
-    "test:input": "node tests/input.test.cjs && node tests/camera.test.cjs",
+    "test:input": "node tests/input.test.cjs && node tests/camera.test.cjs && node tests/aim-preview.test.cjs",
     "test:ui": "node tests/ui.test.cjs",
     "test:app": "node tests/app.test.cjs",
     "test:network": "node tests/network.test.cjs",

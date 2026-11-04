@@ -9,7 +9,7 @@ import { spawnPool } from './catalog.js';
 
 export const MAX_INVENTORY = 3;
 
-const TOURNAMENT_MODES = Object.freeze([GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_6, GameModes.TOURNAMENT_9]);
+const TOURNAMENT_MODES = Object.freeze([GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7]);
 const SOLO_MODES = Object.freeze([GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
 
 /**

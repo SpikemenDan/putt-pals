@@ -26,7 +26,7 @@ await app.dispose();                     // leaves the room and releases everyth
 ## Deliberate differences from the legacy page
 
 - Leaving a room returns to the start screen instead of reloading the page.
-- Ball colours follow join order (the protocol carries no colour; legacy picked randomly). All screens and balls agree.
+- Ball colours (#161): the player's preferred colour index is kept in `localStorage` (`putt-planet.color`) and sent when creating or joining a room; the room confirms it or assigns the lowest free colour. In the lobby a pick is sent as `SET_COLOR` (refused if taken). All screens and balls read `players[id].color`.
 - An explicit leave releases the seat; a page reload or connection interruption can resume the same seat during the service recovery window.
 - Presence gained two optional, validated fields (`effect`, `fx`) to keep power-up auras and attacks working across players; see `src/network/protocol.js`.
 

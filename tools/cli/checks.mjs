@@ -47,8 +47,8 @@ export const listRepoFiles = root => nul(git(root, ['ls-files', '-z', '--cached'
 export function changedFiles(root, base) {
   const ref = base ?? ['origin/main', 'main'].find(r => spawnSync('git', ['-C', root, 'rev-parse', '--verify', '--quiet', r]).status === 0);
   const files = new Set();
-  if (ref) for (const f of nul(git(root, ['diff', '--name-only', '-z', `${ref}...HEAD`]))) files.add(f);
-  for (const f of nul(git(root, ['diff', '--name-only', '-z', 'HEAD']))) files.add(f);
+  if (ref) for (const f of nul(git(root, ['diff', '--name-only', '--no-renames', '-z', `${ref}...HEAD`]))) files.add(f);
+  for (const f of nul(git(root, ['diff', '--name-only', '--no-renames', '-z', 'HEAD']))) files.add(f);
   for (const f of nul(git(root, ['ls-files', '-z', '--others', '--exclude-standard']))) files.add(f);
   return { base: ref ?? null, files: [...files].sort() };
 }
@@ -136,15 +136,22 @@ export const RULES = [
   { test: f => f.startsWith('.github/'), scripts: [], note: 'CI or template change: nothing runs locally; confirm on the PR\'s CI run', reason: 'GitHub configuration' },
   { test: f => f.startsWith('prototypes/'), scripts: [], note: 'isolated prototype with its own package; no suite covers it', reason: 'prototype' },
   { test: f => f === 'scripts/make-portable.cjs', scripts: [], note: 'only build:portable runs this, and that distribution path is unverified', reason: 'portable build helper' },
-  { test: f => /\.(?:md|txt)$/i.test(f) || f.startsWith('docs/') || ['.gitattributes', '.gitignore'].includes(f), scripts: [], note: 'documentation: no suite covers it; verify links, paths and commands (AGENTS.md, "Verification")', reason: 'documentation or repository metadata' },
+  { test: f => /\.(?:md|txt)$/i.test(f) || f.startsWith('docs/') || ['.gitattributes', '.gitignore'].includes(f), docsOnly: true, scripts: [], note: 'documentation: no suite covers it; verify links, paths and commands (AGENTS.md, "Verification")', reason: 'documentation or repository metadata' },
 ];
 
 /** Applied only to a path nothing else covers: reference or manual material that no suite reads. */
 export const LAST_RESORT = [
+  { test: f => /^src\/devtools\/[a-z-]+-preview\.js$/.test(f), note: 'development-only interactive chamber: exercise its controls and inspect browser errors manually' },
   { test: f => f.startsWith('tests/fixtures/') || f.startsWith('tests/render/') || /^tests\/(?:measure-cup-capture|cup-capture-browser)\.mjs$/.test(f), note: 'manual measurement tool or recorded reference material that no suite reads' },
 ];
 
 const unique = list => [...new Set(list)];
+
+/** True when the path of any changed file occurs as text in a code file of the working tree. */
+export function referencedByCode(root, files, changed) {
+  const sources = files.filter(f => CODE.test(f)).map(f => fs.readFileSync(path.join(root, f), 'utf8'));
+  return changed.some(c => sources.some(src => src.includes(c)));
+}
 
 /**
  * @param {{root?: string, changed: string[], files?: string[], pkg?: object}} options
@@ -159,12 +166,14 @@ export function selectChecks({ root = defaultRoot, changed, files = listRepoFile
   const add = (script, file, why) => { if (!hits.has(script)) hits.set(script, []); hits.get(script).push({ file, why }); };
   const notes = [];
   const unknown = [];
+  let nonDocs = false; // a changed path outside the documentation rule
   const simulation = new Set(simulationSourceFiles());
   let all = false;
 
   for (const file of changed) {
     let covered = false;
     const rule = RULES.find(r => r.test(file));
+    if (!rule?.docsOnly) nonDocs = true;
     if (rule) {
       covered = true;
       if (rule.scripts === 'all') { all = true; add('*', file, rule.reason); }
@@ -197,7 +206,12 @@ export function selectChecks({ root = defaultRoot, changed, files = listRepoFile
 
   const reasons = script => hits.get(script) ?? (fallback ? [{ file: '(fallback)', why: all ? 'a change that can affect every suite' : 'a changed path has no mapping, so the full suite is recommended' }] : []);
   const commands = scripts.map(script => ({ script, command: script === 'build' ? 'npm run build' : `npm run ${script}`, reasons: reasons(script) }));
-  return { commands, notes: unique(notes), unknown, fallback };
+  // Documentation only (used by CI to skip the heavy steps): something changed, every changed path is documentation or
+  // repository metadata, no script reaches any of them (a test may read a docs file) and nothing needed the fallback.
+  // A documentation file whose path appears in any code file is treated as an input to that code (a test may assert on its
+  // text), so it is not documentation only.
+  const docsOnly = changed.length > 0 && !nonDocs && !fallback && commands.length === 0 && unknown.length === 0 && !referencedByCode(root, files, changed);
+  return { commands, notes: unique(notes), unknown, fallback, docsOnly };
 }
 
 export function formatReport({ base, changed, result }) {
@@ -220,19 +234,21 @@ export function formatReport({ base, changed, result }) {
   return lines;
 }
 
-/** CLI entry: `checks [--since <ref>] [--json] [paths...]`. Explicit paths replace the git-derived list. */
+/** CLI entry: `checks [--since <ref>] [--json] [--docs-only] [paths...]`. `--docs-only` prints `docs-only=true|false` for CI. Explicit paths replace the git-derived list. */
 export function runChecks(argv, root = defaultRoot) {
-  let since, json = false;
+  let since, json = false, docsOnlyMode = false;
   const explicit = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--since') since = argv[++i];
     else if (argv[i] === '--json') json = true;
-    else if (argv[i].startsWith('--')) return { code: 1, lines: [`ERROR: unknown option ${argv[i]}`, 'Usage: checks [--since <ref>] [--json] [paths...]'] };
+    else if (argv[i] === '--docs-only') docsOnlyMode = true;
+    else if (argv[i].startsWith('--')) return { code: 1, lines: [`ERROR: unknown option ${argv[i]}`, 'Usage: checks [--since <ref>] [--json] [--docs-only] [paths...]'] };
     else explicit.push(argv[i].replace(/\\/g, '/'));
   }
   if (since === undefined && argv.includes('--since')) return { code: 1, lines: ['ERROR: --since requires a ref'] };
   const derived = explicit.length ? { base: null, files: explicit } : changedFiles(root, since);
   const result = selectChecks({ root, changed: derived.files });
+  if (docsOnlyMode) return { code: 0, lines: [`docs-only=${result.docsOnly}`] };
   if (json) return { code: 0, lines: [JSON.stringify({ base: derived.base, changed: derived.files, ...result }, null, 2)] };
   return { code: 0, lines: formatReport({ base: derived.base, changed: derived.files, result }) };
 }

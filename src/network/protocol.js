@@ -1,4 +1,5 @@
 import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS } from '../shared/constants.js';
+import { isColorIndex } from '../shared/colors.js';
 import { GameModes } from '../shared/session.js';
 import { auraIds } from '../gameplay/catalog.js';
 import { validEffectMessage } from '../gameplay/effects.js';
@@ -25,7 +26,7 @@ export function validCommand(e, isHost) {
   if (!record(e) || typeof e.type !== 'string') return false;
   if (!isHost && hostCommands.includes(e.type)) return false;
   const fields = {
-    JOIN_ROOM: ['name', 'resume'], LEAVE_ROOM: [], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [],
+    JOIN_ROOM: ['name', 'resume', 'color'], LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [],
     CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'], RETURN_TO_LOBBY: [],
     PRACTICE_STEP: ['step'], PRACTICE_MAPS: [],
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
@@ -33,7 +34,8 @@ export function validCommand(e, isHost) {
   }[e.type];
   if (!Array.isArray(fields) || !keys(e, ['type', ...fields])) return false;
   switch (e.type) {
-    case 'JOIN_ROOM': return name(e.name) && (e.resume === undefined || validResumeToken(e.resume));
+    case 'JOIN_ROOM': return name(e.name) && (e.resume === undefined || validResumeToken(e.resume)) && (e.color === undefined || isColorIndex(e.color));
+    case 'SET_COLOR': return isColorIndex(e.color);
     case 'SET_MODE': return Object.values(GameModes).includes(e.mode);
     case 'SET_POWERUPS': return typeof e.enabled === 'boolean';
     case 'CAST_VOTE': return index(e.mapIndex, 22);
@@ -66,7 +68,7 @@ export function validSnapshot(s) {
   // Disconnected historical participants can remain in L1; wire storage stays bounded.
   if (entries.length > 128 || entries.filter(([, p]) => p?.connected).length > MAX_PLAYERS) return false;
   for (const [id, p] of entries) {
-    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores']) || p.id !== id || !name(p.name) || typeof p.connected !== 'boolean'
+    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'color', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores']) || p.id !== id || !name(p.name) || !isColorIndex(p.color) || typeof p.connected !== 'boolean'
       || !count(p.strokes) || typeof p.done !== 'boolean' || typeof p.timedOut !== 'boolean'
       || !(p.score === null || count(p.score)) || !Array.isArray(p.scores) || p.scores.length > 6
       || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty']) && count(h.score) && typeof h.timedOut === 'boolean'

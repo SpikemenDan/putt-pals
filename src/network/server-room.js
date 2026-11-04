@@ -30,7 +30,7 @@ export function serverRoomUrl(roomCode, { endpoint, location = globalThis.locati
 }
 
 /** Server-room v2 transport. No host election, physics actor, signaling or ICE. */
-export async function connectServerRoom({ roomCode, name, resume = null, endpoint, location,
+export async function connectServerRoom({ roomCode, name, color = null, resume = null, endpoint, location,
   clock = { now: () => performance.now(), setTimeout, clearTimeout },
   WebSocket = globalThis.WebSocket, random = Math.random, signal,
   expectedCourseHash, crypto = globalThis.crypto,
@@ -41,7 +41,7 @@ export async function connectServerRoom({ roomCode, name, resume = null, endpoin
   const courseHash = expectedCourseHash ?? await browserCourseHash(crypto);
   if (signal?.aborted) throw new Error('cancelled');
   let identity = resume ? { sessionId: resume.sessionId, playerId: resume.playerId, token: resume.token } : null;
-  if (encodeRoomFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, resume: identity }, 'client') === null) throw new Error('invalid-message');
+  if (encodeRoomFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, color, resume: identity }, 'client') === null) throw new Error('invalid-message');
   let localId = null, connectionId = null, snapshot = null, wireSnapshot = null;
   let socket = null, generation = 0, closed = false, connected = false, established = false;
   let commandSequence = 0, presenceSequence = 0, serverPresenceSequence = -1, revision = -1;
@@ -150,7 +150,7 @@ export async function connectServerRoom({ roomCode, name, resume = null, endpoin
     handshakeTimer = clock.setTimeout(() => { if (id === generation) lost('connection-timeout'); }, SERVER_ROOM_LIMITS.handshakeMs);
     next.addEventListener('open', () => {
       if (closed || id !== generation) { next.close(); return; }
-      sendFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, resume: identity });
+      sendFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, color, resume: identity });
     });
     next.addEventListener('message', event => {
       if (closed || id !== generation) return;

@@ -212,6 +212,25 @@ function fakeClock() {
     assert.equal(select.value, 'standard', 'a second player resets a solo-only mode');
     assert.deepEqual([...select.options].filter(o => o.disabled).map(o => o.value), ['practice', 'putt_practice']);
     assert.ok(button('Copy invite'));
+    // Ball colour picker (#161): the room's colours, taken ones disabled with the holder's name, picks sent as a command.
+    {
+      const picker = lobby.querySelector('[data-ui=color-picker]');
+      assert.ok(picker, 'the lobby shows a colour picker');
+      const swatches = [...picker.querySelectorAll('button')];
+      assert.equal(swatches.length, 30, 'one swatch per palette colour');
+      const players = t.session.getSnapshot().players;
+      assert.notEqual(players.host.color, players.g1.color, 'room colours are unique');
+      assert.equal(swatches[players.host.color].getAttribute('aria-checked'), 'true', 'my colour is marked selected');
+      assert.equal(swatches[players.g1.color].disabled, true, "another player's colour is unavailable");
+      assert.match(swatches[players.g1.color].getAttribute('aria-label'), /taken by Ben/);
+      assert.equal(swatches.filter(b => b.disabled).length, 1, 'only colours held by other players are disabled');
+      const pick = swatches.findIndex((b, i) => !b.disabled && i !== players.host.color);
+      t.commands.length = 0;
+      await click(swatches[pick]);
+      assert.deepEqual(t.commands, [{ type: ui.UiCommands.SET_COLOR, color: pick }], 'clicking a free swatch asks for that colour');
+      await click(swatches[players.g1.color]);
+      assert.equal(t.commands.length, 1, 'a taken swatch sends nothing');
+    }
     await setMode('tournament_3');
     t.commands.length = 0;
     await click(button('Start Game'));

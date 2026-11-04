@@ -30,3 +30,22 @@ Preserved details: short pulls, Escape, pointer cancel, lost capture and window 
 `subscribeAim()` reports charge changes for the power meter so per-frame values stay out of React state. `aim.js` holds the shared aim rules (`spread`, `sway`, `shotAngle`, `chargeFromDrag`, `accuracyText`).
 
 `npm run test:input` runs the legacy game and this adapter in one jsdom window, sending identical pointer events to each canvas and shared keyboard events. Seven drags covering power, direction, sway phase and Steady Aim produce shots identical to legacy launches bit for bit. The guide direction matches the legacy guide dots, and camera angles track the legacy camera. The test also covers cancel and guard paths, shortcuts, text-field filtering, free roam and removal of every listener on dispose. Real-browser input is not claimed by this suite.
+
+## U2 preview and tuning
+
+Run `npm run dev` and open `/tests/fixtures/aim/preview.html`. This isolated
+chamber uses production input, simulation and rendering. Drag to inspect power
+and arrow length, release to putt, Escape to cancel, and C to cycle the camera.
+Sliders adjust full-power launch speed (units/s), full-pull distance (CSS pixels), canvas-width fraction, arrow
+length, shaft/head widths, head length and opacity. Units, ranges, defaults and
+current values are shown. Power-mapping changes reset the ball and cancel the
+current pull; presentation changes apply live. Import validates every setting
+before applying any; Export includes only temporary overrides. Reset restores
+shipped defaults. The chamber is development-only and never connects to a room.
+
+The optional input-adapter `aimSettings` port controls only `fullPullPx` and
+`canvasPullFraction`; normal application input still uses authoritative TUNING
+defaults. `display` remains the existing validated presentation port. The
+approved U2 retune sets full-power launch speed to 600 units/s and caps the
+full-pull distance at 18% of canvas width (still limited by `fullPullPx`). The
+preview starts from these same authoritative defaults.

@@ -59,9 +59,9 @@ export function shotAngle({ aimAngle, charge, time, steady = false, aimMode = ''
   return aimAngle + aimModeOffset(aimMode, time) + (steady ? 0 : sway(charge, time));
 }
 
-/** Charge 0..1 from a pointer drag distance in CSS pixels. */
-export function chargeFromDrag(dx, dy, canvasWidth) {
-  return Math.min(1, Math.hypot(dx, dy) / Math.min(FULL_PULL_PX, canvasWidth * FULL_PULL_CANVAS_FRACTION));
+/** Charge 0..1 from a pointer drag distance in CSS pixels. Optional settings are validated preview overrides; defaults come from TUNING. */
+export function chargeFromDrag(dx, dy, canvasWidth, settings = AIM) {
+  return Math.min(1, Math.hypot(dx, dy) / Math.min(settings.fullPullPx, canvasWidth * settings.canvasPullFraction));
 }
 
 /** The power meter caption. */

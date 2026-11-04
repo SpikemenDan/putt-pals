@@ -31,6 +31,22 @@ async function run() {
   }
   console.log('PASS: launch initialization matches legacy at 9 angle/power combinations');
 
+  // The approved U2 launch-speed retune reduces full-power travel on the same flat course.
+  {
+    const course = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000, 40000]], w: [] };
+    const roll = speed => {
+      const engine = new sim.SimulationEngine(course), player = engine.addPlayer('power-probe', 'Probe');
+      engine.launch('power-probe', 0, 1, speed);
+      for (let i = 0; i < 12000 && player.moving; i++) engine.step();
+      assert.equal(player.moving, false, `shot at ${speed} eventually settles`);
+      const distance = player.x;
+      engine.dispose();
+      return distance;
+    };
+    assert.ok(roll(shared.SHOT_POWER) < roll(900), '600-unit/s full power travels less than the previous 900-unit/s setting');
+    console.log('PASS: U2 full-power launch retune shortens a flat full-charge roll');
+  }
+
   // 2. Preserve historical traces BEFORE cup interaction. S2 intentionally changes cup motion.
   const inv = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const references = inv.simulationReferences.shots;
@@ -127,11 +143,11 @@ async function run() {
     console.log(`PASS: ${name} chamber parity verified (active sinks, stripped fails)`);
   };
 
-  // S3 retune: shots re-found under the forgiving friction (robust to +-0.5 deg and +-0.03 power).
-  testMechanic('fan', 0, 170, 0.9, 'fan');
-  testMechanic('teleporter', 1, 176, 0.75, 'tp');
-  testMechanic('jump pad', 2, 179, 0.5, 'pd');
-  testMechanic('tornado', 3, 167, 0.8, 'tornado');
+  // Re-found under shipped S3/U2 defaults; each active mechanic sinks while its stripped chamber does not.
+  testMechanic('fan', 0, 140, 1, 'fan');
+  testMechanic('teleporter', 1, 60, 1, 'tp');
+  testMechanic('jump pad', 2, 179, 0.75, 'pd');
+  testMechanic('tornado', 3, 20, 1, 'tornado');
 
   // 4. Surface Roll Distances (surfaces suite parity)
   {

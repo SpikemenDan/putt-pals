@@ -12,8 +12,8 @@ async function run() {
   assert.equal(shared.R, 5);
   assert.equal(shared.DEFAULT_CUP_RADIUS, 15);
   assert.equal(shared.MIN_CUP_RADIUS, 8);
-  assert.equal(shared.SHOT_POWER, 900);
-  assert.equal(shared.POWER, 900);
+  assert.equal(shared.SHOT_POWER, 600);
+  assert.equal(shared.POWER, 600);
   assert.equal(shared.TURF_FRICTION, 0.5);
   assert.equal(shared.FIXED_TIMESTEP, 1 / 240);
   assert.deepEqual(Array.from(shared.STARTER_COURSE_INDICES), [0, 8, 20, 21, 5, 19]);
@@ -136,7 +136,7 @@ async function run() {
   assert.equal(shared.validateVote({ map: 'str' }), false);
 
   const envelope = shared.createMessageEnvelope('vote', { map: 8 }, 'player1');
-  assert.equal(envelope.version, 1);
+  assert.equal(envelope.version, 2, 'protocol version 2 carries player colours');
   assert.equal(envelope.type, 'vote');
   assert.equal(envelope.senderId, 'player1');
   assert.equal(envelope.payload.map, 8);
@@ -217,6 +217,47 @@ async function run() {
   guestTransport.close();
   mockSim.dispose();
   console.log('PASS: High-fidelity mocks and virtual transport hub');
+
+  // Player colour palette (#161): independent expectations, not a re-read of the constants.
+  {
+    const { PLAYER_COLORS, PLAYER_COLOR_NAMES, PLAYER_COLOR_COUNT, isColorIndex, colorHex } = shared;
+    assert.equal(PLAYER_COLORS.length, PLAYER_COLOR_COUNT);
+    assert.equal(PLAYER_COLOR_NAMES.length, PLAYER_COLOR_COUNT);
+    assert.ok(PLAYER_COLOR_COUNT >= 21 + 4, 'at least 21 rainbow shades plus white, black, gray and brown');
+    assert.equal(new Set(PLAYER_COLORS).size, PLAYER_COLOR_COUNT, 'every colour is distinct');
+    assert.equal(new Set(PLAYER_COLOR_NAMES).size, PLAYER_COLOR_COUNT, 'every colour has its own name');
+    assert.ok(PLAYER_COLORS.every(c => /^#[0-9a-f]{6}$/.test(c)));
+    for (const hue of ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']) {
+      for (const name of [hue, 'light ' + hue, 'dark ' + hue]) {
+        assert.ok(PLAYER_COLOR_NAMES.some(n => n.toLowerCase() === name), 'palette has ' + name);
+      }
+    }
+    for (const extra of ['white', 'black', 'gray', 'brown']) assert.ok(PLAYER_COLOR_NAMES.some(n => n.toLowerCase() === extra), 'palette has ' + extra);
+    assert.deepEqual(Array.from(PLAYER_COLORS.slice(0, 8)),
+      ['#ff4fb8', '#3e8ef7', '#f5a623', '#8e4ec6', '#12a594', '#e5484d', '#99d52a', '#e8e8e8'], 'the original eight colours keep their indexes');
+    assert.equal(isColorIndex(0), true);
+    assert.equal(isColorIndex(PLAYER_COLOR_COUNT - 1), true);
+    for (const bad of [-1, PLAYER_COLOR_COUNT, 1.5, '1', null, undefined, NaN]) assert.equal(isColorIndex(bad), false, String(bad));
+    assert.equal(colorHex(PLAYER_COLOR_COUNT), PLAYER_COLORS[0], 'colorHex wraps past the palette');
+    assert.equal(colorHex(-1), PLAYER_COLORS[PLAYER_COLOR_COUNT - 1]);
+    assert.equal(colorHex(undefined), PLAYER_COLORS[0]);
+    const { validCommand, validSnapshot } = await import('../src/network/protocol.js');
+    assert.equal(validCommand({ type: 'JOIN_ROOM', name: 'Ann', color: 4 }, false), true);
+    assert.equal(validCommand({ type: 'JOIN_ROOM', name: 'Ann' }, false), true, 'a colour preference is optional');
+    assert.equal(validCommand({ type: 'JOIN_ROOM', name: 'Ann', color: PLAYER_COLOR_COUNT }, false), false);
+    assert.equal(validCommand({ type: 'SET_COLOR', color: 3 }, false), true, 'any member may choose a colour');
+    assert.equal(validCommand({ type: 'SET_COLOR', color: -2 }, false), false);
+    assert.equal(validCommand({ type: 'SET_COLOR' }, false), false);
+    const base = { phase: 'lobby', mode: 'standard', powerups: true, hostId: 'h', mapIndex: 0, puttIndex: 0, roundNumber: 0, roundLimitSeconds: 120, roundStartTime: 0, votingDeadline: 0,
+      votes: {}, roster: [], isHost: true, completedMaps: [], totals: {}, last: null, state: 'lobby',
+      players: { h: { id: 'h', name: 'Host', color: 2, connected: true, strokes: 0, done: false, timedOut: false, score: null, scores: [] } } };
+    assert.equal(validSnapshot(base), true, 'a snapshot with player colours is valid');
+    const missing = structuredClone(base); delete missing.players.h.color;
+    assert.equal(validSnapshot(missing), false, 'a snapshot player without a colour is rejected');
+    const bad = structuredClone(base); bad.players.h.color = PLAYER_COLOR_COUNT;
+    assert.equal(validSnapshot(bad), false, 'an out-of-palette colour is rejected');
+    console.log('PASS: 30-colour palette, colour index validation and colour fields in commands and snapshots');
+  }
 
   console.log('\nALL SHARED CONTRACT TESTS PASSED SUCCESSFULLY!');
 }
