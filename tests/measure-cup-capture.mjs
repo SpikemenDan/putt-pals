@@ -52,7 +52,8 @@ for (const ref of old.results) {
     ...result,
     nominal: result.best || findNominal(ref.map, ref.putt),
     elapsedMs: performance.now() - start,
-    provenance: createDifficultyProvenance(document.courses[ref.map], ref.putt),
+    // S2 probe: record its own grid config (v2 provenance also pins gravity and par-solver.mjs).
+    provenance: createDifficultyProvenance(document.courses[ref.map], ref.putt, { configuration: SOLVER_CONFIG }),
   });
   fs.writeFileSync(
     new URL("./fixtures/cup-capture/solutions.json", import.meta.url),
