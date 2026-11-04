@@ -219,7 +219,7 @@ const assert = require('node:assert/strict');
     const blocked = shoot(0, 250, [rec('bumper', 200, 100)]);
     assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.ok(blocked.hits >= 1, 'the bumper reports the hit');
     // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the lane (robust over a range of aims).
-    for (const aimOff of [30, 35]) {
+    for (const aimOff of [35, 40]) {
       const angle = Math.atan2(aimOff, 320);
       assert.equal(shoot(angle, 250, []).sunk, false, `aim ${aimOff} misses without the ring`);
       assert.equal(shoot(angle, 250, [rec('orbital', 320, 100)]).sunk, true, `aim ${aimOff} sinks with the ring (320,100)`);
