@@ -15,7 +15,7 @@ const assert = require('node:assert/strict');
     assert.ok(Object.isFrozen(c.createRoomPolicy()));
   });
   await test('server authority separate from controller; versions 2 and 3 carry player colours',async()=>{
-    assert.equal((await import('../src/shared/constants.js')).PROTOCOL_VERSION,2);
+    assert.equal((await import('../src/shared/constants.js')).PROTOCOL_VERSION,3);
     assert.equal(c.SERVER_ROOM_VERSION,3);assert.ok(c.validRoomSnapshot(snapshot));
     const invalid=copy(snapshot);invalid.session.context.hostId='p1';assert.equal(c.validRoomSnapshot(invalid),false);
     assert.equal(c.authorizeRoomFrame(command(),binding,snapshot,snapshot.serverTime),null);
