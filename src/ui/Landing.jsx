@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BALL_SKINS, CELEBRATIONS, TRAIL_SKINS } from '../cosmetics/catalog.js';
+import { courseRules } from '../courses/definitions.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import { ColorPicker } from './ColorPicker.jsx';
@@ -19,7 +20,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '' }) {
   return (
     <div className={menu.menu} hidden={hidden} data-ui="landing">
     <div className={menu.panel}>
-      <h1>⛳ Putt Pals <span style={TAGLINE}>PARTY CIRCUIT · 20 MAPS</span></h1>
+      <h1>⛳ Putt Pals <span style={TAGLINE}>PARTY CIRCUIT · {courseRules.length} MAPS</span></h1>
       <label>Your name<input maxLength={14} autoComplete="off" value={name} onChange={e => setName(e.target.value)} /></label>
       <div style={{ textAlign: 'left' }}>Ball colour<ColorPicker selected={color} onPick={c => send(UiCommands.SET_COLOR, { color: c })} /></div>
       <button type="button" className={menu.solo} disabled={connecting} onClick={() => send(UiCommands.PLAY_SOLO, { name })}>Play solo</button>

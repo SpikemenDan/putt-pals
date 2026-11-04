@@ -1,3 +1,5 @@
+import { courseRules } from '../courses/definitions.js';
+import { spawnPool } from '../gameplay/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import { PowerMeter } from './PowerMeter.jsx';
@@ -10,6 +12,8 @@ import hud from './Hud.module.css';
  * mounted so the WebGL context survives screen changes; `onCanvas` hands it to
  * the renderer and input adapter.
  */
+const POWERUP_COUNT = spawnPool().length;
+
 export function GameScreen({ hidden, backdrop = false, onCanvas }) {
   const { send, session } = useCommands();
   const view = useView(v => v.hud);
@@ -51,12 +55,11 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
           {(view?.scoreboard || []).map(r => <Row key={r.id} variant="scoreboard" color={r.color} name={r.name} a={r.status} b={r.total} />)}
         </div>
       </div>
-      <details><summary>How to play online · engine roadmap · build notes</summary>
+      <details><summary>How to play online · build notes</summary>
         <p><b>With friends:</b> Everyone opens this updated hosted game and enters the same room code. The room service keeps shared match state and chooses a room controller; the controller starts the game and chooses maps. Late joiners spectate until the next round. Use Invite to copy a room link.</p>
         <p><b>Network limits:</b> Online rooms need a working WebSocket connection to the hosted room service. The service stores match state and membership; ball movement remains local and other players' balls are visual ghosts. Connection recovery and controller succession are handled by the room service. Anti-cheat and guaranteed global connectivity are not implemented. Use solo mode if the room service is unavailable.</p>
         <p><b>Controls:</b> Click/touch the course, pull backward opposite the shot direction, release. Longer pulls mean higher speed and greater angular spread. The arrow shows direction and power; it sways more as power grows. Escape or an interrupted gesture cancels without shooting. Right-drag or arrow keys rotate ball view. Keys 1–3 activate collected power-ups. Hole Magnet deliberately adds attraction only when activated. Steady Aim removes spread.</p>
-        <p><b>This build:</b> Twenty original course layouts; ramps, raised greens, jump pads, water, sand, fans and portals; five collectible power-ups; simultaneous play and scorecards. New warm sunlight, soft shadows, natural materials, animated flags, trees, recessed cups and distance-based drag aiming. Low quality disables shadows and lowers pixel density. Cup physics uses an approximate sphere-on-lip contact model at 240 Hz, with gravity, inner-wall rebounds and below-surface scoring. It is not a full rigid-body solver. Room transitions are service-authoritative; ball motion is client-authoritative. Remote balls remain non-colliding ghosts. Tornadoes apply swirl, inward pull and core lift; moving obstacles rebound balls. Only one map is built at a time. Aim appears only while pulling and sways more at high power; the release direction matches the live indicator.</p>
-        <p><b>Future engine version:</b> The current renderer is Three.js. A migration to Godot, Unity or Unreal is a rebuild of rendering/input/networking, not a checkbox. Keep course layouts and tuning as data, separate fixed-step simulation from rendering, replace the custom collision model with the engine's rigid-body system, then add a server-authoritative match service and synchronized lobbies. The browser version can remain the prototype. See the accompanying Putt_Pals_Architecture.md guide for source contracts and shader details. Putt Party wiki feature parity has not been verified.</p>
+        <p><b>This build:</b> {courseRules.length} original course layouts; ramps, raised greens, jump pads, water, sand, fans and portals; {POWERUP_COUNT} collectible power-ups; simultaneous play and scorecards. New warm sunlight, soft shadows, natural materials, animated flags, trees, recessed cups and distance-based drag aiming. Low quality disables shadows and lowers pixel density. Cup physics uses an approximate sphere-on-lip contact model at 240 Hz, with gravity, inner-wall rebounds and below-surface scoring. It is not a full rigid-body solver. Room transitions are service-authoritative; ball motion is client-authoritative. Remote balls remain non-colliding ghosts. Tornadoes apply swirl, inward pull and core lift; moving obstacles rebound balls. Only one map is built at a time. Aim appears only while pulling and sways more at high power; the release direction matches the live indicator.</p>
       </details>
     </div>
   );
