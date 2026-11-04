@@ -100,8 +100,8 @@ export function bumperContact(list, ball, radius, params = DEPLOYABLE_PARAMS) {
     if (vn >= 0) continue;
     const restitution = d.kind === 'orbital' ? params.orbitalRestitution : params.bumperRestitution;
     const counts = -vn >= params.minHitSpeed; // a ball settling against the body is not an impact
-    // A Bumper always pops the ball out at `bumperKick` or faster, so a slow second touch does not just rebound like a wall.
-    const out = d.kind === 'bumper' && counts ? Math.max(restitution * -vn, params.bumperKick) : restitution * -vn;
+    // Both bodies always pop the ball out at `bumperKick` or faster, so a slow second touch does not just rebound like a wall.
+    const out = counts ? Math.max(restitution * -vn, params.bumperKick) : restitution * -vn;
     ball.vx += (out - vn) * nx;
     ball.vy += (out - vn) * ny;
     if (counts) events.push({ type: DEPLOYABLE_HIT, id: d.id });
