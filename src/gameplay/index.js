@@ -4,4 +4,4 @@ export {
 } from './catalog.js';
 export { MAX_INVENTORY, powerupPolicy, startingInventory, addToInventory, takeFromInventory } from './inventory.js';
 export { armedState, pendingState, activatePowerup, clearAtLaunch, clearAtRest, ballRadiusOf, receiveEffect, auraOf, validEffectMessage, AIM_MODES, aimModeOf, AURA_KINDS, auraSourcesOf, auraAcceleration } from './effects.js';
-export { DEPLOYABLE_PARAMS, placementClear, validDeployable, activeDeployables, recordImpact, orbitalAcceleration, bumperContact } from './deployables.js';
+export { DEPLOYABLE_PARAMS, placementClear, placementFloor, validDeployable, activeDeployables, recordImpact, orbitalAcceleration, bumperContact } from './deployables.js';

@@ -69,6 +69,9 @@ export const TUNING_FIELDS = Object.freeze([
   ['deployables.orbitalRange', 0, 1000, 'Orbital Bumper ring radius (world units).'],
   ['deployables.orbitalPull', 0, 10000, 'Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge).'],
   ['deployables.hitCooldownMs', 0, 5000, 'Minimum milliseconds between impact reports for one deployed object.'],
+  ['deployables.bodyHeight', 1, 200, 'Height of the solid Bumper or Orbital Bumper body above the floor it stands on (world units); a ball whose underside is above it passes over.'],
+  ['deployables.orbitalReach', 1, 500, 'Height of the Orbital Bumper pull volume above its floor (world units); a ball above it is not pulled.'],
+  ['deployables.placementSlopeTolerance', 0, 50, 'Largest floor-height difference allowed across a Bumper footprint when it is placed (world units); rejects ramps, ledges and pit edges.'],
   ['powerups.smallBallScale', 0.1, 1, 'Small Ball radius multiplier.'],
   ['powerups.tallBallScale', 1, 1.6, 'Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup).'],
 
@@ -113,7 +116,7 @@ export const DEFAULT_TUNING = {
   bounce: { wallRestitution: 1.82, ledgeDamping: 0.8, ledgeHeight: 5, landingRestitution: 0.25, landingSpeed: 180 },
   rest: { maxSlope: 0.015, maxSpeed: 6, maxVertical: 5, airTolerance: 0.8, groundTolerance: 0.6 },
   powerups: { magnetRange: 90, magnetPull: 300, chipLaunch: 300, auraRange: 120, auraPull: 260, auraPush: 260, smallBallScale: 0.6, tallBallScale: 1.5 },
-  deployables: { bumperRadius: 14, bumperRestitution: 1.4, bumperKick: 300, orbitalSpeedRef: 250, orbitalRestitution: 1.4, minHitSpeed: 15, maxImpacts: 3, orbitalRange: 40.625, orbitalPull: 1150, hitCooldownMs: 250 },
+  deployables: { bumperRadius: 14, bumperRestitution: 1.4, bumperKick: 300, orbitalSpeedRef: 250, orbitalRestitution: 1.4, minHitSpeed: 15, maxImpacts: 3, orbitalRange: 40.625, orbitalPull: 1150, hitCooldownMs: 250, bodyHeight: 12, orbitalReach: 40, placementSlopeTolerance: 2 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,

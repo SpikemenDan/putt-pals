@@ -16,10 +16,10 @@ import { hitDeployable, placeDeployable } from '../gameplay/deployables.js';
  *
  * Deployables (G1e): the host owns the list of placed Bumpers and Orbital Bumpers. DEPLOY_OBJECT and DEPLOY_HIT from
  * verified guests are handled here, not in the session machine, and the list rides in every snapshot. The host's
- * own actions use the returned function's `deploy(command)` and `hit(id)`. `validPlacement(map, putt, x, y)` is the
+ * own actions use the returned function's `deploy(command)` and `hit(id)`. `floorAt(map, putt, x, y)` is the
  * optional course check (on the floor, clear of walls). Records are dropped when the putt changes.
  */
-export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, validPlacement } = {}) {
+export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, floorAt } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
   const positions = new Map(); let dirty = false, stopped = false, timer;
   let deployables = [], deploySequence = 0, deployReason = ''; const lastHit = new Map();
@@ -53,7 +53,7 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     if (snapshot.phase !== 'play' || !snapshot.roster.includes(id) || !snapshot.players[id]?.connected) return false;
     const result = placeDeployable(deployables, command, {
       playerId: id, map: snapshot.mapIndex, putt: snapshot.puttIndex, time: transport.localNow() / 1000, sequence: ++deploySequence,
-      validPlacement: validPlacement && ((x, y) => validPlacement(snapshot.mapIndex, snapshot.puttIndex, x, y)),
+      floorAt: floorAt && ((x, y) => floorAt(snapshot.mapIndex, snapshot.puttIndex, x, y)),
     });
     deployReason = result.placed ? '' : result.reason;
     if (!result.placed) return false;

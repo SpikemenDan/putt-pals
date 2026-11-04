@@ -26,7 +26,7 @@ export const TUNING_UNITS = Object.freeze([
   [/^powerups\.(?:magnetPull|auraPull|auraPush)$/, 'units/s²'],
   [/^powerups\.chipLaunch$/, 'units/s'],
   [/^powerups\.(?:smallBallScale|tallBallScale)$/, 'multiplier'],
-  [/^deployables\.(?:bumperRadius|orbitalRange)$/, 'world units'],
+  [/^deployables\.(?:bumperRadius|orbitalRange|bodyHeight|orbitalReach|placementSlopeTolerance)$/, 'world units'],
   [/^deployables\.orbitalPull$/, 'units/s²'],
   [/^deployables\.(?:bumperKick|minHitSpeed|orbitalSpeedRef)$/, 'units/s'],
   [/^deployables\.(?:bumperRestitution|orbitalRestitution)$/, 'factor'],

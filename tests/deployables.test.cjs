@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
   let cases = 0;
 
   const course = { hole: [5000, 5000], tee: [0, 0], tiles: [[-6000, -6000, 12000, 12000]], w: [], cup: 15 };
-  const rec = (kind, x, y, extra = {}) => ({ id: 'd1', kind, x, y, owner: 'p1', impacts: 0, placedAt: 0, map: 0, putt: 0, ...extra });
+  const rec = (kind, x, y, extra = {}) => ({ id: 'd1', kind, x, y, z: 0, owner: 'p1', impacts: 0, placedAt: 0, map: 0, putt: 0, ...extra });
   const roll = (deployables, { armed = {}, steps = 600, speed = 200 } = {}) => {
     const p = createPlayerState('Probe', 0, { x: 0, y: 0, z: 0 });
     p.armedPowerups = { ...G.armedState(), ...armed };
@@ -122,10 +122,10 @@ const assert = require('node:assert/strict');
     assert.equal(D.placementClear(arena, 200 + 15 + R + 1, 100), true, 'just beside the cup');
   }
   let placed = put([], 'bumper');
-  assert.deepEqual(placed.placed, { id: 'd1', kind: 'bumper', x: 30, y: 40, owner: 'p1', impacts: 0, placedAt: 5, map: 0, putt: 0 });
+  assert.deepEqual(placed.placed, { id: 'd1', kind: 'bumper', x: 30, y: 40, z: 0, owner: 'p1', impacts: 0, placedAt: 5, map: 0, putt: 0 });
   assert.equal(put([], 'mag').reason, 'invalid', 'only course items can be deployed');
   assert.equal(D.placeDeployable([], { kind: 'bumper', x: NaN, y: 0 }, ctx()).reason, 'invalid');
-  assert.equal(put([], 'bumper', { validPlacement: () => false }).reason, 'blocked');
+  assert.equal(put([], 'bumper', { floorAt: () => null }).reason, 'blocked');
   const twoMine = Array.from({ length: 6 }, (_, i) => rec(i % 2 ? 'orbital' : 'bumper', 1 + i, 1 + i, { id: 'm' + i }));
   assert.equal(put(twoMine, 'bumper').placed?.owner, 'p1', 'no per-player limit');
   const roomFull = Array.from({ length: require('../src/shared/constants.js').MAX_DEPLOYABLES }, (_, i) => rec('bumper', i * 40, 0, { id: 'x' + i, owner: 'p' + (i % 6 + 10) }));
@@ -177,6 +177,58 @@ const assert = require('node:assert/strict');
   snap.puttIndex = 1; unbind.hit('d2');
   assert.equal(last().deployables, undefined, 'a new putt clears the objects');
   unbind(); cases++;
+  // ---- vertical volume (contract section 7): airborne balls, levels, host-assigned z, flat-footprint placement
+  {
+    cases++;
+    const flat = { hole: [5000, 5000], tee: [0, 0], tiles: [[-6000, -6000, 12000, 12000]], w: [], cup: 15 };
+    const fly = (deployables, z, steps = 60) => {
+      const p = createPlayerState('Air', 0, { x: 0, y: 0, z });
+      p.deployables = deployables; applyShot(p, 0, 1, 300); p.z = z; p.vz = 0; p.moving = true;
+      let hits = 0; for (let i = 0; i < steps && p.moving; i++) for (const e of stepBall(p, flat, dt)) if (e.type === D.DEPLOYABLE_HIT) hits++;
+      return { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, hits };
+    };
+    const H = P.bodyHeight, reach = P.orbitalReach;
+    // An airborne ball above z + bodyHeight passes over a Bumper untouched: no event, trajectory identical to no object.
+    const control = fly([], 60);
+    assert.ok(60 - 25 > H, 'the test ball stays above the body for the whole pass');
+    assert.deepEqual(fly([rec('bumper', 50, 0)], 60), control, 'above the body: bit-identical to the control');
+    assert.deepEqual(fly([rec('orbital', 50, 0)], 60 + reach), fly([], 60 + reach), 'an orbital body is passed over too');
+    // A ball at body height bounces exactly as it does for a rolling ball (events, horizontal reflection, vz untouched).
+    const low = fly([rec('bumper', 50, 0)], 5);
+    assert.ok(low.hits >= 1 && low.vx < 0, 'a ball inside the body band is thrown back');
+    const lowControl = fly([], 5);
+    assert.equal(low.vz, lowControl.vz, 'the bounce never changes the vertical velocity'); assert.equal(low.z, lowControl.z);
+    // The orbital pull acts only inside orbitalReach: inside the band it bends the path sideways but leaves the arc alone; above it, nothing.
+    const inBand = fly([rec('orbital', 50, 30)], 30), bandControl = fly([], 30);
+    assert.ok(inBand.y > bandControl.y && inBand.vy > bandControl.vy, 'inside the reach the ball is pulled toward the axis');
+    assert.equal(inBand.vz, bandControl.vz); assert.equal(inBand.z, bandControl.z);
+    assert.deepEqual(fly([rec('orbital', 50, 30)], 100), fly([], 100), 'above the reach: bit-identical to the control');
+    assert.deepEqual(D.orbitalAcceleration([rec('orbital', 100, 0)], 80, 0, 1, P, 0, reach + 1), [0, 0], 'above the pull volume: no pull');
+    assert.deepEqual(D.orbitalAcceleration([rec('orbital', 100, 0)], 80, 0, 1, P, 0, -50), [0, 0], 'a lower level under the floor: no pull');
+    assert.ok(D.orbitalAcceleration([rec('orbital', 100, 0)], 80, 0, 1, P, 0, reach)[0] > 0, 'at the top of the volume: pulled');
+    assert.equal(D.orbitalHolds([rec('orbital', 100, 0)], 80, 0, 5, P, reach + 1), false, 'rest rules ignore a ball above the volume');
+    // Levels: an object on a raised floor (z = 30) does not touch a ball rolling on the lower floor through the same x/y.
+    const platformObject = { ...rec('bumper', 50, 0), z: 30 };
+    assert.deepEqual(fly([platformObject], 0), fly([], 0), 'the lower level is unaffected');
+    const onPlatform = fly([platformObject], 30); assert.ok(onPlatform.hits >= 1, 'the same object affects a ball on its own level');
+
+    // Host placement: z is assigned from the floor, the footprint must be flat, and the record carries z.
+    const level = { tiles: [[0, 0, 400, 200]], pl: [[100, 50, 100, 100, 30]], rp: [[250, 50, 100, 100, '+x', 0, 60]], pit: [[360, 50, 30, 100]], w: [], hole: [20, 20], cup: 15 };
+    assert.equal(D.placementFloor(level, 50, 100), 0, 'open lower floor: z = 0');
+    assert.equal(D.placementFloor(level, 150, 100), 30, 'the middle of a platform: z = the platform height');
+    assert.equal(D.placementFloor(level, 100 + P.bumperRadius / 2, 100), null, 'straddling a platform ledge is refused');
+    assert.equal(D.placementFloor(level, 300, 100), null, 'a ramp is refused');
+    assert.equal(D.placementFloor(level, 375, 100), null, 'a pit is refused');
+    assert.equal(D.placementFloor(level, 365, 20 + 100), null, 'a pit edge under the footprint is refused');
+    const placed = D.placeDeployable([], { kind: 'bumper', x: 150, y: 100 }, ctx({ floorAt: (x, y) => D.placementFloor(level, x, y) }));
+    assert.equal(placed.placed.z, 30, 'the host assigns z');
+    assert.ok(D.validDeployable(placed.placed), 'the record with z is valid');
+    assert.equal(D.validDeployable({ ...placed.placed, z: undefined }), false, 'a record without z is not valid');
+    assert.equal(D.validDeployable({ ...placed.placed, z: NaN }), false);
+    assert.equal(D.placeDeployable([], { kind: 'bumper', x: 300, y: 100 }, ctx({ floorAt: (x, y) => D.placementFloor(level, x, y) })).reason, 'blocked');
+    assert.equal(D.placeDeployable([], { kind: 'bumper', x: 150, y: 100, z: 999 }, ctx({ floorAt: () => 30 })).placed?.z, 30, 'a client-sent z is ignored');
+  }
+
   // ---- a fast ball still bends: the deflection angle does not collapse as the speed goes up
   {
     cases++;

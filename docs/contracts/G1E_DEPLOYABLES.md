@@ -182,7 +182,8 @@ Open, for the integration owner:
 
 ## 13. Implementation notes (as built on agent/g1e-deployables)
 
-- **Built:** sections 1 to 6 in the code, with `z` and sections 7 to 10 not yet implemented. The current hooks use x and y only, which equals the section 7 behaviour for a rolling ball on a single-level floor.
+- **Built:** sections 1 to 8 in the code: the record carries host-assigned `z`; the body and pull volumes use `deployables.bodyHeight`, `orbitalReach` and `rest.groundTolerance`; placement runs `placementFloor` (flat footprint, `placementSlopeTolerance`) and returns the floor height. The pure contact maths is in `src/simulation/deployables.js` (no gameplay or catalog imports); placement, validation and the catalog stay in `src/gameplay/deployables.js`. Section 10 chambers are covered by `tests/deployables.test.cjs` (pass-over, body-height bounce, orbital reach, levels, placement); the per-world gravity sweep waits for the worlds.
+- **Versions:** `PROTOCOL_VERSION` is 3 (peer protocol, covers the `deployables` key and `z`).
 - **Inventory:** in the peer-to-peer room the inventory lives on each client, so the host cannot check it; the placing client spends its slot after the host accepted. Under N4 the server owns the inventory.
 - **Placement check:** `placementClear` (floor, pit, wall and cup clearance) and the overlap test run on both the client hologram and the host (`bindRoomSession`'s `validPlacement`); section 8 extends them with `z` and the footprint-flatness rule.
 - **Server-owned rooms (N4):** still refuse deployables; porting is the owner's.
