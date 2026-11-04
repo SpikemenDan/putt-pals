@@ -46,6 +46,31 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | [W2 #105](https://github.com/SpikemenDan/putt-pals/issues/105) | #104, #83 | Water in levels: splash and reset, shallow water, currents, toon water visuals, solver hazard handling |
 | [W3 #106](https://github.com/SpikemenDan/putt-pals/issues/106) | #104, #83 | Wind zones in levels: steady, gusting and updraft fields, airborne-weighted push, visible streamlines; distinct from fans and the G1f Wind hazard |
 
+## Putt Planet vision backlog (defined 2026-11-03)
+
+Breakdown of the redefined vision in MODERNIZATION_PLAN.md. Tracked by the [VIS umbrella #170](https://github.com/SpikemenDan/putt-pals/issues/170) (GitHub issues opened 2026-11-03; nothing is claimed). Only VIS-T has code, in PR #159. Settle the "Open decisions" in the plan that affect a task before starting it. Each task keeps current behavior and fixtures unchanged when its feature is off.
+
+| ID | Depends on | Scope |
+| --- | --- | --- |
+| [VIS-T #160](https://github.com/SpikemenDan/putt-pals/issues/160) Tournament length 3/5/7 | none | Replace 3/6/9 with 3/5/7 in the session machine (`src/session`), UI model (`src/ui/model.js`), server-room contract, scorecards, tests and docs (BASELINE.md, session README). Touches `src/shared` contracts, so it needs integration-owner coordination |
+| [VIS-C #161](https://github.com/SpikemenDan/putt-pals/issues/161) Ball colours | none | At least 21 rainbow colours (light, standard, dark of seven hues) plus white, black, gray, brown and extras; unique per party, occupied colours marked unavailable, a disconnected player's colour reserved; colour picker showing the real ball. Changes the player and protocol contracts, so it needs integration-owner coordination and a protocol version decision |
+| [VIS-D #162](https://github.com/SpikemenDan/putt-pals/issues/162) Disconnect, rejoin, late arrival | #65 N4, VIS-C | Reserved slots; saved reconnect identity token (local, no accounts); resume with strokes and remaining time before the hole closes; missed-hole scoring (max-hole score plus penalty, new tuning fields); late arrival into an open hole with penalties for earlier holes; scorecard marks penalties. Replaces "late joins stay spectators for the map" in `src/session/README.md`. Server-room contract change, so coordinate with N4 |
+| [VIS-V #163](https://github.com/SpikemenDan/putt-pals/issues/163) Voting and random picker | VIS-T | Votes for format, length, world, opening map and every next map; tie picker with one room-chosen result and a synchronized animation; repeat maps allowed. Server-room contract and session machine |
+| [VIS-W #164](https://github.com/SpikemenDan/putt-pals/issues/164) Worlds and per-world gravity | S3 (merged), #104 K0 | Gaia, Ares and Luna as data: gravity profile in `src/shared/tuning.js`, course collection, environment settings; solver and test chambers run per world; difficulty evidence is redone per world. Gravity numbers need owner playtesting (preview with developer controls) |
+| [VIS-G #165](https://github.com/SpikemenDan/putt-pals/issues/165) Regions and named maps | VIS-W, #97-#100 K1 | Region data model, several named maps per region, and first content for each world. Needs the island-versus-surface decision and the content-volume decision |
+| [VIS-E #166](https://github.com/SpikemenDan/putt-pals/issues/166) Environment effects | VIS-W | Gaia rain/snow with slippery surface (already catalogued as G1f), Ares wind and Luna dust/solar visuals (visual only, no physics) |
+| [VIS-A #167](https://github.com/SpikemenDan/putt-pals/issues/167) Arrival sequence | VIS-M, VIS-V | Launch countdown, skydive, cloud loading that covers map loading, establishing shot, move to the opening hole, zoom into the ball camera, synchronized "ready" from all active players, no cost to the hole timer; repeats for every selected map |
+| VIS-M Menus (tracked in [M1 #36](https://github.com/SpikemenDan/putt-pals/issues/36), no separate issue) | M1 #36 | Planet loading screen with flying balls, Solo/Party/Custom/Settings menu, version label, Solo and Party flows, plane lobby, party code only after Create, colour pick before lobby. Split #36 into sub-issues first |
+| [VIS-U #168](https://github.com/SpikemenDan/putt-pals/issues/168) Custom rules editor | DX1, DX2 | Player-facing rules editor over the validated tuning system; sliders with values, toggles, selectors, per-setting and global reset, then Play Solo or Host Party with those rules; online rules fixed at lobby creation and identical for all |
+| [VIS-R #169](https://github.com/SpikemenDan/putt-pals/issues/169) Rename to Putt Planet | owner approval | Product name in UI, package, docs and hosting; separate from all behaviour work |
+
+Existing tasks changed by the vision:
+
+- **G1e #92 (Deployables):** the Bumper and Orbital Bumper force and designs are approved. The contract draft must add a vertical extent and airborne rules (see "Airborne balls and 3D obstacles" in the plan) before the integration owner accepts it.
+- **K0 #104, K1a-K1d, W2 #105, W3 #106, SV1 #87, G1b Chip In:** all need airborne behaviour and per-world gravity in their acceptance checks.
+- **M1 #36:** its menus scope is now part of VIS-M.
+- **GM1 #95 (No Power-Ups):** becomes a Custom rule flag if the owner confirms (plan, Open decisions).
+
 ## Delivered
 
 All merged to main; details in the PRs and docs/reviews/.
