@@ -1,0 +1,9 @@
+/* Ball colour picker (#161): ink-outlined round swatches; the chosen one is ringed, taken ones are crossed out. */
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:8px;margin:8px 0 12px}
+.swatch{position:relative;width:100%;aspect-ratio:1;padding:0;border-radius:50%;border:3px solid var(--ink);background:var(--swatch);box-shadow:2px 2px 0 var(--ink);cursor:pointer}
+.swatch:hover:not(:disabled){transform:translateY(-2px)}
+.swatch:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+.on{outline:4px solid var(--ink);outline-offset:3px;transform:scale(1.08)}
+.on::after{content:'\2713';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 16px var(--font);color:#fff;text-shadow:1px 1px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink)}
+.taken{opacity:.35;cursor:not-allowed;box-shadow:none}
+.taken::after{content:'';position:absolute;left:12%;right:12%;top:50%;height:3px;background:var(--ink);transform:rotate(-45deg)}

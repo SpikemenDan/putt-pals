@@ -30,6 +30,7 @@ export const SessionCommands = Object.freeze({
   LEAVE_ROOM: 'LEAVE_ROOM',
   SET_MODE: 'SET_MODE',
   SET_POWERUPS: 'SET_POWERUPS', // host: power-ups on or off for the room (GM1)
+  SET_COLOR: 'SET_COLOR', // any member, lobby only: choose an unused ball colour (#161)
   START_VOTING: 'START_VOTING',
   CAST_VOTE: 'CAST_VOTE',
   START_ROUND: 'START_ROUND',
@@ -128,6 +129,7 @@ export function canExecuteCommand(phase, commandType, isHost) {
         SessionCommands.LEAVE_ROOM,
         SessionCommands.SET_MODE,
         SessionCommands.SET_POWERUPS,
+        SessionCommands.SET_COLOR,
         SessionCommands.START_VOTING,
       ].includes(commandType);
 

@@ -258,7 +258,7 @@ export class RoomDurableObject {
     if (hello.roomCode !== connection.roomCode) return this.reject(connection, 'invalid-message', 1008, 'Room code mismatch');
     let room = this.runtime;
     if (hello.resume === null && room === null) {
-      room = await this.createRuntime(connection.roomCode, hello.name.trim());
+      room = await this.createRuntime(connection.roomCode, hello.name.trim(), hello.color);
       const token = randomToken();
       const identity = await this.createIdentity(room, room.initialPlayerId, hello.name.trim(), token);
       const now = this.now(room);
@@ -326,7 +326,7 @@ export class RoomDurableObject {
       }
     } else {
       room.seats.set(identity.playerId, seat);
-      if (!room.session.send({ type: 'JOIN_ROOM', playerId: identity.playerId, name: identity.name })) {
+      if (!room.session.send({ type: 'JOIN_ROOM', playerId: identity.playerId, name: identity.name, ...(hello.color === null ? {} : { color: hello.color }) })) {
         room.seats.delete(identity.playerId);
         room.suppress--;
         return this.reject(connection, 'room-full', 1008, 'Room does not admit new players');
@@ -347,7 +347,7 @@ export class RoomDurableObject {
     this.setRoomTimer(room);
   }
 
-  async createRuntime(roomCode, name) {
+  async createRuntime(roomCode, name, color = null) {
     const courseHash = await createCourseHash();
     const sessionId = randomId();
     const playerId = randomId();
@@ -360,7 +360,7 @@ export class RoomDurableObject {
       logicalTime: Date.now(),
     };
     room.session = this.makeSession(room, {
-      controllerId: playerId, hostName: name, serverOwned: true, isReserved: id => {
+      controllerId: playerId, hostName: name, hostColor: color ?? undefined, serverOwned: true, isReserved: id => {
         const seat = room.seats.get(id);
         return !!seat && seat.connectedSince === null && seat.resumeUntil !== null && seat.resumeUntil > this.now(room);
       },
@@ -458,7 +458,7 @@ export class RoomDurableObject {
         connectedSince: snapshot.serverTime, resumeUntil: null,
       });
       snapshot.session.context.players[candidate.playerId] = {
-        id: candidate.playerId, name: candidate.name, connected: true,
+        id: candidate.playerId, name: candidate.name, color: 0, connected: true,
         strokes: 0, done: false, timedOut: false, score: null, scores: [],
       };
       // The first connected member also becomes controller of a retained empty room.

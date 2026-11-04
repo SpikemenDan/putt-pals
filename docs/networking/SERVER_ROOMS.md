@@ -38,13 +38,13 @@ Retain an empty room for 15 minutes from the last live disconnect/leave, indepen
 
 ## Wire boundary and API
 
-Direct imports are intentional: `src/network/contracts/server-room.js` and `server-room-mocks.js`. They introduce **server-room protocol 2**, checkpoint schema 1 and rules version `server-room-1`; existing `PROTOCOL_VERSION = 1` and the local solo transport stay unchanged. Do not modify active v1 validators to make v2 look compatible. Server and client reject incompatible versions with an actionable rejoin/reload outcome.
+Direct imports are intentional: `src/network/contracts/server-room.js` and `server-room-mocks.js`. They introduce **server-room protocol 2** (now **3** with player colours, #161: `hello.color`, the `SET_COLOR` command, `color` on every session player, rules version `server-room-2`; the peer protocol `PROTOCOL_VERSION` is 2), checkpoint schema 1 and rules version `server-room-2` (was `server-room-1`); the peer `PROTOCOL_VERSION` is now 2 (#161) and the local solo transport is otherwise unchanged. Do not modify active v1 validators to make v2 look compatible. Server and client reject incompatible versions with an actionable rejoin/reload outcome.
 
 Only bounded JSON **text** is accepted; no binary or executable payloads. `decodeRoomFrame(raw, direction)` measures UTF-8 bytes before parsing and validates direction, exact fields and field bounds. `encodeRoomFrame` also checks the output boundary. Unknown fields are rejected; do not forward caller-declared `playerId`, actor internals or arbitrary XState events. Validators here follow the existing dependency-free contract style. Network-only contracts live under `src/network/contracts/`, outside the simulation/common-source fingerprint, consistent with the existing network protocol boundary. They are pure and import no adapter/runtime APIs; backend and browser import the same file. No solver provenance or measurement fixture changes are needed. No new dependency is selected by #66; any broader Zod migration remains integration-owner work under the modernization plan.
 
 | Direction/type | Fields after `version`, `type` |
 | --- | --- |
-| Client `hello` | `roomCode`, `name`, `resume: null \| {sessionId, playerId, token}` |
+| Client `hello` | `roomCode`, `name`, `color: null \| palette index` (preferred ball colour; the room gives the lowest free one if it is taken), `resume: null \| {sessionId, playerId, token}` |
 | Client `command` | `sessionId`, `connectionId`, `sequence`, `roundNumber`, `puttIndex`, `payload` |
 | Client `presence` | Same envelope fields as command; payload is current ball movement/effect data |
 | Client `ping` | `nonce`, `clientTime` (local monotonic ms, opaque to the server) |

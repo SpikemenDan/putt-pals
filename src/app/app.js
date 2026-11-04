@@ -16,6 +16,7 @@ import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView } from '../render/index.js';
 import { aimModeOf, auraSourcesOf, ballRadiusOf, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
 import { createPutt } from './putt.js';
@@ -49,7 +50,9 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   // localStorage can be missing or throw (privacy modes); the choice then simply does not persist.
   const cosmeticsStorage = (() => { try { return win.localStorage ?? null; } catch { return null; } })();
   let cosmetics = loadCosmetics(cosmeticsStorage);
-  store.setLocal({ cosmetics });
+  // Preferred ball colour (palette index), kept locally; the room confirms or replaces it if taken.
+  let colorPref = (() => { try { const n = Number(cosmeticsStorage?.getItem('putt-planet.color')); return cosmeticsStorage?.getItem('putt-planet.color') != null && isColorIndex(n) ? n : null; } catch { return null; } })();
+  store.setLocal({ cosmetics, colorPref });
   const audio = createAudio();
   const unbindGestures = audio.bindGestures(win);
   let room = null, putt = null, puttPolicy = null, carriedInventory = [], activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
@@ -87,7 +90,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, roomCode: request.roomCode, clock, random, createTransport, identity: stored, endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, clock, random, createTransport, identity: stored, endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
       if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
       joining = null;
       reloadRecovery = !!opened.resumed;
@@ -397,6 +400,13 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         toast(r.label);
         break;
       }
+      case UiCommands.SET_COLOR:
+        if (!isColorIndex(command.color)) break;
+        colorPref = command.color;
+        try { cosmeticsStorage?.setItem('putt-planet.color', String(colorPref)); } catch { /* storage unavailable */ }
+        setLocal({ colorPref });
+        room?.command({ type: 'SET_COLOR', color: colorPref });
+        break;
       case UiCommands.SET_COSMETIC:
         cosmetics = selectCosmetic(cosmetics, command.kind, command.id);
         if (cosmeticsStorage) saveCosmetics(cosmeticsStorage, cosmetics);
