@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BALL_SKINS, CELEBRATIONS, TRAIL_SKINS } from '../cosmetics/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
+import { ColorPicker } from './ColorPicker.jsx';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
 import menu from './Landing.module.css';
@@ -12,7 +13,7 @@ const TAGLINE = { display: 'block', fontSize: '12px', letterSpacing: '4px', colo
 /** Start screen: name and room code for online rooms, or solo play. */
 export function Landing({ hidden, initialName = '', initialRoomCode = '' }) {
   const { send } = useCommands();
-  const { connecting, error, cosmetics } = useView(v => v.landing);
+  const { connecting, error, cosmetics, color } = useView(v => v.landing);
   const [name, setName] = useState(initialName);
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   return (
@@ -20,6 +21,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '' }) {
     <div className={menu.panel}>
       <h1>⛳ Putt Pals <span style={TAGLINE}>PARTY CIRCUIT · 20 MAPS</span></h1>
       <label>Your name<input maxLength={14} autoComplete="off" value={name} onChange={e => setName(e.target.value)} /></label>
+      <div style={{ textAlign: 'left' }}>Ball colour<ColorPicker selected={color} onPick={c => send(UiCommands.SET_COLOR, { color: c })} /></div>
       <button type="button" className={menu.solo} disabled={connecting} onClick={() => send(UiCommands.PLAY_SOLO, { name })}>Play solo</button>
       <p className={menu.or}>or play with friends</p>
       <label>Room code (friends type the same one)<input maxLength={12} autoComplete="off" value={roomCode} onChange={e => setRoomCode(e.target.value)} /></label>

@@ -71,7 +71,7 @@ async function openRoom(baseUrl, name, resume = null, roomCode = testRoomCode) {
     socket.addEventListener('error', reject, { once: true });
   });
   const response = nextFrame(client, frame => frame.type === 'welcome' || frame.type === 'error');
-  socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, resume }));
+  socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode, name, resume }));
   const frame = await response;
   assert.equal(frame.type, 'welcome', `room admission failed: ${frame.code}`);
   assert.ok(validRoomSnapshot(frame.snapshot), 'welcome includes a valid public room snapshot');
@@ -240,12 +240,12 @@ async function main() {
   assert.throws(() => roomObjectName('development', 'bad-room'), /Invalid room code/);
 
   await expectHandshakeError(baseUrl, 'room124', JSON.stringify({
-    version: 1, type: 'hello', roomCode: 'room124', name: 'Old client', resume: null,
+    version: 1, type: 'hello', color: null, roomCode: 'room124', name: 'Old client', resume: null,
   }), 'incompatible-version');
   await expectHandshakeError(baseUrl, 'room125', '{', 'invalid-message');
   await expectHandshakeError(baseUrl, 'room126', 'x'.repeat(65_537), 'invalid-message');
   await expectHandshakeError(baseUrl, 'room127', JSON.stringify({
-    version: SERVER_ROOM_VERSION, type: 'hello', roomCode: 'room127', name: '', resume: null,
+    version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'room127', name: '', resume: null,
   }), 'invalid-message');
   assert.equal(await upgradeStatus(baseUrl, 'room128', 'https://evil.example'), 403);
   const boundaryClient = await openRoom(baseUrl, 'Boundary', null, 'room129');
@@ -279,7 +279,7 @@ async function main() {
     });
     const fullResponse = nextFrame(ninth, frame => frame.type === 'error');
     ninthSocket.send(JSON.stringify({
-      version: SERVER_ROOM_VERSION, type: 'hello', roomCode: capacityRoom, name: 'Ninth', resume: null,
+      version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: capacityRoom, name: 'Ninth', resume: null,
     }));
     assert.equal((await fullResponse).code, 'room-full');
     for (const client of capacityClients) client.socket.close();
@@ -309,7 +309,7 @@ async function main() {
     assert.equal(resumedHost.snapshot.session.context.votingDeadline, votingDeadline, 'controller departure preserves the voting deadline');
     assert.equal((await command(resumedHost, { type: 'START_VOTING' }, { connectionId: host.connectionId })).code, 'stale-connection');
     await expectHandshakeError(baseUrl, testRoomCode, JSON.stringify({
-      version: SERVER_ROOM_VERSION, type: 'hello', roomCode: testRoomCode, name: 'Host',
+      version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: testRoomCode, name: 'Host',
       resume: { sessionId: host.snapshot.sessionId, playerId: host.playerId, token: host.resumeToken },
     }), 'identity-rejected');
 

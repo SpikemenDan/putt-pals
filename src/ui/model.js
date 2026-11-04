@@ -10,6 +10,7 @@
 
 import { isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
 
@@ -43,14 +44,26 @@ const playersOf = room => Object.values(room?.players || {});
 const connectedPlayers = room => playersOf(room).filter(p => p.connected);
 
 /**
- * Player colour index. The session protocol carries no colour, so colours
- * follow join order unless the application supplies `local.colors`.
+ * Player colour index: the colour the room assigned (`players[id].color`), else
+ * `local.colors`, else join order (offline fixtures and old snapshots).
  */
 export function colorOf(room, local, id) {
   if (local?.colors && Number.isInteger(local.colors[id])) return local.colors[id];
+  const chosen = room?.players?.[id]?.color;
+  if (isColorIndex(chosen)) return chosen;
   const order = Object.keys(room?.players || {});
   const at = order.indexOf(id);
-  return at < 0 ? 0 : at % 8;
+  return at < 0 ? 0 : at % PLAYER_COLOR_COUNT;
+}
+
+/** Palette indexes other players hold or have reserved (connected, or on the roster), keyed by index to the holder's name. */
+export function takenColors(room, local) {
+  const taken = {};
+  for (const [id, p] of Object.entries(room?.players || {})) {
+    if (id === local?.id || !isColorIndex(p.color)) continue;
+    if (p.connected || (room.roster || []).includes(id)) taken[p.color] = p.name;
+  }
+  return taken;
 }
 
 /** Describes the room controller, other members, or solo practice. */
@@ -93,6 +106,8 @@ export function lobbyView(room, local, now, courses) {
   return {
     label: roomLabel(room, local),
     roster: players.map(p => ({ id: p.id, name: p.name + (p.id === local.id ? ' (you)' : ''), color: colorOf(room, local, p.id) })),
+    myColor: colorOf(room, local, local.id),
+    takenColors: takenColors(room, local),
     showModes: !!local.isHost,
     powerups: room.powerups !== false,
     showStart: !!local.isHost && room.phase === SessionPhases.LOBBY,
