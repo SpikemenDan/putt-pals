@@ -97,7 +97,7 @@ export const TUNING_FIELDS = Object.freeze([
 export const DEFAULT_TUNING = {
   ball: { radius: 5 },
   gravity: 700,
-  shotPower: 900,
+  shotPower: 600,
   wallHeight: 28,
   cup: { defaultRadius: 15, minRadius: 8, depth: 36, sinkMargin: 1.5, filletWidth: 10, filletDepth: 2, lipRestitutionBase: 1.15, lipRestitutionGain: 0.6 },
   surface: {
@@ -117,7 +117,7 @@ export const DEFAULT_TUNING = {
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
-    fullPullPx: 380, canvasPullFraction: 0.6, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
+    fullPullPx: 380, canvasPullFraction: 0.18, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
     guideMinCharge: 0.015, shotMinCharge: 0.025,
   },
 };

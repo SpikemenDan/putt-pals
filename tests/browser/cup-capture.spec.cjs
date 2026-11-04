@@ -2,14 +2,13 @@
 // Inputs use public UI/shot commands; the app hook is read-only.
 const { test, expect } = require("@playwright/test");
 const { openApp, until } = require("./support/app.cjs");
-const legacy = require("../fixtures/solver-baseline.json").results.find(
-  (r) => r.map === 0 && r.putt === 0,
-).best;
+// Re-measured at the shared U2 launch speed: this overlaps the cup but must not capture.
+const grazing = { deg: 30.5, power: 0.86 };
 const current = require("../fixtures/cup-capture/solutions.json").results.find(
   (r) => r.map === 0 && r.putt === 0,
 ).best;
 
-test("cup: a historical grazing capture now misses, while a centred shot still sinks", async ({
+test("cup: a grazing shot misses, while a centred shot still sinks", async ({
   page,
 }, testInfo) => {
   const ana = await openApp(page, "Cup tester");
@@ -36,7 +35,7 @@ test("cup: a historical grazing capture now misses, while a centred shot still s
     };
     observe();
   });
-  await ana.shoot(legacy.deg, legacy.power);
+  await ana.shoot(grazing.deg, grazing.power);
   await until(
     async () =>
       (await page.evaluate(() => window.__ppApp.putt?.player?.strokes)) === 1 &&
@@ -78,7 +77,7 @@ test("cup: a historical grazing capture now misses, while a centred shot still s
   expect(capture.strokes).toBe(1);
   await page.screenshot({ path: testInfo.outputPath("cup-capture.png") });
   await testInfo.attach("cup-trajectories", {
-    body: JSON.stringify({ legacy, current, miss, capture }, null, 2),
+    body: JSON.stringify({ grazing, current, miss, capture }, null, 2),
     contentType: "application/json",
   });
   expect(ana.errors, "no page or console errors").toEqual([]);
