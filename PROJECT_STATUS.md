@@ -12,7 +12,7 @@ The product vision (MODERNIZATION_PLAN.md) is only partly built. Not built: Putt
 
 - Private friend rooms, desktop browsers, normal hosted build; no offline single file or native packaging.
 - Prefer established libraries; keep the custom physics. Rapier is deferred after evaluation.
-- Server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets. Defaults: immediate controller succession, 30-second reconnect grace, 15-minute empty-room retention. N3 TURN stays paused.
+- Server-owned rooms on Cloudflare Workers and SQLite Durable Objects over WebSockets. Defaults: immediate controller succession, 30-second reconnect grace, 15-minute empty-room retention. N3 TURN is closed as superseded; PeerJS and ICE are no longer used.
 - Original comic art direction: smooth flat colour, ink outlines, no scenery clutter. Ambient weather on Frost Hollow and Cyclone Ring is visual only.
 - Course direction: per-putt walled islands with designed gaps, true portal pairs, stronger fans, 3D courses and more complicated level design. Every putt must be possible in par (2 to 6); hole-in-one guarantees are removed; physics should be more forgiving.
 - Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 8 players, 3 inventory slots, free-for-all on the same hole with everyone putting at once and advancing together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
