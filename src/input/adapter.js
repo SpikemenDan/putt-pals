@@ -23,9 +23,10 @@ const isTextEntry = target => !!(target && target.matches && target.matches('inp
  * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean, aimMode?:string}} options.getState
  *   active: joined a room; mode: local simulation mode (play/sunk/wait/spectator/lobby)
  * @param {(command: object) => void} options.dispatch
+ * @param {{fullPullPx:number, canvasPullFraction:number}} [options.aimSettings] Validated development-preview power mapping; reset the preview before changing it. Omitted uses TUNING defaults.
  * @param {typeof DISPLAY} [options.display] Presentation settings; the aim arrow length comes from display.aim.arrowMaxLength
  */
-export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY }) {
+export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY, aimSettings }) {
   if (!canvas || !camera || typeof pickGround !== 'function' || typeof getState !== 'function' || typeof dispatch !== 'function') {
     throw new TypeError('canvas, camera, pickGround, getState and dispatch are required');
   }
@@ -67,7 +68,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
     if (!p) return;
     const dx = pull.p.x - p.x, dz = pull.p.z - p.z;
     if (Math.hypot(dx, dz) > 0.1) aimAngle = Math.atan2(dz, dx);
-    charge = chargeFromDrag(e.clientX - pull.x, e.clientY - pull.y, canvas.clientWidth);
+    charge = chargeFromDrag(e.clientX - pull.x, e.clientY - pull.y, canvas.clientWidth, aimSettings);
     notifyAim();
   });
   on(canvas, 'pointerup', e => {

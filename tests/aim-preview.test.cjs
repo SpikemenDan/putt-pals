@@ -1,0 +1,28 @@
+const assert=require('node:assert/strict');
+const {JSDOM}=require('jsdom');
+(async()=>{
+  const {chargeFromDrag}=await import('../src/input/aim.js');
+  const {createInputAdapter}=await import('../src/input/adapter.js');
+  const {createDisplay}=await import('../src/shared/display.js');
+  const {createTuning}=await import('../src/shared/tuning.js');
+  const settings=createTuning({aim:{fullPullPx:480,canvasPullFraction:0.8}}).aim;
+  assert.equal(chargeFromDrag(120,0,1000,settings),0.25);
+  assert.equal(chargeFromDrag(120,0,300,settings),0.5,'narrow canvas caps the full pull at 240px');
+  assert.equal(chargeFromDrag(1000,0,1000,settings),1);
+  assert.equal(chargeFromDrag(95,0,1000),95/180,'default mapping uses the approved 18% canvas cap');
+  const dom=new JSDOM('<canvas></canvas>'),canvas=dom.window.document.querySelector('canvas');
+  Object.defineProperty(canvas,'clientWidth',{value:1000});
+  const commands=[];
+  const input=createInputAdapter({canvas,window:dom.window,camera:{state:{freeRoam:false}},getState:()=>({active:true,mode:'play',moving:false,connected:true}),pickGround:(x,z)=>({x,z}),dispatch:c=>commands.push(c),aimSettings:settings,display:createDisplay({aim:{arrowMaxLength:200}})});
+  const pointer=(type,x)=>{const e=new dom.window.Event(type);Object.assign(e,{button:0,pointerId:1,clientX:x,clientY:0});canvas.dispatchEvent(e);};
+  pointer('pointerdown',300);pointer('pointermove',180);
+  const small=input.frameAim(0.35);assert.equal(small.charge,0.25);assert.equal(small.length,50);
+  pointer('pointermove',60);
+  const large=input.frameAim(0.35);assert.equal(large.charge,0.5);assert.equal(large.length,100,'twice the pull produces twice the arrow length');
+  pointer('pointerup',60);
+  const shot=commands.find(c=>c.type==='shot');assert.equal(shot.power,0.5);assert.equal(shot.angle,large.angle,'released shot matches the displayed swayed direction');
+  pointer('pointerdown',300);pointer('pointermove',180);input.cancel();pointer('pointerup',180);
+  assert.equal(commands.filter(c=>c.type==='shot').length,1,'preview reset cancels an in-progress pull');
+  input.dispose();dom.window.close();
+  console.log('Aim preview: default mapping, custom/narrow-canvas mapping, proportional guide, release direction and reset cancellation passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

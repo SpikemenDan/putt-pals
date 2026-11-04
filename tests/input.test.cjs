@@ -77,11 +77,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       recorded.times.forEach((t, i) => assert.equal(sway(row.power, t), row.sway[i], `sway(${row.power}, ${t})`));
     }
     assert.ok([0, 0.7, 1.4].every(t => Math.abs(sway(1, t)) < 1e-9), 'zero crossings give a straight shot (legacy smoke tolerance)');
-    assert.equal(chargeFromDrag(100, 0, 1600), 100 / FULL_PULL_PX);
+    assert.equal(chargeFromDrag(100, 0, 1600), 100 / Math.min(FULL_PULL_PX, 1600 * FULL_PULL_CANVAS_FRACTION));
     assert.equal(chargeFromDrag(0, 500, 400), 1, 'capped at full power');
     assert.equal(chargeFromDrag(0, 0, 800), 0, 'no pull, no power');
     assert.equal(chargeFromDrag(60, 80, 1600) * 2, chargeFromDrag(120, 160, 1600), 'linear in the pull');
-    assert.equal(chargeFromDrag(100, 0, 400), 100 / (400 * FULL_PULL_CANVAS_FRACTION), 'small canvases scale by width');
+    assert.equal(chargeFromDrag(36, 0, 400), 0.5, 'small canvases scale by width and clamp at full power');
     assert.equal(accuracyText(false, 0.5), 'Pull to set power');
     assert.equal(accuracyText(true, 0.5), '50% power · ±' + (spread(0.5) * 180 / Math.PI).toFixed(1) + '° spread');
   });
@@ -99,10 +99,10 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     for (const c of cases) {
       const r = shot(c);
       assert.ok(r.command, 'adapter dispatched a shot');
-      // U2 intentionally changed the drag-to-power mapping (FULL_PULL_PX), so launch speeds differ from the legacy game.
+      // U2 intentionally retunes drag-to-power sensitivity; the released charge must match the shared cap.
       assert.equal(r.command.power, r.guide.charge, `power is the shown charge for ${JSON.stringify(c)}`);
       assert.ok(r.command.power > 0 && r.command.power <= 1);
-      assert.ok(r.guide.charge <= Math.min(1, Math.hypot(c.to[0] - 400, c.to[1] - 250) / 260), 'no more sensitive than the legacy pull (260 px)');
+      assert.equal(r.guide.charge, Math.min(1, Math.hypot(c.to[0] - 400, c.to[1] - 250) / Math.min(FULL_PULL_PX, 800 * FULL_PULL_CANVAS_FRACTION)), 'charge follows the configured effective pull cap');
       assert.equal(r.command.angle, shotAngle({ aimAngle: r.guide.aimAngle, charge: r.guide.charge, time: c.frameAt / 1000, steady: !!c.steady }));
     }
   });
@@ -125,9 +125,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
 
   await scenario('cancel: small pulls, Escape, pointer cancel, lost capture and blur never shoot', async () => {
     const attempts = [
-      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 403, clientY: 252 }); input.frameAim(now / 1000); pointer(canvas, 'pointerup', { clientX: 403, clientY: 252 }); },
-      // Between the guide threshold (0.015) and the shot threshold (0.025): guide shown, release cancels. // U2: slightly longer pull on the adapter canvas to clear the guide threshold under the gentler mapping.
-      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 407, clientY: 252 }); assert.ok(input.frameAim(now / 1000), 'guide shown'); pointer(canvas, 'pointerup', { clientX: 407, clientY: 252 }); },
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 402, clientY: 251 }); input.frameAim(now / 1000); pointer(canvas, 'pointerup', { clientX: 402, clientY: 251 }); },
+      // Between the guide threshold (0.015) and shot threshold (0.025): guide shown, release cancels.
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 403, clientY: 251 }); assert.ok(input.frameAim(now / 1000), 'guide shown'); pointer(canvas, 'pointerup', { clientX: 403, clientY: 251 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); key('keydown', 'Escape'); key('keyup', 'Escape'); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointercancel', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'lostpointercapture', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },

@@ -88,7 +88,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     console.log(Math.round(p.x - 100));`;
   const probes = [
     ['surface.turf.friction slows the roll', { 'surface.turf.friction': 1.5 }, rollDistance, 416, v => v < 416 * 0.7],
-    ['shotPower sets the launch speed', { shotPower: 450 }, `const e = new SimulationEngine({ tiles: [[0, 0, 4000, 400]], w: [], tee: [100, 200], hole: [3900, 390] }, 0, { hazardTime: 0 }); const p = e.addPlayer('p', 'P', 0); e.launch('p', 0, 1); console.log(Math.round(p.vx));`, 900, v => v === 450],
+    ['shotPower sets the launch speed', { shotPower: 450 }, `const e = new SimulationEngine({ tiles: [[0, 0, 4000, 400]], w: [], tee: [100, 200], hole: [3900, 390] }, 0, { hazardTime: 0 }); const p = e.addPlayer('p', 'P', 0); e.launch('p', 0, 1); console.log(Math.round(p.vx));`, 600, v => v === 450],
     ['cup.defaultRadius sets the default cup', { 'cup.defaultRadius': 12 }, 'console.log(cupOf({}));', 15, v => v === 12],
     ['aim.fullPullPx sets the drag for full power', { 'aim.fullPullPx': 200 }, 'console.log(chargeFromDrag(100, 0, 2000));', 100 / 380, v => v === 0.5],
     ['aim.swayPeriod sets the sway cycle', { 'aim.swayPeriod': 2.8 }, 'console.log(SWAY_PERIOD);', 1.4, v => v === 2.8],

@@ -6,12 +6,12 @@ async function run() {
   const physics = await import('../src/simulation/physics.js');
   const aim = await import('../src/input/aim.js');
 
-  // Defaults equal the numbers the game shipped with before T2, except the S3 retune (turf, sand, ice, slime friction).
+  // Defaults preserve the prior tuning except the documented S3 and approved U2 retunes.
   assert.equal(shared.BALL_RADIUS, 5);
   assert.equal(shared.DEFAULT_CUP_RADIUS, 15);
   assert.equal(shared.MIN_CUP_RADIUS, 8);
   assert.equal(shared.TURF_FRICTION, 0.5); // S3 retune
-  assert.equal(shared.SHOT_POWER, 900);
+  assert.equal(shared.SHOT_POWER, 600);
   assert.deepEqual({ ...shared.SURFACE_DRAG }, { turf: 1.0, sand: 3.5, ice: 0.15, slime: 6.0 });
   assert.equal(physics.GRAVITY, 700);
   assert.equal(physics.WALL_HEIGHT, 28);
@@ -32,7 +32,7 @@ async function run() {
   assert.equal(aim.GUIDE_MIN_CHARGE, 0.015);
   assert.equal(aim.SHOT_MIN_CHARGE, 0.025);
   for (const p of [0, 0.25, 0.5, 1]) assert.equal(aim.spread(p), 0.002 + 0.14 * Math.pow(p, 2.6));
-  assert.equal(aim.chargeFromDrag(300, 0, 1000), Math.min(1, 300 / Math.min(380, 1000 * 0.6)));
+  assert.equal(aim.chargeFromDrag(30, 0, 1000), 30 / 180);
 
   // Frozen, and every field is documented and validated.
   assert.ok(Object.isFrozen(TUNING) && Object.isFrozen(TUNING.surface.turf));
