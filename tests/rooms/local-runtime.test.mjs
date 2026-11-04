@@ -23,6 +23,7 @@ const persistDir = await mkdtemp(path.join(os.tmpdir(), 'putt-pals-n4b-'));
 const logs = [];
 let child;
 const testRoomCode = 'room123';
+const SCORE_CLOCK_MARGIN_MS = 250; // slack past roundStartTime before reporting; far below the 1500ms minimum play
 
 function observe(socket) {
   const client = { socket, frames: [], waiters: [], snapshot: null, playerId: null, connectionId: null, sequence: 0 };
@@ -352,7 +353,10 @@ async function main() {
       phase = `putt ${puttIndex + 1} scoring`;
       const playing = await waitForSnapshot(controller, snapshot =>
         snapshot.session.node.startsWith('play.') && snapshot.session.context.puttIndex === puttIndex);
-      await delay(Math.max(0, playing.session.context.roundStartTime - Date.now()));
+      // The server acks a REPORT_SCORE it then ignores when its clock is still before roundStartTime. The
+      // workerd clock and this process's timers are not aligned to the millisecond, so reporting exactly at
+      // the deadline occasionally dropped the first player's score and stalled the putt until the fallback.
+      await delay(Math.max(0, playing.session.context.roundStartTime - Date.now()) + SCORE_CLOCK_MARGIN_MS);
       for (const client of clients) {
         assert.equal((await command(client, { type: 'REPORT_SCORE', strokes: 1, timedOut: false })).type, 'ack');
       }
