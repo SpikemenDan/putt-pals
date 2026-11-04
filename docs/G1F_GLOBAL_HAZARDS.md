@@ -118,10 +118,10 @@ seed repeatability, time/scope boundaries, finite vortex centres, weather
 replacement, actual roll distance changes, directional Wind, inactive parity,
 guest command handling and No Power-Ups filtering. It runs in `test:simulation`.
 Contract, network, simulation, UI, app, course, session, audio and build checks
-have passed during this implementation. The legacy renderer scene comparison
-fails at child 26 with hashes `2b2bfc4a2e9ace66` / `0c19ecddfaf42715`;
-the identical failure was reproduced from a clean `origin/main` source snapshot.
-The renderer failure is existing evidence, not a passed check.
+have passed during this implementation. The inherited renderer comparison
+failure was traced to cross-runtime trigonometric roundoff in procedural sky
+positions. Its comparison now permits only bounded numeric roundoff in those
+positions; recorded hashes, materials, geometry and other state stay exact.
 
 1. One-shot Lightning targeting, snapshot deduplication and missed-strike expiry
    after reconnect are covered by the focused hazard tests.
@@ -153,5 +153,9 @@ refresh. Full online browser acceptance and current-head CI remain merge gates.
 The 2026-11-04 solver refresh (`node tests/measure-cup-capture.mjs`) reproduces
 all 36 previous outcomes exactly, with 34 robust hole-in-one results and the
 same two known robustness gaps (19/0 and 19/2). The measurement exits 1 for those
-gaps; it does not establish complete par-route acceptance. The generated source
-fingerprint is current. No active hazards are included in these baseline shots.
+single-shot gaps. Both are now resolved under the product's par rule by full
+searches proving robust two-stroke routes (derived par 2, within shipped par 4). Evidence is stored in
+`tests/fixtures/cup-capture/par-route-gaps.json`; `tests/par-route-gaps.test.cjs`
+independently replays the routes and perturbations and runs in `test:cli`.
+The generated source fingerprint is current. No active hazards are included in
+these baseline shots. Course geometry and physics did not change for this fix.

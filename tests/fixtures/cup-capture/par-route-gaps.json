@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 2,
+  "task": "SV1: shortest robust route within par 2..6 per putt (hole-in-one optional)",
+  "mode": "full",
+  "gravity": 700,
+  "simulationSha256": "248a404e6e9ed24a98dd3973c39f4f77840f9b2bebd555c2a511f6caafe288ff",
+  "solverConfig": {
+    "version": 2,
+    "minPar": 2,
+    "maxStrokes": 6,
+    "trialTicks": 4800,
+    "hazardTime": 0,
+    "angleOffsets": [
+      -0.007,
+      0,
+      0.007
+    ],
+    "powerOffsets": [
+      -0.025,
+      0,
+      0.025
+    ],
+    "powerStart": 0.3,
+    "powerStep": 0.05,
+    "powerEndInclusive": 1.001,
+    "finishAngleStepDeg": 0.5,
+    "screenAngleStepDeg": 2,
+    "screenPowerStep": 0.1,
+    "waypointAngleStepDeg": 3,
+    "waypointPowerStep": 0.1,
+    "waypointCell": 8,
+    "maxWaypoints": 24,
+    "local": {
+      "angleDeg": 4,
+      "angleStepDeg": 0.5,
+      "power": 0.15
+    },
+    "marginScales": [
+      1,
+      1.5,
+      2,
+      3
+    ],
+    "budgetTrials": 1500000,
+    "fullBudgetTrials": 6000000,
+    "fullWaypointAngleStepDeg": 1.5,
+    "fullMaxWaypoints": 60
+  },
+  "results": [
+    {
+      "schemaVersion": 2,
+      "map": 19,
+      "putt": 0,
+      "name": "Grand Finale",
+      "gravity": 700,
+      "status": "route",
+      "trials": 24033,
+      "strokes": 2,
+      "par": 2,
+      "holeInOne": false,
+      "margin": 1,
+      "difficulty": 2.667,
+      "route": [
+        {
+          "deg": 73.5,
+          "power": 0.8,
+          "to": [
+            244.5,
+            106
+          ]
+        },
+        {
+          "deg": 270,
+          "power": 0.7,
+          "to": "cup"
+        }
+      ],
+      "verified": true,
+      "provenance": {
+        "version": 2,
+        "courseId": "grand-finale",
+        "puttId": "grand-finale-putt-1",
+        "gravity": 700,
+        "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
+        "simulationSha256": "248a404e6e9ed24a98dd3973c39f4f77840f9b2bebd555c2a511f6caafe288ff",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "full"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "map": 19,
+      "putt": 2,
+      "name": "Grand Finale",
+      "gravity": 700,
+      "status": "route",
+      "trials": 24760,
+      "strokes": 2,
+      "par": 2,
+      "holeInOne": false,
+      "margin": 1,
+      "difficulty": 2.667,
+      "route": [
+        {
+          "deg": 19.5,
+          "power": 0.7,
+          "to": [
+            657.1,
+            210
+          ]
+        },
+        {
+          "deg": 4,
+          "power": 0.3,
+          "to": "cup"
+        }
+      ],
+      "verified": true,
+      "provenance": {
+        "version": 2,
+        "courseId": "grand-finale",
+        "puttId": "grand-finale-putt-3",
+        "gravity": 700,
+        "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
+        "simulationSha256": "248a404e6e9ed24a98dd3973c39f4f77840f9b2bebd555c2a511f6caafe288ff",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "full"
+      }
+    }
+  ]
+}

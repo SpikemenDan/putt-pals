@@ -32,7 +32,7 @@
     "measure:par": "node tools/cli/measure-par.mjs",
     "config:report": "node tools/cli/main.mjs config",
     "checks": "node tools/cli/main.mjs checks",
-    "test:cli": "node tests/cli.test.cjs && node tests/checks.test.cjs",
+    "test:cli": "node tests/cli.test.cjs && node tests/checks.test.cjs && node tests/par-route-gaps.test.cjs",
     "test:overnight": "node tests/overnight.test.cjs",
     "test:gemini": "node tests/gemini-handoff.test.cjs",
     "gemini:handoff": "node tools/gemini/handoff.mjs",
