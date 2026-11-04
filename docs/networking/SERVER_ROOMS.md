@@ -38,7 +38,7 @@ Retain an empty room for 15 minutes from the last live disconnect/leave, indepen
 
 ## Wire boundary and API
 
-Direct imports are intentional: `src/network/contracts/server-room.js` and `server-room-mocks.js`. They introduce **server-room protocol 2** (now **3** with player colours, #161: `hello.color`, the `SET_COLOR` command, `color` on every session player, rules version `server-room-2`; the peer protocol `PROTOCOL_VERSION` is 2), checkpoint schema 1 and rules version `server-room-2` (was `server-room-1`); the peer `PROTOCOL_VERSION` is now 2 (#161) and the local solo transport is otherwise unchanged. Do not modify active v1 validators to make v2 look compatible. Server and client reject incompatible versions with an actionable rejoin/reload outcome.
+Direct imports are intentional: `src/network/contracts/server-room.js` and `server-room-mocks.js`. Server-room wire version 5 adds the optional synchronized `globalHazards` snapshot field and `ACTIVATE_HAZARD`; rules version is `server-room-3`. Peer `PROTOCOL_VERSION` is 4. Checkpoint schema remains 1; decode migrates `server-room-2` checkpoints to the new rules version with no active hazards. Server and client reject incompatible protocol versions with an actionable rejoin/reload outcome.
 
 Only bounded JSON **text** is accepted; no binary or executable payloads. `decodeRoomFrame(raw, direction)` measures UTF-8 bytes before parsing and validates direction, exact fields and field bounds. `encodeRoomFrame` also checks the output boundary. Unknown fields are rejected; do not forward caller-declared `playerId`, actor internals or arbitrary XState events. Validators here follow the existing dependency-free contract style. Network-only contracts live under `src/network/contracts/`, outside the simulation/common-source fingerprint, consistent with the existing network protocol boundary. They are pure and import no adapter/runtime APIs; backend and browser import the same file. No solver provenance or measurement fixture changes are needed. No new dependency is selected by #66; any broader Zod migration remains integration-owner work under the modernization plan.
 
@@ -77,6 +77,10 @@ Statuses are `connecting`, `connected`, `reconnecting`, `disconnected`, `closed`
 - `DEPLOY_HIT {id}`: counted only when the reporter's latest presence is fresh, for this round and putt, and within `bumperRadius + ball radius + hitReportTolerance` horizontally and inside the body band vertically; rate-limited per object by `hitCooldownMs`; the object is removed after `maxImpacts` hits.
 
 The list lives in the room snapshot, so every checkpoint contains it and a reconstructed room keeps it. It is cleared when the putt, map or phase changes or the owner leaves. A refused command is acknowledged and changes nothing.
+
+## Global hazards (G1f, wire version 5)
+
+`ACTIVATE_HAZARD` accepts a catalog kind and, for Wind, a finite direction, or, for Lightning, a target id. The room assigns activation id, owner, synchronized start/expiry, scope and seed. It rejects activations outside play, when power-ups are disabled, from non-roster players, or toward an invalid Lightning target. Global records are optional in the snapshot and durable checkpoint, are validated at the boundary and are cleared when the room leaves play, power-ups are disabled, or the round/map/putt scope changes. Inventory remains client-held; the room cannot verify possession. Peers derive Tornado and Hurricane paths from the shared seed and server time instead of receiving frame positions.
 
 ## Identity and connection handling
 

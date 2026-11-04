@@ -16,6 +16,7 @@ import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { auraAcceleration, ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
+import { evaluateGlobalHazards } from '../gameplay/global-hazards.js';
 import { bumperContact, orbitalAcceleration, orbitalHolds } from './deployables.js';
 
 export const GRAVITY = TUNING.gravity;
@@ -345,9 +346,10 @@ export function stopBall(player, events = []) {
  * @param {object} course Course definition
  * @param {number} [dt=FIXED_TIMESTEP] Timestep in seconds
  * @param {number} [hazardTime=0] Time for moving obstacles in seconds
+ * @param {object} [globalHazardTuning=TUNING.globalHazards] Validated force settings; local tuning previews may inject candidates.
  * @returns {Array<object>} Emitted domain events
  */
-export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
+export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, globalHazardTuning = TUNING.globalHazards) {
   if (!player.moving || player.mode !== 'play') return [];
   const R = ballRadiusOf(player);
   // Resolve fast cup crossings spatially instead of depending on tick alignment.
@@ -362,15 +364,15 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0) {
     player.y + t * dy - course.hole[1]) < cupOf(course) + R;
   const steps = crossesCup ? Math.min(128, Math.max(1,
     Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
-  if (steps === 1) return stepBallTick(player, course, dt, hazardTime);
+  if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning);
   const events = [];
   for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
-    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps));
+    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps, globalHazardTuning));
   }
   return events;
 }
 
-function stepBallTick(player, course, dt, hazardTime) {
+function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
@@ -385,14 +387,22 @@ function stepBallTick(player, course, dt, hazardTime) {
     player.vx += ax; player.vy += ay;
     if (!ghost) events.push(...bumperContact(player.deployables, player, R));
   }
+  const globalHazards = player.globalHazards?.length
+    ? evaluateGlobalHazards(player.globalHazards, hazardTime, player, player.globalHazardBounds, globalHazardTuning) : null;
+  if (globalHazards) {
+    player.vx += globalHazards.ax * dt;
+    player.vy += globalHazards.ay * dt;
+  }
   let f = contactHeight(course, player.x, player.y, R);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
-  const air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0);
+  let air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0);
+  if (!air && globalHazards?.az > 0) { player.vz = Math.max(0, player.vz); air = true; }
 
   if (air) {
     player.vz -= GRAVITY * dt;
+    if (globalHazards) player.vz += globalHazards.az * dt;
   } else {
     player.z = f;
     let k = TURF_FRICTION;
@@ -431,7 +441,7 @@ function stepBallTick(player, course, dt, hazardTime) {
     // Velocity-dependent friction
     const v = Math.hypot(player.vx, player.vy);
     const k_eff = k * (1 + SURF.speedFrictionGain * Math.min(1, v / SURF.speedFrictionRef));
-    const decay = Math.exp(-k_eff * dt);
+    const decay = Math.exp(-k_eff * (globalHazards?.frictionMultiplier ?? 1) * dt);
     player.vx *= decay;
     player.vy *= decay;
 
@@ -466,7 +476,7 @@ function stepBallTick(player, course, dt, hazardTime) {
 
     const s0 = Math.hypot(player.vx, player.vy);
     if (s0 > 0) {
-      const d = Math.min(s0, cd * dt);
+      const d = Math.min(s0, cd * (globalHazards?.dragMultiplier ?? 1) * dt);
       player.vx -= (player.vx / s0) * d;
       player.vy -= (player.vy / s0) * d;
     }
@@ -658,6 +668,7 @@ function stepBallTick(player, course, dt, hazardTime) {
 
   if (
     gnd &&
+    !(globalHazards && Math.hypot(globalHazards.ax, globalHazards.ay, globalHazards.az) > 0) &&
     slope < REST.maxSlope &&
     Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) + CUPT.filletWidth &&
     Math.hypot(player.vx, player.vy) < REST.maxSpeed &&

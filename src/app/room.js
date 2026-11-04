@@ -173,12 +173,15 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
     command(event) { return transport.send({ type: 'command', payload: event }); },
     /** Deployed objects for this room: the host's own list, or what the host's last snapshot carried. */
     get deployables() { return transport.isHost ? unbind?.list() ?? [] : last?.deployables ?? []; },
+    /** Host-authoritative timed gameplay hazards for the current putt (G1f). */
+    get globalHazards() { return transport.isHost ? unbind?.globalHazards() ?? [] : last?.globalHazards ?? []; },
     /** Why the host's own last placement was refused ('' when it was not). */
     get deployReason() { return unbind?.reason?.() ?? ''; },
     /** Place a Bumper or Orbital Bumper (G1e). The host applies it directly; a guest sends DEPLOY_OBJECT. Returns whether it was accepted (host) or sent (guest). */
     deploy(kind, x, y) { return transport.isHost ? !!unbind?.deploy({ type: 'DEPLOY_OBJECT', kind, x, y }) : transport.send({ type: 'command', payload: { type: 'DEPLOY_OBJECT', kind, x, y } }); },
     /** Report that this client's ball hit a deployed object (G1e). */
     deployHit(id) { return transport.isHost ? !!unbind?.hit(id) : transport.send({ type: 'command', payload: { type: 'DEPLOY_HIT', id } }); },
+    activateGlobalHazard(command) { return transport.isHost ? !!unbind?.activateHazard(command) : transport.send({ type: 'command', payload: { type: 'ACTIVATE_HAZARD', ...command } }); },
     /** Local ball state for other players: {x, y, z, mode, strokes, effect?, fx?}. */
     presence(payload) { return transport.send({ type: 'presence', payload }); },
     /** Leaves the room and releases the transport, session bridge and timers. Idempotent. */
@@ -215,9 +218,12 @@ export async function openRoom(options) {
     now: server.now, command: server.send, presence: server.sendPresence,
     /** Placed Bumpers and Orbital Bumpers; the room service owns the list and every client reads it from the snapshot (G1e). */
     get deployables() { return server.deployables; },
+    /** Host-authoritative timed gameplay hazards for the current putt (G1f). */
+    get globalHazards() { return server.globalHazards; },
     get deployReason() { return ''; },
     deploy: (kind, x, y) => server.send({ type: 'DEPLOY_OBJECT', kind, x, y }),
     deployHit: id => server.send({ type: 'DEPLOY_HIT', id }),
+    activateGlobalHazard: command => server.send({ type: 'ACTIVATE_HAZARD', ...command }),
     onSnapshot: server.onSnapshot, onPresence: server.onPresence, onStatus: server.onStatus,
     close: options => server.close(options),
   };

@@ -9,7 +9,7 @@
 
 import { BALL_RADIUS } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
-import { DurationKinds, getPowerup, isDeployablePowerup, isOpponentPowerup, POWERUP_CATALOG, PowerupTargets, powerupIds } from './catalog.js';
+import { DurationKinds, getPowerup, isDeployablePowerup, isGlobalHazardPowerup, isOpponentPowerup, POWERUP_CATALOG, PowerupTargets, powerupIds } from './catalog.js';
 
 const count = n => Number.isSafeInteger(n) && n >= 0;
 
@@ -30,6 +30,7 @@ export function activatePowerup(player, id, nextMessageId, catalog = POWERUP_CAT
     return { ok: true, entry, message: { id: nextMessageId, t: id }, toast: entry.name + ' sent to everyone else!' };
   }
   if (isDeployablePowerup(id, catalog)) return { ok: true, entry, deploy: { kind: id }, toast: entry.toast };
+  if (isGlobalHazardPowerup(id, catalog)) return { ok: true, entry, global: { kind: id }, toast: entry.toast };
   if (player.armedPowerups[id]) return { ok: false, entry, toast: entry.name + ' is already armed.' };
   player.armedPowerups[id] = 1;
   return { ok: true, entry, toast: entry.toast };

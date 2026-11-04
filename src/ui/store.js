@@ -24,7 +24,7 @@ export const BANNER_GAP_MS = 350;
 
 const DEFAULT_LOCAL = Object.freeze({
   active: false, connecting: false, connectError: '', connected: true, id: null, isHost: false, roomCode: '',
-  mode: 'lobby', strokes: 0, inventory: [], soundOn: true, qualityHigh: true, viewLabel: 'Ball cam', colors: null, webglUnavailable: false, cosmetics: normalizeCosmetics(),
+  mode: 'lobby', strokes: 0, inventory: [], hazardPrompt: null, soundOn: true, qualityHigh: true, viewLabel: 'Ball cam', colors: null, webglUnavailable: false, cosmetics: normalizeCosmetics(),
 });
 
 function deepFreeze(value) {

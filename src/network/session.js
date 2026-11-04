@@ -1,5 +1,7 @@
 import { RECONNECT_GRACE_PERIOD_MS, SNAPSHOT_INTERVAL_MS } from '../shared/constants.js';
+import { GameModes } from '../shared/session.js';
 import { hitDeployable, placeDeployable } from '../gameplay/deployables.js';
+import { activeGlobalHazards, createGlobalHazard, validGlobalHazardCommand } from '../gameplay/global-hazards.js';
 
 /**
  * Host-side bridge. The caller owns the session and transport lifetimes.
@@ -22,7 +24,9 @@ import { hitDeployable, placeDeployable } from '../gameplay/deployables.js';
 export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, floorAt } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
   const positions = new Map(); let dirty = false, stopped = false, timer;
-  let deployables = [], deploySequence = 0, deployReason = ''; const lastHit = new Map();
+  let deployables = [], deploySequence = 0, deployReason = '';
+  let globalHazards = [], hazardSequence = 0;
+  const lastHit = new Map();
   // The host's own commands arrive locally (no link), so the host is always verified.
   const tokens = new Map(), verified = new Set([transport.peerId]), grace = new Map();
   const endGrace = id => { if (grace.has(id)) { clock.clearTimeout(grace.get(id)); grace.delete(id); } };
@@ -35,9 +39,12 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
         || p.roundNumber !== snapshot.roundNumber || p.puttIndex !== snapshot.puttIndex) positions.delete(id);
     }
     deployables = deployables.filter(d => d.map === snapshot.mapIndex && d.putt === snapshot.puttIndex && snapshot.phase === 'play' && Object.hasOwn(snapshot.players, d.owner));
+    globalHazards = globalHazards.length && snapshot.phase === 'play' && snapshot.powerups !== false
+      ? activeGlobalHazards(globalHazards, { roundNumber: snapshot.roundNumber, map: snapshot.mapIndex, putt: snapshot.puttIndex, now: Math.max(0, (transport.now() - snapshot.roundStartTime) / 1000) })
+      : [];
     for (const id of [...lastHit.keys()]) if (!deployables.some(d => d.id === id)) lastHit.delete(id);
     const presence = Object.fromEntries([...positions].map(([id, value]) => [id, value.payload]));
-    transport.send({ type: 'snapshot', payload: { ...snapshot, presence, ...(deployables.length ? { deployables } : {}) } }); dirty = false;
+    transport.send({ type: 'snapshot', payload: { ...snapshot, presence, ...(deployables.length ? { deployables } : {}), ...(globalHazards.length ? { globalHazards } : {}) } }); dirty = false;
   };
   const join = (id, { resume, ...command }) => {
     const known = tokens.get(id);
@@ -65,12 +72,30 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
     if (result.counted) { deployables = result.list; publish(); }
     return result.counted;
   };
+  const activateHazard = (id, command) => {
+    const snapshot = session.getSnapshot();
+    if (!validGlobalHazardCommand(command) || snapshot.phase !== 'play' || snapshot.powerups === false
+        || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(snapshot.mode) || snapshot.roster.length < 2
+        || !snapshot.roster.includes(id) || !snapshot.players[id]?.connected) return false;
+    if (command.kind === 'lightning' && (!snapshot.roster.includes(command.targetId) || command.targetId === id || !snapshot.players[command.targetId]?.connected)) return false;
+    const sequence = ++hazardSequence;
+    const next = createGlobalHazard(globalHazards, command, {
+      owner: id, roundNumber: snapshot.roundNumber, map: snapshot.mapIndex, putt: snapshot.puttIndex,
+      now: Math.max(0, (transport.now() - snapshot.roundStartTime) / 1000), sequence, seed: Math.imul(sequence, 0x9e3779b1) >>> 0,
+    });
+    if (!next) return false;
+    globalHazards = next; publish(); return true;
+  };
   const unsubscribe = transport.subscribe(message => {
     const id = message.senderId;
     if (message.type === 'command') {
       if (message.payload.type === 'JOIN_ROOM') join(id, message.payload);
       else if (message.payload.type === 'DEPLOY_OBJECT') { if (verified.has(id)) deploy(id, message.payload); }
       else if (message.payload.type === 'DEPLOY_HIT') { if (verified.has(id)) hit(id, message.payload.id); }
+      else if (message.payload.type === 'ACTIVATE_HAZARD') {
+        const { type, ...command } = message.payload;
+        if (verified.has(id)) activateHazard(id, command);
+      }
       else if (verified.has(id)) session.send({ ...message.payload, playerId: id });
     }
     if (message.type === 'peer-close') {
@@ -106,11 +131,13 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
   const unbind = () => {
     stopped = true; clock.clearTimeout(timer); unsubscribe(); stopSession(); positions.clear();
     for (const id of [...grace.keys()]) endGrace(id);
-    tokens.clear(); verified.clear(); deployables = []; lastHit.clear();
+    tokens.clear(); verified.clear(); deployables = []; globalHazards = []; lastHit.clear();
   };
   unbind.deploy = command => deploy(transport.peerId, command);
   unbind.reason = () => deployReason; // why the last placement was refused (host's own feedback)
   unbind.list = () => deployables; // the host's own view of the list; guests read it from the snapshot
   unbind.hit = objectId => hit(transport.peerId, objectId);
+  unbind.activateHazard = command => activateHazard(transport.peerId, command);
+  unbind.globalHazards = () => globalHazards;
   return unbind;
 }

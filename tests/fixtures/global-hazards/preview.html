@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>G1f Global Hazards Preview</title>
+  <style>
+    [hidden]{display:none!important}
+    :root{color-scheme:dark;font:15px system-ui;background:#141820;color:#eef2f7}
+    body{margin:0;padding:20px;max-width:1240px;margin-inline:auto}
+    h1{margin:0 0 8px;font-size:24px}p{color:#b8c2d0;margin:0 0 16px}
+    .badge{display:inline-block;background:#9c3d25;color:white;padding:4px 9px;border-radius:5px;font-weight:800;letter-spacing:.04em}
+    main{display:grid;grid-template-columns:minmax(480px,1fr) 330px;gap:16px;align-items:start}
+    canvas{width:100%;aspect-ratio:8/5;background:#b2df9b;border:2px solid #697688;border-radius:8px;display:block}
+    aside{display:grid;gap:12px;background:#202733;padding:14px;border-radius:8px}
+    label{display:grid;grid-template-columns:1fr auto;gap:4px 10px}label small{grid-column:1/-1;color:#aab6c5}
+    input[type=range]{grid-column:1/-1;width:100%}output{font-variant-numeric:tabular-nums;color:#9fe4ff}
+    select,button,textarea{font:inherit;color:inherit;background:#303c4c;border:1px solid #718096;border-radius:5px;padding:7px}
+    button{cursor:pointer;font-weight:700}button:hover{background:#42536a}
+    .row{display:flex;gap:7px;flex-wrap:wrap}.row button{flex:1}
+    textarea{width:100%;box-sizing:border-box;min-height:76px;font:12px ui-monospace,monospace}
+    #status{min-height:20px;color:#9fe4ff}
+    @media(max-width:850px){body{padding:12px}main{grid-template-columns:1fr}.canvas-wrap{min-width:0}}
+  </style>
+</head>
+<body>
+  <h1>Global Hazards · G1f</h1>
+  <p><span class="badge">LOCAL PREVIEW ONLY · VALUES NOT SHIPPED</span></p>
+  <main>
+    <section class="canvas-wrap">
+      <canvas id="course" width="800" height="500" aria-label="Top-down hazard simulation"></canvas>
+      <p id="status" role="status"></p>
+      <div class="row">
+        <button id="activate">Activate selected hazard</button>
+        <button id="launch">Launch ball</button>
+        <button id="reset">Reset preview</button><button id="defaults">Reset settings</button>
+      </div>
+    </section>
+    <aside>
+      <label>Hazard
+        <select id="kind">
+          <option value="rain">Rain</option><option value="snow">Snow</option>
+          <option value="wind">Wind</option><option value="lightning">Lightning</option>
+          <option value="tornado">Tornado</option><option value="hurricane">Hurricane</option>
+        </select>
+      </label>
+      <label id="directionRow">Wind direction <output id="directionValue">0°</output>
+        <input id="direction" type="range" min="-180" max="180" step="15" value="0">
+        <small>0° pushes east; positive angles turn toward the lower edge.</small>
+      </label>
+      <div id="controls"></div>
+      <div class="row"><button id="export">Export overrides</button><button id="import">Import overrides</button></div>
+      <textarea id="overrides" spellcheck="false" aria-label="Validated override JSON"></textarea>
+    </aside>
+  </main>
+  <script type="module">
+    import { TUNING, createTuning } from '../../../src/shared/tuning.js';
+    import { evaluateGlobalHazards, globalHazardCenter, lightningImpulse } from '../../../src/gameplay/global-hazards.js';
+
+    import { stepBall } from '../../../src/simulation/physics.js';
+    import { createPlayerState } from '../../../src/shared/simulation.js';
+    const course = {tiles:[[0,0,800,500]],tee:[390,250],hole:[5000,5000],w:[[0,0,800,5],[0,495,800,5],[0,0,5,500],[795,0,5,500]],cup:15};
+    const base = { ...TUNING.globalHazards };
+    const values = { ...base };
+    const specs = [
+      ['rainFrictionMultiplier','Rain rolling friction','0','2','×'],['rainDragMultiplier','Rain drag','0','2','×'],
+      ['snowFrictionMultiplier','Snow rolling friction','0','5','×'],['snowDragMultiplier','Snow drag','0','5','×'],
+      ['windAcceleration','Wind acceleration','0','5000','u/s²'],['lightningImpulse','Lightning impulse','0','10000','u/s'],
+      ['vortexRange','Vortex range','0','1000','u'],['vortexAcceleration','Vortex force','0','10000','u/s²'],
+      ['tornadoLift','Tornado lift','0','10000','u/s²'],['roamRadius','Roam radius','0','10000','u'],
+      ['roamPeriod','Roam period','0.1','600','s'],['durationSeconds','Duration','1','600','s'],
+      ['lightningWindowSeconds','Lightning delivery window','0.1','5','s'],
+    ];
+    const canvas = document.querySelector('#course'), ctx = canvas.getContext('2d');
+    const controls = document.querySelector('#controls'), direction = document.querySelector('#direction');
+    const directionRow = document.querySelector('#directionRow'), status = document.querySelector('#status');
+    let record = null, time = 0, last = performance.now(), accumulator = 0, seq = 0;
+    const ball = createPlayerState('preview', 0, {x:390,y:250,z:0});
+    ball.globalHazardBounds = [0,0,800,500];
+    const bounds = [0, 0, 800, 500];
+    const sliders = new Map();
+    for (const [key, label, min, max, unit] of specs) {
+      const row = document.createElement('label');
+      const title = document.createElement('span'); title.textContent = label;
+      const output = document.createElement('output');
+      const input = document.createElement('input'); input.type = 'range'; input.min = min; input.max = max; input.step = Number(max) <= 5 ? '0.05' : '1'; input.value = values[key];
+      const note = document.createElement('small'); note.textContent = `Allowed ${min}–${max} ${unit}; reload is not required in this preview.`;
+      input.addEventListener('input', () => { values[key] = Number(input.value); drawValue(key, output, unit); resetBall(); });
+      row.append(title, output, input, note); controls.append(row); sliders.set(key, { input, output, unit });
+      drawValue(key, output, unit);
+    }
+    function drawValue(key, output, unit) { output.value = `${Number(values[key]).toFixed(2).replace(/\.00$/, '')} ${unit}`; }
+    function resetBall() { Object.assign(ball, { x: 390, y: 250, vx: 0, vy: 0, z: 0, vz: 0, moving: false }); time = 0; accumulator = 0; record = null; }
+    function activate() {
+      const kind = document.querySelector('#kind').value, startTime = time;
+      record = { id: `h${++seq}`, kind, owner: 'preview', roundNumber: 0, map: 0, putt: 0, startTime,
+        endTime: startTime + (kind === 'lightning' ? values.lightningWindowSeconds : values.durationSeconds), seed: 8127 + seq };
+      if (kind === 'wind') record.direction = Number(direction.value) * Math.PI / 180;
+      if (kind === 'lightning') {
+        const impulse = lightningImpulse({ ...record, targetId: 'preview' }, 'preview', values);
+        ball.vx += impulse.x; ball.vy += impulse.y; ball.moving = true;
+      }
+      status.textContent = `${kind.toUpperCase()} active. Re-activation replaces the prior ${kind} record.`;
+    }
+    function step(dt) {
+      time += dt;
+      if (record && time >= record.endTime) { status.textContent = `${record.kind.toUpperCase()} expired.`; record = null; }
+      const effect = evaluateGlobalHazards(record ? [record] : [], time, ball, bounds, values);
+      if (Math.hypot(effect.ax,effect.ay,effect.az) > 0) ball.moving = true;
+      if (!ball.moving) return;
+      ball.globalHazards = record ? [record] : [];
+      stepBall(ball, course, dt, time, values);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, 800, 500); ctx.fillStyle = '#a8d790'; ctx.fillRect(0, 0, 800, 500);
+      ctx.strokeStyle = '#8abc78'; ctx.lineWidth = 1;
+      for (let x = 0; x < 800; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 500); ctx.stroke(); }
+      for (let y = 0; y < 500; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke(); }
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.strokeRect(3, 3, 794, 494);
+      if (record && ['tornado','hurricane'].includes(record.kind)) {
+        const center = globalHazardCenter(record, time, bounds, values);
+        if (center) {
+          ctx.beginPath(); ctx.arc(center.x, center.y, values.vortexRange, 0, Math.PI * 2);
+          ctx.strokeStyle = record.kind === 'tornado' ? '#7d3cb5' : '#1773bd'; ctx.setLineDash([8,6]); ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+          ctx.beginPath(); ctx.arc(center.x, center.y, 12, 0, Math.PI*2); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+        }
+      }
+      if (record && record.kind === 'wind') {
+        const angle = record.direction; ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(400,60); ctx.lineTo(400+Math.cos(angle)*65,60+Math.sin(angle)*65); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(ball.x, ball.y + 4, 12, 6, 0, 0, 2*Math.PI); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(ball.x, ball.y - ball.z, 10, 0, 2*Math.PI); ctx.fillStyle = '#f54839'; ctx.fill(); ctx.strokeStyle = '#251b2a'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#14202a'; ctx.font = 'bold 15px system-ui'; ctx.fillText(`t = ${time.toFixed(1)}s`, 14, 25);
+      if (record) ctx.fillText(`${record.kind.toUpperCase()} · ${Math.max(0, record.endTime-time).toFixed(1)}s`, 14, 47);
+      requestAnimationFrame(frame);
+    }
+    function frame(now) { accumulator += Math.min(0.05, (now-last)/1000); last = now; while (accumulator >= 1/120) { step(1/120); accumulator -= 1/120; } draw(); }
+    document.querySelector('#defaults').addEventListener('click', () => { Object.assign(values, base); for (const [key, slider] of sliders) { slider.input.value = values[key]; drawValue(key, slider.output, slider.unit); } resetBall(); status.textContent = 'Settings restored to defaults.'; });
+    document.querySelector('#activate').addEventListener('click', activate);
+    document.querySelector('#launch').addEventListener('click', () => { ball.vx = 300; ball.vy = 0; ball.moving = true; });
+    document.querySelector('#reset').addEventListener('click', () => { resetBall(); status.textContent = 'Preview reset.'; });
+    document.querySelector('#kind').addEventListener('change', e => { directionRow.hidden = e.target.value !== 'wind'; });
+    direction.addEventListener('input', () => { document.querySelector('#directionValue').value = `${direction.value}°`; });
+    directionRow.hidden = true;
+    document.querySelector('#export').addEventListener('click', () => { document.querySelector('#overrides').value = JSON.stringify({ globalHazards: values }, null, 2); });
+    document.querySelector('#import').addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(document.querySelector('#overrides').value);
+        if (!parsed || Object.keys(parsed).length !== 1 || !parsed.globalHazards || Object.keys(parsed.globalHazards).length !== specs.length) throw Error('Expected exactly the globalHazards settings.');
+        for (const [key, , min, max] of specs) if (!Number.isFinite(parsed.globalHazards[key]) || parsed.globalHazards[key] < Number(min) || parsed.globalHazards[key] > Number(max)) throw Error(`${key} must be within ${min} to ${max}.`);
+        createTuning(parsed);
+        Object.assign(values, parsed.globalHazards);
+        for (const [key, slider] of sliders) { slider.input.value = values[key]; drawValue(key, slider.output, slider.unit); }
+        resetBall(); status.textContent = 'Validated overrides imported. Physics preview reset.';
+      } catch (error) { status.textContent = `Import rejected: ${error.message}`; }
+    });
+    document.querySelector('#directionValue').value = '0°';
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

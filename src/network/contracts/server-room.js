@@ -5,11 +5,12 @@ import { isColorIndex } from '../../shared/colors.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 import { validDeployable, validDeployCommand } from '../../gameplay/deployables.js';
+import { GLOBAL_HAZARD_LIMIT, validGlobalHazard, validGlobalHazardCommand } from '../../gameplay/global-hazards.js';
 
-// 4: the room snapshot may carry `deployables` and clients may send DEPLOY_OBJECT / DEPLOY_HIT (G1e).
-export const SERVER_ROOM_VERSION = 4;
+// 5: the room snapshot may carry synchronized G1f hazard records.
+export const SERVER_ROOM_VERSION = 5;
 export const CHECKPOINT_VERSION = 1;
-export const ROOM_RULES_VERSION = 'server-room-2';
+export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({
   members: MAX_PLAYERS, history: 128, messageBytes: 65536, checkpointBytes: 262144,
   presenceIntervalMs: 70, commandBurst: 20, commandsPerSecond: 10,
@@ -50,6 +51,10 @@ export function createRoomPolicy(overrides = {}) {
 export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'SET_POWERUPS', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS']);
 export function validServerCommand(c) {
   if (!object(c)) return false;
+  if (c.type === 'ACTIVATE_HAZARD') {
+    const { type, ...command } = c;
+    return allowed(c, ['type', 'kind', 'direction', 'targetId']) && validGlobalHazardCommand(command);
+  }
   const fields = { LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
     RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'],
     DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'] }[c.type];
@@ -112,12 +117,19 @@ const ROOM_SNAPSHOT_KEYS = ['roomCode','sessionId','rulesVersion','courseHash','
 const roomDeployables = (list, context) => Array.isArray(list) && list.length <= MAX_DEPLOYABLES && new Set(list.map(d => d?.id)).size === list.length
   && list.every(d => validDeployable(d) && Object.hasOwn(context.players, d.owner) && d.map === context.mapIndex && d.putt === context.puttIndex);
 export function validRoomSnapshot(s) {
-  if (!(exact(s,ROOM_SNAPSHOT_KEYS) || exact(s,[...ROOM_SNAPSHOT_KEYS,'deployables'])) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
+  if (!(exact(s,ROOM_SNAPSHOT_KEYS) || exact(s,[...ROOM_SNAPSHOT_KEYS,'deployables']) || exact(s,[...ROOM_SNAPSHOT_KEYS,'globalHazards']) || exact(s,[...ROOM_SNAPSHOT_KEYS,'deployables','globalHazards'])) || !validRoomCode(s.roomCode) || !validRoomId(s.sessionId)
     || s.rulesVersion !== ROOM_RULES_VERSION || !validHash(s.courseHash) || !count(s.revision) || !time(s.serverTime) || !validRoomPolicy(s.policy) || !session(s.session) || !Array.isArray(s.seats) || s.seats.length > MAX_PLAYERS
     || !s.seats.every(seat) || new Set(s.seats.map(s => s.playerId)).size !== s.seats.length || new Set(s.seats.map(s => s.joinOrder)).size !== s.seats.length
     || !s.seats.every(seat => (seat.connectedSince === null || seat.connectedSince <= s.serverTime) && Object.hasOwn(s.session.context.players,seat.playerId) && s.session.context.players[seat.playerId].connected === (seat.connectedSince !== null))
     || !Object.entries(s.session.context.players).every(([id,p]) => !p.connected || s.seats.some(seat => seat.playerId === id))) return false;
   if (s.deployables !== undefined && !roomDeployables(s.deployables, s.session.context)) return false;
+  if (s.globalHazards !== undefined && (!Array.isArray(s.globalHazards) || s.globalHazards.length > GLOBAL_HAZARD_LIMIT
+    || s.globalHazards.length > 0 && (!s.session.node.startsWith('play.') || !s.session.context.powerups || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(s.session.context.mode) || s.session.context.roster.length < 2)
+    || new Set(s.globalHazards.map(h => h?.id)).size !== s.globalHazards.length
+    || !s.globalHazards.every(h => validGlobalHazard(h) && Object.hasOwn(s.session.context.players, h.owner)
+      && Object.hasOwn(s.session.context.players, h.kind === 'lightning' ? h.targetId : h.owner)
+      && (h.kind !== 'lightning' || h.owner !== h.targetId)
+      && h.roundNumber === s.session.context.roundNumber && h.map === s.session.context.mapIndex && h.putt === s.session.context.puttIndex))) return false;
   const controller = s.seats.find(seat => seat.playerId === s.controllerId);
   return s.controllerId === null ? !s.seats.some(seat => seat.connectedSince !== null)
     : validRoomId(s.controllerId) && !!controller && (controller.connectedSince !== null || s.policy.controllerTransferDelayMs > 0);
@@ -166,8 +178,10 @@ export function chooseRoomController(seats) {
 
 /** Durable domain checkpoint, explicitly separate from public snapshots and raw XState persistence. */
 export function validRoomCheckpoint(c) {
-  if (!exact(c,['schemaVersion','rulesVersion','courseHash','savedAt','snapshot','identities','deadlines','nextJoinOrder','presenceSequence']) || c.schemaVersion !== CHECKPOINT_VERSION
+  const checkpointKeys = ['schemaVersion','rulesVersion','courseHash','savedAt','snapshot','identities','deadlines','nextJoinOrder','presenceSequence'];
+  if (!(exact(c,checkpointKeys) || exact(c,[...checkpointKeys,'hazardSequence'])) || c.schemaVersion !== CHECKPOINT_VERSION
     || c.rulesVersion !== ROOM_RULES_VERSION || !validHash(c.courseHash) || !time(c.savedAt) || !validRoomSnapshot(c.snapshot) || c.savedAt !== c.snapshot.serverTime || c.courseHash !== c.snapshot.courseHash || c.rulesVersion !== c.snapshot.rulesVersion
+    || (c.hazardSequence !== undefined && !count(c.hazardSequence))
     || !positive(c.nextJoinOrder) || c.snapshot.seats.some(s => s.joinOrder >= c.nextJoinOrder) || !count(c.presenceSequence)
     || !Array.isArray(c.identities) || c.identities.length !== c.snapshot.seats.length
     || new Set(c.identities.map(i => i?.playerId)).size !== c.identities.length
@@ -197,6 +211,12 @@ export function decodeRoomCheckpoint(raw) {
     // Checkpoints saved before GM1 have no `powerups`; those rooms had power-ups on.
     const ctx=c?.snapshot?.session?.context;
     if (object(ctx) && !Object.hasOwn(ctx,'powerups')) ctx.powerups=true;
+    // server-room-2 snapshots predate G1f; migrate them with no active hazards.
+    if (c?.rulesVersion === 'server-room-2' && c?.snapshot?.rulesVersion === 'server-room-2') {
+      c.rulesVersion = ROOM_RULES_VERSION;
+      c.snapshot.rulesVersion = ROOM_RULES_VERSION;
+    }
+    if (c && c.hazardSequence === undefined) c.hazardSequence = Math.max(0, ...(c.snapshot?.globalHazards || []).map(h => Number(String(h?.id).slice(1)) || 0));
     return validRoomCheckpoint(c) ? c : null;
   } catch { return null; }
 }

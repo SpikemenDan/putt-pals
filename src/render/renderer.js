@@ -14,6 +14,7 @@ import { createMaterialLibrary, PLAYER_COLORS, colorHex } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
 import { cosmeticRecord, DEFAULT_COSMETICS, rainbowHex } from '../cosmetics/catalog.js';
 import { createDeployableLayer } from './deployables.js';
+import { createGlobalHazardLayer } from './global-hazards.js';
 import { applyBallSkin, createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
 import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
@@ -162,6 +163,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
 
   const remotes = new Map();
   const deployableLayer = createDeployableLayer({ THREE, scene, library, toon });
+  const globalHazardLayer = createGlobalHazardLayer({ THREE, scene });
   const updateWallFade = createWallFade(THREE);
   let build = null, lastMode = '', width = 0, disposed = false;
   const bufferSize = new THREE.Vector2();
@@ -262,10 +264,11 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
      * @param {object[]} [frame.remotes=[]] Players to show: {id,name,x,y,z,color,effect}
      * @param {object|null} [frame.aim=null] {charge,angle,aimAngle,spread} while charging
      * @param {object[]} [frame.deployables=[]] Active Bumper / Orbital Bumper records (G1e)
+     * @param {object[]} [frame.globalHazards=[]] Active global hazard records (G1f)
      * @param {{kind:string,x:number,y:number}|null} [frame.placing=null] Placement ghost
      * @param {object} frame.camera Pose from createCameraRig().update()
      */
-    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, deployables = [], placing = null, camera: pose }) {
+    render({ now, dt, hazardTime = 0, local, remotes: shown = [], aim = null, deployables = [], globalHazards = [], placing = null, camera: pose }) {
       if (disposed) throw new Error('Renderer has been disposed');
       const t = now / 1000;
       library.time.value = t;
@@ -372,6 +375,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         if (renderer.getDrawingBufferSize) { renderer.getDrawingBufferSize(bufferSize); sizeInk(library.inkUniforms, bufferSize.x, bufferSize.y); }
       }
       deployableLayer.update(deployables, placing, build.transform, build.course, t, camera);
+      globalHazardLayer.update(globalHazards, hazardTime, build.transform, build.course);
       renderer.render(scene, camera);
     },
 
@@ -387,6 +391,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const resource of owned) resource.dispose();
       owned.clear();
       deployableLayer.dispose();
+      globalHazardLayer.dispose();
       weather?.dispose();
       skyWorld?.dispose();
       sun.shadow.dispose?.();

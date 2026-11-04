@@ -1,14 +1,14 @@
-# G1f global hazards — proposed implementation
+# G1f global hazards — implementation notes
 
-Status: design only, 2026-11-03. Issue: [G1f #93](https://github.com/SpikemenDan/putt-pals/issues/93).
-Contributor: Codex, local branch `feat/global-hazards`, based on `d7d7dbe`.
-The claim has not been published; remote writes are not authorized.
+Status: implementation underway, 2026-11-04. Issue: [G1f #93](https://github.com/SpikemenDan/putt-pals/issues/93).
+Contributor: Codex, local branch `feat/global-hazards`; remote claim not published.
 
-The owner requested G1f, but could not confirm exclusive ownership or a path
-split with the active G1e contributor. Do not edit the overlapping catalog,
-simulation, renderer, app integration or shared contracts until that work lands
-or ownership is coordinated. This document proposes a design; it does not
-establish an agreed contract with G1e or implement any hazard.
+G1e is integrated on main. This branch adds timed hazard records, room snapshots,
+catalog entries, deterministic evaluation, fixed-step physics hooks, HUD/audio,
+and a local tuning preview. Owner feel acceptance was received on 2026-11-04.
+Current defaults match the accepted preview; integration checks remain. Inventory
+is client-held in this build, so a room validates phase, policy, and membership
+but cannot verify that a sender owns the catalog item.
 
 ## Observable completion
 
@@ -34,48 +34,41 @@ accepted. Technical checks and owner acceptance remain separate gates.
 | Tornado | Roam on a seeded path and fling nearby balls outward with lift. | Whole room, timed. |
 | Hurricane | Roam on a seeded path and pull nearby balls inward. | Whole room, timed. |
 
-These choices refine the vision and require preview acceptance. Propose replacing
-Rain with Snow and vice versa, rather than multiplying opposing weather factors.
-Propose one active instance per timed kind; reactivation refreshes its lifetime.
-Specify replacement, refresh and room caps in tests before integration. A
-confirmed activation consumes the item once; cancelling a selector consumes none.
+The owner accepted the preview behavior and current values on 2026-11-04. Rain replaces
+Snow and vice versa; a new activation replaces the prior instance of the same
+kind. Other timed kinds have one active instance per kind. A confirmed activation
+consumes the item after the room snapshot confirms it; cancelling consumes none.
 Global effects include the activating player's ball. Lightning targets a single
 opponent, unlike the existing aim attacks broadcast through presence.
 
 ## Existing implementation constraints
 
-- `src/gameplay/catalog.js` currently has self and opponent targets and next-shot
-  and stroke durations. G1e also needs a course target and a new lifetime model:
-  reconcile these additions once rather than independently extending the schema.
-- `src/app/putt.js` currently activates items locally, consumes inventory, and
-  exposes an opponent attack as presence `fx: {id, t}`. That message has no chosen
-  target, direction, seed, authoritative start time or persistent lifetime.
-- `src/app/putt.js` already supplies hazard time in seconds derived from
+- `src/gameplay/catalog.js` includes global-target timed power-ups alongside
+  the G1e course-target deployables.
+- The G1f flow uses explicit room activation commands and snapshots rather than
+  the presence `fx: {id, t}` attack message.
+- `src/app/putt.js` supplies hazard time in seconds derived from
   `(roomNow() - roundStartTime) / 1000`. Use that time basis consistently; avoid
   independent browser clocks and streamed vortex positions.
 - `src/simulation/physics.js` currently skips stationary balls. A Lightning strike
   or nearby roaming hazard needs an explicit wake path, while sunk, waiting,
   disconnected and spectator players must remain protected.
-- The server room currently receives client presence and stroke updates. Do not
-  claim it verifies inventory ownership merely because a catalog id is valid.
-  G1e's proposed server activation/inventory path must be reconciled with G1f.
+- The server room stores global hazard records beside deployables, validates
+  their exact shape and scope, and includes them in durable snapshots. Hazard
+  sequence state is checkpointed to keep activation IDs unique after recovery.
+  Inventory possession remains client-held and is not server-verified.
 
-## Proposed authority and lifecycle
+## Authority and lifecycle
 
 Use explicit activation commands and snapshot state, rather than stretching the
 presence attack format. The service validates room phase, power-up policy,
-sender identity, target membership, finite direction, message bounds, inventory
-ownership, activation limits and duplicate request ids. Inventory consumption and
-hazard creation must be one accepted operation; rejected requests leave inventory
-unchanged. The required authoritative inventory design is an integration
-dependency, not functionality already present.
+sender identity, target membership, finite direction, message bounds and
+activation limits. Rejected activations leave the local item unchanged.
 
 Timed records need a unique activation id, catalog kind, owner, round and putt
 identity, authoritative start time, expiry time, seed and optional direction.
-Lightning additionally needs its target and a bounded event sequence. Exact
-field names, limits, version changes and snapshot schema are deferred until the
-G1e contract is reconciled. Unknown fields and kinds must be rejected at the
-boundary, and persisted state validated again on recovery.
+Lightning additionally stores its target. Unknown fields and kinds are rejected
+at the boundary, and persisted state is validated again on recovery.
 
 The server assigns the seed and timing using injected sources. Derive Lightning's
 direction from its seed once. A client applies each accepted strike at most once;
@@ -118,25 +111,47 @@ vortices show their effect radius. Reuse original procedural rendering and audio
 with explicit disposal. Add preview controls using the established panel patterns;
 gameplay changes reset the preview rather than mutating an active match.
 
-## Implementation and verification after coordination
+## Remaining implementation and verification
 
-1. Reconcile G1e catalog, activation, inventory, protocol and snapshot changes;
-   update validators, consumers, mocks and version compatibility together.
-2. Add the pure evaluator and tests for seed repeatability, time boundaries,
-   finite centres, opposing weather replacement and inactive identity.
-3. Integrate fixed-step friction, impulses, force and wake behavior. Independently
-   verify Rain rolls farther, Snow rolls less, Wind pushes in the selected
+Focused coverage in `tests/global-hazards.test.cjs` passes for activation shape,
+seed repeatability, time/scope boundaries, finite vortex centres, weather
+replacement, actual roll distance changes, directional Wind, inactive parity,
+guest command handling and No Power-Ups filtering. It runs in `test:simulation`.
+Contract, network, simulation, UI, app, course, session, audio and build checks
+have passed during this implementation. The legacy renderer scene comparison
+fails at child 26 with hashes `2b2bfc4a2e9ace66` / `0c19ecddfaf42715`;
+the identical failure was reproduced from a clean `origin/main` source snapshot.
+The renderer failure is existing evidence, not a passed check.
+
+1. One-shot Lightning targeting, snapshot deduplication and missed-strike expiry
+   after reconnect are covered by the focused hazard tests.
+2. Finish protocol and durable recovery checks for policy filtering, reconnect,
+   expiry and controller succession.
+3. Independently verify Rain rolls farther, Snow rolls less, Wind pushes in the selected
    direction, Lightning affects only its target once, Tornado flings and Hurricane
    pulls. Test sunk/resting/airborne balls and interactions with existing effects.
-4. Test duplicate/rejected commands, inventory consumption, scope resets, policy
-   filtering, reconnect, durable recovery, expiry and controller succession.
-5. Add indicators, selection flows, audio and development preview controls;
-   inspect browser errors and present the preview for owner feedback.
+4. Test duplicate/rejected commands, scope resets, policy filtering, reconnect,
+   durable recovery, expiry and controller succession.
+5. Open the development preview, exercise each hazard and tuning import/export,
+   and inspect browser errors before treating the preview as reviewed;
 6. Select checks with `npm run checks`. Run relevant contract, simulation,
    network, session, app, renderer, audio and browser suites plus build. Follow
    `docs/GITHUB_WORKFLOW.md` for simulation fingerprint changes; do not replace
    fixtures to conceal a trajectory regression. Rerun affected solver/acceptance
    evidence when hazards or geometry change those scenarios.
 
-No implementation, hazard tests, browser preview or owner acceptance is claimed
-by this design document. Current blocker: overlapping G1e paths are uncoordinated.
+The local preview is at
+`http://127.0.0.1:5175/tests/fixtures/global-hazards/preview.html`.
+Chromium exercised all six selectors, activation, launch/reset, defaults reset,
+validated import/export and invalid import rejection without page errors. The
+preview runs the shared physics step with isolated candidate hazard settings.
+The full local Worker suite also passes. The owner accepted the local preview
+on 2026-11-04 ("good"), including the current tuning defaults. CLI, app, physics,
+input, UI, contracts and out-of-bounds integration checks pass after the solver
+refresh. Full online browser acceptance and current-head CI remain merge gates.
+
+The 2026-11-04 solver refresh (`node tests/measure-cup-capture.mjs`) reproduces
+all 36 previous outcomes exactly, with 34 robust hole-in-one results and the
+same two known robustness gaps (19/0 and 19/2). The measurement exits 1 for those
+gaps; it does not establish complete par-route acceptance. The generated source
+fingerprint is current. No active hazards are included in these baseline shots.

@@ -158,6 +158,7 @@ function mapTotal(player, local, puttIndex) {
 
 /** In-game HUD: info line, scoreboard, inventory and bar labels. */
 export function hudView(room, local, now, courses) {
+  const hazardTime = typeof room.now === 'function' ? room.now() : now;
   const course = courses[room.mapIndex];
   const putt = course.putts[room.puttIndex] || course.putts[0];
   const spectating = local.mode === 'spectator';
@@ -188,6 +189,17 @@ export function hudView(room, local, now, courses) {
     scoreboard,
     connection: local.roomCode ? 'Room ' + local.roomCode + ' · ' + list.length + ' players' : 'Solo practice',
     inventory,
+    hazardPrompt: local.hazardPrompt ? {
+      ...local.hazardPrompt,
+      targets: (room.roster || []).filter(id => id !== local.id && room.players?.[id]?.connected)
+        .map(id => ({ id, name: room.players[id].name })),
+    } : null,
+    activeHazards: (room.globalHazards || []).map(h => ({
+      id: h.id, kind: h.kind,
+      seconds: Math.max(0, Math.ceil(h.endTime - Math.max(0, (hazardTime - room.roundStartTime) / 1000))),
+      direction: h.kind === 'wind' ? ['→','↘','↓','↙','←','↖','↑','↗'][Math.round(((h.direction + 2 * Math.PI) % (2 * Math.PI)) / (Math.PI / 4)) % 8] : '',
+      targetName: h.kind === 'lightning' ? room.players?.[h.targetId]?.name || 'opponent' : '',
+    })).filter(h => h.seconds > 0),
     viewLabel: 'View: ' + (local.viewLabel || 'Ball cam'),
     soundLabel: 'Sound: ' + (local.soundOn === false ? 'Off' : 'On'),
     qualityLabel: 'Quality: ' + (local.qualityHigh === false ? 'Low' : 'High'),
