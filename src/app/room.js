@@ -27,6 +27,7 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {object} options
  * @param {boolean} options.multi
  * @param {string} options.name Display name (already sanitized)
+ * @param {number|null} [options.color] Preferred ball colour index; the room gives the nearest free one if taken
  * @param {string} [options.roomCode] Sanitized room code (multi only)
  * @param {{now: () => number, setTimeout: Function, clearTimeout: Function}} options.clock Local monotonic clock
  * @param {() => number} [options.random]
@@ -35,7 +36,7 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {(map: number, putt: number, x: number, y: number) => boolean} [options.validPlacement] Host course check for Bumper / Orbital Bumper placement (G1e)
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, validPlacement }) {
+async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, validPlacement }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
@@ -80,7 +81,7 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
   let last = null, closed = false;
 
   if (transport.isHost) {
-    session = createRoomSession({ hostId: transport.peerId, hostName: name, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
+    session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
     unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, validPlacement });
     stops.push(session.subscribe(s => {
       last = s;
@@ -148,7 +149,7 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
     };
     function wire() {
       linkStops = [transport.subscribe(onMessage), transport.subscribeStatus(onLinkStatus)];
-      transport.send({ type: 'command', payload: { type: 'JOIN_ROOM', name, resume: guest.token } });
+      transport.send({ type: 'command', payload: { type: 'JOIN_ROOM', name, ...(color === null ? {} : { color }), resume: guest.token } });
       heartbeat();
     }
     wire();
@@ -198,7 +199,7 @@ async function openLocalRoom({ multi, name, roomCode = '', clock, random = Math.
 /** Online production rooms use the v2 service; injected transports retain the legacy unit-test seam. */
 export async function openRoom(options) {
   if (!options.multi || options.createTransport) return openLocalRoom(options);
-  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name,
+  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name, color: options.color ?? null,
     resume: options.identity, endpoint: options.endpoint, location: options.location,
     clock: options.clock, WebSocket: options.WebSocket, random: options.random, signal: options.signal,
     expectedCourseHash: options.expectedCourseHash, crypto: options.crypto,

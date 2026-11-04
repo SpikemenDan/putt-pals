@@ -19,17 +19,39 @@ test('clipping: every map renders non-blank from every camera view without page 
   expect(maps, 'map picker lists the courses').toBeGreaterThan(0);
 
   const canvas = page.locator('[data-ui=game] canvas');
-  // Cameras ease toward their pose; wait for the putt transition, then let the frame settle.
+  // Cameras ease toward their pose with a frame-stepped spring, and on software GL a frame can take a long
+  // time, so a fixed sleep can sample a half-way pose (ground only, ball out of shot). Wait for the putt
+  // transition, then for the pose to hold still across several rendered frames.
   const settle = async () => {
     await until(async () => !(await page.evaluate(() => window.__ppApp.view.rig.transitioning)), { label: 'camera settled' });
-    await page.waitForTimeout(400);
+    await page.evaluate(() => new Promise((resolve, reject) => {
+      const rig = window.__ppApp.view.rig, pose = () => [...rig.position, ...rig.look];
+      const started = performance.now();
+      let previous = pose(), still = 0;
+      const step = () => {
+        const current = pose();
+        still = Math.max(...current.map((v, i) => Math.abs(v - previous[i]))) < 0.05 ? still + 1 : 0;
+        previous = current;
+        if (still >= 5) resolve();
+        else if (performance.now() - started > 90_000) reject(new Error('camera pose never settled'));
+        else requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }));
   };
   const shoot = async (map, putt, view) => {
     await settle();
-    const colours = await ana.canvasColours();
-    expect(colours, `map ${map} putt ${putt + 1} ${view} view is not a blank frame`).toBeGreaterThan(8);
+    // Poll instead of sampling once: a blank or clipped frame stays flat and still fails after the window,
+    // while one flat frame from a slow software-GL present does not. The shot is attached either way.
+    let colours = 0;
+    const sample = async () => (colours = await ana.canvasColours());
     const name = `map-${String(map).padStart(2, '0')}-putt-${putt + 1}-${view}`;
-    await testInfo.attach(name, { body: await canvas.screenshot(), contentType: 'image/png' });
+    try {
+      await expect.poll(sample, { timeout: 20_000, intervals: [250, 500, 1000], message: `map ${map} putt ${putt + 1} ${view} view is not a blank frame` }).toBeGreaterThan(8);
+    } finally {
+      await testInfo.attach(name, { body: await canvas.screenshot(), contentType: 'image/png' });
+      if (colours <= 8) await testInfo.attach(name + '-colours', { body: String(colours), contentType: 'text/plain' });
+    }
   };
 
   for (let map = 0; map < maps; map++) {

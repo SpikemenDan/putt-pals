@@ -141,8 +141,13 @@ How it decides (implementation and the few rules: `tools/cli/checks.mjs`):
   script the tool cannot read gets the conservative fallback: the full suite
   (`npm test` and `npm run build`). It never silently skips.
 
-This only helps you choose local checks. CI is unchanged: it still runs the full suite
-and the real-browser checks on every PR, and nothing is skipped automatically. If you
+This only helps you choose local checks. CI runs the full suite and the real-browser
+checks on every PR, with one conservative exception: a pull request whose changed paths
+are all documentation that no code reads (`npm run checks -- --docs-only --since <ref>`
+prints `docs-only=true|false` from this same mapping) skips the install, build and test
+steps. The `baseline-ci` and `browser-ci (...)` jobs still run and report, so required
+checks pass. Any unmapped, code, configuration or workflow path, and every push to main,
+nightly and manual run, gets the full suite. If you
 add a file kind the tool does not know, `npm run test:cli` fails its staleness guard
 until a test reaches the file or a rule covers it.
 

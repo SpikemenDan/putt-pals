@@ -17,6 +17,8 @@ export const UiCommands = Object.freeze({
   LEAVE: 'leave',
   /** { type } — Invite / Copy invite. */
   INVITE: 'invite',
+  /** { type, color } — Choose a ball colour (palette index). Saved locally; in a lobby it also asks the room for it. */
+  SET_COLOR: 'set-color',
   /** { type, kind, id } — Choose a cosmetic (kind: ball, trail or celebration; id from the cosmetics catalog). */
   SET_COSMETIC: 'set-cosmetic',
   /** { type } — Quality: High/Low. */
@@ -29,8 +31,8 @@ export const UiCommands = Object.freeze({
 export const MODE_OPTIONS = Object.freeze([
   { value: GameModes.STANDARD, label: 'Standard · 1 map', soloOnly: false },
   { value: GameModes.TOURNAMENT_3, label: 'Tournament · 3 maps', soloOnly: false },
-  { value: GameModes.TOURNAMENT_6, label: 'Tournament · 6 maps', soloOnly: false },
-  { value: GameModes.TOURNAMENT_9, label: 'Tournament · 9 maps', soloOnly: false },
+  { value: GameModes.TOURNAMENT_5, label: 'Tournament · 5 maps', soloOnly: false },
+  { value: GameModes.TOURNAMENT_7, label: 'Tournament · 7 maps', soloOnly: false },
   { value: GameModes.PRACTICE, label: 'Practice · pick any map (solo)', soloOnly: true },
   { value: GameModes.PUTT_PRACTICE, label: 'Practice · replay one putt (solo)', soloOnly: true },
 ].map(Object.freeze));

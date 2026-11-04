@@ -1,12 +1,13 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
 import { GameModes } from '../../shared/session.js';
 import { MAX_PLAYERS } from '../../shared/constants.js';
+import { isColorIndex } from '../../shared/colors.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 
-export const SERVER_ROOM_VERSION = 2;
+export const SERVER_ROOM_VERSION = 3;
 export const CHECKPOINT_VERSION = 1;
-export const ROOM_RULES_VERSION = 'server-room-1';
+export const ROOM_RULES_VERSION = 'server-room-2';
 export const SERVER_ROOM_LIMITS = Object.freeze({
   members: MAX_PLAYERS, history: 128, messageBytes: 65536, checkpointBytes: 262144,
   presenceIntervalMs: 70, commandBurst: 20, commandsPerSecond: 10,
@@ -47,10 +48,11 @@ export function createRoomPolicy(overrides = {}) {
 export const CONTROLLER_COMMANDS = Object.freeze(['SET_MODE', 'SET_POWERUPS', 'START_VOTING', 'START_ROUND', 'RETURN_TO_LOBBY', 'PRACTICE_STEP', 'PRACTICE_MAPS']);
 export function validServerCommand(c) {
   if (!object(c)) return false;
-  const fields = { LEAVE_ROOM: [], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
+  const fields = { LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
     RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'] }[c.type];
   if (!Array.isArray(fields) || !exact(c, ['type', ...fields])) return false;
   switch (c.type) {
+    case 'SET_COLOR': return isColorIndex(c.color);
     case 'SET_MODE': return modes.includes(c.mode);
     case 'SET_POWERUPS': return typeof c.enabled === 'boolean';
     case 'CAST_VOTE': return [0, 8, 20, 21, 5, 19].includes(c.mapIndex);
@@ -70,7 +72,7 @@ export function validServerPresence(p) {
 const validResume = r => exact(r, ['sessionId', 'playerId', 'token']) && validRoomId(r.sessionId) && validRoomId(r.playerId) && validRoomSecret(r.token);
 export function validClientFrame(m) {
   if (!object(m) || m.version !== SERVER_ROOM_VERSION) return false;
-  if (m.type === 'hello') return exact(m, ['version', 'type', 'roomCode', 'name', 'resume']) && validRoomCode(m.roomCode) && name(m.name) && nullable(m.resume, validResume);
+  if (m.type === 'hello') return exact(m, ['version', 'type', 'roomCode', 'name', 'color', 'resume']) && validRoomCode(m.roomCode) && name(m.name) && nullable(m.color, isColorIndex) && nullable(m.resume, validResume);
   if (m.type === 'ping') return exact(m, ['version', 'type', 'nonce', 'clientTime']) && validRoomId(m.nonce) && Number.isFinite(m.clientTime) && m.clientTime >= 0;
   return exact(m, ['version','type','sessionId','connectionId','sequence','roundNumber','puttIndex','payload'])
     && ['command','presence'].includes(m.type) && validRoomId(m.sessionId) && validRoomId(m.connectionId)
@@ -79,7 +81,7 @@ export function validClientFrame(m) {
 }
 
 const score = s => exact(s, ['score','timedOut','par','penalty']) && count(s.score) && typeof s.timedOut === 'boolean' && index(s.par,11) && s.par > 0 && index(s.penalty,11);
-const player = p => exact(p, ['id','name','connected','strokes','done','timedOut','score','scores']) && validRoomId(p.id) && name(p.name)
+const player = p => exact(p, ['id','name','color','connected','strokes','done','timedOut','score','scores']) && validRoomId(p.id) && name(p.name) && isColorIndex(p.color)
   && typeof p.connected === 'boolean' && count(p.strokes) && typeof p.done === 'boolean' && typeof p.timedOut === 'boolean'
   && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score));
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));

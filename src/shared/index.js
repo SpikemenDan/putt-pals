@@ -5,6 +5,7 @@
  */
 
 export * from './constants.js';
+export * from './colors.js';
 export * from './tuning.js';
 export * from './display.js';
 export * from './coords.js';

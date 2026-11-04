@@ -53,7 +53,7 @@ async function run() {
 
   // ---- policy and inventory
   const policy = mode => G.powerupPolicy({ mode, rosterSize: 4 });
-  for (const mode of [GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_6, GameModes.TOURNAMENT_9]) assert.equal(policy(mode).carryover, true, mode);
+  for (const mode of [GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7]) assert.equal(policy(mode).carryover, true, mode);
   for (const mode of [GameModes.STANDARD, GameModes.PRACTICE, GameModes.PUTT_PRACTICE]) assert.equal(policy(mode).carryover, false, mode);
   assert.equal(G.powerupPolicy({ mode: GameModes.STANDARD, rosterSize: 1 }).solo, true);
   assert.equal(G.powerupPolicy({ mode: GameModes.PRACTICE, rosterSize: 4 }).solo, true);
