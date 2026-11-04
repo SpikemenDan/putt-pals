@@ -67,9 +67,9 @@ const { EventEmitter } = require('node:events');
   await run('reject spoofed identities, host commands, internal events, stale tokens, oversized data and incompatible versions', async () => {
     const f = await fixture();
     try {
-      const make = (changes = {}) => ({ version: 1, sessionId: 'session-1', senderId: 'a', sequence: 100, roundNumber: 0, puttIndex: 0, now: 0, type: 'command', payload: { type: 'CAST_VOTE', mapIndex: 0 }, ...changes });
+      const make = (changes = {}) => ({ version: 2, sessionId: 'session-1', senderId: 'a', sequence: 100, roundNumber: 0, puttIndex: 0, now: 0, type: 'command', payload: { type: 'CAST_VOTE', mapIndex: 0 }, ...changes });
       const receive = m => f.host.receive('a', JSON.stringify(m));
-      for (const m of [make({ senderId: 'host' }), make({ version: 2 }), make({ sessionId: 'old' }), make({ roundNumber: 99 }),
+      for (const m of [make({ senderId: 'host' }), make({ version: 1 }), make({ sessionId: 'old' }), make({ roundNumber: 99 }),
         make({ payload: { type: 'START_VOTING' } }), make({ payload: { type: 'xstate.after.fake' } }),
         ...['__proto__', 'constructor', 'toString', 'hasOwnProperty'].map(type => make({ payload: { type } })),
         make({ payload: { type: 'CAST_VOTE', mapIndex: 0, playerId: 'host' } }), make({ payload: { type: 'REPORT_SCORE', strokes: -1, roundNumber: 0, puttIndex: 0 } })]) assert.equal(receive(m), false);
@@ -384,8 +384,8 @@ const { EventEmitter } = require('node:events');
         await guest.connect(); guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Player-' + id, resume: 'token-' + id.repeat(16) } }); f.guests.push(guest);
       }
       const everyone = [f.host, ...f.guests];
-      // Worst case for size: a 9-map tournament late in its first map, all eight scorecards filled.
-      f.command('SET_MODE', { mode: 'tournament_9' }); f.command('START_VOTING');
+      // Worst case for size: a 7-map tournament late in its first map, all eight scorecards filled.
+      f.command('SET_MODE', { mode: 'tournament_7' }); f.command('START_VOTING');
       for (const t of everyone) f.command('CAST_VOTE', { mapIndex: 0 }, t);
       for (let putt = 0; putt < 5; putt++) {
         const st = f.session.getSnapshot(); f.clock.increment(Math.max(0, st.roundStartTime + 1500 - f.clock.now()));
@@ -402,7 +402,7 @@ const { EventEmitter } = require('node:events');
       const received = (f.snapshots.length - before) / 7;
       const last = f.snapshots.at(-1);
       assert.equal(Object.keys(last.payload.presence).length, 7, 'every moving guest is in the snapshot');
-      const bytes = new TextEncoder().encode(encode({ version: 1, sessionId: 'session-1', senderId: 'host', sequence: 1e9, roundNumber: last.payload.roundNumber, puttIndex: last.payload.puttIndex, now: 1e12, type: 'snapshot', payload: last.payload })).byteLength;
+      const bytes = new TextEncoder().encode(encode({ version: 2, sessionId: 'session-1', senderId: 'host', sequence: 1e9, roundNumber: last.payload.roundNumber, puttIndex: last.payload.puttIndex, now: 1e12, type: 'snapshot', payload: last.payload })).byteLength;
       console.log(`  measured: 8-player snapshot ${bytes} bytes (limit ${MAX_MESSAGE_BYTES}); ${received} snapshots per guest in 1 s of play with all 7 guests moving`);
       assert.ok(bytes < MAX_MESSAGE_BYTES / 4, `snapshot ${bytes} B leaves headroom under the ${MAX_MESSAGE_BYTES} B message limit`);
       assert.ok(received >= 13 && received <= 16, `about one snapshot per 70 ms (got ${received})`);

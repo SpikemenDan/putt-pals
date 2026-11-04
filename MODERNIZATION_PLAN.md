@@ -1,16 +1,42 @@
-# Putt Pals plan
+# Putt Planet plan
 
 Product direction, technology choices and remaining stages. Live work is tracked in GitHub issues (docs/ISSUES.md); TASKS.md is the roadmap snapshot and PROJECT_STATUS.md records the accepted state of main.
 
+Naming: the game is now called **Putt Planet** (owner vision, 2026-11-03). The repository, package and hosted names still say Putt Pals; renaming them is a separate task (VIS-R) and is not implied by this document.
+
 ## Product direction
 
-Putt Pals is a fast, high-energy 3D multiplayer mini-golf game for the web. It mixes over-the-top arcade party chaos with skill-based putting: instantly easy to join with friends, with real mastery for competitive players. Confirmed scope: private friend rooms, desktop browsers, a normal hosted web build (no single-file or offline distribution, no native packaging).
+Putt Planet is a colourful, fast, high-energy 3D multiplayer mini-golf game for the web. Players explore themed courses across planets and moons, alone or with friends, and the whole experience feels connected: the planet in the menu is the world you travel to, its regions contain playable courses, and the golf balls waiting in the plane become the players on the course. It mixes over-the-top arcade party chaos with skill-based putting: instantly easy to join with friends, with real mastery for competitive players. Confirmed scope: private friend rooms, desktop browsers, a normal hosted web build (no single-file or offline distribution, no native packaging, no public matchmaking, no accounts).
+
+### Journey and menus (owner vision, 2026-11-03)
+
+- **Loading screen.** The Putt Planet title and loading text over the curved horizon of a planet; golf balls occasionally fly across the sky. The planet shows recognisable regions, cities and landmarks (on Gaia: snowy poles, desert and tropical bands near the middle, other biomes between).
+- **Main menu.** Three primary buttons: **Solo**, **Party** and **Custom**. A smaller but noticeable **Settings** button stays easy to find. The game version is shown bottom-left. Playful, polished and animated without making menus hard to navigate.
+- **Solo.** Choose **Casual** (one map) or **Tournament** (**3, 5 or 7 maps**, cumulative scoring), then a destination (**Gaia, Ares or Luna**), then the opening region and map. In a tournament the player picks the next map after each finished map until the series length is reached.
+- **Party.** **Host** creates a party; **Join** takes a party code in a text box with a Join button beside it. Players choose their ball colour before entering the lobby, the host included. A party code exists **only after the host creates the lobby**; opening the Party menu alone creates no room and no code. The lobby shows everyone's balls together in a plane, with their chosen colours.
+- **Custom.** An attractive, interactive gameplay-rules editor. After adjusting settings the player chooses **Play Solo** or **Host Party** using those rules. See "Custom rules".
+- **Launch and arrival.** After the destination and map are settled, a launch countdown runs. In Solo one golf ball jumps from the plane; in Party the group jumps together. The skydive transitions into a cloud loading sequence (clouds whizzing past the camera) that continues while the map loads. When loading finishes: the camera emerges from the clouds, a wide establishing shot reveals the whole map and its surroundings, the camera moves toward the opening hole, then zooms smoothly into the player's ball camera. The gameplay countdown begins only after every active player has finished the arrival sequence. The same arrival introduces every newly selected map, repeat maps included. Loading and cinematic time never consume the hole's gameplay timer.
+
+### Worlds and gravity
+
+A tournament takes place on one world. Each destination has its own visual identity, course collection, environment and gravity, and courses are designed around that world's physics.
+
+| Destination | Identity | Gravity | Regions and environments |
+| --- | --- | --- | --- |
+| **Gaia** | Lively, Earth-inspired planet | Standard | Snow, desert, tropical, cities and further biomes |
+| **Ares** | Rugged, Mars-inspired planet | Lower than Gaia | Hot, cold and temperate regions with distinct terrain |
+| **Luna** | Gaia's barren moon | Lower than Ares | Craters, dust fields, rocky landscapes and lunar installations |
+
+- Gravity must noticeably change shots, jumps, airtime and strategy. Today `gravity` in `src/shared/tuning.js` is one number (700 units/s^2); it becomes a per-world profile with Gaia as the shipped default, and the numbers for Ares and Luna are set by owner playtesting (not yet decided).
+- Players choose maps through a view of the chosen world and its regions. Each region holds several individually named courses (for example the snowy trio Frostbite Falls, Glacier Glide and Aurora Ridge). Regions are places with their own identity, never one course recoloured.
+- Suggested Gaia biomes: polar and alpine, desert, tropical, temperate forest, wetlands and volcanic, with cities and settlements inside them.
+- **Environmental effects.** The core power-up set is the same everywhere. The precipitation power-up gives rain on warm Gaia maps and snow on cold Gaia maps, and both make the course slippery (gameplay). On Ares the equivalent effect is **wind** and on Luna it is **dust and solar activity**; these Ares and Luna effects are **visual only** (owner, 2026-11-03) and add atmosphere without changing physics. Effects must clearly communicate what is happening.
 
 ### Look and feel
 
 - **Bold comic style.** Thick black outlines, action crosshatching, saturated colour and caption-box UI. The inspiration is a comic look; all lettering, characters, logos and art are original and nothing is copied from existing works.
-- **Sky archipelago.** Every putt is an isolated floating island in the clouds, with dynamic skies, birds and sun flares.
-- **Atmosphere.** Courses carry their own weather, from rainstorms with lightning to snowy peaks. This ambient weather is visual only and is separate from the gameplay weather power-ups below.
+- **Sky and planets.** Dynamic skies, birds and sun flares remain. Whether individual holes keep the floating-island-in-the-clouds layout on planet surfaces, or become ground-based planet courses, is an open owner decision (see "Open decisions" below); until then K1a keeps its current scope.
+- **Atmosphere.** Courses carry their own weather, from rainstorms with lightning to snowy peaks, dust and wind. This ambient weather is visual only and is separate from the gameplay weather power-ups below.
 - **Console feel.** Snappy arcade menus, punchy audio and glowing player markers, so it plays like a premium game rather than a web page.
 
 ### Courses
@@ -22,12 +48,22 @@ Putt Pals is a fast, high-energy 3D multiplayer mini-golf game for the web. It m
 - **Risk versus reward.** Guard walls keep ordinary shots in play; deliberate drop-offs tempt bold players into risky shortcuts, which may include a hole-in-one on some putts. A hole-in-one is an optional reward, never a requirement.
 - **Par, not hole-in-one, defines a playable hole.** Every putt must be completable within its par; par is 2 to 6 strokes per putt. Courses can therefore be longer, multi-level and more complicated.
 - **Trick shots.** Corner bouncers and interactive surfaces reward bank shots and unexpected angles.
+- **Six holes per map.** A map is six holes (putts) on one course, as defined previously. A region holds several named maps.
+
+#### Airborne balls and 3D obstacles (owner, 2026-11-03)
+
+Maps are 3D, with ramps and other obstacles that lift the ball, and the Chip In power-up also launches it. The owner accepts the Bumper and Orbital Bumper force and designs as they are, but airborne play is where they get tricky. Everything that touches the ball must define what it does to an airborne ball, not only a rolling one:
+
+- Bumpers and orbital bumpers need a volume (height as well as radius): which airborne heights they affect, how the bounce direction and kick apply to a ball moving up or down, and how the orbital pull acts on vertical velocity. Their rolling-ball force and look are unchanged.
+- Ramps, drops, tubes, fans, wind zones, water and the cup must each state airborne behaviour, including landing, clearance over walls and ceilings, and what happens when an airborne ball passes through a deployed object.
+- Gravity differs per world, so airtime, arcs and the apex a chip shot reaches differ per world. The solver and every test chamber must run per world.
+- Simulation coordinates already keep z vertical; the deployed-object contract (`x`, `y` placement) needs a vertical extent before it is accepted (see G1e in TASKS.md).
 
 ### Game modes
 
 | Mode | Rules |
 | --- | --- |
-| Party Circuit and Tournaments | Group matches against the clock with unlimited strokes, live scorecards and a crowned champion. Tournaments run 3, 6 or 9 maps. |
+| Party Circuit and Tournaments | Group matches against the clock with unlimited strokes, live scorecards and a crowned champion. Tournaments run **3, 5 or 7 maps** on one world (changed from 3, 6 or 9 on 2026-11-03). |
 | Putt Pong | Turn-based 1v1 cup pong with chip shots: a 10-cup rack at each end, bonus balls and a redemption shot. Details below. |
 | No Power-Ups (Pure Mini-Golf) | Competitive mode with no power-ups: line, angle and touch only. |
 | Practice Suite | Relaxed solo play: explore any course or drill one hole repeatedly. |
@@ -52,6 +88,27 @@ Putt Pals is a fast, high-energy 3D multiplayer mini-golf game for the web. It m
 
 Collectible ball skins and trail skins (speed lines, elemental auras, comic sparks), plus custom hole-in-one celebrations with banners, fanfare and screen effects.
 
+**Ball colours.** At least **21 rainbow colours**: light, standard and dark variations of red, orange, yellow, green, blue, indigo and violet. Further colours: white, black, gray and brown, with room for pink, cyan, gold and silver. The picker shows the real ball appearance and makes the selection obvious. Colours are **unique within a party**; occupied colours are marked unavailable, and a disconnected player's colour stays reserved for their return. Today's palette has 8 colours, so this changes the shared player and protocol contracts (VIS-C).
+
+### Voting and match flow (owner, 2026-11-03)
+
+- When the host presses **Play** in a party, the party votes on: (1) Casual or Tournament; (2) 3, 5 or 7 maps, if Tournament wins; (3) Gaia, Ares or Luna; (4) the opening region and map. A launch countdown follows. In a tournament players vote for the next map after each finished map; scores carry forward and final results close the series.
+- **Ties.** A tied map vote picks randomly from the tied maps only. Other ties (format, length, destination) use the same picker. An animated random picker cycles through the tied options and reveals the winner; every player sees the same animation and result, so the result is chosen once by the room and broadcast.
+- **Repeat maps are allowed.** Played maps stay selectable; a repeat is introduced by the same arrival sequence.
+- Gameplay stays free-for-all and simultaneous with a per-hole timer (see "Room and scoring rules").
+
+### Disconnects, rejoining and late arrivals (owner, 2026-11-03)
+
+- A disconnected player never holds up the match: any action that needs them is skipped while the others continue. Their identity, colour, score and progress stay reserved in the lobby.
+- **Rejoin.** If the player returns to the same lobby with the same username before the current hole's timer expires and before the hole closes, they resume from their saved position with their stroke count and remaining time. If the hole closes first, they receive a missed-hole penalty, and again for each further missed hole.
+- **Late arrival.** If the current hole is open and its timer has not expired, a late arrival enters it with the time remaining. They receive penalty strokes for every earlier hole they missed. If the hole has closed, they start at the next hole.
+- **Missing play never improves a score.** A missed hole scores the configured maximum-hole score plus the missed-hole penalty, never zero strokes. The scorecard marks these penalties clearly.
+- **Identity.** The username is what players see. A saved reconnect identity (a local token created on join, with no account or sign-in) proves ownership of the player slot so nobody else can take it, and rejoining restores the original player record.
+
+### Custom rules
+
+Custom opens a gameplay rules editor built from the existing validated gameplay configuration (`src/shared/tuning.js`, documented in docs/TUNING.md; this is the verified source, not an `inputs.md`). Numeric settings are labelled sliders with visible values; other settings are toggles and selectors. Likely categories: ball physics, shot power, aiming controls, timers, power-ups and match rules, limited to what the game supports. Players can see current values, adjust within supported limits, reset one setting and restore all defaults. Settings carry the same precision a developer has, in player-friendly language. Rules chosen for a party are fixed when the lobby is created or the match starts and are never changed mid-match; every participant must be on the same values. Secrets, authentication and service quotas are never exposed. The developer tuning panel (DX2) remains separate and development-only.
+
 ## Implementation snapshot
 
 The implementation paragraphs and stage statuses below are historical notes from the supplied plan. They have not been freshly checked against GitHub or runtime code. Some lag PROJECT_STATUS.md (including No Power-Ups, cosmetics, catalog power-ups and the eight-player server cap). Read the supplied PROJECT_STATUS.md for the later documented snapshot and verify code/live issues before taking action. This warning does not change the product vision or confirmed target rules.
@@ -64,13 +121,13 @@ Not built: Putt Pong, the No Power-Ups mode, the power-ups listed above other th
 
 - Up to **8 players** per room, **3 inventory slots**.
 - **Free-for-all, everyone at once.** Every player is on the same course and aims for the same hole in the current putt, all putting simultaneously with no turn order. A player who finishes early waits (spectating) for the others, even if one of them uses the whole time limit; the room moves to the next putt only when every player has finished (sunk or timed out), and everyone moves on together.
-- **Win condition:** strokes minus par. The player with the lowest total relative to par after the 6 putts of a level wins. A casual game is one level; a tournament runs 3, 6 or 9 levels and the lowest total across them wins.
+- **Win condition:** strokes minus par. The player with the lowest total relative to par after the 6 putts of a level wins. A casual game is one level (map); a tournament runs 3, 5 or 7 levels on one world and the lowest total across them wins. Missed holes score the configured maximum-hole score plus a missed-hole penalty (see "Disconnects, rejoining and late arrivals"). The 3, 5, 7 lengths replace 3, 6, 9 (owner, 2026-11-03).
 - **Skins are simply selectable** for now (no unlock progression); the choice is stored locally in the browser.
 - **Legacy power-ups retired:** Rewind, Reversiball and Zanyball are removed in favor of the catalog above.
 - **Solo pool** (Solo and Practice): the self-enhancing power-ups only: Chip In, Steady Aim, Hole Magnet, Ghost Ball, Small Ball, Tall Ball and Sticky Ball. Bumpers and the global weather items are excluded because they are course hazards that exist to affect other players.
 - **Sequencing:** the framework and the power-ups that leave default trajectories unchanged (G1a-G1f, GM1, F1, C3) may start now. Physics and course changes follow the course and physics rules below (S3, then SV1, then G1g and K1).
 
-Code today versus these rules: the 8-player cap, the 8-colour palette, the 3 slots, free-for-all simultaneous play, advancing together and the 3/6/9-level tournaments already exist. C3 (PR #133) aligned the N4 server-room contract with eight players and added strokes-minus-par results.
+Code today versus these rules: the 8-player cap, the 3 slots, free-for-all simultaneous play and advancing together already exist and stay (the cap of 8 players and 3 power-up slots is reconfirmed on 2026-11-03; unused power-ups carry over between maps in a tournament). The 8-colour palette and the 3/6/9-level tournaments exist today but are being replaced by the 21-plus-colour palette and 3/5/7 tournaments (VIS-C, VIS-T). Late joiners are spectators for the whole current map in `src/session/README.md`; the new late-arrival rules replace that (VIS-D). C3 (PR #133) aligned the N4 server-room contract with eight players and added strokes-minus-par results.
 
 ### Course and physics rules (owner decisions, 2026-10-29)
 
@@ -101,9 +158,19 @@ Assumptions confirmed by the owner (2026-10-29): "the other person" in the redem
 
 **Engineering consequences.** Putt Pong needs: a lofted chip shot as its base shot (the Chip In mechanic, G1b); courses with many cups (the current course schema and cup physics handle one hole per putt, so cups become a list with per-cup enabled state, elimination events and a renderer cover or removal effect); a turn-based phase in the session machine and server contract, where main-game rooms are simultaneous; and a field layout with rack geometry at each end. No power-ups by default.
 
-### Still open
+### Open decisions
 
-Whether skins should one day unlock through play or an account (not needed now).
+Raised by the 2026-11-03 vision; nothing below is decided or scheduled.
+
+- Skins unlocking through play or an account (not needed now).
+- **Island versus planet-surface courses.** The current plan has each putt on an isolated floating island (K1a). The vision places courses in regions on planets. Keep islands, move to ground-based courses, or mix.
+- **Where Practice, Putt Pong and No Power-Ups live in the menu.** The vision names only Solo, Party and Custom. Likely homes: No Power-Ups as a Custom rule (GM1 flag), Practice under Solo, Putt Pong a Party/Custom option. Needs the owner.
+- **Gravity numbers** for Gaia, Ares and Luna, and whether gravity is a Custom setting.
+- **Missed-hole numbers:** the maximum-hole score and the missed-hole penalty (tuning fields to be added) and how a rejoining player's hole timer is held while they are away.
+- **Course content volume.** How many regions and named maps each world ships with first, and how many of the 22 existing maps are kept, moved to a world or retired.
+- **Ares and Luna environment power-up.** Their environment is visual only; whether the weather power-up still exists there as a cosmetic item, or is replaced, is not stated.
+- **Late join and rejoin across a tournament:** how a late arrival's penalties are scored in a tournament total.
+- **Product rename** from Putt Pals to Putt Planet in code, package and hosting (VIS-R).
 
 ## Technology
 
@@ -134,6 +201,7 @@ TypeScript, Zod, Vitest, ESLint and Prettier were considered and are not adopted
 | Look and feel (V1a-V1d): toon style, sky world, palettes, ambient weather, comic HUD | Done |
 | M6 Release readiness (Q1 #18): par-achievability check under final physics, production-like preview, rollback, manual playtests | Blocked on N4 |
 | Vision features (G1, K1, M1 and the new tasks in TASKS.md) | Not started; start order in the owner decisions above |
+| Putt Planet vision (VIS-W worlds and gravity, VIS-C colours, VIS-T tournament length, VIS-V voting, VIS-D disconnect and rejoin, VIS-A arrival, VIS-M menus, VIS-U custom rules, VIS-G regions, VIS-E environment, VIS-R rename) | Defined 2026-11-03; not started; see TASKS.md and Open decisions |
 
 M4 exit gate: four-player real-browser games across separate networks through an authorized deployed Worker; controller departure, guest recovery after hibernation or restart, forged, stale and versioned messages, bounded queues and quota failure all tested; deployment and rollback documented. Contracts and lifecycle defaults (immediate controller succession, 30-second reconnect grace, 15-minute empty retention) are in docs/networking/SERVER_ROOMS.md; local setup is in docs/networking/CLOUDFLARE_SETUP.md. The browser stays trusted for ball physics; the server owns room coordination. N3 (managed TURN) is paused as an alternative, not a prerequisite.
 

@@ -60,7 +60,7 @@ async function open(resume = null) {
   assert.equal(response.status, 101);
   const client = observe(response.webSocket);
   const welcome = next(client, frame => frame.type === 'welcome' || frame.type === 'error');
-  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode: code, name: 'Player', resume }));
+  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: code, name: 'Player', resume }));
   const frame = await welcome;
   assert.equal(frame.type, 'welcome', JSON.stringify(frame));
   return client;

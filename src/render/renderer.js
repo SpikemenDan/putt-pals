@@ -10,7 +10,7 @@
 import { BALL_RADIUS } from '../shared/constants.js';
 import { DISPLAY } from '../shared/display.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
-import { createMaterialLibrary, PLAYER_COLORS } from './materials.js';
+import { createMaterialLibrary, PLAYER_COLORS, colorHex } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
 import { cosmeticRecord, DEFAULT_COSMETICS, rainbowHex } from '../cosmetics/catalog.js';
 import { applyBallSkin, createAimGuide, createAura, createBall, createBlob, createConfetti, createTrail, createTurnRing, placeAura, placeBlob, placeTurnRing } from './actors.js';
@@ -293,7 +293,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
 
       const me = local || { x: 0, y: 0, z: 0, vx: 0, vy: 0, moving: false, mode: 'lobby', color: 0 };
       localBall.visible = me.mode === 'play' || me.mode === 'sunk';
-      localBall.material.color.set(PLAYER_COLORS[me.color % 8]);
+      localBall.material.color.set(colorHex(me.color));
       const meScale = (me.radius > 0 ? me.radius / R : 1) * display.ball.visualScale; // Small/Tall Ball (per-ball radius) times the presentation scale
       localBall.scale.setScalar(meScale);
       localBall.position.set(me.x + o[0], me.z + R * meScale, me.y + o[1]);
@@ -301,7 +301,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       const floor = surfaceHeight(course, me.x, me.y);
       placeBlob(localBlob, me.x + o[0], isFinite(floor) ? floor : me.z, me.z, me.y + o[1], localBall.visible);
 
-      placeTurnRing(turnRing, PLAYER_COLORS[me.color % 8], me.x + o[0], isFinite(floor) ? floor : me.z, me.y + o[1], me.mode === 'play' && !me.moving, t);
+      placeTurnRing(turnRing, colorHex(me.color), me.x + o[0], isFinite(floor) ? floor : me.z, me.y + o[1], me.mode === 'play' && !me.moving, t);
 
       for (const entry of remotes.values()) { entry.ball.visible = false; if (entry.label) entry.label.visible = false; if (entry.aura) entry.aura.visible = false; entry.blob.visible = false; }
       for (const p of shown) {
@@ -314,7 +314,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
           entry.name = name;
         }
         const d = entry.shown = smoothRemotePosition(entry.shown, { x: +p.x || 0, y: +p.y || 0, z: +p.z || 0 });
-        entry.ball.material.color.set(PLAYER_COLORS[(+p.color || 0) % 8]);
+        entry.ball.material.color.set(colorHex(+p.color || 0));
         const scale = (p.radius > 0 ? p.radius / R : 1) * display.ball.visualScale;
         entry.ball.scale.setScalar(scale);
         entry.ball.userData.scale = scale;
@@ -331,7 +331,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         placeAura(entry.aura, p.effect, entry.ball.position, true, t, entry.ball.userData.scale || 1);
       }
       const trailSkin = cosmetics.trail;
-      trail.update(localBall.position, me.moving, localBall.visible && me.mode === 'play', trailSkin.color === 'player' ? PLAYER_COLORS[me.color % 8] : trailSkin.color === 'rainbow' ? rainbowHex(t) : trailSkin.color, trailSkin.size);
+      trail.update(localBall.position, me.moving, localBall.visible && me.mode === 'play', trailSkin.color === 'player' ? colorHex(me.color) : trailSkin.color === 'rainbow' ? rainbowHex(t) : trailSkin.color, trailSkin.size);
       if (me.mode === 'sunk' && lastMode !== 'sunk') confetti.burst(localBall.position, cosmetics.celebration);
       lastMode = me.mode;
       confetti.update(dt);

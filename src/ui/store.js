@@ -69,7 +69,7 @@ export function createUiStore({ courses, clock = globalThis }) {
     const hasRoom = !!room && local.active;
     const view = {
       screens: reuse('screens', screens),
-      landing: reuse('landing', { connecting: !!local.connecting, error: local.connectError || '', cosmetics: local.cosmetics }),
+      landing: reuse('landing', { connecting: !!local.connecting, error: local.connectError || '', cosmetics: local.cosmetics, color: Number.isInteger(local.colorPref) ? local.colorPref : null }),
       lobby: reuse('lobby', hasRoom && screens.lobby ? lobbyView(room, local, now, courses) : null),
       voting: reuse('voting', hasRoom && screens.voting ? votingView(room, local, now, courses) : null),
       hud: reuse('hud', hasRoom && screens.game ? hudView(room, local, now, courses) : null),
