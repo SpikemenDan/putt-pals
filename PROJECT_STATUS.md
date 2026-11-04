@@ -16,6 +16,7 @@ The product vision (MODERNIZATION_PLAN.md) is only partly built. Not built: Putt
 - Original comic art direction: smooth flat colour, ink outlines, no scenery clutter. Ambient weather on Frost Hollow and Cyclone Ring is visual only.
 - Course direction: per-putt walled islands with designed gaps, true portal pairs, stronger fans, 3D courses and more complicated level design. Every putt must be possible in par (2 to 6); hole-in-one guarantees are removed; physics should be more forgiving.
 - Product vision and room rules as recorded in MODERNIZATION_PLAN.md: 8 players, 3 inventory slots, free-for-all on the same hole with everyone putting at once and advancing together, lowest strokes minus par wins, Rewind/Reversiball/Zanyball retired, skins selectable.
+- Putt Planet vision (owner, 2026-11-03; recorded in MODERNIZATION_PLAN.md, not yet implemented): worlds Gaia, Ares and Luna with per-world gravity; tournaments of 3, 5 or 7 maps on one world; six holes per map; at least 21 rainbow ball colours, unique per party; room voting with a shared random tie-break; rejoin and late-arrival rules with missed-hole penalties; skydive and cloud arrival sequence; Custom rules editor. The 8-player cap and 3 inventory slots stay. Ares and Luna environment effects are visual only. Several open decisions are listed in MODERNIZATION_PLAN.md.
 - Direct implementation requests authorize scoped local commits. Remote writes, merging and deployment follow AGENTS.md; repeated local commit approval is not required.
 
 ## Known issues and gaps
