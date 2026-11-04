@@ -19,7 +19,6 @@ Statuses: READY (eligible after dependency and overlap checks), ACTIVE, BLOCKED 
 | [F1 #101](https://github.com/SpikemenDan/putt-pals/issues/101) | REVIEW | none | PR #132 merged (local ball and trail skins, celebrations); issue acceptance remains open |
 | [CL2 #103](https://github.com/SpikemenDan/putt-pals/issues/103) | REVIEW | none | PR #128 merged (camera collision, wall fade, depth-tested aim arrow); issue acceptance remains open |
 | [G1b #89](https://github.com/SpikemenDan/putt-pals/issues/89) | REVIEW | G1a | PR #118 merged (self utility power-ups); issue acceptance remains open |
-| [G1e #92](https://github.com/SpikemenDan/putt-pals/issues/92) | ACTIVE | none | Draft PR #157 (arshakir). Needs a vertical extent and airborne rules, server-room placement, and a rebase onto the protocol bump from PR #171 (next `PROTOCOL_VERSION`, regenerated fixture) |
 | [VIS-C #161](https://github.com/SpikemenDan/putt-pals/issues/161) | REVIEW | none | PR #171 merged (30-colour palette, unique per room, `PROTOCOL_VERSION` 2); owner look acceptance remains |
 | [#177](https://github.com/SpikemenDan/putt-pals/issues/177) | READY | none | Stale in-game help and start-screen text (map and power-up counts, engine-migration paragraph) |
 
@@ -32,7 +31,6 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | ID | Depends on | Scope |
 | --- | --- | --- |
 | [SV1 #87](https://github.com/SpikemenDan/putt-pals/issues/87) Par-route solver | #86 | Multi-stroke solver proving a robust route within par for every putt, replacing the single-shot hole-in-one search, hit-count ladder and hole-in-one par defaults in `tools/cli`; par becomes an integer from 2 to 6 per putt (the shared validator currently allows 1 to 10); par defaults come from the shortest robust route; new difficulty measure and fixtures; `rank` and `check` updated. Coordinate contract changes with affected active work and update consumers/tests together |
-| [G1e #92](https://github.com/SpikemenDan/putt-pals/issues/92) Deployables | #88 | Bumper and Orbital Bumper (3 impacts, visible radius rings), synced objects (active, see Open work)
 | [G1f #93](https://github.com/SpikemenDan/putt-pals/issues/93) Global hazards | #88 | Rain, Snow, Wind, targeted Lightning, roaming Tornado and Hurricane driven by synced room time; keep distinct from the visual-only ambient weather |
 | [G1g #94](https://github.com/SpikemenDan/putt-pals/issues/94) Course mechanics | #87 | Corner wedges and bouncers on tight turns, stronger fans, vortex rework, true portal pairs; re-solve affected maps |
 | [GM2 #96](https://github.com/SpikemenDan/putt-pals/issues/96) Putt Pong | #88, #89 (lofted shot) | Turn-based 1v1 cup-rack mode per MODERNIZATION_PLAN.md: 10-cup racks, bonus balls, redemption and rounds, multi-cup course support with elimination events, rack field and renderer effect, turn phase in the session machine and server-room contract, lobby entry. More than two players is deferred by the owner |
@@ -64,7 +62,7 @@ Breakdown of the redefined vision in MODERNIZATION_PLAN.md. Tracked by the [VIS 
 
 Existing tasks changed by the vision:
 
-- **G1e #92 (Deployables):** the Bumper and Orbital Bumper force and designs are approved. The contract draft must add a vertical extent and airborne rules (see "Airborne balls and 3D obstacles" in the plan) before the integration owner accepts it.
+- **G1e #92 (Deployables):** delivered in PR #157 (merged 2026-11-04, issue closed) with the owner-approved force and designs, the vertical extent and airborne rules (contract revision 2) and server-room placement and hit checks; `PROTOCOL_VERSION` 3, `SERVER_ROOM_VERSION` 4. Separate-network validation stays with N4 #65.
 - **K0 #104, K1a-K1d, W2 #105, W3 #106, SV1 #87, G1b Chip In:** all need airborne behaviour and per-world gravity in their acceptance checks.
 - **M1 #36:** its menus scope is now part of VIS-M.
 - **GM1 #95 (No Power-Ups):** becomes a Custom rule flag if the owner confirms (plan, Open decisions).
@@ -83,7 +81,7 @@ All merged to main; details in the PRs and docs/reviews/.
 | Rendering | R2 Three.js 0.186.1 (#16, PR #53); R2w Windows GPU validation (#52, PR #56); R2c shader colours (#57, PR #63) |
 | Look and feel | V1a toon foundation (#58, PR #67); V1b sky world (#59, PR #76); V1c palettes and weather (#60, PR #78); V1d comic HUD (#61, PR #79); V1 umbrella (#33) |
 | Evaluation | P1 Rapier experiment (#17, PR #80): production adoption deferred |
-| Vision backlog | T2 tuning module (#83, PR #109); G1a power-up framework (#88, PR #115); GM1 No Power-Ups flag (#95, PR #119); G1c aim sabotage (#90, PR #135); G1d ball auras (#91, PR #134); C3 eight-player rooms (#85, PR #133); U2 aim arrow (#84, PRs #107 and #156); VIS-T 3/5/7 tournaments (#160, PR #159) |
+| Vision backlog | T2 tuning module (#83, PR #109); G1a power-up framework (#88, PR #115); GM1 No Power-Ups flag (#95, PR #119); G1c aim sabotage (#90, PR #135); G1d ball auras (#91, PR #134); C3 eight-player rooms (#85, PR #133); U2 aim arrow (#84, PRs #107 and #156); VIS-T 3/5/7 tournaments (#160, PR #159); G1e Bumper and Orbital Bumper deployables (#92, PR #157) |
 
 
 ## Developer workflow improvements
