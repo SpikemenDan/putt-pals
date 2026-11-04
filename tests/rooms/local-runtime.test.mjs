@@ -233,7 +233,7 @@ async function main() {
   assert.equal(roomOne.id, sameRoom.id, 'same environment and room code must map to the same Durable Object');
   assert.notEqual(roomOne.id, otherRoom.id, 'different room codes must use isolated Durable Objects');
 
-  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v2:room123');
+  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v3:room123');
   assert.notEqual(roomObjectName('development', 'room123'), roomObjectName('preview', 'room123'));
   assert.notEqual(roomObjectName('preview', 'room123'), roomObjectName('production', 'room123'));
   assert.throws(() => roomObjectName('staging', 'room123'), /Unknown room environment/);
@@ -363,7 +363,7 @@ async function main() {
     const results = await waitForSnapshot(controller, snapshot => snapshot.session.node === 'results');
     assert.equal(results.session.context.players[host.playerId].scores.length, 6);
     assert.equal(results.session.context.players[clients[1].playerId].scores.length, 6);
-    console.log('Local Wrangler runtime passed: routing/isolation, v2 admission, eight-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
+    console.log('Local Wrangler runtime passed: routing/isolation, v3 admission, eight-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
   } catch (error) {
     throw new Error(`${phase}: ${error.message}`, { cause: error });
   } finally {
