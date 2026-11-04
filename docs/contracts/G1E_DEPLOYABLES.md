@@ -63,7 +63,7 @@ Worker proposes these fields for `docs/TUNING.md`; values are the owner's call:
 | `deployables.bumperRadius` | 14 | solid bumper radius (world units) |
 | `deployables.bumperRestitution` | 1.1 | speed multiplier on a bounce (above 1 gives the pinball kick) |
 | `deployables.maxImpacts` | 3 | impacts before removal |
-| `deployables.orbitalRange` | 65 | gravity ring radius |
+| `deployables.orbitalRange` | 32.5 | gravity ring radius |
 | `deployables.orbitalPull` | 1000 | pull acceleration at the ring edge, falling off linearly toward the centre |
 | `deployables.hitCooldownMs` | 250 | per-object report rate limit |
 

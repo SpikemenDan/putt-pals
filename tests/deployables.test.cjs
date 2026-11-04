@@ -100,7 +100,7 @@ const assert = require('node:assert/strict');
   cases++;
 
   // ---- orbital ring bends a passing shot toward the centre; outside the range nothing happens
-  const pass = roll([rec('orbital', 250, P.orbitalRange * 0.7)], { steps: 500 }).p; // passes through the outer part of the ring, well clear of the body
+  const pass = roll([rec('orbital', 80, P.bumperRadius + 12)], { steps: 500 }).p; // passes through the ring just outside the body, well clear of the body
   assert.ok(pass.vy > plain.vy || pass.y > plain.y, 'the ring pulled the ball toward the ring centre');
   const [ax, ay] = D.orbitalAcceleration([rec('orbital', 0, 0)], P.orbitalRange * 2, 0, dt);
   assert.deepEqual([ax, ay], [0, 0]);
@@ -181,19 +181,20 @@ const assert = require('node:assert/strict');
   {
     cases++;
     const R = require('../src/shared/constants.js').BALL_RADIUS;
-    const ring = [rec('orbital', 40, 0)];
+    const OX = P.bumperRadius + R + 8; // inside the ring, a little clear of the body
+    const ring = [rec('orbital', OX, 0)];
     const ball = () => { const p = createPlayerState('Rest', 0, { x: 0, y: 0, z: 0 }); p.deployables = ring; p.moving = false; return p; };
     const { environmentAwake } = await import('../src/app/rules.js');
     const flat = { ...course, fan: [], tornado: [], movers: [], hole: [5000, 5000] };
     assert.equal(environmentAwake(flat, ball(), 0), true, 'a resting ball inside the ring wakes');
-    const out = ball(); out.x = 40 + 500; assert.equal(environmentAwake(flat, out, 0), false, 'outside the ring it stays asleep');
-    const touching = ball(); touching.x = 40 - P.bumperRadius - R; assert.equal(environmentAwake(flat, touching, 0), false, 'a ball held against the body may rest');
+    const out = ball(); out.x = OX + 500; assert.equal(environmentAwake(flat, out, 0), false, 'outside the ring it stays asleep');
+    const touching = ball(); touching.x = OX - P.bumperRadius - R; assert.equal(environmentAwake(flat, touching, 0), false, 'a ball held against the body may rest');
     // Drawn in by the ring, the ball meets the body and is kicked back out (the pull does not swallow the bounce).
     const p = ball(); p.moving = true; let hit = false, kicked = false, closest = Infinity;
     for (let i = 0; i < 2400 && !kicked; i++) {
       for (const e of stepBall(p, course, dt)) if (e.type === D.DEPLOYABLE_HIT) hit = true;
-      closest = Math.min(closest, Math.hypot(p.x - 40, p.y));
-      if (hit && (p.x - 40) * p.vx > 0) kicked = true; // moving away from the centre after the hit
+      closest = Math.min(closest, Math.hypot(p.x - OX, p.y));
+      if (hit && (p.x - OX) * p.vx > 0) kicked = true; // moving away from the centre after the hit
     }
     assert.ok(hit, 'the ball reached the body and reported an impact');
     assert.ok(kicked, 'the body threw the ball back out');
@@ -218,10 +219,10 @@ const assert = require('node:assert/strict');
     const blocked = shoot(0, 250, [rec('bumper', 200, 100)]);
     assert.equal(blocked.sunk, false, 'the bumper stops a shot that sinks without it'); assert.ok(blocked.hits >= 1, 'the bumper reports the hit');
     // Orbital chamber: a shot that misses wide sinks when an orbital ring sits beside the lane (robust over a range of aims).
-    for (const aimOff of [25, 30]) {
+    for (const aimOff of [30, 35]) {
       const angle = Math.atan2(aimOff, 320);
       assert.equal(shoot(angle, 250, []).sunk, false, `aim ${aimOff} misses without the ring`);
-      assert.equal(shoot(angle, 250, [rec('orbital', 310, 90)]).sunk, true, `aim ${aimOff} sinks with the ring (310,90)`);
+      assert.equal(shoot(angle, 250, [rec('orbital', 320, 100)]).sunk, true, `aim ${aimOff} sinks with the ring (320,100)`);
     }
   }
 

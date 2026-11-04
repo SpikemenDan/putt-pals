@@ -19,7 +19,7 @@ export const DEPLOYABLE_COLORS = Object.freeze({
 
 /** Hologram colours for the placement ghost: green where it can go, red where it cannot. */
 export const HOLO_OK = 0x2dff6e, HOLO_BLOCKED = 0xff2d2d;
-/** Dots above a bumper: one per hit it has left. */
+/** Dots above a bumper: one per hit it has left, in the bumper's own colour. */
 const DOT_HEIGHT = 22, DOT_SPACING = 6;
 
 /** Lathe profile [radius multiple, height] from the floor up: base lip, indented waist, flared barrel, domed cap. */
@@ -84,9 +84,10 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
   function showLives(entry, lives) {
     if (entry.lives === lives) return;
     if (entry.dots) { entry.root.remove(entry.dots.group); for (const m of entry.dots.mats) m.dispose(); }
+    const color = (DEPLOYABLE_COLORS[entry.kind] ?? DEPLOYABLE_COLORS.bumper).body; // the dots match the bumper's own colour
     const dotGroup = new THREE.Group(), mats = [];
     for (let i = 0; i < lives; i++) {
-      const m = library && toon ? library.toon(0xffe14d) : new THREE.MeshStandardMaterial({ color: 0xffe14d, roughness: 0.5 });
+      const m = library && toon ? library.toon(color) : new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
       mats.push(m);
       const dot = new THREE.Mesh(dotGeometry, m);
       dot.position.set((i - (lives - 1) / 2) * DOT_SPACING, DOT_HEIGHT, 0);

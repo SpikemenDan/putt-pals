@@ -56,7 +56,7 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `deployables.orbitalRestitution` | 1.1 | 0 to 3 | Orbital Bumper body bounce: reflected normal speed as a multiple of the incoming speed (above 1 kicks a ball that was pulled in back out). |
 | `deployables.minHitSpeed` | 15 | 0 to 1000 | Slowest approach speed (units/s) that counts as an impact on a Bumper or Orbital Bumper; slower contacts only push the ball out. |
 | `deployables.maxImpacts` | 3 | 1 to 20 | Hits a Bumper or Orbital Bumper survives before it disappears. |
-| `deployables.orbitalRange` | 65 | 0 to 1000 | Orbital Bumper ring radius (world units). |
+| `deployables.orbitalRange` | 32.5 | 0 to 1000 | Orbital Bumper ring radius (world units). |
 | `deployables.orbitalPull` | 1000 | 0 to 10000 | Orbital Bumper pull acceleration at the ring centre (falls off linearly to the ring edge). |
 | `deployables.hitCooldownMs` | 250 | 0 to 5000 | Minimum milliseconds between impact reports for one deployed object. |
 | `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
