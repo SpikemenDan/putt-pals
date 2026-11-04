@@ -10,6 +10,7 @@
 import { TUNING } from '../shared/tuning.js';
 import { surfaceHeight } from '../simulation/physics.js';
 import { addInk } from './outline.js';
+import { PLAYER_COLORS } from './materials.js';
 
 /** body: main colour, accent: waist band, cap ring and orbital moon. */
 export const DEPLOYABLE_COLORS = Object.freeze({
@@ -33,8 +34,15 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
   const entries = new Map(); // id (or 'ghost') -> { kind, root, spin, ring, owned, holo, dots, lives }
   const dotGeometry = new THREE.SphereGeometry(2, 14, 10);
   
-  function build(kind, ghost) {
-    const p = TUNING.deployables, palette = DEPLOYABLE_COLORS[kind] ?? DEPLOYABLE_COLORS.bumper;
+  /** A Bumper wears its owner's player colour with a lighter shade of it as the accent; the Orbital keeps its own blue. */
+  function paletteFor(kind, colorIndex) {
+    if (kind !== 'bumper' || !Number.isInteger(colorIndex)) return DEPLOYABLE_COLORS[kind] ?? DEPLOYABLE_COLORS.bumper;
+    const body = new THREE.Color(PLAYER_COLORS[colorIndex % 8]);
+    return { body: body.getHex(), accent: body.clone().lerp(new THREE.Color(0xffffff), 0.55).getHex() };
+  }
+
+  function build(kind, ghost, colorIndex) {
+    const p = TUNING.deployables, palette = paletteFor(kind, colorIndex);
     const root = new THREE.Group(), owned = [], inked = [], holo = [];
     const geo = g => { owned.push(g); return g; };
     const mat = (color, opts = {}) => {
@@ -78,13 +86,13 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
     }
     for (const mesh of inked) { const hull = addInk(THREE, mesh, library.ink.solid); hull.geometry && owned.push(hull.geometry); }
     group.add(root);
-    return { kind, root, spin, ring, owned, holo, dots: null, lives: -1 };
+    return { kind, root, spin, ring, owned, holo, dots: null, lives: -1, colorIndex, palette };
   }
   /** One dot per remaining hit, in a row above the cap; rebuilt only when the count changes. */
   function showLives(entry, lives) {
     if (entry.lives === lives) return;
     if (entry.dots) { entry.root.remove(entry.dots.group); for (const m of entry.dots.mats) m.dispose(); }
-    const color = (DEPLOYABLE_COLORS[entry.kind] ?? DEPLOYABLE_COLORS.bumper).body; // the dots match the bumper's own colour
+    const color = entry.palette.body; // the dots match the bumper's own colour
     const dotGroup = new THREE.Group(), mats = [];
     for (let i = 0; i < lives; i++) {
       const m = library && toon ? library.toon(color) : new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
@@ -116,12 +124,12 @@ export function createDeployableLayer({ THREE, scene, library = null, toon = fal
       if (placing) wanted.set('ghost', { id: 'ghost', ...placing });
       for (const [id, entry] of [...entries]) {
         const d = wanted.get(id);
-        if (!d || d.kind !== entry.kind) { release(entry); entries.delete(id); }
+        if (!d || d.kind !== entry.kind || (id !== 'ghost' && d.color !== entry.colorIndex)) { release(entry); entries.delete(id); }
       }
       if (!wanted.size && group.parent) scene.remove(group); // attached only while something is shown, so an empty layer leaves the scene untouched
       for (const [id, d] of wanted) {
         let entry = entries.get(id);
-        if (!entry) { entry = build(d.kind, id === 'ghost'); entries.set(id, entry); }
+        if (!entry) { entry = build(d.kind, id === 'ghost', id === 'ghost' ? undefined : d.color); entries.set(id, entry); }
         if (!group.parent) scene.add(group);
         const [wx, wy, wz] = transform.ground(d.x, d.y, surfaceHeight(course, d.x, d.y));
         entry.root.position.set(wx, wy, wz);

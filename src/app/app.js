@@ -399,7 +399,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         local: { ...state, color },
         remotes: remotesForRender(t),
         aim: input.frameAim(t / 1000),
-        deployables: activeDeployables(room.deployables, s.mapIndex, s.puttIndex),
+        deployables: activeDeployables(room.deployables, s.mapIndex, s.puttIndex).map(d => ({ ...d, color: colorOf(s, {}, d.owner) })), // each bumper wears its owner's colour
         placing: placing && cursor ? { kind: placing, x: cursor.x, y: cursor.y, valid: placeable(cursor) } : null,
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
