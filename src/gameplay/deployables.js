@@ -51,16 +51,18 @@ export function recordImpact(list, id, params = DEPLOYABLE_PARAMS) {
 /**
  * Orbital hook: the acceleration (x/y, world units per second squared, already scaled by dt) that every orbital ring
  * exerts on a ball at (x, y). It pulls toward the centre and falls off linearly to zero at the ring edge.
- * Returns [0, 0] with no orbitals.
+ * A ball faster than `orbitalSpeedRef` is pulled harder, by (speed / ref) squared, so a fast shot still bends by about
+ * the angle a ref-speed shot does instead of sailing straight through. Returns [0, 0] with no orbitals.
  */
-export function orbitalAcceleration(list, x, y, dt, params = DEPLOYABLE_PARAMS) {
+export function orbitalAcceleration(list, x, y, dt, params = DEPLOYABLE_PARAMS, speed = 0) {
   let ax = 0, ay = 0;
   if (!list?.length) return [ax, ay];
+  const boost = Math.max(1, (speed / params.orbitalSpeedRef) ** 2);
   for (const d of list) {
     if (d.kind !== 'orbital') continue;
     const dx = d.x - x, dy = d.y - y, dist = Math.hypot(dx, dy);
     if (!(dist > 1e-6 && dist < params.orbitalRange)) continue;
-    const strength = params.orbitalPull * (1 - dist / params.orbitalRange) * dt;
+    const strength = params.orbitalPull * boost * (1 - dist / params.orbitalRange) * dt;
     ax += dx / dist * strength; ay += dy / dist * strength;
   }
   return [ax, ay];

@@ -381,7 +381,7 @@ function stepBallTick(player, course, dt, hazardTime) {
   const R = ballRadiusOf(player);
   const ghost = !!player.armedPowerups?.ghost; // Ghost Ball skips wall and obstacle bounces
   if (player.deployables?.length) { // Bumper and Orbital Bumper (G1e); absent or empty leaves every result unchanged
-    const [ax, ay] = orbitalAcceleration(player.deployables, player.x, player.y, dt);
+    const [ax, ay] = orbitalAcceleration(player.deployables, player.x, player.y, dt, undefined, Math.hypot(player.vx, player.vy));
     player.vx += ax; player.vy += ay;
     if (!ghost) events.push(...bumperContact(player.deployables, player, R));
   }

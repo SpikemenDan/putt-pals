@@ -177,6 +177,21 @@ const assert = require('node:assert/strict');
   snap.puttIndex = 1; unbind.hit('d2');
   assert.equal(last().deployables, undefined, 'a new putt clears the objects');
   unbind(); cases++;
+  // ---- a fast ball still bends: the deflection angle does not collapse as the speed goes up
+  {
+    cases++;
+    const bend = speed => {
+      const p = createPlayerState('Fast', 0, { x: 0, y: 0, z: 0 });
+      p.deployables = [rec('orbital', 100, P.bumperRadius + 14)]; applyShot(p, 0, 1, speed);
+      for (let i = 0; i < 1200 && p.moving && p.x < 260; i++) stepBall(p, course, dt);
+      return Math.atan2(p.vy, p.vx) * 180 / Math.PI;
+    };
+    const mid = bend(500), fast = bend(900);
+    assert.ok(mid > 5 && fast > 5, `bends at 500 (${mid.toFixed(1)}°) and 900 (${fast.toFixed(1)}°)`);
+    assert.ok(fast > mid * 0.6, 'a much faster ball bends nearly as much, not a sliver');
+    assert.deepEqual(D.orbitalAcceleration([rec('orbital', 100, 0)], 100 - P.orbitalRange / 2, 0, 1, P, P.orbitalSpeedRef), D.orbitalAcceleration([rec('orbital', 100, 0)], 100 - P.orbitalRange / 2, 0, 1), 'at or below the reference speed nothing is scaled');
+  }
+
   // ---- the ring applies at rest: a resting ball inside it wakes, is drawn in, and only rests against the body
   {
     cases++;
