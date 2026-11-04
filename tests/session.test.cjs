@@ -147,8 +147,8 @@ const assert = require('node:assert/strict');
     assert.equal(f.state().roster.includes('late'), false);
     f.clock.increment(2500); assert.equal(score(f, 'late'), false);
   });
-  run('3/6/9-map tournaments preserve cumulative totals and reset after the final map', () => {
-    for (const [mode, maps] of [[GameModes.TOURNAMENT_3, 3], [GameModes.TOURNAMENT_6, 6], [GameModes.TOURNAMENT_9, 9]]) {
+  run('3/5/7-map tournaments preserve cumulative totals and reset after the final map', () => {
+    for (const [mode, maps] of [[GameModes.TOURNAMENT_3, 3], [GameModes.TOURNAMENT_5, 5], [GameModes.TOURNAMENT_7, 7]]) {
       const f = make(); start(f, mode);
       for (let map = 0; map < maps; map++) {
         completeMap(f); assert.equal(f.state().totals.host.total, (map + 1) * 6);

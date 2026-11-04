@@ -17,7 +17,7 @@ import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
 export const ITEM_NAMES = Object.freeze(Object.fromEntries(POWERUP_CATALOG.map(e => [e.id, e.name])));
 
 const isTournament = mode => typeof mode === 'string' && mode.startsWith('tournament_');
-/** Maps in the series: 3/6/9 for tournaments, otherwise 1. */
+/** Maps in the series: 3/5/7 for tournaments, otherwise 1. */
 export const seriesOf = mode => (isTournament(mode) ? Number(mode.slice('tournament_'.length)) : 1);
 const pad2 = n => String(n).padStart(2, '0');
 

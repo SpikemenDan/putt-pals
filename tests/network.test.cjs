@@ -384,8 +384,8 @@ const { EventEmitter } = require('node:events');
         await guest.connect(); guest.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: 'Player-' + id, resume: 'token-' + id.repeat(16) } }); f.guests.push(guest);
       }
       const everyone = [f.host, ...f.guests];
-      // Worst case for size: a 9-map tournament late in its first map, all eight scorecards filled.
-      f.command('SET_MODE', { mode: 'tournament_9' }); f.command('START_VOTING');
+      // Worst case for size: a 7-map tournament late in its first map, all eight scorecards filled.
+      f.command('SET_MODE', { mode: 'tournament_7' }); f.command('START_VOTING');
       for (const t of everyone) f.command('CAST_VOTE', { mapIndex: 0 }, t);
       for (let putt = 0; putt < 5; putt++) {
         const st = f.session.getSnapshot(); f.clock.increment(Math.max(0, st.roundStartTime + 1500 - f.clock.now()));
