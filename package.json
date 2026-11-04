@@ -29,6 +29,7 @@
     "test:physics": "node tests/physics.test.cjs",
     "solve": "node tools/cli/main.mjs solve",
     "rank": "node tools/cli/main.mjs rank",
+    "measure:par": "node tools/cli/measure-par.mjs",
     "config:report": "node tools/cli/main.mjs config",
     "checks": "node tools/cli/main.mjs checks",
     "test:cli": "node tests/cli.test.cjs && node tests/checks.test.cjs",

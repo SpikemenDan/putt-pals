@@ -1,5 +1,5 @@
 export { runRank } from './rank.mjs';
-import { solveCourse } from './solver.mjs';
+import { solvePar } from './par-solver.mjs';
 /**
  * CLI command logic. Every command returns { code, lines } and never prints,
  * so it can be tested without spawning a process.
@@ -72,7 +72,10 @@ export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
   };
 }
 
-/** Search the legacy shot grid with imported courses and the shared simulation. */
+/**
+ * SV1: shortest robust multi-stroke route for one putt (hole-in-one optional).
+ * Exit 0 when a robust route within 6 strokes exists; 1 otherwise (never weakened to pass).
+ */
 export function runSolve(holes, mapArg, puttArg, flag) {
   if ([mapArg, puttArg].some(value => value == null || String(value).trim() === '')) return fail('solve requires map and putt');
   const map = Number(mapArg);
@@ -81,8 +84,8 @@ export function runSolve(holes, mapArg, puttArg, flag) {
   const count = holes[map].putts?.length ?? 1;
   if (!Number.isInteger(putt) || putt < 0 || putt >= count) return fail(`putt must be an integer 0..${count - 1} for map ${map}`);
   if (flag != null && flag !== '--full') return fail('only --full is supported after map and putt');
-  const result = solveCourse(holes[map], putt, { full: flag === '--full' });
-  return { code: result.best ? 0 : 1, result, lines: [JSON.stringify({ map, putt, ...result })] };
+  const result = solvePar(holes[map], putt, { full: flag === '--full' });
+  return { code: result.status === 'route' ? 0 : 1, result, lines: [JSON.stringify({ map, putt, ...result })] };
 }
 
 /** Emit validated data; never patch the legacy HTML. */
@@ -93,13 +96,33 @@ export function runArena(name) {
   } catch (error) { return fail(error.message); }
 }
 
-/** Geometry, playable positions and resolved-rule parity for all imported maps. */
-export function runCheck({ definitions, rules, document }) {
+/** Par range enforced by the CLI (owner rule). The shared validator still allows 1..10 until the integration owner changes the contract. */
+export const PAR_RANGE = Object.freeze({ min: 2, max: 6 });
+
+function parProblems(entries, parRoutes) {
+  const problems = [];
+  const byKey = new Map((parRoutes?.results ?? []).map(entry => [`${entry.map}/${entry.putt}`, entry]));
+  for (const { map, putt, name, par } of entries) {
+    const label = `${name} putt ${putt + 1}`;
+    if (!Number.isInteger(par) || par < PAR_RANGE.min || par > PAR_RANGE.max) problems.push(`${label}: par ${par} must be an integer ${PAR_RANGE.min}..${PAR_RANGE.max}`);
+    const measured = byKey.get(`${map}/${putt}`);
+    if (!measured) continue;
+    if (measured.status !== 'route') problems.push(`${label}: no robust route within ${PAR_RANGE.max} strokes found (${measured.status})`);
+    else if (Number.isInteger(par) && par < measured.strokes) problems.push(`${label}: par ${par} is below the shortest robust route of ${measured.strokes} strokes`);
+  }
+  return problems;
+}
+
+/** Geometry, playable positions and resolved-rule parity for all imported maps, plus par range and par-route consistency. */
+export function runCheck({ definitions, rules, document, parRoutes }) {
   const result = document ? validateCourseDocument(document) : validateCourseDefinitions(definitions, rules);
   const count = document ? document.courses?.length : definitions?.length;
-  return result.valid
-    ? { code: 0, lines: [`CHECK OK: ${count} courses; geometry, playable tee/cup positions and resolved rules agree`] }
-    : { code: 1, lines: ['CHECK FAILED', ...result.errors.map(error => `  ${error}`)] };
+  const courses = document ? document.courses : rules;
+  const entries = (Array.isArray(courses) ? courses : []).flatMap((course, map) => (Array.isArray(course?.putts) ? course.putts : []).map((putt, index) => ({ map, putt: index, name: course.name ?? course.id, par: putt.par })));
+  const problems = [...(result.valid ? [] : result.errors), ...parProblems(entries, parRoutes)];
+  return problems.length
+    ? { code: 1, lines: ['CHECK FAILED', ...problems.map(error => `  ${error}`)] }
+    : { code: 0, lines: [`CHECK OK: ${count} courses; geometry, playable tee/cup positions, resolved rules and par ${PAR_RANGE.min}..${PAR_RANGE.max} agree${parRoutes ? ' with the measured par routes' : ''}`] };
 }
 
 export function runExport(document = createCourseDocument()) {
@@ -113,12 +136,12 @@ export const USAGE = [
   '  --courses is supported by list, check, export, shot and solve',
   '  list                          list all courses',
   '  export                        print versioned course JSON with persistent course/putt IDs',
-  '  check                         validate imported geometry, playable positions and rules',
-  '  rank                          audit historical ladder (exit 2: current difficulty unverified)',
+  '  check [--routes <file>]       validate geometry, rules and par 2..6; with a measure-par report also require a robust route within par',
+  '  rank                          rank [--routes <file>]        rank starters by measured par-route difficulty from a measure-par report (exit 2: no/stale report)',
   '  config [display|tuning|all] [--json] [--overrides <file>]  settings with defaults, units, restart rule and the files that read them',
   '  checks [--since <ref>] [--json] [paths...]  recommend which verification commands to run for the changed paths, and why',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
-  '  solve <map> <putt> [--full]  search robust shots (putt is 0-based; --full counts the entire grid)',
+  '  solve <map> <putt> [--full]  shortest robust route within par 2..6 (putt is 0-based; --full = finer waypoint grid, larger budget)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
 ];

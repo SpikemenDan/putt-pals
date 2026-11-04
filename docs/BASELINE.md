@@ -97,3 +97,32 @@ These are visual references for review, not pixel-diff goldens: color selection,
 ## Review handoff
 
 B1 artifacts are ready for review on agent/b1-browser-baseline. The user approved committing and pushing that branch. They do not authorize C1 automatically: the coordinator/user must accept the references and disclosed limitations and integrate the task before releasing its dependents. PR creation and merge approval remain separate. No gameplay, tool simulation logic, package dependencies or CI workflow changed in B1.
+
+## SV1 par-route solver and report-only run (2026-11-04)
+
+`tools/cli/par-solver.mjs` finds the shortest **robust** route of at most 6 strokes by driving the shared `SimulationEngine`. A hole-in-one is just a one-stroke route, never required. Par = `max(2, strokes)`. Robust means every stroke survives the S2 margin (angle +-0.007 rad, power +-0.025) and a non-final stroke leaves the ball at rest in play from which a local re-aim still finishes. Gravity is a solver parameter recorded in provenance; only the loaded value (700) can run until #164 injects gravity into the engine. A `none`/`budget` result is search-bounded (candidate grid, 1.5 M trial budget), not proof that no route exists.
+
+Commands:
+
+```sh
+node tools/cli/main.mjs solve <map> <putt> [--full]        # one putt
+npm run measure:par -- --out routes.json [--only 0/0,5/1]   # report-only run, parallel
+node tools/cli/main.mjs check --routes routes.json          # par 2..6 plus a route within par
+node tools/cli/main.mjs rank  --routes routes.json          # starters ranked by route difficulty
+```
+
+`check` without `--routes` enforces only the par 2..6 range. No per-map fixture is stored; the report is regenerated on demand. Difficulty per putt = strokes + 1 - min(1, margin/3) (margin = largest tested multiple of the S2 offsets still followed); a map sums its putts.
+
+Report-only run over all 22 shipped maps (52 putts, current simulation, gravity 700):
+
+| Outcome | Putts |
+| --- | --- |
+| Robust hole-in-one (1 stroke) | 39 |
+| 2-stroke robust route | 8: 1/0, 7/0, 9/0, 10/0, 15/0, 17/0, 19/0, 19/2 |
+| 3-stroke robust route | 1: 11/0 Fortress Spiral |
+| No route found, candidate grid exhausted | 1: 18/0 Comet Run |
+| No route found, trial budget exhausted | 3: 4/0 Clockwork Maze, 13/0 Hourglass, 16/0 Crescent Coast |
+
+All 36 starter putts have a robust route within 6 strokes; only Grand Finale putts 1 and 3 (19/0, 19/2, the known S2 gaps) need two. Shipped pars were not changed or compared for fairness here: most putts have a robust hole-in-one, so shortest-route par would be 2 for most. The four non-starter putts without a route are search-limited findings, not verified impossibilities. Hourglass and Clockwork Maze have moving obstacles that the solver freezes at hazard time 0 (as the S2 solver did); Comet Run's likely route is three strokes and needs a wider robustness rule than "continuation of the same length".
+
+Open owner decisions: narrowing the shared validator to par 2..6 (CLI-only today), changing shipped pars to shortest-route values, the `src/courses/arena.js` hole-in-one par defaults, time-aware moving hazards, and widening the robustness rule for Comet Run / Crescent Coast. Most shipped maps are expected to be redesigned under K0 (#104), so these are deliberately not pursued on today's maps.
