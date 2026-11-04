@@ -1,7 +1,7 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import { UiCommands } from './commands.js';
 
-/** { store, dispatch, aim } supplied by <PuttPalsUi>. */
+/** { store, dispatch, aim, display } supplied by <PuttPalsUi>. */
 export const UiContext = createContext(null);
 
 export function useUiContext() {

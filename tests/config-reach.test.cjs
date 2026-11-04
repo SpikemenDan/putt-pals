@@ -69,8 +69,43 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(normal.scale, 1);
     assert.equal(big.scale, 2, 'ball.visualScale reaches the renderer');
     assert.ok(Math.abs((big.y - normal.y) - 5) < 1e-9, 'and its resting height');
+    // Loading screen (src/ui/planet-scene.js): each setting changes exactly its own measurement.
+    const planet = await import(url('src/ui/planet-scene.js'));
+    const loadingMeasure = display => {
+      const dom = new JSDOM('<canvas></canvas><div></div>', { pretendToBeVisual: true });
+      const { document } = dom.window, canvas = document.querySelector('canvas'), layer = document.querySelector('div');
+      let pixels = null;
+      canvas.getBoundingClientRect = () => ({ width: 800, height: 600 });
+      canvas.getContext = () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData: image => { pixels = image; } });
+      const scene = planet.createPlanetScene({ canvas, ballLayer: layer, display, random: planet.mulberry32(9), win: dom.window });
+      scene.start();
+      scene.step(0.5);
+      const w = canvas.width, h = canvas.height, d = pixels.data;
+      let top = h, hash = 0;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = (y * w + x) * 4; if (d[o + 3] === 255) { top = Math.min(top, y); if (y > h - 12) hash = (hash * 31 + d[o] + d[o + 1] * 3 + d[o + 2] * 7) % 1000003; } }
+      const startSpin = scene.spin;
+      let firstBall = null, gone = null, size = null, first = null, t = 0;
+      for (; t < 4000; t++) {
+        scene.step(0.05);
+        if (firstBall === null && scene.balls > 0) { firstBall = +(t * 0.05).toFixed(2); first = layer.firstElementChild; size = first.style.width; }
+        if (first && gone === null && !first.isConnected) gone = +(t * 0.05 - firstBall).toFixed(2);
+        if (gone !== null) break;
+      }
+      scene.dispose(); dom.window.close();
+      return { spin: startSpin, top, hash, firstBall, size, flight: gone };
+    };
+    const lbase = loadingMeasure(DEFAULT_DISPLAY);
+    const changed = (key, value) => loadingMeasure(createDisplay({ loading: { [key]: value } }));
+    assert.ok(Math.abs(changed('spinSpeed', 40).spin - 20) < 1e-9 && Math.abs(lbase.spin - 2) < 1e-9, 'loading.spinSpeed turns the planet');
+    assert.ok(changed('horizonHeight', 0.8).top > lbase.top, 'loading.horizonHeight moves the planet down');
+    assert.notEqual(changed('axisTilt', -40).hash, lbase.hash, 'loading.axisTilt reorients the surface');
+    assert.ok(changed('ballInterval', 20).firstBall > lbase.firstBall, 'loading.ballInterval delays the first ball');
+    assert.equal(changed('ballSize', 60).size, '60px', 'loading.ballSize sizes the ball');
+    assert.equal(lbase.size, '26px');
+    assert.ok(changed('ballFlightTime', 9).flight > lbase.flight, 'loading.ballFlightTime lengthens the flight');
+    assert.ok(Math.abs(lbase.flight - 4.5) < 0.1, 'default flight lasts ballFlightTime');
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale'].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'ballInterval', 'ballFlightTime', 'ballSize'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

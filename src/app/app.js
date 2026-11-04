@@ -569,7 +569,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const onPress = event => { if (buttonOf(event)) audio.handleEvent({ type: 'ui', kind: 'click' }); };
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '' });
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display });
 
   return {
     store,

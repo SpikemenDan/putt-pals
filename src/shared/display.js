@@ -5,7 +5,8 @@
  * values without desyncing a room or invalidating recorded difficulty. Defaults equal the values the renderer
  * used before they were parameterized. Every field is validated at load: finite numbers inside a sane range.
  *
- * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier.
+ * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier. The `loading` group
+ * (loading screen, src/ui/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field.
  */
 
 /** Field spec: [dotted path, min, max, description]. Drives validation and docs/DISPLAY.md. */
@@ -16,12 +17,19 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['aim.arrowHeadHalfWidth', 0.1, 100, 'Half the width of the aim arrow head.'],
   ['aim.arrowHeadLength', 1, 200, 'Length of the aim arrow head (capped at half the arrow so short arrows stay readable).'],
   ['aim.arrowOpacity', 0.05, 1, 'Opacity of the aim arrow.'],
+  ['loading.spinSpeed', 0, 60, 'Loading screen: planet rotation speed (0 holds it still). Ignored when the player prefers reduced motion.'],
+  ['loading.axisTilt', -60, 60, 'Loading screen: tilt of the planet axis away from the horizon line, so the poles lean up or down.'],
+  ['loading.horizonHeight', 0.3, 0.9, 'Loading screen: where the top of the planet sits, as a fraction of the screen height measured from the top (higher number = lower planet).'],
+  ['loading.ballInterval', 0.5, 120, 'Loading screen: average gap between golf balls flying across the sky. Ignored when the player prefers reduced motion (no balls fly).'],
+  ['loading.ballFlightTime', 0.5, 30, 'Loading screen: time one golf ball takes to cross the sky.'],
+  ['loading.ballSize', 6, 120, 'Loading screen: diameter of a flying golf ball.'],
 ]);
 
 /** Values the renderer used before they were parameterized. */
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, ballInterval: 5, ballFlightTime: 4.5, ballSize: 26 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

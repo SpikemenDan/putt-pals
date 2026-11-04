@@ -8,6 +8,7 @@ import { Results } from './Results.jsx';
 import { RoomLobby } from './RoomLobby.jsx';
 import { ScorecardOverlay } from './Scorecard.jsx';
 import { MESSAGES } from './commands.js';
+import { DISPLAY } from '../shared/display.js';
 import app from './App.module.css';
 import './global.css';
 
@@ -40,10 +41,11 @@ function Screens({ onCanvas, initialName, initialRoomCode }) {
  * @param {(command: object) => void} props.dispatch Use createUiDispatcher(store, appDispatch)
  * @param {{subscribeAim: Function}} [props.aim] The input adapter (power meter source)
  * @param {(canvas: HTMLCanvasElement|null) => void} [props.onCanvas]
+ * @param {typeof DISPLAY} [props.display] Presentation settings (read live by the loading screen); defaults to DISPLAY
  */
-export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '' }) {
+export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', display = DISPLAY }) {
   return (
-    <UiContext.Provider value={{ store, dispatch, aim }}>
+    <UiContext.Provider value={{ store, dispatch, aim, display }}>
       <Screens onCanvas={onCanvas} initialName={initialName} initialRoomCode={initialRoomCode} />
     </UiContext.Provider>
   );

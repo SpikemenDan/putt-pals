@@ -50,6 +50,12 @@ export const DISPLAY_UNITS = Object.freeze({
   'aim.arrowHeadHalfWidth': 'world units',
   'aim.arrowHeadLength': 'world units',
   'aim.arrowOpacity': 'opacity, 0 to 1',
+  'loading.spinSpeed': 'degrees/s',
+  'loading.axisTilt': 'degrees',
+  'loading.horizonHeight': 'fraction of screen height',
+  'loading.ballInterval': 'seconds',
+  'loading.ballFlightTime': 'seconds',
+  'loading.ballSize': 'CSS px',
 });
 
 /** How a change takes effect. */

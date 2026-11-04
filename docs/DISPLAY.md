@@ -2,7 +2,7 @@
 
 Sizes and looks that change what a player sees live in `src/shared/display.js` (`DISPLAY`, frozen, validated at load). Nothing here is read by the simulation, so a client may override these without desyncing a room or invalidating recorded difficulty. Anything that changes how the ball moves belongs in `TUNING` (docs/TUNING.md) instead. `createDisplay(overrides)` builds a validated variant; invalid values and unknown keys (typos) throw and are never partially applied.
 
-Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
+Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). The `loading` group is read by the loading screen (`src/ui/Loading.jsx`, `src/ui/planet-scene.js`); `mountUi(root, { display })` passes the live object, and the dev panel's "Loading screen preview" button (bottom left) shows that screen without a room. Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
 
 `aim.arrowMaxLength` here is the authoritative arrow length. The older TUNING `aim.arrowMaxLength` (300) is read by nothing; removing it changes the simulation fingerprint and is a separate follow-up.
 
@@ -16,6 +16,12 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `aim.arrowHeadHalfWidth` | 7 | 0.1 to 100 | Half the width of the aim arrow head. |
 | `aim.arrowHeadLength` | 14 | 1 to 200 | Length of the aim arrow head (capped at half the arrow so short arrows stay readable). |
 | `aim.arrowOpacity` | 0.92 | 0.05 to 1 | Opacity of the aim arrow. |
+| `loading.spinSpeed` | 4 | 0 to 60 | Loading screen: planet rotation speed in degrees/s (0 holds it still). Ignored under reduced motion. |
+| `loading.axisTilt` | 12 | -60 to 60 | Loading screen: tilt of the planet axis in degrees, so the poles lean up or down. |
+| `loading.horizonHeight` | 0.48 | 0.3 to 0.9 | Loading screen: top of the planet as a fraction of the screen height from the top (higher = lower planet). |
+| `loading.ballInterval` | 5 | 0.5 to 120 | Loading screen: average seconds between flying golf balls. No balls fly under reduced motion. |
+| `loading.ballFlightTime` | 4.5 | 0.5 to 30 | Loading screen: seconds one golf ball takes to cross the sky. |
+| `loading.ballSize` | 26 | 6 to 120 | Loading screen: golf ball diameter in CSS px. |
 
 ## Development tuning panel
 

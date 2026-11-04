@@ -35,6 +35,7 @@ function fakeClock() {
 (async () => {
   const { moduleUrl } = await buildUi();
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' });
+  dom.window.HTMLCanvasElement.prototype.getContext = () => null; // jsdom has no 2D canvas; the loading scene draws nothing without one
   Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
   const ui = await import(moduleUrl);
   const React = (await import('react')).default;
@@ -126,6 +127,80 @@ function fakeClock() {
     assert.equal(t.within('[data-ui=results] p').textContent, 'Dune Serpent: Ana 14 (+4) · Ben 17 (+7) · Cy 20 (+10). Map winner: Ana. Standings after map 2/3: Ana +6 · Ben +12 · Cy +14.');
     assert.equal(t.within('[data-ui=results] button').textContent, legacyAgain);
     await t.teardown();
+  });
+
+  await scenario('loading screen: Putt Pals title over the planet scene; reduced motion keeps it still with no balls', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ active: false, connecting: true }));
+    const loading = t.within('[data-ui=loading]');
+    assert.equal(loading.querySelector('[data-ui=loading-title]').textContent, 'Putt Pals', 'current product name until the rename is approved');
+    assert.match(loading.textContent, /Setting up your game/);
+    assert.ok(loading.querySelector('canvas[data-ui=loading-planet]'), 'planet layer');
+    assert.equal(loading.querySelector('canvas').getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
+    await act(async () => t.store.setLocal({ connecting: false }));
+    assert.equal(t.within('[data-ui=loading]'), null);
+    await t.teardown();
+  });
+
+  await scenario('planet scene: biome bands, deterministic planet, ball arcs, reduced motion, live settings, disposal', async () => {
+    const scene = await import('../src/ui/planet-scene.js');
+    const { DEFAULT_DISPLAY, createDisplay } = await import('../src/shared/display.js');
+    // Gaia regions: snowy poles, desert and tropical bands, forests between, seas and mountains break them up.
+    assert.equal(scene.biomeAt(88, 0.7, 0.3), 'snow');
+    assert.equal(scene.biomeAt(-80, 0.2, 0.3), 'snow', 'the south pole is ice even over water');
+    assert.equal(scene.biomeAt(2, 0.7, 0.3), 'tropical');
+    assert.equal(scene.biomeAt(2, 0.7, 0.7), 'jungle');
+    assert.equal(scene.biomeAt(25, 0.7, 0.3), 'desert');
+    assert.equal(scene.biomeAt(-25, 0.7, 0.3), 'desert');
+    assert.equal(scene.biomeAt(38, 0.7, 0.3), 'temperate');
+    assert.equal(scene.biomeAt(50, 0.7, 0.3), 'boreal');
+    assert.equal(scene.biomeAt(65, 0.7, 0.3), 'tundra');
+    assert.equal(scene.biomeAt(10, 0.36, 0.3), 'ocean');
+    assert.equal(scene.biomeAt(10, 0.2, 0.3), 'deepOcean');
+    const map = scene.buildBiomeMap(scene.mulberry32(5));
+    assert.deepEqual(map, scene.buildBiomeMap(scene.mulberry32(5)), 'same seed, same planet');
+    const rowShare = (row, name) => { let n = 0; for (let x = 0; x < scene.TEX_W; x++) if (map[row * scene.TEX_W + x] === scene.BIOMES.indexOf(name)) n++; return n / scene.TEX_W; };
+    assert.equal(rowShare(0, 'snow'), 1, 'north pole row is all snow');
+    assert.equal(rowShare(scene.TEX_H - 1, 'snow'), 1, 'south pole row is all snow');
+    const present = new Set(scene.BIOMES.filter(b => [...map].includes(scene.BIOMES.indexOf(b))));
+    for (const b of ['snow', 'tundra', 'boreal', 'temperate', 'desert', 'tropical', 'ocean']) assert.ok(present.has(b), 'planet shows ' + b);
+    // Ball flights are parabolic arcs that start off screen and end near the horizon.
+    const flight = { x0: -40, y0: 100, x1: 1320, y1: 400, apex: 150 };
+    assert.deepEqual([scene.ballPose(flight, 0).x, scene.ballPose(flight, 0).y], [-40, 100]);
+    assert.deepEqual([scene.ballPose(flight, 1).x, scene.ballPose(flight, 1).y], [1320, 400]);
+    assert.ok(scene.ballPose(flight, 0.5).y < (100 + 400) / 2 - 100, 'rises above the straight line between the ends');
+    assert.ok(scene.ballPose(flight, 1).scale < scene.ballPose(flight, 0).scale, 'shrinks as it flies away');
+    const planned = scene.planFlight(scene.mulberry32(1), 1280, 720, 26, 450);
+    assert.ok(planned.x0 < 0 && planned.x1 > 1280 || planned.x0 > 1280 && planned.x1 < 0, 'crosses the whole sky');
+    // Running scene: balls appear on the configured schedule, expire, and follow live settings.
+    const make = (display, reducedMotion = false) => {
+      const sd = new JSDOM('<canvas></canvas><div></div>', { pretendToBeVisual: true });
+      const canvas = sd.window.document.querySelector('canvas'), layer = sd.window.document.querySelector('div');
+      canvas.getContext = () => null;
+      return { sd, layer, scene: scene.createPlanetScene({ canvas, ballLayer: layer, display, random: scene.mulberry32(3), reducedMotion, win: sd.window }) };
+    };
+    const live = createDisplay({ loading: { ballInterval: 1, ballFlightTime: 2, spinSpeed: 10 } });
+    const a = make(live);
+    a.scene.start();
+    for (let i = 0; i < 10; i++) a.scene.step(0.1); // 1 s
+    assert.ok(a.scene.balls >= 1 && a.layer.querySelectorAll('[data-ui=loading-ball]').length === a.scene.balls, 'a ball is flying');
+    assert.ok(Math.abs(a.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
+    for (let i = 0; i < 400; i++) a.scene.step(0.1);
+    assert.ok(a.scene.balls <= 3, 'at most three balls at once');
+    a.scene.dispose();
+    assert.equal(a.layer.children.length, 0, 'dispose removes the balls');
+    const frozen = make(createDisplay({ loading: { spinSpeed: 0, ballInterval: 120 } }));
+    frozen.scene.start();
+    for (let i = 0; i < 20; i++) frozen.scene.step(0.1);
+    assert.equal(frozen.scene.spin, 0, 'spinSpeed 0 holds the planet still');
+    assert.equal(frozen.scene.balls, 0, 'a long ballInterval launches nothing in two seconds');
+    frozen.scene.dispose();
+    const still = make(DEFAULT_DISPLAY, true);
+    still.scene.start();
+    for (let i = 0; i < 600; i++) still.scene.step(0.1);
+    assert.equal(still.scene.spin, 0, 'reduced motion: planet does not turn');
+    assert.equal(still.scene.balls, 0, 'reduced motion: no balls fly');
+    still.scene.dispose();
   });
 
   // ------------------------------------------------------------------ Part B: flows through the real session
