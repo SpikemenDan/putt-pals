@@ -300,6 +300,64 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   });
 
   // ---------------------------------------------------------------------------------------------
+  await scenario('deployables (G1e): a guest places a Bumper by clicking the course; the slot is spent only after the host accepts, and right-click cancels', async () => {
+    const W = world();
+    const ana = await W.client('Ana');
+    await ana.join('duo');
+    const ben = await W.client('Ben'); await ben.join('duo');
+    await W.run(300);
+    await ana.select('tournament_3');
+    await ana.click('Start Game');
+    await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'guest voting');
+    for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
+    await W.until(() => ana.ready() && ben.ready(), 10000, 'putt start');
+    const canvas = ben.$('canvas');
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 500, right: 800, bottom: 500 });
+    const click = async (c, button) => act(async () => { c.dispatchEvent(new ben.win.w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 400, clientY: 300, button })); });
+    ben.putt.player.inventory.push('bumper');
+    await ben.useItem(0);
+    assert.deepEqual(ben.putt.player.inventory, ['bumper'], 'activating only asks for a spot');
+    assert.doesNotMatch(ben.text('[data-ui=game]'), /place the Bumper|Right-click/, 'no placement explanation is shown');
+    await click(canvas, 2);
+    assert.deepEqual(ben.putt.player.inventory, ['bumper'], 'right-click cancels and keeps the item');
+    assert.equal(ben.app.renderer.deployableDots().size, 0);
+    assert.equal(ana.app.room.deployables.length, 0);
+    await ben.useItem(0);
+    await click(canvas, 0);
+    await W.until(() => ana.app.room.deployables.length === 1, 3000, 'host holds the bumper');
+    await W.until(() => ben.putt.player.inventory.length === 0, 3000, 'slot spent after the host accepted');
+    const [d] = ana.app.room.deployables;
+    assert.equal(d.kind, 'bumper'); assert.equal(d.owner, ben.app.room.localId); assert.equal(d.impacts, 0);
+    await W.until(() => ben.app.room.deployables.length === 1, 3000, 'guest snapshot carries it');
+    await W.run(300);
+    assert.doesNotMatch(ben.text('[data-ui=hud-info]'), /HITS LEFT/, 'the top bar no longer shows bumper lives');
+    assert.deepEqual([...ben.app.renderer.deployableDots().values()], [3], 'three dots over a fresh bumper');
+    assert.deepEqual([...ana.app.renderer.deployableDots().values()], [3], 'every player sees the same dots');
+    await act(async () => { ben.app.room.deployHit(d.id); }); await W.run(400);
+    await W.until(() => [...ana.app.renderer.deployableDots().values()].join() === '2', 3000, 'dots drop to two after a hit');
+    await act(async () => { ben.app.room.deployHit(d.id); }); await W.run(400);
+    await W.until(() => [...ben.app.renderer.deployableDots().values()].join() === '1', 3000, 'dots drop to one after the second hit');
+    await act(async () => { ben.app.room.deployHit(d.id); }); await W.run(400);
+    await W.until(() => ana.app.renderer.deployableDots().size === 0, 3000, 'no dots once it has broken');
+    await W.until(() => ana.app.room.deployables.length === 0 && ben.app.room.deployables.length === 0, 3000, 'broken after three hits');
+    await W.run(300);
+    for (const c of [ana, ben]) assert.ok(tracked(c).includes('deployable_break:bumper'), c.name + ' hears the bumper break');
+    // A physical hit makes the hit sound, including the third hit, which removes the object on the host at once.
+    const me = ana.putt.player;
+    assert.equal(ana.app.room.deploy('bumper', me.x + 50, me.y), true, 'host places a bumper in its own ball path');
+    const before = tracked(ana).filter(e => e === 'deployable_hit:bumper').length;
+    for (let k = 0; k < 3; k++) {
+      await W.until(() => ana.ready(), 20000, 'ball at rest');
+      await ana.shoot(0, 0.55);
+      await W.until(() => tracked(ana).filter(e => e === 'deployable_hit:bumper').length >= before + k + 1 || ana.app.room.deployables.length === 0, 20000, 'hit sound ' + (k + 1));
+      await W.run(600);
+    }
+    assert.ok(tracked(ana).filter(e => e === 'deployable_hit:bumper').length - before >= 3, 'every hit is audible, the last one too (the pop can send the ball back for a second contact)');
+    assert.ok(tracked(ana).lastIndexOf('deployable_break:bumper') > tracked(ana).lastIndexOf('deployable_hit:bumper') - 1, 'the break follows the last hit');
+    await ana.dispose(); await ben.dispose();
+  });
+
+  // ---------------------------------------------------------------------------------------------
   await scenario('four clients: a three-map tournament with an attack, a guest leaving and rejoining as a spectator, and host loss', async () => {
     const W = world();
     const ana = await W.client('Ana');

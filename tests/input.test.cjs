@@ -132,6 +132,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointercancel', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'lostpointercapture', {}); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); w.dispatchEvent(new w.Event('blur')); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
+      // Right-click mid-pull cancels the aim (G1e).
+      () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointerdown', { clientX: 300, clientY: 330, button: 2 }); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
       () => { pointer(canvas, 'pointerdown', { clientX: 400, clientY: 250, button: 1 }); pointer(canvas, 'pointermove', { clientX: 300, clientY: 330 }); pointer(canvas, 'pointerup', { clientX: 300, clientY: 330 }); },
     ];
     for (const attempt of attempts) {

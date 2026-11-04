@@ -105,6 +105,57 @@ try {
   assert.equal(room.checkpoint().snapshot.session.node, 'play.active.settling');
   now += 1500; await room.alarm();
   assert.equal(room.checkpoint().snapshot.session.node, 'play.active.running');
+  // Bumper and Orbital Bumper (G1e) through the real durable command path: placement, persistence, impact reports and removal.
+  {
+    const { createCourseData } = await import('../../src/courses/index.js');
+    const { resolvePuttCourse } = await import('../../src/simulation/engine.js');
+    const { placementFloor, DEPLOYABLE_PARAMS: P } = await import('../../src/gameplay/deployables.js');
+    const state = room.runtime.session.getSnapshot();
+    const course = resolvePuttCourse(createCourseData().definitions[state.mapIndex], state.puttIndex);
+    let spot = null;
+    for (let x = 0; x < 800 && !spot; x += 10) for (let y = 0; y < 500 && !spot; y += 10) if (placementFloor(course, x, y) !== null) spot = { x, y, z: placementFloor(course, x, y) };
+    assert.ok(spot, 'the course has somewhere to place a bumper');
+    const presence = async (x, y, z, sequence, mode = 'play') => {
+      const c = room.checkpoint().snapshot;
+      await room.webSocketMessage(guest, JSON.stringify({
+        version: SERVER_ROOM_VERSION, type: 'presence', sessionId: c.sessionId, connectionId: guest.attachment.connectionId, sequence,
+        roundNumber: c.session.context.roundNumber, puttIndex: c.session.context.puttIndex, payload: { x, y, z, mode, strokes: 0 },
+      }));
+    };
+    const listed = () => room.checkpoint().snapshot.deployables ?? [];
+    await command(room, guest, { type: 'DEPLOY_OBJECT', kind: 'bumper', x: spot.x, y: spot.y }, 2);
+    assert.equal(guest.frames.at(-1).type, 'ack');
+    assert.equal(listed().length, 1, 'the room accepted the placement');
+    const placed = listed()[0];
+    assert.equal(placed.owner, guestWelcome.playerId); assert.equal(placed.z, spot.z, 'the room assigned the floor height'); assert.equal(placed.impacts, 0);
+    assert.ok(room.checkpoint().snapshot.deployables, 'objects are part of the durable checkpoint');
+    await command(room, guest, { type: 'DEPLOY_OBJECT', kind: 'orbital', x: spot.x, y: spot.y }, 3);
+    assert.equal(listed().length, 1, 'an overlapping placement is refused');
+    await command(room, guest, { type: 'DEPLOY_OBJECT', kind: 'bumper', x: -5000, y: -5000 }, 4);
+    assert.equal(listed().length, 1, 'a spot off the floor is refused');
+    room = new RoomDurableObject(ctx, ctx.env ?? env); await room.ready;
+    assert.deepEqual(listed(), [placed], 'placed objects survive durable reconstruction');
+    // Impact reports are checked against the reporter's latest presence.
+    await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, 5);
+    assert.equal(listed()[0].impacts, 0, 'a report with no presence is ignored');
+    await presence(spot.x + 2000, spot.y, spot.z, 1);
+    await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, 6);
+    assert.equal(listed()[0].impacts, 0, 'a report from far away is ignored');
+    await presence(spot.x + P.bumperRadius, spot.y, spot.z + 1000, 2);
+    await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, 7);
+    assert.equal(listed()[0].impacts, 0, 'a report from high above the body is ignored');
+    await presence(spot.x + P.bumperRadius, spot.y, spot.z, 3);
+    await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, 8);
+    assert.equal(listed()[0].impacts, 1, 'a plausible report counts');
+    await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, 9);
+    assert.equal(listed()[0].impacts, 1, 'a flood inside the cooldown is rate-limited');
+    for (const sequence of [10, 11]) {
+      now += P.hitCooldownMs + 50;
+      await presence(spot.x + P.bumperRadius, spot.y, spot.z, sequence - 6);
+      await command(room, guest, { type: 'DEPLOY_HIT', id: placed.id }, sequence);
+    }
+    assert.equal(listed().length, 0, 'removed after maxImpacts hits');
+  }
   await command(room, ws, { type: 'REPORT_SCORE', strokes: 2, timedOut: false }, 3);
   const round = room.checkpoint().snapshot.session.context.roundNumber;
   room = new RoomDurableObject(ctx, ctx.env ?? env); await room.ready;

@@ -136,7 +136,7 @@ async function run() {
   assert.equal(shared.validateVote({ map: 'str' }), false);
 
   const envelope = shared.createMessageEnvelope('vote', { map: 8 }, 'player1');
-  assert.equal(envelope.version, 2, 'protocol version 2 carries player colours');
+  assert.equal(envelope.version, 3, 'protocol version 3 carries player colours and deployables');
   assert.equal(envelope.type, 'vote');
   assert.equal(envelope.senderId, 'player1');
   assert.equal(envelope.payload.map, 8);

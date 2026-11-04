@@ -33,9 +33,10 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {() => number} [options.random]
  * @param {(options: object) => object} [options.createTransport] Legacy unit-test transport seam
  * @param {{peerId: string, token: string}} [options.identity] Guest identity to resume (a new one is made if missing or invalid)
+ * @param {(map: number, putt: number, x: number, y: number) => (number|null)} [options.floorAt] Host course check for Bumper / Orbital Bumper placement (G1e): the floor height to stand on, or null
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS }) {
+async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
@@ -81,7 +82,7 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
 
   if (transport.isHost) {
     session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
-    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS });
+    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, floorAt });
     stops.push(session.subscribe(s => {
       last = s;
       for (const [id, v] of presence) if (v.roundNumber !== s.roundNumber || v.puttIndex !== s.puttIndex || !s.players[id]?.connected) presence.delete(id);
@@ -170,6 +171,14 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
     onStatus(listener) { statusListeners.add(listener); return () => statusListeners.delete(listener); },
     /** An L1 command without playerId; the transport binds the sender. */
     command(event) { return transport.send({ type: 'command', payload: event }); },
+    /** Deployed objects for this room: the host's own list, or what the host's last snapshot carried. */
+    get deployables() { return transport.isHost ? unbind?.list() ?? [] : last?.deployables ?? []; },
+    /** Why the host's own last placement was refused ('' when it was not). */
+    get deployReason() { return unbind?.reason?.() ?? ''; },
+    /** Place a Bumper or Orbital Bumper (G1e). The host applies it directly; a guest sends DEPLOY_OBJECT. Returns whether it was accepted (host) or sent (guest). */
+    deploy(kind, x, y) { return transport.isHost ? !!unbind?.deploy({ type: 'DEPLOY_OBJECT', kind, x, y }) : transport.send({ type: 'command', payload: { type: 'DEPLOY_OBJECT', kind, x, y } }); },
+    /** Report that this client's ball hit a deployed object (G1e). */
+    deployHit(id) { return transport.isHost ? !!unbind?.hit(id) : transport.send({ type: 'command', payload: { type: 'DEPLOY_HIT', id } }); },
     /** Local ball state for other players: {x, y, z, mode, strokes, effect?, fx?}. */
     presence(payload) { return transport.send({ type: 'presence', payload }); },
     /** Leaves the room and releases the transport, session bridge and timers. Idempotent. */
@@ -204,6 +213,11 @@ export async function openRoom(options) {
     get snapshot() { return server.snapshot; },
     get connected() { return server.connected; },
     now: server.now, command: server.send, presence: server.sendPresence,
+    /** Placed Bumpers and Orbital Bumpers; the room service owns the list and every client reads it from the snapshot (G1e). */
+    get deployables() { return server.deployables; },
+    get deployReason() { return ''; },
+    deploy: (kind, x, y) => server.send({ type: 'DEPLOY_OBJECT', kind, x, y }),
+    deployHit: id => server.send({ type: 'DEPLOY_HIT', id }),
     onSnapshot: server.onSnapshot, onPresence: server.onPresence, onStatus: server.onStatus,
     close: options => server.close(options),
   };

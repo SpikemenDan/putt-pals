@@ -28,6 +28,16 @@ export function createRecipes({ tone, puff, random }) {
   pu_aim180:(c,t,o)=>{tone(c,o,'sine',500,900,t,.2,.25);tone(c,o,'sine',900,500,t+.2,.2,.25);},
   pu_love:(c,t,o)=>{tone(c,o,'sine',520,780,t,.2,.3);tone(c,o,'sine',660,990,t+.08,.2,.25);},
   pu_hate:(c,t,o)=>{tone(c,o,'sawtooth',300,120,t,.25,.25);puff(c,o,'bandpass',300,150,t,.2,.25);},
+  // G1e: placement stingers and impact sounds for the deployables; the Bumper is a dry pinball thwack, the Orbital Bumper a ringing, higher chime.
+  pu_bumper:(c,t,o)=>{tone(c,o,'triangle',200,480,t,.2,.8);tone(c,o,'sine',100,60,t,.24,.9);tone(c,o,'square',480,720,t+.07,.12,.2);puff(c,o,'bandpass',1500,900,t,.05,.4);},
+  pu_orbital:(c,t,o)=>{tone(c,o,'sine',300,1000,t,.3,.7);tone(c,o,'sine',306,1012,t+.05,.3,.5);tone(c,o,'sine',150,300,t,.3,.5);},
+  bumper_hit:(c,t,o)=>{tone(c,o,'sine',150,55,t,.16,1);tone(c,o,'triangle',720+random()*60,300,t,.13,1);tone(c,o,'square',1100,480,t,.07,.22);puff(c,o,'bandpass',1800,800,t,.05,.6);},
+  orbital_hit:(c,t,o)=>{tone(c,o,'sine',260,130,t,.2,.8);tone(c,o,'sine',560+random()*60,1120,t,.24,.9);tone(c,o,'sine',845,1690,t+.02,.26,.55);puff(c,o,'highpass',4500,4500,t,.06,.3);},
+  // The break sound is the hit sound with a splintering crack, a falling crunch and a debris rattle on top.
+  bumper_break:(c,t,o)=>{tone(c,o,'sine',150,55,t,.16,1);tone(c,o,'triangle',720,300,t,.13,1);tone(c,o,'square',1100,480,t,.07,.22);puff(c,o,'bandpass',1800,800,t,.05,.6);
+    puff(c,o,'highpass',6000,900,t+.03,.35,.9);tone(c,o,'sawtooth',420,70,t+.03,.4,.55);tone(c,o,'square',900,200,t+.07,.22,.3);puff(c,o,'bandpass',3200,600,t+.2,.25,.45);},
+  orbital_break:(c,t,o)=>{tone(c,o,'sine',260,130,t,.2,.8);tone(c,o,'sine',560,1120,t,.24,.9);tone(c,o,'sine',845,1690,t+.02,.26,.55);puff(c,o,'highpass',4500,4500,t,.06,.3);
+    puff(c,o,'highpass',7000,1200,t+.03,.4,.9);tone(c,o,'sawtooth',1300,90,t+.03,.45,.5);tone(c,o,'sine',1690,300,t+.06,.35,.35);puff(c,o,'bandpass',3800,700,t+.22,.3,.45);},
   pu_sticky:(c,t,o)=>{puff(c,o,'bandpass',500,250,t,.2,.5);tone(c,o,'sine',200,110,t,.18,.3);}
   });
 }

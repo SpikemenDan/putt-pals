@@ -9,7 +9,7 @@
 
 import { BALL_RADIUS } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
-import { DurationKinds, getPowerup, isOpponentPowerup, POWERUP_CATALOG, PowerupTargets, powerupIds } from './catalog.js';
+import { DurationKinds, getPowerup, isDeployablePowerup, isOpponentPowerup, POWERUP_CATALOG, PowerupTargets, powerupIds } from './catalog.js';
 
 const count = n => Number.isSafeInteger(n) && n >= 0;
 
@@ -20,7 +20,8 @@ export const pendingState = (catalog = POWERUP_CATALOG) => Object.fromEntries(ca
 
 /**
  * Activates one power-up for a player. Does not touch the inventory.
- * @returns {{ok: boolean, entry?: object, message?: {id:number, t:string}, toast: string}}
+ * @returns {{ok: boolean, entry?: object, message?: {id:number, t:string}, deploy?: {kind:string}, toast: string}}
+ * A course entry returns `deploy`: the caller picks a spot and sends a DEPLOY_OBJECT command (see docs/contracts/G1E_DEPLOYABLES.md).
  */
 export function activatePowerup(player, id, nextMessageId, catalog = POWERUP_CATALOG) {
   const entry = getPowerup(id, catalog);
@@ -28,6 +29,7 @@ export function activatePowerup(player, id, nextMessageId, catalog = POWERUP_CAT
   if (entry.target === PowerupTargets.OPPONENT) {
     return { ok: true, entry, message: { id: nextMessageId, t: id }, toast: entry.name + ' sent to everyone else!' };
   }
+  if (isDeployablePowerup(id, catalog)) return { ok: true, entry, deploy: { kind: id }, toast: entry.toast };
   if (player.armedPowerups[id]) return { ok: false, entry, toast: entry.name + ' is already armed.' };
   player.armedPowerups[id] = 1;
   return { ok: true, entry, toast: entry.toast };

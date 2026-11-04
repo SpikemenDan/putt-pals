@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SOLVER_CONFIG } from './solver.mjs';
+import { PAR_SOLVER_CONFIG } from './par-solver.mjs';
+import { TUNING } from '../../src/shared/tuning.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -41,31 +42,36 @@ export function hashSimulationSources() {
   return hashJson(simulationSourceFiles().map(file => [file, digest(fs.readFileSync(path.join(root, file)))]));
 }
 
-export function createDifficultyProvenance(course, puttIndex, { full = false, simulationHash = hashSimulationSources(), configuration = SOLVER_CONFIG } = {}) {
+export function createDifficultyProvenance(course, puttIndex, { full = false, simulationHash = hashSimulationSources(), configuration = PAR_SOLVER_CONFIG, gravity = TUNING.gravity } = {}) {
   const putt = course?.putts?.[puttIndex];
   if (!course?.id || !putt?.id) throw new Error('A normalized course and valid putt index are required');
-  return { version: 1, courseId: course.id, puttId: putt.id,
+  return { version: 2, courseId: course.id, puttId: putt.id, gravity,
     courseSha256: hashJson(course), simulationSha256: simulationHash,
-    configurationSha256: hashJson({ parameters: configuration, solverSha256: digest(fs.readFileSync(path.join(root, 'tools/cli/solver.mjs'))) }), searchMode: full ? 'full' : 'fast' };
+    configurationSha256: hashJson({ parameters: configuration, solverSha256: digest(fs.readFileSync(path.join(root, 'tools/cli/par-solver.mjs'))) }), searchMode: full ? 'full' : 'fast' };
 }
 
-/** Boundary check for persisted results; fast searches never establish full-grid counts. */
+/** Boundary check for a persisted par-route result; fast searches never establish the thorough grid. */
 export function assessDifficultyResult(record, current) {
   const differences = [];
-  if (!record || record.schemaVersion !== 1 || !record.provenance || typeof record.provenance !== 'object') {
-    return { current: false, complete: false, differences: ['Unsupported or missing difficulty provenance'] };
+  if (!record || record.schemaVersion !== 2 || !record.provenance || typeof record.provenance !== 'object') {
+    return { current: false, complete: false, differences: ['Unsupported or missing par-route provenance'] };
   }
   const provenance = record.provenance;
-  if (provenance.version !== 1) differences.push('Unsupported provenance version');
+  if (provenance.version !== 2) differences.push('Unsupported provenance version');
   for (const key of ['courseId', 'puttId']) if (typeof provenance[key] !== 'string' || !provenance[key]) differences.push(`Invalid ${key}`);
-  for (const key of ['version', 'courseId', 'puttId', 'courseSha256', 'simulationSha256', 'configurationSha256', 'searchMode']) {
+  for (const key of ['version', 'courseId', 'puttId', 'gravity', 'courseSha256', 'simulationSha256', 'configurationSha256', 'searchMode']) {
     if (provenance[key] !== current?.[key]) differences.push(`${key} differs from current input`);
   }
   for (const key of ['courseSha256', 'simulationSha256', 'configurationSha256']) {
     if (typeof provenance[key] !== 'string' || !/^[a-f0-9]{64}$/.test(provenance[key])) differences.push(`${key} is not a SHA-256 digest`);
   }
   if (!['fast', 'full'].includes(provenance.searchMode)) differences.push('Invalid search mode');
-  if (!Number.isInteger(record.hits) || record.hits < 0) differences.push('Invalid hit count');
-  if (record.best !== null && (!record.best || !Number.isFinite(record.best.deg) || !Number.isFinite(record.best.power) || record.best.power <= 0 || record.best.power > 1)) differences.push('Invalid robust solution');
+  if (!['route', 'none', 'budget'].includes(record.status)) differences.push('Invalid status');
+  if (record.status === 'route') {
+    const okRoute = Array.isArray(record.route) && record.route.length === record.strokes && record.strokes >= 1 && record.strokes <= PAR_SOLVER_CONFIG.maxStrokes
+      && record.route.every(s => Number.isFinite(s.deg) && Number.isFinite(s.power) && s.power > 0 && s.power <= 1);
+    if (!okRoute) differences.push('Invalid robust route');
+    if (record.par !== Math.max(PAR_SOLVER_CONFIG.minPar, record.strokes)) differences.push('Par does not follow the shortest robust route');
+  }
   return { current: differences.length === 0, complete: differences.length === 0 && provenance.searchMode === 'full', differences };
 }

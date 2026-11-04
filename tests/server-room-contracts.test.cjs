@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
   async function test(name,fn) { await fn(); console.log('PASS '+name); passed++; }
   const copy=v=>structuredClone(v);
   const snapshot=createServerRoomFixture();
-  const command=(type='START_VOTING', extra={}) => ({version:3,type:'command',sessionId:snapshot.sessionId,connectionId:'socket_p1',sequence:1,roundNumber:0,puttIndex:0,payload:{type,...extra}});
+  const command=(type='START_VOTING', extra={}) => ({version:4,type:'command',sessionId:snapshot.sessionId,connectionId:'socket_p1',sequence:1,roundNumber:0,puttIndex:0,payload:{type,...extra}});
   const binding={playerId:'p1',connectionId:'socket_p1',lastSequence:0};
   await test('policy defaults and validated future deployment overrides',()=>{
     assert.deepEqual(c.createRoomPolicy(),{reconnectGraceMs:30000,controllerTransferDelayMs:0,emptyRoomTtlMs:900000});
@@ -14,9 +14,9 @@ const assert = require('node:assert/strict');
     for(const overrides of [{reconnectGraceMs:0},{emptyRoomTtlMs:1},{controllerTransferDelayMs:30001},{unknown:true},{reconnectGraceMs:NaN}]) assert.throws(()=>c.createRoomPolicy(overrides));
     assert.ok(Object.isFrozen(c.createRoomPolicy()));
   });
-  await test('server authority separate from controller; versions 2 and 3 carry player colours',async()=>{
-    assert.equal((await import('../src/shared/constants.js')).PROTOCOL_VERSION,2);
-    assert.equal(c.SERVER_ROOM_VERSION,3);assert.ok(c.validRoomSnapshot(snapshot));
+  await test('server authority separate from controller; versions 3 (peer) and 4 (server room) carry player colours and deployables',async()=>{
+    assert.equal((await import('../src/shared/constants.js')).PROTOCOL_VERSION,3);
+    assert.equal(c.SERVER_ROOM_VERSION,4);assert.ok(c.validRoomSnapshot(snapshot));
     const invalid=copy(snapshot);invalid.session.context.hostId='p1';assert.equal(c.validRoomSnapshot(invalid),false);
     assert.equal(c.authorizeRoomFrame(command(),binding,snapshot,snapshot.serverTime),null);
     assert.equal(c.authorizeRoomFrame({...command(),connectionId:'socket_p2'},{...binding,playerId:'p2',connectionId:'socket_p2'},snapshot,snapshot.serverTime),'unauthorized');
@@ -27,16 +27,16 @@ const assert = require('node:assert/strict');
     assert.equal(c.decodeRoomFrame(JSON.stringify(command()),'server'),null);
     assert.equal(c.decodeRoomFrame('{','client'),null);assert.equal(c.decodeRoomFrame(new Uint8Array(1),'client'),null);
     assert.equal(c.decodeRoomFrame(' '.repeat(65537),'client'),null);
-    const hello={version:3,type:'hello',color:null,roomCode:'friends',name:'x'.repeat(14),resume:null};
+    const hello={version:4,type:'hello',color:null,roomCode:'friends',name:'x'.repeat(14),resume:null};
     assert.ok(c.validClientFrame(hello));assert.equal(c.validClientFrame({...hello,name:'x'.repeat(15)}),false);
     assert.equal(c.decodeRoomFrame(JSON.stringify({...hello,name:'😀'.repeat(20000)}),'client'),null);
     assert.equal(c.validRoomId('__proto__'),false);assert.equal(c.validRoomCode('A B!'),false);
   });
   await test('resume secret only in private handshake/welcome, never shared snapshot',()=>{
     const resume={sessionId:'session_fixture',playerId:'p1',token:'x'.repeat(43)};
-    assert.ok(c.validClientFrame({version:3,type:'hello',color:null,roomCode:'friends',name:'A',resume}));
-    assert.equal(c.validClientFrame({version:3,type:'hello',color:null,roomCode:'friends',name:'A',resume:{...resume,token:'short'}}),false);
-    const welcome={version:3,type:'welcome',playerId:'p1',connectionId:'socket_p1',resumeToken:'x'.repeat(43),snapshot};
+    assert.ok(c.validClientFrame({version:4,type:'hello',color:null,roomCode:'friends',name:'A',resume}));
+    assert.equal(c.validClientFrame({version:4,type:'hello',color:null,roomCode:'friends',name:'A',resume:{...resume,token:'short'}}),false);
+    const welcome={version:4,type:'welcome',playerId:'p1',connectionId:'socket_p1',resumeToken:'x'.repeat(43),snapshot};
     assert.ok(c.decodeRoomFrame(c.encodeRoomFrame(welcome,'server'),'server'));
     const leaked=copy(snapshot);leaked.seats[0].token='secret';assert.equal(c.validRoomSnapshot(leaked),false);
     const leaked2=copy(snapshot);leaked2.session.context.players.p1.tokenHash='a'.repeat(64);assert.equal(c.validRoomSnapshot(leaked2),false);
@@ -141,11 +141,22 @@ const assert = require('node:assert/strict');
     assert.ok((await mock.receive(JSON.stringify(command('REPORT_SCORE',{strokes:1,timedOut:false})),'p1')).ack);
     assert.equal(mock.checkpoint.identities[0].lastSequence,1);
   });
+  await test('deployables (G1e): optional snapshot key and DEPLOY_OBJECT / DEPLOY_HIT commands are strictly validated',()=>{
+    const ctx=snapshot.session.context, owner=Object.keys(ctx.players)[0];
+    const obj=(id='d1',extra={})=>({id,kind:'bumper',x:10,y:20,z:0,owner,impacts:0,placedAt:5,map:ctx.mapIndex,putt:ctx.puttIndex,...extra});
+    const withList=list=>({...copy(snapshot),deployables:list});
+    assert.ok(c.validRoomSnapshot(snapshot),'absent means none');
+    assert.ok(c.validRoomSnapshot(withList([])));assert.ok(c.validRoomSnapshot(withList([obj('d1'),obj('d2',{kind:'orbital',x:99})])));
+    for(const bad of [[obj('d1'),obj('d1')],[obj('d1',{owner:'ghost'})],[obj('d1',{map:(ctx.mapIndex+1)%22})],[obj('d1',{putt:(ctx.puttIndex+1)%6})],[obj('d1',{z:undefined})],[obj('d1',{kind:'mag'})],[obj('d1',{impacts:99})],[{...obj('d1'),name:'x'}],'nope']) assert.equal(c.validRoomSnapshot(withList(bad)),false,JSON.stringify(bad).slice(0,60));
+    assert.equal(c.validRoomSnapshot({...copy(snapshot),deployables:Array.from({length:201},(_,i)=>obj('d'+i))}),false,'the wire bound');
+    assert.ok(c.validServerCommand({type:'DEPLOY_OBJECT',kind:'orbital',x:1,y:2}));assert.ok(c.validServerCommand({type:'DEPLOY_HIT',id:'d1'}));
+    for(const bad of [{type:'DEPLOY_OBJECT',kind:'mag',x:1,y:2},{type:'DEPLOY_OBJECT',kind:'bumper',x:NaN,y:2},{type:'DEPLOY_OBJECT',kind:'bumper',x:1,y:2,z:3},{type:'DEPLOY_OBJECT',kind:'bumper',x:1},{type:'DEPLOY_HIT',id:'__proto__'},{type:'DEPLOY_HIT'},{type:'DEPLOY_HIT',id:'d1',z:1}]) assert.equal(c.validServerCommand(bad),false,JSON.stringify(bad));
+  });
   await test('server frames reject unknown errors, malformed ack and client impersonation',()=>{
-    assert.ok(c.validServerFrame({version:3,type:'error',code:'room-full',retryAfterMs:null}));
-    assert.equal(c.validServerFrame({version:3,type:'error',code:'secret exception trace',retryAfterMs:null}),false);
-    assert.equal(c.validServerFrame({version:3,type:'ack',sessionId:'s',connectionId:'c',sequence:0,revision:1}),false);
-    assert.equal(c.validClientFrame({version:3,type:'snapshot',snapshot}),false);
+    assert.ok(c.validServerFrame({version:4,type:'error',code:'room-full',retryAfterMs:null}));
+    assert.equal(c.validServerFrame({version:4,type:'error',code:'secret exception trace',retryAfterMs:null}),false);
+    assert.equal(c.validServerFrame({version:4,type:'ack',sessionId:'s',connectionId:'c',sequence:0,revision:1}),false);
+    assert.equal(c.validClientFrame({version:4,type:'snapshot',snapshot}),false);
   });
   console.log(`${passed} server-room contract scenarios passed (no Cloudflare runtime or real network claim).`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

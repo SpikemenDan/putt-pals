@@ -10,7 +10,6 @@ const reference = require('./support/legacy-reference.cjs');
 const root = path.resolve(__dirname, '..');
 const currentShots = require('./fixtures/cup-capture/solutions.json');
 const currentFirstShot = currentShots.results[0].best;
-const currentFull = require('./fixtures/cup-capture/reference-full.json');
 const main = path.join(root, 'tools/cli/main.mjs');
 const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding: 'utf8' });
 
@@ -29,7 +28,7 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   };
 
   const provenanceTools = await import(pathToFileURL(path.join(root, 'tools/cli/provenance.mjs')).href);
-  const { SOLVER_CONFIG } = await import(pathToFileURL(path.join(root, 'tools/cli/solver.mjs')).href);
+  const parSolver = await import(pathToFileURL(path.join(root, 'tools/cli/par-solver.mjs')).href);
   const { parseCliArguments } = await import(pathToFileURL(path.join(root, 'tools/cli/arguments.mjs')).href);
   run('course-file option parsing rejects ambiguous or ignored arguments', () => {
     assert.deepEqual(parseCliArguments(['--courses', 'maps.json', 'solve', '0', '0', '--full']),
@@ -86,26 +85,27 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.throws(() => hashJson({ x: NaN }));
     const course = createCourseDocument().courses[0];
     const current = createDifficultyProvenance(course, 0, { full: true });
-    const saved = { schemaVersion: 1, hits: 811, best: { deg: 31, power: 0.8 }, provenance: current };
+    const saved = { schemaVersion: 2, status: 'route', strokes: 1, par: 2, route: [{ deg: 30.5, power: 0.8, to: 'cup' }], provenance: current };
     assert.deepEqual(assessDifficultyResult(saved, current), { current: true, complete: true, differences: [] });
     assert.deepEqual(createDifficultyProvenance(course, 0, { full: true }), current);
     const changedCourse = structuredClone(course); changedCourse.geometry.w[0][0] += 1;
     for (const updated of [createDifficultyProvenance(changedCourse, 0, { full: true }),
       createDifficultyProvenance(course, 0, { full: true, simulationHash: 'a'.repeat(64) }),
-      createDifficultyProvenance(course, 0, { full: true, configuration: { ...SOLVER_CONFIG, trialTicks: 2400 } }),
+      createDifficultyProvenance(course, 0, { full: true, configuration: { ...parSolver.PAR_SOLVER_CONFIG, trialTicks: 2400 } }),
+      createDifficultyProvenance(course, 0, { full: true, gravity: 250 }),
       createDifficultyProvenance(course, 1, { full: true })]) {
       assert.equal(assessDifficultyResult(saved, updated).current, false);
       assert.equal(assessDifficultyResult(saved, updated).complete, false);
     }
   });
-  run('fast or malformed difficulty results cannot establish complete current counts', () => {
+  run('fast or malformed par-route results cannot establish a complete current measurement', () => {
     const { createDifficultyProvenance, assessDifficultyResult } = provenanceTools;
     const current = createDifficultyProvenance(createCourseDocument().courses[0], 0);
-    const fast = { schemaVersion: 1, hits: 2, best: { deg: 31, power: 0.8 }, provenance: current };
+    const fast = { schemaVersion: 2, status: 'route', strokes: 1, par: 2, route: [{ deg: 30.5, power: 0.8, to: 'cup' }], provenance: current };
     assert.equal(assessDifficultyResult(fast, current).current, true);
     assert.equal(assessDifficultyResult(fast, current).complete, false);
-    for (const changed of [null, { ...fast, hits: -1 }, { ...fast, hits: 1.5 },
-      { ...fast, best: { deg: 0, power: 2 } }, { ...fast, schemaVersion: 999 },
+    for (const changed of [null, { ...fast, status: 'maybe' }, { ...fast, par: 3 }, { ...fast, strokes: 7, route: Array(7).fill(fast.route[0]) },
+      { ...fast, route: [{ deg: 0, power: 2, to: 'cup' }] }, { ...fast, schemaVersion: 999 },
       { ...fast, provenance: { ...current, courseSha256: 'bad' } }]) assert.equal(assessDifficultyResult(changed, current).current, false);
   });
   run('check accepts all maps and rejects geometry/rule mismatches and unplayable positions', () => {
@@ -126,19 +126,111 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(commands.runCheck({ definitions: null, rules: [] }).code, 1);
     assert.equal(commands.runCheck({ definitions: [], rules: [{ putts: 'bad' }] }).code, 1);
   });
-  run('rank labels historical counts and never certifies current difficulty', () => {
-    const out = commands.runRank(data.rules);
+  // Report-only gate inputs are synthetic: shipped-map routes are measured by `npm run measure:par`, not stored.
+  const { PAR_SOLVER_CONFIG } = parSolver;
+  const syntheticRoutes = (overrides = () => ({})) => {
+    const document = createCourseDocument();
+    const results = document.courses.flatMap((course, map) => course.putts.map((_putt, putt) => ({
+      schemaVersion: 2, map, putt, name: course.name, gravity: 700, status: 'route', strokes: 1, par: 2, holeInOne: true, margin: 1, difficulty: 1.667 + map / 100,
+      route: [{ deg: 10, power: 0.5, to: 'cup' }], verified: true,
+      provenance: provenanceTools.createDifficultyProvenance(course, putt),
+      ...overrides(map, putt),
+    })));
+    return { schemaVersion: 2, results };
+  };
+  const parRoutes = syntheticRoutes();
+  run('rank needs a current measure-par report: missing/stale exit 2, bad input or routeless putts exit 1', () => {
+    const document = createCourseDocument();
+    assert.equal(commands.runRank(document.courses, undefined).code, 2);
+    assert.match(commands.runRank(document.courses, undefined).lines.join('\n'), /PAR ROUTES MISSING/);
+    assert.equal(commands.runRank(null, parRoutes).code, 1);
+    assert.equal(commands.runRank(document.courses, parRoutes).code, 0);
+    const stale = syntheticRoutes();
+    stale.results[0].provenance.courseSha256 = '0'.repeat(64);
+    const out = commands.runRank(document.courses, stale);
     assert.equal(out.code, 2);
-    assert.match(out.lines.join('\n'), /HISTORICAL COUNTS/);
-    assert.match(out.lines.join('\n'), /total 5213/);
-    assert.equal(out.lines.filter(line => /^\d\./.test(line)).length, 6);
-    const { arenaSourceData } = arenaDataModule;
-    for (const mutate of [rows => { rows.pop(); }, rows => { rows[0][1] = 'wrong'; },
-      rows => { rows[0][2][0] = -1; }, rows => { rows[1][2] = Array(6).fill(9999); }]) {
-      const rows = structuredClone(arenaSourceData.ladder);
-      mutate(rows);
-      assert.equal(commands.runRank(data.rules, rows).code, 1);
+    assert.match(out.lines.join('\n'), /STALE: Switchback Garden putt 1/);
+    const missing = syntheticRoutes();
+    missing.results = missing.results.filter(r => !(r.map === 0 && r.putt === 0));
+    assert.equal(commands.runRank(document.courses, missing).code, 1);
+    const routeless = syntheticRoutes((map, putt) => (map === 0 && putt === 0 ? { status: 'none', route: undefined, strokes: undefined, par: undefined } : {}));
+    assert.equal(commands.runRank(document.courses, routeless).code, 1);
+  });
+  run('rank orders the six starters by summed route difficulty', () => {
+    const out = commands.runRank(createCourseDocument().courses, syntheticRoutes((map) => ({ difficulty: map === 5 ? 1 : 3 })));
+    assert.equal(out.code, 0, out.lines.join('\n'));
+    const rows = out.lines.filter(line => /^\d\. map/.test(line));
+    assert.equal(rows.length, 6);
+    assert.match(rows[0], /map 5 Cyclone Ring/);
+  });
+  run('process: measure-par writes a report whose provenance matches the current inputs', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-measure-'));
+    try {
+      const file = path.join(temp, 'report.json');
+      const out = spawnSync(process.execPath, [path.join(root, 'tools/cli/measure-par.mjs'), '--only', '0/0', '--jobs', '1', '--out', file], { encoding: 'utf8' });
+      assert.equal(out.status, 0, out.stdout + out.stderr);
+      const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+      assert.equal(report.results.length, 1);
+      const [entry] = report.results;
+      assert.deepEqual([entry.status, entry.strokes, entry.par, entry.gravity], ['route', 1, 2, 700]);
+      const expected = provenanceTools.createDifficultyProvenance(createCourseDocument().courses[0], 0);
+      assert.deepEqual(provenanceTools.assessDifficultyResult(entry, expected).differences, []);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  });
+  run('process: --routes feeds check and rank; check and rank run without it', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-routes-'));
+    try {
+      const file = path.join(temp, 'routes.json');
+      fs.writeFileSync(file, JSON.stringify(parRoutes));
+      assert.equal(cli('check').status, 0);
+      assert.equal(cli('check', '--routes', file).status, 0);
+      const rank = cli('rank', '--routes', file);
+      assert.equal(rank.status, 0, rank.stdout + rank.stderr);
+      assert.match(rank.stdout, /current for every starter putt/);
+      assert.equal(cli('rank').status, 2);
+      assert.notEqual(cli('list', '--routes', file).status, 0);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  });
+  run('check gate: par must be an integer 2..6 and a robust route must exist within par', () => {
+    const range = structuredClone(data.rules);
+    range[0].putts[0].par = 7;
+    assert.match(commands.runCheck({ definitions: data.definitions, rules: range }).lines.join('\n'), /par 7 must be an integer 2\.\.6/);
+    const one = structuredClone(data.rules);
+    one[0].putts[0].par = 1;
+    assert.equal(commands.runCheck({ definitions: data.definitions, rules: one }).code, 1);
+    const tooLow = syntheticRoutes((map, putt) => (map === 0 && putt === 0 ? { strokes: 3 } : {}));
+    assert.match(commands.runCheck({ ...data, parRoutes: tooLow }).lines.join('\n'), /below the shortest robust route of 3 strokes/);
+    const none = syntheticRoutes((map, putt) => (map === 0 && putt === 0 ? { status: 'none' } : {}));
+    assert.match(commands.runCheck({ ...data, parRoutes: none }).lines.join('\n'), /no robust route within 6 strokes/);
+    assert.equal(commands.runCheck({ ...data, parRoutes }).code, 0);
+  });
+  run('par-solver proof chambers: hole-in-one optional, two-stroke route, and a hole with no route', () => {
+    const base = { tiles: [[0, 0, 800, 400]], w: [], pit: [], fan: [], tornado: [], movers: [], pl: [], rp: [], pd: [], tp: [], q: [], sand: [], ice: [], slime: [], tee: [100, 100], hole: [700, 100] };
+    const open = parSolver.solvePar({ ...base, hole: [400, 100] }, 0);
+    assert.equal(open.status, 'route');
+    assert.deepEqual([open.strokes, open.par, open.verified], [1, 2, true]);
+    const dogleg = parSolver.solvePar({ ...base, w: [[380, 0, 20, 300]] }, 0);
+    assert.equal(dogleg.status, 'route', 'a wall across the straight line forces a two-stroke route');
+    assert.deepEqual([dogleg.strokes, dogleg.par, dogleg.verified], [2, 2, true]);
+    const sealedCup = { ...base, w: [[640, 40, 20, 120], [740, 40, 20, 120], [640, 40, 120, 20], [640, 140, 120, 20]] };
+    const none = parSolver.solvePar(sealedCup, 0, { config: { ...PAR_SOLVER_CONFIG, maxStrokes: 2, maxWaypoints: 4 } });
+    assert.equal(none.status, 'none', 'a walled-in cup has no robust route');
+    assert.equal(none.route, undefined);
+  });
+  run('solver replay: the dogleg route flies through the shared simulation and sinks', async () => {
+    const { SimulationEngine } = await import(pathToFileURL(path.join(root, 'src/simulation/index.js')).href);
+    const { SHOT_POWER } = await import(pathToFileURL(path.join(root, 'src/shared/constants.js')).href);
+    const course = { tiles: [[0, 0, 800, 400]], w: [[380, 0, 20, 300]], pit: [], fan: [], tornado: [], movers: [], pl: [], rp: [], pd: [], tp: [], q: [], sand: [], ice: [], slime: [], tee: [100, 100], hole: [700, 100] };
+    const solved = parSolver.solvePar(course, 0);
+    const engine = new SimulationEngine(course, 0, { hazardTime: 0 });
+    const player = engine.addPlayer('p', 'P', 0);
+    for (const stroke of solved.route) {
+      engine.launch('p', stroke.deg * Math.PI / 180, 1, stroke.power * SHOT_POWER);
+      for (let i = 0; i < 4800 && player.moving && player.mode !== 'sunk'; i++) engine.step();
     }
+    assert.equal(player.mode, 'sunk');
+    assert.equal(player.strokes, solved.strokes);
+    engine.dispose();
   });
   run('process: export emits a versioned document for every map', () => {
     const out = cli('export');
@@ -149,13 +241,10 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(document.courses.filter(c => c.starter).length, 6);
     assert.equal(document.courses[0].putts[0].id, 'switchback-garden-putt-1');
   });
-  run('process: check succeeds and historical rank exits 2', () => {
+  run('process: check succeeds', () => {
     const check = cli('check');
     assert.equal(check.status, 0, check.stderr);
     assert.match(check.stdout, /CHECK OK: 22 courses/);
-    const rank = cli('rank');
-    assert.equal(rank.status, 2, rank.stderr);
-    assert.match(rank.stdout, /Current difficulty remains unverified/);
   });
   run('all six arena transforms and resolved rules match the recorded legacy generation exactly', () => {
     const recorded = reference.arenas();
@@ -253,21 +342,18 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.code, 1);
     assert.ok(out.lines.some(line => line.includes('Imported courses:')));
   });
-  run('solve reproduces all 36 S2 search outcomes, including two no-robust-shot results', () => {
-    const refs = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8')).results;
-    assert.equal(refs.length, 36);
-    for (const ref of refs) {
-      const out = commands.runSolve(data.definitions, ref.map, ref.putt);
-      assert.equal(out.code, ref.best ? 0 : 1, `${ref.map}/${ref.putt}`);
-      assert.deepEqual(out.result.best, ref.best, `${ref.map}/${ref.putt}`);
-      assert.ok(out.result.hits >= 0);
-    }
-  });
-  run('full solve matches the separately measured S2 reference grid (historical counts retained)', () => {
-    const out = commands.runSolve(data.definitions, 0, 0, '--full');
+  run('solve finds a verified shortest robust route and records gravity (hole-in-one optional)', () => {
+    const out = commands.runSolve(data.definitions, 0, 0);
     assert.equal(out.code, 0);
-    assert.equal(out.result.hits, currentFull.hits);
-    assert.deepEqual(out.result.best, currentFirstShot);
+    assert.equal(out.result.status, 'route');
+    assert.equal(out.result.verified, true);
+    assert.equal(out.result.strokes, 1);
+    assert.equal(out.result.par, 2, 'a one-stroke route still gives par 2: par is never below 2');
+    assert.equal(out.result.gravity, 700);
+  });
+  run('solver refuses a gravity the loaded simulation cannot honour', () => {
+    assert.throws(() => parSolver.assertWorldGravity(250), /per-world gravity injection is pending/);
+    assert.doesNotThrow(() => parSolver.assertWorldGravity(700));
   });
   run('solve rejects missing, invalid and unknown arguments', () => {
     for (const args of [[], ['', 0], [99, 0], [0, 99], [0, 0, '--typo']]) {
@@ -282,7 +368,8 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       const out = spawnSync(process.execPath, [path.join(temp, 'tools/cli/main.mjs'), 'solve', '0', '0'], { encoding: 'utf8', cwd: temp });
       assert.equal(out.status, 0, out.stderr);
       const saved = JSON.parse(out.stdout);
-      assert.deepEqual(saved.best, currentFirstShot);
+      assert.equal(saved.status, 'route');
+      assert.equal(saved.strokes, 1);
       const expected = provenanceTools.createDifficultyProvenance(createCourseDocument().courses[0], 0);
       assert.deepEqual(provenanceTools.assessDifficultyResult(saved, expected), { current: true, complete: false, differences: [] });
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }

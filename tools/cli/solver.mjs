@@ -9,7 +9,11 @@ export const SOLVER_CONFIG = Object.freeze({
   powerOffsets: Object.freeze([-0.025, 0, 0.025]),
 });
 
-/** Same grid, robustness offsets and 20-second trial window as the legacy solver. */
+/**
+ * S2 single-stroke hole-in-one probe on the legacy grid, kept for the cup-capture measurements
+ * (tests/measure-cup-capture.mjs) and the physics mechanic chambers. It no longer drives par,
+ * `solve`, `rank` or `check`: those use the multi-stroke par-route solver in par-solver.mjs (SV1).
+ */
 export function solveCourse(course, putt, { full = false } = {}) {
   const trial = (angle, power) => {
     const engine = new SimulationEngine(course, putt, { hazardTime: SOLVER_CONFIG.hazardTime });
