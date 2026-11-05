@@ -2,7 +2,9 @@ import { createCourseDocument } from '../../src/courses/document.js';
 import { createCourseData } from '../../src/courses/index.js';
 import { resolvePuttCourse } from '../../src/simulation/engine.js';
 import { hitDeployable, hitPlausible, placeDeployable, placementFloor } from '../../src/gameplay/deployables.js';
+import { activeGlobalHazards, createGlobalHazard } from '../../src/gameplay/global-hazards.js';
 import { createRoomSession } from '../../src/session/index.js';
+import { GameModes } from '../../src/shared/session.js';
 import {
   SERVER_ROOM_LIMITS, SERVER_ROOM_VERSION, ROOM_RULES_VERSION,
   authorizeRoomFrame, chooseRoomController, createRoomPolicy, decodeRoomFrame,
@@ -364,6 +366,7 @@ export class RoomDurableObject {
       emptyAt: null, controllerAt: null, roomTimer: null, suppress: 0, dirty: false,
       logicalTime: Date.now(),
       deployables: [], deploySeq: 0, hitTimes: new Map(), latestPresence: new Map(),
+      globalHazards: [], hazardSeq: 0,
     };
     room.session = this.makeSession(room, {
       controllerId: playerId, hostName: name, hostColor: color ?? undefined, serverOwned: true, isReserved: id => {
@@ -450,9 +453,34 @@ export class RoomDurableObject {
     for (const id of [...room.hitTimes.keys()]) if (!room.deployables.some(d => d.id === id)) room.hitTimes.delete(id);
   }
 
+  /** Create room-scoped G1f records using only server time and server-assigned seeds. */
+  activateGlobalHazard(room, identity, command, nowMs) {
+    const state = room.session.getSnapshot(), playerId = identity.playerId;
+    if (state.phase !== 'play' || state.powerups === false || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(state.mode) || state.roster.length < 2
+        || !state.roster.includes(playerId) || !state.players[playerId]?.connected) return false;
+    if (command.kind === 'lightning' && (command.targetId === playerId || !state.roster.includes(command.targetId) || !state.players[command.targetId]?.connected)) return false;
+    for (const h of room.globalHazards) room.hazardSeq = Math.max(room.hazardSeq, Number(String(h.id).slice(1)) || 0);
+    const sequence = ++room.hazardSeq;
+    const next = createGlobalHazard(room.globalHazards, command, {
+      owner: playerId, roundNumber: state.roundNumber, map: state.mapIndex, putt: state.puttIndex,
+      now: Math.max(0, (nowMs - state.roundStartTime) / 1000), sequence, seed: Math.imul(sequence, 0x9e3779b1) >>> 0,
+    });
+    if (!next) return false;
+    room.globalHazards = next; room.dirty = true;
+    return true;
+  }
+
+  syncGlobalHazards(room, state) {
+    room.globalHazards = state.phase === 'play' && state.powerups !== false
+      ? activeGlobalHazards(room.globalHazards, {
+        roundNumber: state.roundNumber, map: state.mapIndex, putt: state.puttIndex, now: Math.max(0, (this.now(room) - state.roundStartTime) / 1000),
+      }) : [];
+  }
+
   snapshot(room) {
     const state = room.session.getSnapshot();
     this.syncDeployables(room, state);
+    this.syncGlobalHazards(room, state);
     const context = Object.fromEntries(CONTEXT_FIELDS.map(field => [field, state[field]]));
     const snapshot = {
       roomCode: room.roomCode, sessionId: room.sessionId, rulesVersion: ROOM_RULES_VERSION,
@@ -461,6 +489,7 @@ export class RoomDurableObject {
       seats: [...room.seats.values()].sort((a, b) => a.joinOrder - b.joinOrder).map(seat => ({ ...seat })),
       session: { node: nodeFor(state.state), context },
       ...(room.deployables.length ? { deployables: structuredClone(room.deployables) } : {}),
+      ...(room.globalHazards.length ? { globalHazards: structuredClone(room.globalHazards) } : {}),
     };
     return snapshot;
   }
@@ -579,6 +608,7 @@ export class RoomDurableObject {
     };
     const changed = payload.type === 'DEPLOY_OBJECT' || payload.type === 'DEPLOY_HIT'
       ? this.deployCommand(room, identity, payload, now)
+      : payload.type === 'ACTIVATE_HAZARD' ? this.activateGlobalHazard(room, identity, payload, now)
       : room.session.send(event);
     if (!changed) room.dirty = true;
     if (payload.type === 'LEAVE_ROOM') {

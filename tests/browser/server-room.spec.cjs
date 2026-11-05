@@ -61,9 +61,10 @@ test('server rooms: tournament, late spectator and controller departure preserve
 });
 
 test('server rooms: duplicate resume and incompatible frames are rejected without disturbing the seat', async ({ browser }, info) => {
+  const { SERVER_ROOM_VERSION } = await import('../../src/network/contracts/server-room.js');
   const code = roomCode('N4V');
   const player = await openPlayer(browser, info, 'Player', { contexts }); await player.join(code);
-  const results = await player.page.evaluate(async code => {
+  const results = await player.page.evaluate(async ({ code, version }) => {
     async function rejected(hello) {
       return new Promise((resolve, reject) => {
         const ws = new WebSocket(`ws://${location.host}/api/rooms/${code}/socket`);
@@ -73,10 +74,10 @@ test('server rooms: duplicate resume and incompatible frames are rejected withou
       });
     }
     const resume = window.__ppApp.room.identity;
-    return [await rejected({ version: 4, type: 'hello', color: null, roomCode: code, name: 'Duplicate', resume }),
+    return [await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Duplicate', resume }),
       await rejected({ version: 1, type: 'hello', color: null, roomCode: code, name: 'Old', resume: null }),
-      await rejected({ version: 4, type: 'hello', color: null, roomCode: code, name: 'Extra', resume: null, playerId: 'forged' })];
-  }, code.toLowerCase());
+      await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Extra', resume: null, playerId: 'forged' })];
+  }, { code: code.toLowerCase(), version: SERVER_ROOM_VERSION });
   expect(results).toEqual(['identity-rejected', 'incompatible-version', 'invalid-message']);
   expect(await player.roomConnected()).toBe(true);
   expect(Object.keys((await player.snapshot()).players)).toHaveLength(1);

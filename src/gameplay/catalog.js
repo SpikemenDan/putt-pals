@@ -21,9 +21,9 @@
  *   toast     message shown when the effect is armed (self) or sent (opponent)
  */
 
-export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent', COURSE: 'course' });
-export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke', IMPACTS: 'impacts' });
-export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura', DEPLOY: 'deploy' });
+export const PowerupTargets = Object.freeze({ SELF: 'self', OPPONENT: 'opponent', COURSE: 'course', GLOBAL: 'global' });
+export const DurationKinds = Object.freeze({ NEXT_SHOT: 'next-shot', STROKE: 'stroke', IMPACTS: 'impacts', TIMED: 'timed' });
+export const PowerupHooks = Object.freeze({ TICK_FORCE: 'tick-force', AIM_SWAY: 'aim-sway', LAUNCH: 'launch', COLLISION: 'collision', RADIUS: 'radius', AIM_MODE: 'aim-mode', AURA: 'aura', DEPLOY: 'deploy', GLOBAL_HAZARD: 'global-hazard' });
 
 const deepFreeze = value => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -99,6 +99,18 @@ export const POWERUP_CATALOG = deepFreeze([
     duration: { kind: DurationKinds.IMPACTS }, hook: PowerupHooks.DEPLOY,
     banner: 'ORBITAL BUMPER', toast: 'An orbital bumper is placed on the course. Its ring bends nearby shots.',
   },
+  ...[
+    ['rain', 'Rain', 'Reduces rolling friction for the whole room.'],
+    ['snow', 'Snow', 'Increases rolling resistance for the whole room.'],
+    ['wind', 'Wind', 'Pushes every ball in the selected direction.'],
+    ['lightning', 'Lightning', 'Strikes the selected opponent once.'],
+    ['tornado', 'Tornado', 'A roaming vortex flings nearby balls and lifts them.'],
+    ['hurricane', 'Hurricane', 'A roaming vortex pulls nearby balls toward its centre.'],
+  ].map(([id, name, toast]) => ({
+    id, name, group: 'global-hazard', target: PowerupTargets.GLOBAL, solo: false, weight: 1,
+    duration: { kind: DurationKinds.TIMED }, hook: PowerupHooks.GLOBAL_HAZARD,
+    banner: name.toUpperCase(), toast,
+  })),
 ]);
 
 /** Problems with a catalog (empty when valid): duplicate ids, bad fields, non-self entries allowed in solo. */
@@ -131,8 +143,9 @@ export const isOpponentPowerup = (id, catalog = POWERUP_CATALOG) => getPowerup(i
 export const powerupName = (id, catalog = POWERUP_CATALOG) => getPowerup(id, catalog)?.name || String(id);
 
 /** Aura values a ball can show in presence: '' for none, then every catalog id except deployables, which are objects and not auras. */
-export const auraIds = (catalog = POWERUP_CATALOG) => ['', ...catalog.filter(e => e.target !== PowerupTargets.COURSE).map(e => e.id)];
+export const auraIds = (catalog = POWERUP_CATALOG) => ['', ...catalog.filter(e => e.target !== PowerupTargets.COURSE && e.target !== PowerupTargets.GLOBAL).map(e => e.id)];
 export const isDeployablePowerup = (id, catalog = POWERUP_CATALOG) => getPowerup(id, catalog)?.target === PowerupTargets.COURSE;
+export const isGlobalHazardPowerup = (id, catalog = POWERUP_CATALOG) => getPowerup(id, catalog)?.target === PowerupTargets.GLOBAL;
 
 /**
  * The entries a box can award for a session.

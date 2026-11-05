@@ -31,6 +31,13 @@ export function createRecipes({ tone, puff, random }) {
   // G1e: placement stingers and impact sounds for the deployables; the Bumper is a dry pinball thwack, the Orbital Bumper a ringing, higher chime.
   pu_bumper:(c,t,o)=>{tone(c,o,'triangle',200,480,t,.2,.8);tone(c,o,'sine',100,60,t,.24,.9);tone(c,o,'square',480,720,t+.07,.12,.2);puff(c,o,'bandpass',1500,900,t,.05,.4);},
   pu_orbital:(c,t,o)=>{tone(c,o,'sine',300,1000,t,.3,.7);tone(c,o,'sine',306,1012,t+.05,.3,.5);tone(c,o,'sine',150,300,t,.3,.5);},
+  pu_rain:(c,t,o)=>{puff(c,o,'highpass',4500,2400,t,.35,.3);tone(c,o,'sine',620,420,t,.25,.25);},
+  pu_snow:(c,t,o)=>{puff(c,o,'highpass',6200,3200,t,.3,.24);tone(c,o,'sine',880,1320,t,.22,.2);},
+  pu_wind:(c,t,o)=>{puff(c,o,'bandpass',300,1700,t,.4,.35);tone(c,o,'sine',240,420,t,.3,.18);},
+  pu_lightning:(c,t,o)=>{puff(c,o,'lowpass',3000,160,t,.25,.8);tone(c,o,'square',120,35,t,.16,.6);tone(c,o,'sine',1400,110,t+.03,.24,.35);},
+  pu_tornado:(c,t,o)=>{puff(c,o,'bandpass',180,900,t,.55,.35);tone(c,o,'sine',250,480,t,.3,.2);},
+  pu_hurricane:(c,t,o)=>{puff(c,o,'lowpass',700,240,t,.5,.35);tone(c,o,'triangle',180,360,t,.4,.22);},
+  lightning:(c,t,o)=>{puff(c,o,'lowpass',4000,140,t,.25,.95);tone(c,o,'square',150,35,t,.18,.7);tone(c,o,'sine',1450,140,t+.04,.3,.35);},
   bumper_hit:(c,t,o)=>{tone(c,o,'sine',150,55,t,.16,1);tone(c,o,'triangle',720+random()*60,300,t,.13,1);tone(c,o,'square',1100,480,t,.07,.22);puff(c,o,'bandpass',1800,800,t,.05,.6);},
   orbital_hit:(c,t,o)=>{tone(c,o,'sine',260,130,t,.2,.8);tone(c,o,'sine',560+random()*60,1120,t,.24,.9);tone(c,o,'sine',845,1690,t+.02,.26,.55);puff(c,o,'highpass',4500,4500,t,.06,.3);},
   // The break sound is the hit sound with a splintering crack, a falling crunch and a debris rattle on top.

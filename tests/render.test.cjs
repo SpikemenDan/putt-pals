@@ -116,6 +116,23 @@ function firstDifference(a, b, at = '$') {
   for (const k of keys) { const d = firstDifference(a[k], b[k], `${at}.${k}`); if (d) return d; }
   return null;
 }
+// Math.sin/cos may differ by one ULP between the V8 used to record the tape
+// and current Node. Procedural sky positions allow one ULP horizontally and
+// at most 1e-12 world units vertically (sine then offset can cancel near zero).
+// Every other serialized value stays exact; recorded hashes are never replaced.
+function matchesRecordedNode(object, expected) {
+  const value = node(object);
+  if (sha(value) === expected) return true;
+  if (!Number.isInteger(object.userData.p)) return false;
+  const [x, y, z] = value.position;
+  const ulp = n => Number.EPSILON * 2 ** Math.floor(Math.log2(Math.abs(n) || 1));
+  for (const dx of [-1,0,1]) for (let dy = -128; dy <= 128; dy++) for (const dz of [-1,0,1]) {
+    if (Math.abs(dy * ulp(y)) > 1e-12) continue;
+    value.position[0] = x + dx * ulp(x); value.position[1] = y + dy * ulp(y); value.position[2] = z + dz * ulp(z);
+    if (sha(value) === expected) return true;
+  }
+  return false;
+}
 const same = (actual, expected, label) => { const d = firstDifference(actual, expected); assert.equal(d, null, `${label}: ${d}`); };
 
 // U2: the legacy spread cone (3 vertices) and twelve guide dots are replaced by one arrow (9 vertices);
@@ -128,6 +145,18 @@ let TUNING;
   const env = createWindow();
   const { w } = env;
   const THREE = w.THREE;
+  await scenario('recorded scenery tolerance accepts numeric roundoff and rejects changed layout/materials', async () => {
+    const object = new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xffffff}));
+    object.userData.p=0; object.position.set(100,20,100);
+    const expected=sha(node(object));
+    object.position.x += Number.EPSILON*64;
+    assert.ok(matchesRecordedNode(object,expected));
+    object.position.x=100.000001;
+    assert.equal(matchesRecordedNode(object,expected),false);
+    object.position.x=100; object.material.color.setHex(0);
+    assert.equal(matchesRecordedNode(object,expected),false);
+    object.geometry.dispose();object.material.dispose();
+  });
   const [{ createCourseData }, render, camera, physics, coords] = await Promise.all([
     import('../src/courses/index.js'), import('../src/render/index.js'), import('../src/camera/index.js'), import('../src/simulation/physics.js'), import('../src/shared/coords.js'),
   ]);
@@ -209,7 +238,8 @@ let TUNING;
     });
     const M = ms.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === view.renderer.course.group)).map(c => sha(node(c)));
     assert.equal(M.length, frame.children.length, `${label} full scene @${now}: child count`);
-    M.forEach((h, i) => assert.equal(h, frame.children[i], `${label} full scene @${now}: child ${i} (${ms.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === view.renderer.course.group))[i].type})`));
+    const compared = ms.children.filter(c => !isAimGuide(c) && (!c.isGroup || c === view.renderer.course.group));
+    compared.forEach((object, i) => assert.ok(matchesRecordedNode(object, frame.children[i]), `${label} full scene @${now}: child ${i} (${object.type})`));
     return frame;
   }
 

@@ -65,7 +65,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const aimListeners = new Set();
   let unsubscribeInputAim = null;
   // Bumper / Orbital Bumper placement (G1e): `placing` while the player picks a spot, `awaiting` while a guest's DEPLOY_OBJECT is in flight.
-  let placing = null, awaiting = null, cursor = null, unbindPlacement = null;
+  let placing = null, awaiting = null, hazardAwaiting = null, cursor = null, unbindPlacement = null;
   const AWAIT_MS = 3000;
   let seenKey = '', seenKinds = new Map();
 
@@ -172,7 +172,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   function endPutt() {
     if (putt && puttPolicy?.carryover) carriedInventory = [...putt.player.inventory];
     putt?.dispose(); putt = null;
-    stopPlacing(); awaiting = null;
+    stopPlacing(); awaiting = null; hazardAwaiting = null; setLocal({ hazardPrompt: null });
     input?.cancel();
     lastSound = null;
   }
@@ -356,6 +356,38 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
     else if (now > awaiting.deadline) awaiting = null; // not accepted: the item is simply kept
   }
 
+  function confirmGlobalHazard(command) {
+    const prompt = store.getSnapshot().local.hazardPrompt;
+    if (!prompt || !room || !putt || !room.connected || prompt.kind !== command.kind || prompt.index !== command.index) return;
+    const activation = { kind: command.kind };
+    if (command.kind === 'wind') activation.direction = command.direction;
+    if (command.kind === 'lightning') activation.targetId = command.targetId;
+    const known = new Set(room.globalHazards.map(h => h.id));
+    if (!room.activateGlobalHazard(activation)) { toast('That hazard could not be activated. Your item is still in inventory.'); setLocal({ hazardPrompt: null }); return; }
+    setLocal({ hazardPrompt: null });
+    if (!room.serverOwned && room.isHost) {
+      const record = room.globalHazards.find(h => h.owner === room.localId && h.kind === activation.kind && !known.has(h.id));
+      if (record) acceptGlobalHazard(record.kind);
+    } else hazardAwaiting = { kind: activation.kind, known, deadline: win.performance.now() + AWAIT_MS };
+  }
+
+  function acceptGlobalHazard(kind) {
+    hazardAwaiting = null;
+    if (!putt?.consumeItem(kind)) return;
+    const entry = getPowerup(kind);
+    store.announce(s0name(), (entry?.banner || kind) + ' ACTIVATED', 'power');
+    audio.handleEvent({ type: 'powerup', id: kind });
+    setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+    publish(true);
+  }
+
+  function checkGlobalHazardAwaiting(now) {
+    if (!hazardAwaiting || !room) return;
+    const record = room.globalHazards.find(h => h.owner === room.localId && h.kind === hazardAwaiting.kind && !hazardAwaiting.known.has(h.id));
+    if (record) acceptGlobalHazard(record.kind);
+    else if (now > hazardAwaiting.deadline) { hazardAwaiting = null; toast('Hazard activation was not confirmed. Your item is still in inventory.'); }
+  }
+
   function frame(t) {
     frameId = null;
     if (disposed) return;
@@ -369,12 +401,14 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         putt.setAuras(auraSourcesOf(remoteBalls()));
         const placed = activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex);
         putt.setDeployables(placed);
+        for (const event of putt.setGlobalHazards(room.globalHazards)) audio.handleEvent({ type: 'lightning', id: event.id });
         // Sounds: the hit uses the list from before the host counted it (the last hit removes the object at once), and
         // an object that disappears from the same putt broke, which every player hears.
         const key = room.snapshot.roundNumber + ':' + room.snapshot.mapIndex + ':' + room.snapshot.puttIndex;
         if (key === seenKey) for (const [id, kind] of seenKinds) if (!placed.some(d => d.id === id)) audio.handleEvent({ type: 'deployable_break', kind });
         seenKey = key; seenKinds = new Map(placed.map(d => [d.id, d.kind]));
         const out = putt.frame(t, dt);
+        checkGlobalHazardAwaiting(t);
         for (const id of out.deployHits) { audio.handleEvent({ type: 'deployable_hit', kind: seenKinds.get(id) }, { speed: 300 }); room.deployHit(id); }
         checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
@@ -402,6 +436,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         remotes: remotesForRender(t),
         aim: input.frameAim(t / 1000),
         deployables: activeDeployables(room.deployables, s.mapIndex, s.puttIndex).map(d => ({ ...d, color: colorOf(s, {}, d.owner) })), // each bumper wears its owner's colour
+        globalHazards: room.globalHazards,
         placing: placing && cursor ? { kind: placing, x: cursor.x, y: cursor.y, valid: placeable(cursor) } : null,
         free: state.mode === 'wait' || state.mode === 'spectator',
         keys: input.keys,
@@ -444,15 +479,19 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         break;
       case UiCommands.USE_ITEM: {
         if (!putt || !room?.connected) break;
+        setLocal({ hazardPrompt: null });
         stopPlacing();
         const out = putt.useItem(command.index, win.performance.now());
         if (out.placement) startPlacing(out.placement.kind);
+        if (out.globalHazard) setLocal({ hazardPrompt: out.globalHazard });
         for (const [text, sub, kind, powerup] of out.banners) { store.announce(text, sub, kind); if (powerup) audio.handleEvent({ type: 'powerup', id: powerup }); }
         for (const message of out.toasts) toast(message);
         setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
         publish(true);
         break;
       }
+      case UiCommands.CONFIRM_HAZARD: confirmGlobalHazard(command); break;
+      case UiCommands.CANCEL_HAZARD: setLocal({ hazardPrompt: null }); break;
       case UiCommands.CYCLE_CAMERA: {
         if (!view) break;
         const r = view.rig.cycleView();

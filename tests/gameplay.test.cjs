@@ -19,9 +19,9 @@ async function run() {
   // ---- catalog
   assert.deepEqual(G.catalogProblems(), [], 'shipped catalog is valid');
   assert.deepEqual(G.catalogProblems(TEST_CATALOG), []);
-  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital'], 'Rewind, Reversiball and Zanyball are gone');
+  assert.deepEqual(G.powerupIds(), ['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital', 'rain', 'snow', 'wind', 'lightning', 'tornado', 'hurricane'], 'Rewind, Reversiball and Zanyball are gone');
   assert.ok(Object.isFrozen(G.POWERUP_CATALOG) && Object.isFrozen(G.POWERUP_CATALOG[0].duration));
-  assert.deepEqual(G.auraIds(), ['', ...G.powerupIds().filter(id => id !== 'bumper' && id !== 'orbital')], 'deployables are objects, not auras');
+  assert.deepEqual(G.auraIds(), ['', ...G.powerupIds().filter(id => !['bumper', 'orbital', 'rain', 'snow', 'wind', 'lightning', 'tornado', 'hurricane'].includes(id))], 'deployables are objects, not auras');
   assert.equal(G.powerupName('mag'), 'Hole Magnet');
   assert.equal(G.powerupName('nope'), 'nope');
   assert.equal(G.isPowerupId('steady'), true);
@@ -112,7 +112,7 @@ async function run() {
   assert.equal(G.validEffectMessage({ id: 1, t: 'mag' }), false, 'self power-ups cannot travel as effect messages');
   for (const t of ['aim360', 'aim180']) assert.equal(G.validEffectMessage({ id: 1, t }), true, t);
   const base = { x: 1, y: 2, z: 0, mode: 'play', strokes: 1 };
-  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds().filter(id => !G.isDeployablePowerup(id))]);
+  assert.deepEqual([...protocol.PRESENCE_EFFECTS], ['', ...G.powerupIds().filter(id => !G.isDeployablePowerup(id) && !G.isGlobalHazardPowerup(id))]);
   for (const fx of [{ id: 1, t: 'rev' }, { id: 1, t: 'zany' }]) assert.equal(protocol.validPresence({ ...base, fx }), false);
 
   // ---- putt integration: boxes, inventory carryover, activation

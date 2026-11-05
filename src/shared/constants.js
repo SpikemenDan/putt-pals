@@ -42,7 +42,7 @@ export const STARTER_COURSE_INDICES = Object.freeze([0, 8, 20, 21, 5, 19]);
 export const STARTERS = STARTER_COURSE_INDICES;
 
 // --- Multiplayer & Protocol Constants ---
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 export const MAX_PLAYERS = 8;
 export const MAX_DEPLOYABLES = 200; // wire safety bound only (G1e): keeps a snapshot far under MAX_MESSAGE_BYTES; no game limit applies below it
 export const SNAPSHOT_INTERVAL_MS = 70;

@@ -11,7 +11,7 @@ const defaultContext = () => {
 const defaultStorage = () => { try { return globalThis.window?.localStorage ?? null; } catch { return null; } };
 
 /** Application-owned audio: reuse across rooms; reset voices per room; dispose on app teardown. */
-const POWERUP_CUES = new Set(['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital']);
+const POWERUP_CUES = new Set(['mag', 'steady', 'chip', 'ghost', 'small', 'tall', 'sticky', 'aim360', 'aim180', 'love', 'hate', 'bumper', 'orbital', 'rain', 'snow', 'wind', 'lightning', 'tornado', 'hurricane']);
 
 export function createAudioAdapter({ createContext = defaultContext, storage = defaultStorage(), random = Math.random,
   onError = () => {}, maxVoices = 32 } = {}) {
@@ -160,6 +160,7 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     if (event.type === 'deployable_break') return ['bumper', 'orbital'].includes(event.kind) && play(event.kind + '_break', null, 1);
     if (event.type === 'deployable_hit') return ['bumper', 'orbital'].includes(event.kind) && play(event.kind + '_hit', null, Number.isFinite(speed) ? Math.min(1, .75 + Math.max(0, speed) / 600) : .9);
     if (event.type === 'powerup') return typeof event.id === 'string' && POWERUP_CUES.has(event.id) && play('pu_' + event.id, null, ['bumper', 'orbital'].includes(event.id) ? 1 : .7);
+    if (event.type === 'lightning') return play('lightning', null, .9);
     if (!vector(event.position)) return false;
     const position = simToWorld(...event.position, origin);
     switch (event.type) {

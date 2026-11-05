@@ -41,6 +41,9 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
           </span>
         </div>
         <canvas className={hud.canvas} width="800" height="500" ref={onCanvas} aria-label="Course. Drag back from the ball and release to putt." />
+        {!!view?.activeHazards?.length && <div className={hud.hazardIndicators} aria-label="Active gameplay hazards">
+          {view.activeHazards.map(h => <span key={h.id}>{h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
+        </div>}
         <PowerMeter />
         <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
         <div className={hud.inv}>
@@ -49,6 +52,18 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
               onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>{slot.label}</button>
           ))}
         </div>
+        {view?.hazardPrompt && <div className={hud.hazardPrompt} role="dialog" aria-label={`${view.hazardPrompt.kind} options`}>
+          <b>{view.hazardPrompt.kind[0].toUpperCase() + view.hazardPrompt.kind.slice(1)}</b>{' '}
+          {view.hazardPrompt.kind === 'wind' && ['E','SE','S','SW','W','NW','N','NE'].map((label, i) => (
+            <button type="button" className={ghost} key={label} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index, direction: i * Math.PI / 4 <= Math.PI ? i * Math.PI / 4 : i * Math.PI / 4 - 2 * Math.PI })}>{label}</button>
+          ))}
+          {view.hazardPrompt.kind === 'lightning' && view.hazardPrompt.targets.map(target => (
+            <button type="button" className={ghost} key={target.id} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index, targetId: target.id })}>{target.name}</button>
+          ))}
+          {view.hazardPrompt.kind === 'lightning' && view.hazardPrompt.targets.length === 0 && <span>No connected opponent</span>}
+          {!['wind','lightning'].includes(view.hazardPrompt.kind) && <button type="button" className={ghost} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index })}>Activate</button>}
+          <button type="button" className={ghost} onClick={() => send(UiCommands.CANCEL_HAZARD)}>Cancel</button>
+        </div>}
         <div className={hud.toast} role="status" aria-live="polite">{toast}</div>
         <div className={hud.sb} data-ui="scoreboard">
           <Row header variant="scoreboard" name="SCOREBOARD" a="Putt" b="Total" />
@@ -59,7 +74,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         <p><b>With friends:</b> Everyone opens this updated hosted game and enters the same room code. The room service keeps shared match state and chooses a room controller; the controller starts the game and chooses maps. Late joiners spectate until the next round. Use Invite to copy a room link.</p>
         <p><b>Network limits:</b> Online rooms need a working WebSocket connection to the hosted room service. The service stores match state and membership; ball movement remains local and other players' balls are visual ghosts. Connection recovery and controller succession are handled by the room service. Anti-cheat and guaranteed global connectivity are not implemented. Use solo mode if the room service is unavailable.</p>
         <p><b>Controls:</b> Click/touch the course, pull backward opposite the shot direction, release. Longer pulls mean higher speed and greater angular spread. The arrow shows direction and power; it sways more as power grows. Escape or an interrupted gesture cancels without shooting. Right-drag or arrow keys rotate ball view. Keys 1–3 activate collected power-ups. Hole Magnet deliberately adds attraction only when activated. Steady Aim removes spread.</p>
-        <p><b>This build:</b> {courseRules.length} original course layouts; ramps, raised greens, jump pads, water, sand, fans and portals; {POWERUP_COUNT} collectible power-ups; simultaneous play and scorecards. New warm sunlight, soft shadows, natural materials, animated flags, trees, recessed cups and distance-based drag aiming. Low quality disables shadows and lowers pixel density. Cup physics uses an approximate sphere-on-lip contact model at 240 Hz, with gravity, inner-wall rebounds and below-surface scoring. It is not a full rigid-body solver. Room transitions are service-authoritative; ball motion is client-authoritative. Remote balls remain non-colliding ghosts. Tornadoes apply swirl, inward pull and core lift; moving obstacles rebound balls. Only one map is built at a time. Aim appears only while pulling and sways more at high power; the release direction matches the live indicator.</p>
+        <p><b>This build:</b> {courseRules.length} original course layouts; ramps, raised greens, jump pads, water, sand, fans and portals; {POWERUP_COUNT} collectible power-ups, including synchronized global hazards; simultaneous play and scorecards. New warm sunlight, soft shadows, natural materials, animated flags, trees, recessed cups and distance-based drag aiming. Low quality disables shadows and lowers pixel density. Cup physics uses an approximate sphere-on-lip contact model at 240 Hz, with gravity, inner-wall rebounds and below-surface scoring. It is not a full rigid-body solver. Room transitions are service-authoritative; ball motion is client-authoritative. Remote balls remain non-colliding ghosts. Tornadoes apply swirl, inward pull and core lift; moving obstacles rebound balls. Only one map is built at a time. Aim appears only while pulling and sways more at high power; the release direction matches the live indicator.</p>
       </details>
     </div>
   );

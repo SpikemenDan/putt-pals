@@ -1,5 +1,11 @@
 # Project status
 
+G1f branch update (2026-11-04): `feat/global-hazards` implements Rain, Snow,
+directional Wind, targeted Lightning, roaming Tornado and Hurricane with shared
+simulation, peer/server snapshots, durable recovery, HUD/audio and a tuning
+preview. The owner accepted the local preview and current defaults. This work
+is not merged. See [G1f evidence and remaining gates](docs/G1F_GLOBAL_HAZARDS.md).
+
 Implementation snapshot refreshed 2026-11-04 against main `29f50a8`, after the issue audit and the G1e merge: the full `npm test` and build passed on a clean copy of that commit, and the task tables were checked against live GitHub issues. Workflow decisions below were updated from the owner's confirmed instructions; they do not imply new code was implemented. Live issues/PRs and actual code must be checked before acting.
 
 ## Where the project stands
