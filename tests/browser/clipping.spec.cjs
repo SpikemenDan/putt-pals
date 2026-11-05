@@ -8,7 +8,7 @@ const { openApp, until } = require('./support/app.cjs');
 // first are shot close only, to keep the run short.
 const VIEWS = ['default', 'hole', 'world', 'close'];
 
-test('clipping: every map renders non-blank from every camera view without page errors', async ({ page }, testInfo) => {
+test('clipping: every map renders non-blank from every camera view without page errors @slow', async ({ page }, testInfo) => {
   test.setTimeout(1_800_000);
   const ana = await openApp(page, 'Ana');
   await ana.solo();
