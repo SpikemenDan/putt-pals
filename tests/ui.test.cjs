@@ -163,6 +163,20 @@ function fakeClock() {
     await t.teardown();
   });
 
+  await scenario('copy: map and power-up counts come from the course data and power-up catalog; no engine-roadmap text', async () => {
+    const { POWERUP_CATALOG } = await import('../src/gameplay/catalog.js');
+    const t = await setup();
+    const maps = createCourseData().catalog.length;
+    const boxPowerups = POWERUP_CATALOG.filter(e => e.weight > 0).length; // retired entries are absent from the catalog
+    assert.ok(maps > 20 && boxPowerups > 5, 'sanity: not the old hard-coded numbers');
+    assert.ok(t.within('[data-ui=landing] h1').textContent.includes(maps + ' MAPS'), 'tagline map count');
+    const text = t.root.textContent;
+    assert.ok(text.includes(maps + ' original course layouts'), 'help map count');
+    assert.ok(text.includes(boxPowerups + ' collectible power-ups'), 'help power-up count');
+    for (const stale of ['Future engine version', 'Godot', 'Unity', 'Unreal', 'Putt_Pals_Architecture', '20 MAPS', 'Twenty original', 'five collectible']) assert.ok(!text.includes(stale), 'removed: ' + stale);
+    await t.teardown();
+  });
+
   await scenario('landing: join needs a room code, both buttons dispatch, connecting disables them; join validation matches legacy', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));
