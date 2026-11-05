@@ -1,8 +1,10 @@
 /**
- * Planet backdrop for the loading screen (VIS-M1): a curved Gaia horizon and golf balls that now and then fly across the sky.
+ * Planet backdrop for the loading screen (VIS-M1): a curved Gaia horizon with clouds, and golf balls that now and then fly
+ * across the sky trailing a streak of wind.
  *
- * Original art, drawn procedurally: a latitude/longitude texture is built once from seeded noise (snowy poles, tundra,
- * boreal and temperate forest, a desert band, tropics and oceans), then the visible cap of the sphere is sampled into a
+ * Original art, drawn procedurally: a latitude/longitude texture is built once from invented continents (not Earth's
+ * coastlines) with Earth-like climate bands (snowy poles, tundra, boreal and temperate forest, deserts in the dry subtropics,
+ * tropics on the equator, oceans) plus a separate cloud texture, then the visible cap of the sphere is sampled into a
  * small canvas every frame while the planet turns. Balls are plain DOM elements moved along parabolic arcs. This module
  * is presentation only: it imports no simulation, Three.js or React code, takes its randomness and clock as inputs, and
  * reads the live `display.loading` settings (src/shared/display.js) each frame so the developer panel shows changes at
@@ -49,39 +51,69 @@ function makeNoise(random, cellsX, cellsY) {
 }
 
 /**
- * Biome for a place on Gaia. `lat` is the latitude in degrees (sign ignored), `land` and `detail` are noise values in 0..1
- * (`land` below 0.4 is sea; a high `detail` on land is mountains and, in the desert band, dunes versus rock).
- * Bands: snow caps beyond 72 degrees, tundra, boreal and temperate forest toward the middle, deserts around 18 to 33
- * degrees and tropics on the equator, with seas and mountains breaking the bands up.
+ * Biome for a place on Gaia. `lat` is the latitude in degrees (sign ignored), `land` is 0..1 (below 0.4 is sea) and `wet` is
+ * a smooth 0..1 humidity field. Bands follow Earth: snow caps beyond 72 degrees, tundra, boreal and temperate forest toward
+ * the middle, deserts in the dry subtropics (18 to 33 degrees, unless wet), tropics and jungle on the equator.
+ * A very high `wet` in a dry band gives a rare highland of rock.
  */
-export function biomeAt(lat, land, detail) {
+export function biomeAt(lat, land, wet) {
   const a = Math.abs(lat);
   if (a >= 72) return 'snow';
   if (land < 0.4) return land < 0.32 ? 'deepOcean' : 'ocean';
-  if (detail > 0.84 && a > 12) return a > 50 ? 'snow' : 'rock';
   if (a >= 60) return 'tundra';
   if (a >= 45) return 'boreal';
   if (a >= 33) return 'temperate';
-  if (a >= 18) return detail > 0.78 ? 'rock' : 'desert';
-  return detail > 0.62 ? 'jungle' : 'tropical';
+  if (a >= 18) return wet > 0.8 ? 'rock' : wet > 0.66 ? 'tropical' : 'desert';
+  return wet > 0.55 ? 'jungle' : 'tropical';
+}
+
+/** Invented continents: [centre u (0..1 of a full turn), centre latitude, half-width u, half-height degrees]. */
+const CONTINENTS = Object.freeze([
+  [0.10, 46, 0.12, 26], [0.16, -20, 0.06, 30], [0.44, 38, 0.15, 24], [0.50, 4, 0.07, 30],
+  [0.75, 34, 0.13, 26], [0.83, -26, 0.08, 20], [0.30, -62, 0.18, 10], [0.96, 8, 0.05, 14],
+]);
+
+/** Sea-to-land value for a place: the strongest continent falloff, roughened by `coast` noise (0..1). */
+function landAt(u, lat, coast) {
+  let best = -1;
+  for (const [cu, clat, ru, rlat] of CONTINENTS) {
+    const du = Math.min(Math.abs(u - cu), 1 - Math.abs(u - cu)) / ru, dl = (lat - clat) / rlat;
+    best = Math.max(best, 1 - Math.hypot(du, dl));
+  }
+  return 0.46 + best * 0.5 + (coast - 0.5) * 0.45;
 }
 
 /** Builds the planet texture once: one biome id per texel, `TEX_W` by `TEX_H`, row 0 at the north pole. */
 export function buildBiomeMap(random) {
-  const coarse = makeNoise(random, 6, 3), medium = makeNoise(random, 14, 7), fine = makeNoise(random, 36, 18);
-  const warp = makeNoise(random, 9, 5), detailNoise = makeNoise(random, 24, 12), detailFine = makeNoise(random, 60, 30);
+  const coastA = makeNoise(random, 10, 5), coastB = makeNoise(random, 28, 14);
+  const warp = makeNoise(random, 7, 4), wetA = makeNoise(random, 5, 3), wetB = makeNoise(random, 11, 6);
   const map = new Uint8Array(TEX_W * TEX_H);
   for (let y = 0; y < TEX_H; y++) {
     const v = (y + 0.5) / TEX_H;
     for (let x = 0; x < TEX_W; x++) {
       const u = x / TEX_W;
-      const lat = (0.5 - v) * 180 + (warp(u, v) - 0.5) * 16; // wobble the band edges so they read as coasts and climates, not stripes
-      const land = coarse(u, v) * 0.5 + medium(u, v) * 0.32 + fine(u, v) * 0.18;
-      const detail = detailNoise(u, v) * 0.7 + detailFine(u, v) * 0.3;
-      map[y * TEX_W + x] = ID[biomeAt(lat, land, detail)];
+      const lat = (0.5 - v) * 180 + (warp(u, v) - 0.5) * 10; // wobble the band edges so climates are not ruler-straight
+      const land = landAt(u, (0.5 - v) * 180, coastA(u, v) * 0.65 + coastB(u, v) * 0.35);
+      const wet = Math.min(1, Math.max(0, 0.5 + (wetA(u, v) * 0.65 + wetB(u, v) * 0.35 - 0.5) * 2.2));
+      map[y * TEX_W + x] = ID[biomeAt(lat, land, wet)];
     }
   }
   return map;
+}
+
+/** Cloud density texture (0..255 per texel): stretched along the equator, thicker near the equator and mid-latitude storm belts. */
+function buildCloudMap(random) {
+  const a = makeNoise(random, 9, 4), b = makeNoise(random, 22, 9), c = makeNoise(random, 48, 20);
+  const out = new Uint8Array(TEX_W * TEX_H);
+  for (let y = 0; y < TEX_H; y++) {
+    const v = (y + 0.5) / TEX_H, lat = Math.abs(0.5 - v) * 180;
+    const belt = 0.12 * Math.cos(lat / 90 * Math.PI * 2) + 0.06 * Math.cos((lat - 55) / 20 * Math.PI) * (lat > 35 && lat < 75 ? 1 : 0);
+    for (let x = 0; x < TEX_W; x++) {
+      const u = x / TEX_W, raw = a(u, v) * 0.5 + b(u, v) * 0.32 + c(u, v) * 0.18, d = (raw - 0.5) * 1.8 + 0.5 + belt; // stretch the contrast so clouds form distinct banks
+      out[y * TEX_W + x] = Math.max(0, Math.min(255, d * 255));
+    }
+  }
+  return out;
 }
 
 /** RGB bytes for a biome map, with a little per-texel grain so large regions are not flat. */
@@ -112,10 +144,10 @@ export function ballPose(flight, t) {
 export function planFlight(random, width, height, ballSize, horizonY) {
   const leftToRight = random() < 0.5;
   const margin = ballSize * 1.5;
-  const y0 = height * (0.2 + random() * 0.3), y1 = Math.max(y0 + 20, horizonY - height * (0.02 + random() * 0.06));
+  const y0 = height * (0.3 + random() * 0.2), y1 = Math.max(y0 + 20, horizonY - height * (0.02 + random() * 0.06));
   return {
     x0: leftToRight ? -margin : width + margin, x1: leftToRight ? width + margin : -margin,
-    y0, y1, apex: height * (0.1 + random() * 0.18),
+    y0, y1, apex: height * (0.06 + random() * 0.12),
   };
 }
 
@@ -124,7 +156,7 @@ export function planFlight(random, width, height, ballSize, horizonY) {
  * @param {object} options
  * @param {HTMLCanvasElement} options.canvas
  * @param {HTMLElement} options.ballLayer
- * @param {{loading: {spinSpeed:number, axisTilt:number, horizonHeight:number, ballInterval:number, ballFlightTime:number, ballSize:number}}} options.display live settings
+ * @param {{loading: {spinSpeed:number, axisTilt:number, horizonHeight:number, cloudCover:number, cloudDrift:number, ballInterval:number, ballFlightTime:number, ballSize:number}}} options.display live settings
  * @param {() => number} options.random seeded generator (same seed, same planet and same flights)
  * @param {boolean} [options.reducedMotion] draw one still frame, no balls
  * @param {Window} [options.win] provides requestAnimationFrame and the viewport size
@@ -133,9 +165,10 @@ export function createPlanetScene({ canvas, ballLayer, display, random, reducedM
   const doc = canvas.ownerDocument;
   const biomes = buildBiomeMap(random);
   const texture = buildColourTexture(biomes, random);
+  const clouds = buildCloudMap(random);
   const ctx = canvas.getContext?.('2d') ?? null;
   const SCALE = 4; // CSS px per buffer pixel; the canvas is stretched up with smoothing
-  let layout = null, image = null, frameId = null, last = null, spin = 0, clock = 0, nextBall = 0, disposed = false, geometryKey = '';
+  let layout = null, image = null, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, nextBall = 0, disposed = false, geometryKey = '';
   const balls = [];
 
   const settings = () => display.loading;
@@ -183,12 +216,18 @@ export function createPlanetScene({ canvas, ballLayer, display, random, reducedM
     const s = settings();
     if (!layout || geometryKey !== `${w}x${h}:${s.axisTilt}:${s.horizonHeight}`) buildGeometry(w, h);
     if (!ctx || !image) return;
-    const { bw, bh, rows, lon, shade, rim, glow, kind } = layout, px = image.data, turn = spin / 360;
+    const { bw, bh, rows, lon, shade, rim, glow, kind } = layout, px = image.data, turn = spin / 360, cloudTurn = cloudSpin / 360;
+    const thr = 0.85 - s.cloudCover * 0.5, cover = s.cloudCover > 0;
     for (let i = 0, n = bw * bh; i < n; i++) {
       const o = i * 4;
       if (kind[i]) {
         const col = ((((lon[i] + turn) % 1) + 1) % 1 * TEX_W) | 0, t = (rows[i] * TEX_W + col) * 3, k = shade[i], a = rim[i];
-        px[o] = Math.min(255, texture[t] * k + 150 * a); px[o + 1] = Math.min(255, texture[t + 1] * k + 205 * a); px[o + 2] = Math.min(255, texture[t + 2] * k + 255 * a); px[o + 3] = 255;
+        let r = texture[t] * k, g = texture[t + 1] * k, bl = texture[t + 2] * k;
+        if (cover) {
+          const cc = ((((lon[i] + cloudTurn) % 1) + 1) % 1 * TEX_W) | 0, d = clouds[rows[i] * TEX_W + cc] / 255, m = Math.max(0, Math.min(1, (d - thr) / 0.2));
+          if (m > 0) { const w = 0.9 * m * (0.6 + 0.4 * Math.min(1, k)), lit = 232 * Math.min(1.08, 0.45 + k * 0.62); r = r * (1 - w) + lit * w; g = g * (1 - w) + (lit + 6) * w; bl = bl * (1 - w) + (lit + 14) * w; }
+        }
+        px[o] = Math.min(255, r + 150 * a); px[o + 1] = Math.min(255, g + 205 * a); px[o + 2] = Math.min(255, bl + 255 * a); px[o + 3] = 255;
       } else if (glow[i] > 0.004) {
         px[o] = 140; px[o + 1] = 205; px[o + 2] = 255; px[o + 3] = Math.min(255, glow[i] * 255);
       } else px[o + 3] = 0;
@@ -204,6 +243,9 @@ export function createPlanetScene({ canvas, ballLayer, display, random, reducedM
     el.dataset.ui = 'loading-ball';
     el.style.width = el.style.height = size + 'px';
     el.style.marginLeft = el.style.marginTop = -size / 2 + 'px';
+    const trail = doc.createElement('b'), core = doc.createElement('u');
+    trail.className = 'trail'; core.className = 'core';
+    el.append(trail, core);
     ballLayer.append(el);
     balls.push({ el, flight: planFlight(random, w, h, size, horizonY), age: 0, duration: s.ballFlightTime });
   }
@@ -212,8 +254,12 @@ export function createPlanetScene({ canvas, ballLayer, display, random, reducedM
     for (let i = balls.length - 1; i >= 0; i--) {
       const b = balls[i], t = b.age / b.duration;
       if (t >= 1) { b.el.remove(); balls.splice(i, 1); continue; }
-      const p = ballPose(b.flight, t);
-      b.el.style.transform = `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px) rotate(${p.spin.toFixed(0)}deg) scale(${p.scale.toFixed(3)})`;
+      const p = ballPose(b.flight, t), q = ballPose(b.flight, Math.min(1, t + 0.02));
+      const heading = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI + 180; // the trail points back along the path
+      b.el.style.transform = `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px) scale(${p.scale.toFixed(3)})`;
+      b.el.style.setProperty('--heading', heading.toFixed(1) + 'deg');
+      b.el.firstChild.style.setProperty('--heading', heading.toFixed(1) + 'deg');
+      b.el.lastChild.style.transform = `rotate(${p.spin.toFixed(0)}deg)`;
     }
   }
 
@@ -224,6 +270,7 @@ export function createPlanetScene({ canvas, ballLayer, display, random, reducedM
     clock += dt;
     if (!reducedMotion) {
       spin = (spin + s.spinSpeed * dt) % 360;
+      cloudSpin = (cloudSpin + s.spinSpeed * s.cloudDrift * dt) % 360;
       for (const b of balls) b.age += dt;
       if (clock >= nextBall) {
         if (balls.length < 3) launchBall();

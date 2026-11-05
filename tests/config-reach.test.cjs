@@ -105,7 +105,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(changed('ballFlightTime', 9).flight > lbase.flight, 'loading.ballFlightTime lengthens the flight');
     assert.ok(Math.abs(lbase.flight - 4.5) < 0.1, 'default flight lasts ballFlightTime');
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'ballInterval', 'ballFlightTime', 'ballSize'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'ballInterval', 'ballFlightTime', 'ballSize'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

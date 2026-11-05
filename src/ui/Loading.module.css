@@ -1,6 +1,8 @@
 /* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night-to-day sky, the curved horizon of a planet
-   painted by planet-scene.js, golf balls flying across, then the brand, status line, progress bar and a tip. */
+   painted by planet-scene.js, Ares and Luna in the distance, golf balls flying across, then the brand, a putt-progress strip
+   and a tip. Fonts (self-hosted, SIL OFL): Lilita One for display, Fredoka for status, Baloo 2 for reading text. */
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
+  --display:'Lilita One','Arial Black',sans-serif;--ui:'Fredoka','Segoe UI',sans-serif;--body:'Baloo 2','Segoe UI',sans-serif;
   background-color:#0b1240;background-image:
     radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 27% 9%,#fff,transparent),radial-gradient(1.5px 1.5px at 41% 24%,#ffe9a8,transparent),
     radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 73% 21%,#fff,transparent),radial-gradient(1px 1px at 88% 8%,#cfe6ff,transparent),
@@ -8,15 +10,53 @@
     linear-gradient(#0b1240 0%,#1d3f9e 45%,#4aa3ff 80%,#a7e0ff 100%)}
 .planet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .balls{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.balls :global(.ball){position:absolute;left:0;top:0;border-radius:50%;will-change:transform;
-  background:radial-gradient(circle at 34% 30%,#fff 0 38%,#e6ecf7 70%,#b9c4da 100%);border:2px solid var(--ink);box-shadow:0 0 14px rgba(255,255,255,.7)}
-.balls :global(.ball)::after{content:"";position:absolute;inset:22% 30% 46% 24%;border-radius:50%;background:rgba(20,16,42,.22);box-shadow:9px 7px 0 -1px rgba(20,16,42,.2)}
+/* A golf ball in flight: a dimpled white core, with a tapering streak of wind behind it along its path. */
+.balls :global(.ball){position:absolute;left:0;top:0;will-change:transform}
+.balls :global(.core){position:absolute;inset:0;border-radius:50%;border:2px solid var(--ink);box-sizing:border-box;
+  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.24) 0 13%,transparent 17%) 0 0/25% 25%,radial-gradient(circle at 50% 50%,rgba(20,16,42,.24) 0 13%,transparent 17%) 12.5% 12.5%/25% 25%,
+    radial-gradient(circle at 34% 28%,#fff 0 30%,rgba(255,255,255,0) 62%),radial-gradient(circle at 70% 75%,rgba(20,16,42,.3),transparent 60%),#f4f6fb;box-shadow:2px 3px 0 rgba(20,16,42,.45)}
+.balls :global(.trail){position:absolute;left:50%;top:50%;width:420%;height:46%;margin-top:-23%;transform-origin:0 50%;transform:rotate(var(--heading,180deg));pointer-events:none;
+  background:linear-gradient(90deg,rgba(255,255,255,.85),rgba(190,230,255,.45) 35%,transparent);clip-path:polygon(0 8%,100% 42%,100% 58%,0 92%)}
+/* Ares and Luna in the distance: the next destinations, placed where a later planet menu can zoom into them. */
+.worlds{position:absolute;inset:0;pointer-events:none}
+.world{position:absolute;display:block;border-radius:50%;opacity:.92;animation:bob 7s ease-in-out infinite alternate}
+.ares{left:clamp(8px,9vw,150px);top:20%;width:clamp(46px,6.5vw,104px);aspect-ratio:1;
+  background:radial-gradient(circle at 30% 28%,rgba(255,220,180,.7),transparent 38%),radial-gradient(ellipse 30% 10% at 55% 40%,rgba(120,40,20,.5),transparent),radial-gradient(ellipse 22% 8% at 40% 62%,rgba(120,40,20,.45),transparent),
+    radial-gradient(ellipse 26% 12% at 50% 6%,#fff 0 60%,transparent 62%),radial-gradient(circle at 36% 32%,#ef8a52,#c2461f 58%,#6c2214);
+  box-shadow:inset -10px -8px 16px rgba(20,10,40,.55),0 0 20px rgba(255,150,100,.25)}
+.luna{right:clamp(10px,12vw,200px);top:12%;width:clamp(30px,4.2vw,68px);aspect-ratio:1;animation-delay:-3s;
+  background:radial-gradient(circle at 34% 36%,rgba(90,86,104,.55) 0 9%,transparent 11%),radial-gradient(circle at 62% 30%,rgba(90,86,104,.5) 0 6%,transparent 8%),radial-gradient(circle at 56% 62%,rgba(90,86,104,.5) 0 11%,transparent 13%),
+    radial-gradient(circle at 30% 72%,rgba(90,86,104,.45) 0 5%,transparent 7%),radial-gradient(circle at 34% 30%,#f1eff6,#a9a5b8 60%,#5f5b72);
+  box-shadow:inset -8px -6px 12px rgba(10,8,30,.6),0 0 16px rgba(220,220,255,.2)}
+@keyframes bob{from{transform:translateY(-4px)}to{transform:translateY(5px)}}
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
-.brand{margin:0;font:900 clamp(40px,8vw,72px)/1 var(--font);letter-spacing:-1px;text-transform:uppercase;color:var(--yellow);text-shadow:4px 4px 0 var(--ink),0 0 24px rgba(255,210,63,.35)}
-.status{margin:0;font:900 clamp(18px,3vw,26px)/1.2 var(--font);color:#fff;text-shadow:3px 3px 0 var(--ink)}
-.bar{width:min(80vw,360px);height:20px;border:var(--line) solid var(--ink);border-radius:10px;background:#fff;overflow:hidden;box-shadow:var(--shadow)}
-.bar i{display:block;height:100%;width:40%;background:var(--pink);border-right:var(--line) solid var(--ink);animation:slide 1.2s ease-in-out infinite alternate}
-.tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font-size:17px;font-weight:700}
-.tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:900 12px var(--font);letter-spacing:2px}
-@keyframes slide{from{transform:translateX(0)}to{transform:translateX(150%)}}
-@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
+.brand{margin:0;font:400 clamp(44px,9vw,84px)/1 var(--display);letter-spacing:1px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:4px 5px 0 var(--ink),0 0 26px rgba(255,210,63,.35)}
+.status{margin:0;font:600 clamp(18px,3vw,26px)/1.2 var(--ui);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
+/* Putt progress: a ball is struck, rolls to a stop at the cup and drops in, then a new ball is set. */
+.putt{--w:min(80vw,380px);position:relative;width:var(--w);height:54px;margin-top:4px}
+.turf{position:absolute;left:0;right:0;bottom:4px;height:24px;display:block;border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);
+  background:repeating-linear-gradient(90deg,#3fcf6a 0 22px,#35bd5d 22px 44px)}
+.cup{position:absolute;right:26px;bottom:14px;width:28px;height:11px;border-radius:50%;background:var(--ink);box-shadow:inset 0 3px 0 #000}
+.flag{position:absolute;right:38px;bottom:20px;display:block;width:3px;height:40px;background:var(--ink);border-radius:2px}
+.flag::after{content:"";position:absolute;left:3px;top:0;width:20px;height:14px;background:var(--pink);clip-path:polygon(0 0,100% 50%,0 100%)}
+.rollball{position:absolute;left:14px;bottom:17px;width:18px;height:18px;border-radius:50%;border:2px solid var(--ink);box-sizing:border-box;
+  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.28) 0 14%,transparent 18%) 0 0/50% 50%,radial-gradient(circle at 34% 30%,#fff 0 35%,#e3e8f4);animation:roll 3.6s linear infinite}
+.putter{position:absolute;left:8px;top:-16px;width:5px;height:46px;border-radius:3px;background:var(--ink);transform-origin:50% 0;animation:swing 3.6s ease-in-out infinite;transform:rotate(50deg)}
+.putter::after{content:"";position:absolute;left:-3px;bottom:-3px;width:14px;height:9px;border-radius:3px;background:var(--yellow);border:2px solid var(--ink)}
+@keyframes roll{
+  0%,9%{transform:translateX(0) rotate(0);opacity:1;animation-timing-function:cubic-bezier(.1,.75,.3,1)}
+  72%{transform:translateX(calc(var(--w) - 62px)) rotate(980deg);opacity:1;animation-timing-function:ease-in}
+  80%{transform:translateX(calc(var(--w) - 62px)) translateY(9px) rotate(1000deg) scale(.5);opacity:1}
+  84%{transform:translateX(calc(var(--w) - 62px)) translateY(12px) scale(.2);opacity:0}
+  85%,94%{transform:translateX(0) rotate(0);opacity:0}
+  100%{transform:translateX(0) rotate(0);opacity:1}}
+@keyframes swing{
+  0%{transform:rotate(50deg)}
+  8%{transform:rotate(50deg);animation-timing-function:cubic-bezier(.6,0,1,.6)}
+  10%{transform:rotate(-8deg)}
+  24%{transform:rotate(-30deg)}
+  86%{transform:rotate(-30deg)}
+  100%{transform:rotate(50deg)}}
+.tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.25 var(--body)}
+.tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 13px var(--display);letter-spacing:2px}
+@media (prefers-reduced-motion:reduce){.world,.rollball,.putter{animation:none}.rollball{transform:translateX(calc(var(--w) * .45))}.putter{transform:rotate(-30deg)}}

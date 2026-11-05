@@ -19,6 +19,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.spinSpeed` | 4 | 0 to 60 | Loading screen: planet rotation speed in degrees/s (0 holds it still). Ignored under reduced motion. |
 | `loading.axisTilt` | 12 | -60 to 60 | Loading screen: tilt of the planet axis in degrees, so the poles lean up or down. |
 | `loading.horizonHeight` | 0.48 | 0.3 to 0.9 | Loading screen: top of the planet as a fraction of the screen height from the top (higher = lower planet). |
+| `loading.cloudCover` | 0.6 | 0 to 1 | Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast). |
+| `loading.cloudDrift` | 1.4 | 0 to 4 | Loading screen: cloud speed relative to the planet spin (1 = with the ground; higher slides ahead of it). |
 | `loading.ballInterval` | 5 | 0.5 to 120 | Loading screen: average seconds between flying golf balls. No balls fly under reduced motion. |
 | `loading.ballFlightTime` | 4.5 | 0.5 to 30 | Loading screen: seconds one golf ball takes to cross the sky. |
 | `loading.ballSize` | 26 | 6 to 120 | Loading screen: golf ball diameter in CSS px. |
