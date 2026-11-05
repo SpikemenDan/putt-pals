@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>G1g mechanic chambers</title>
+<style>
+:root{font:15px system-ui;color:#eef3fa;background:#111820;color-scheme:dark}body{max-width:1400px;margin:auto;padding:20px}h1{font-size:25px;margin:0 0 8px}p{color:#b8c8d7}main{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}canvas{display:block;width:100%;height:560px;border:1px solid #5a7185;border-radius:10px}aside{background:#202d3a;border-radius:10px;padding:15px}label{display:grid;grid-template-columns:1fr auto;gap:6px;margin:12px 0}input[type=range],small{grid-column:1/-1;width:100%}small{color:#a9bfd0}button,select,textarea{font:inherit;background:#30485d;color:#eef3fa;border:1px solid #7892a8;border-radius:5px;padding:8px}button{cursor:pointer}.row{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}output{color:#a3e5ff}textarea{box-sizing:border-box;width:100%;min-height:100px;font:12px monospace}.badge{color:#ffd893}#status{min-height:45px}#stage{position:sticky;top:15px;align-self:start}@media(max-width:900px){main{grid-template-columns:1fr}#stage{position:static}canvas{height:420px}}
+</style></head><body>
+<h1>G1g · Course mechanic chambers</h1><p class="badge">Local preview · temporary settings · resets on physics changes</p>
+<main><section id="stage"><canvas id="canvas" aria-label="3D course mechanic chamber"></canvas>
+<div class="row"><button id="launch">Launch proof shot</button><button id="reset">Reset chamber</button><button id="core">Place in force core</button><button id="defaults">Reset settings</button></div>
+<p id="status" role="status"></p><p>Red ball: mechanic active. Gray ball: the same shot with the mechanic removed. Drag to orbit; wheel to zoom. Portal arrows show the outward exit direction.</p></section>
+<aside><label>Chamber<select id="kind"><option value="wedge">Diagonal wedge</option><option value="bouncer">Corner bouncer</option><option value="fan">Stronger fan</option><option value="vortex">Course vortex</option><option value="portal">Oriented portal pair</option></select></label>
+<label>Shot direction <output id="angleValue"></output><input id="angle" type="range" min="0" max="360" step="0.5"></label>
+<label>Shot power <output id="powerValue"></output><input id="power" type="range" min="0.05" max="1" step="0.005"></label>
+<div id="controls"></div><div class="row"><button id="export">Export overrides</button><button id="import">Import overrides</button></div><textarea id="overrides" aria-label="Tuning overrides JSON"></textarea></aside></main>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {createMechanicChambers,MECHANIC_PROOF_SHOTS} from '../../../src/courses/mechanic-chambers.js';
+import {buildCourseMechanics} from '../../../src/render/course-mechanics.js';
+import {createWorldTransform} from '../../../src/render/transform.js';
+import {createPlayerState,applyShot} from '../../../src/shared/simulation.js';
+import {stepBall,surfaceHeight} from '../../../src/simulation/physics.js';
+import {courseMechanicForce} from '../../../src/simulation/course-mechanics.js';
+import {TUNING,TUNING_FIELDS,createTuning} from '../../../src/shared/tuning.js';
+import {unitsOf} from '../../../src/shared/config-meta.js';
+const proof=MECHANIC_PROOF_SHOTS;
+const canvas=document.querySelector('#canvas'),status=document.querySelector('#status'),kind=document.querySelector('#kind');
+const values={...TUNING.courseMechanics},sliders=new Map();
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x1c3042);
+const camera=new THREE.PerspectiveCamera(45,1,1,4000);camera.position.set(400,820,650);
+const controls=new OrbitControls(camera,canvas);controls.target.set(400,0,250);controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff,0x36445c,2));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(200,700,100);scene.add(sun);
+const transform=createWorldTransform(),ballMesh=new THREE.Mesh(new THREE.SphereGeometry(15,24,16),new THREE.MeshStandardMaterial({color:0xf64e56,roughness:.4}));
+const referenceMesh=new THREE.Mesh(new THREE.SphereGeometry(15,20,12),new THREE.MeshStandardMaterial({color:0xd5dce5,transparent:true,opacity:.45}));scene.add(ballMesh,referenceMesh);
+let disposed=false,frameId=null;
+let course,group,ball,reference,time=0,last=performance.now(),accumulator=0,maxHeight=0,events=0;
+const angle=document.querySelector('#angle'),power=document.querySelector('#power');
+function showShot(){document.querySelector('#angleValue').value=angle.value+'°';document.querySelector('#powerValue').value=Number(power.value).toFixed(3);}
+function disposeGroup(){if(!group)return;const geometries=new Set(),materials=new Set();group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();scene.remove(group);}
+function reset(selectShot=false){
+  disposeGroup();course=createMechanicChambers()[kind.value];group=new THREE.Group();scene.add(group);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(800,500),new THREE.MeshStandardMaterial({color:0x9aca88,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.set(400,-.5,250);group.add(floor);
+  const grid=new THREE.GridHelper(800,20,0x57845b,0x81ad73);grid.position.set(400,0,250);group.add(grid);
+  const cup=new THREE.Mesh(new THREE.CylinderGeometry(15,15,2,32),new THREE.MeshBasicMaterial({color:0x18201a}));cup.position.set(course.hole[0],.5,course.hole[1]);group.add(cup);
+  buildCourseMechanics({THREE,course,group,transform,solids:[],tuning:values});
+  ball=createPlayerState('Active',0,{x:course.tee[0],y:course.tee[1],z:0});reference=createPlayerState('Stripped',0,{x:course.tee[0],y:course.tee[1],z:0});
+  time=0;accumulator=0;maxHeight=0;events=0;
+  if(selectShot){angle.value=proof[kind.value].deg;power.value=proof[kind.value].power;}showShot();
+  status.textContent='Ready. Launch the proof shot or adjust angle and power. Settings are temporary.';
+  document.querySelector('#core').disabled=!['fan','vortex'].includes(kind.value);
+}
+function drawValue(key){const s=sliders.get(key);s.output.value=Number(values[key]).toFixed(2).replace(/\.00$/,'')+' '+s.unit;}
+for(const [path,min,max,description] of TUNING_FIELDS.filter(([p])=>p.startsWith('courseMechanics.'))){
+  const key=path.split('.')[1],row=document.createElement('label'),title=document.createElement('span'),output=document.createElement('output'),input=document.createElement('input'),note=document.createElement('small');
+  title.textContent=key.replace(/([A-Z])/g,' $1');input.type='range';input.min=min;input.max=max;input.step=max <= 10 ? .05 : 1;input.value=values[key];note.textContent=description+` Range ${min}–${max}. Changing resets the chamber.`;
+  sliders.set(key,{input,output,unit:unitsOf('tuning',path)});drawValue(key);
+  input.addEventListener('input',()=>{values[key]=Number(input.value);drawValue(key);reset();});row.append(title,output,input,note);document.querySelector('#controls').append(row);
+}
+document.querySelector('#launch').onclick=()=>{if(ball.moving || reference.moving){reset();}applyShot(ball,Number(angle.value)*Math.PI/180,Number(power.value));applyShot(reference,Number(angle.value)*Math.PI/180,Number(power.value));status.textContent='Proof shot running. Red uses the mechanic; gray is the stripped comparison.';};
+document.querySelector('#reset').onclick=()=>reset();
+document.querySelector('#defaults').onclick=()=>{Object.assign(values,TUNING.courseMechanics);for(const [key,s] of sliders){s.input.value=values[key];drawValue(key);}reset(true);};
+document.querySelector('#core').onclick=()=>{reset();const m=course.mechanics[0],p=m.center || [m.rect[0]+m.rect[2]/2,m.rect[1]+m.rect[3]/2];ball.x=reference.x=p[0];ball.y=reference.y=p[1];status.textContent='Ball placed in the force core. Red wakes under the mechanic; gray stays still.';};
+kind.onchange=()=>reset(true);angle.oninput=power.oninput=()=>{reset();showShot();};
+document.querySelector('#export').onclick=()=>document.querySelector('#overrides').value=JSON.stringify({courseMechanics:values},null,2);
+document.querySelector('#import').onclick=()=>{try{const raw=JSON.parse(document.querySelector('#overrides').value);if(!raw || Object.keys(raw).length!==1 || !raw.courseMechanics)throw Error('Expected courseMechanics overrides.');const validated=createTuning(raw).courseMechanics;Object.assign(values,validated);for(const [key,s] of sliders){s.input.value=values[key];drawValue(key);}reset();status.textContent='Validated overrides imported; chamber reset.';}catch(e){status.textContent='Import rejected: '+e.message;}};
+function tick(dt){time+=dt;const f=courseMechanicForce(course.mechanics,ball,(x,y)=>surfaceHeight(course,x,y),values);if(ball.mode==='play' && Math.hypot(f.x,f.y,f.z)>0)ball.moving=true;
+  events+=stepBall(ball,course,dt,time,TUNING.globalHazards,values).length;stepBall(reference,{...course,mechanics:[]},dt,time);
+  maxHeight=Math.max(maxHeight,ball.z);if(ball.mode==='sunk')status.textContent=`Active ball sunk. Stripped ball: ${reference.mode}. Maximum lift ${maxHeight.toFixed(1)} u. ${events} domain events.`;
+}
+function frame(now){if(disposed)return;accumulator+=Math.min(.05,(now-last)/1000);last=now;while(accumulator>=1/240){tick(1/240);accumulator-=1/240;}
+  referenceMesh.visible=Math.hypot(ball.x-reference.x,ball.y-reference.y,ball.z-reference.z)>2;
+  ballMesh.position.set(...transform.ball(ball.x,ball.y,ball.z));referenceMesh.position.set(...transform.ball(reference.x,reference.y,reference.z));
+  const width=canvas.clientWidth,height=canvas.clientHeight;if(canvas.width!==Math.round(width*renderer.getPixelRatio()) || canvas.height!==Math.round(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}controls.update();renderer.render(scene,camera);frameId=requestAnimationFrame(frame);
+}
+reset(true);frameId=requestAnimationFrame(frame);
+window.addEventListener('pagehide',()=>{disposed=true;cancelAnimationFrame(frameId);disposeGroup();ballMesh.geometry.dispose();ballMesh.material.dispose();referenceMesh.geometry.dispose();referenceMesh.material.dispose();controls.dispose();renderer.dispose();},{once:true});
+</script></body></html>

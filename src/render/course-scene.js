@@ -1,3 +1,4 @@
+import { buildCourseMechanics } from './course-mechanics.js';
 /**
  * Builds the Three.js scene graph for one course putt.
  *
@@ -265,6 +266,8 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const solidBox = (x, y, w, d, low, high) => solids.push({ min: transform.ground(x, y, low), max: transform.ground(x + w, y + d, high) });
   for (const r of hl.w) solidBox(r[0], r[1], r[2], r[3], 0, WALL_HEIGHT);
   for (const p of hl.pl) solidBox(p[0], p[1], p[2], p[3], -10, p[4]);
+
+  buildCourseMechanics({THREE,course:hl,group:g,transform,solids});
 
   let disposed = false;
   return {

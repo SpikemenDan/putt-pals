@@ -148,3 +148,24 @@ For proposed appearance or feel changes:
 If browser access is unavailable, provide the exact local URL and steps and mark
 interactive verification/acceptance pending. The panel remains a target until
 implementation and verification are recorded.
+
+## G1g course mechanics
+
+The owner accepted these candidate defaults in the local G1g chamber preview on 2026-11-05. Legacy fan, tornado and teleporter tuples keep their current behavior. These settings apply to optional `mechanics` records. Physics changes reset the preview; temporary overrides never enter ordinary rooms. Per-record `height` and fan/vortex `acceleration` overrides are explicit, validated course data.
+
+| Setting | Default | Range | Units | Effect |
+| --- | --- | --- | --- | --- |
+| `courseMechanics.bodyHeight` | 40 | 1 to 1000 | world units | Solid mechanic height above its local floor (world units). |
+| `courseMechanics.wedgeRestitution` | 0.9 | 0 to 2 | factor | Wedge face restitution (factor). |
+| `courseMechanics.bouncerRestitution` | 1.05 | 0 to 2 | factor | Bouncer face restitution (factor). |
+| `courseMechanics.bouncerKick` | 180 | 0 to 3000 | units/s | Added outgoing normal speed at a bouncer (world units/s). |
+| `courseMechanics.fanAcceleration` | 600 | 0 to 10000 | units/s² | Default mechanic fan acceleration (world units/s^2). |
+| `courseMechanics.fanHeight` | 100 | 1 to 1000 | world units | Fan force reach above the local floor (world units). |
+| `courseMechanics.vortexAcceleration` | 400 | 0 to 10000 | units/s² | Default tangential vortex acceleration (world units/s^2). |
+| `courseMechanics.vortexPull` | 0.5 | 0 to 3 | factor | Inward pull as a factor of tangential force. |
+| `courseMechanics.vortexLift` | 1400 | 0 to 10000 | units/s² | Vortex core lift acceleration (world units/s^2). |
+| `courseMechanics.vortexHeight` | 130 | 1 to 1000 | world units | Vortex force reach above its local floor (world units). |
+| `courseMechanics.portalRadius` | 18 | 1 to 100 | world units | Portal trigger radius (world units). |
+| `courseMechanics.portalHeight` | 25 | 1 to 1000 | world units | Portal entry height above the floor (world units). |
+| `courseMechanics.portalCooldown` | 0.6 | 0.05 to 10 | seconds | Shared paired-portal re-entry cooldown (seconds). |
+| `courseMechanics.portalClearance` | 2 | 0.1 to 100 | world units | Extra exit clearance beyond ball and trigger radius (world units). |

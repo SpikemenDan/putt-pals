@@ -48,3 +48,18 @@ Missing/malformed files, unsupported schemas, duplicate/missing options, unsuppo
 ## Geometry integrity
 
 `check` and document validation also run the CL1 geometry integrity rules (interpenetrating solids, wall/spawn/cup clearances, ramp seams) with errors naming map, putt and element ids. See "Course geometry integrity" in ARCHITECTURE.md. This supersedes the earlier note that `check` does not examine wall clearance; it still does not certify connectivity or reachability.
+
+## G1g mechanic records
+
+Course geometry may include an optional `mechanics` array. Validated records
+provide triangular wedges, finite bouncer faces, height-gated stronger fans,
+course vortices and oriented portal pairs. The browser, CLI and solver consume
+the same records and fixed-step simulation. Existing tuple-based mechanics keep
+their behavior. Exact fields, units, conservative integrity rules, proof
+chambers and reproduction commands are in
+[the G1g contract](../../docs/G1G_COURSE_MECHANICS.md).
+
+`node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
+with development chambers appended. Use `--courses` with the existing CLI
+commands to inspect, shoot and solve them. The normal catalog and voting pool
+are unchanged.

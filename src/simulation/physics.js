@@ -1,3 +1,4 @@
+import { courseMechanicForce, moveCourseSolids, applyCoursePortal } from './course-mechanics.js';
 /**
  * Pure physics and collision routines for Putt Pals.
  * Decoupled from DOM, Three.js, React, audio, and networking.
@@ -347,9 +348,10 @@ export function stopBall(player, events = []) {
  * @param {number} [dt=FIXED_TIMESTEP] Timestep in seconds
  * @param {number} [hazardTime=0] Time for moving obstacles in seconds
  * @param {object} [globalHazardTuning=TUNING.globalHazards] Validated force settings; local tuning previews may inject candidates.
+ * @param {object} [courseMechanicTuning=TUNING.courseMechanics] Validated isolated preview settings.
  * @returns {Array<object>} Emitted domain events
  */
-export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, globalHazardTuning = TUNING.globalHazards) {
+export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, globalHazardTuning = TUNING.globalHazards, courseMechanicTuning = TUNING.courseMechanics) {
   if (!player.moving || player.mode !== 'play') return [];
   const R = ballRadiusOf(player);
   // Resolve fast cup crossings spatially instead of depending on tick alignment.
@@ -364,15 +366,15 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, gl
     player.y + t * dy - course.hole[1]) < cupOf(course) + R;
   const steps = crossesCup ? Math.min(128, Math.max(1,
     Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
-  if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning);
+  if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning);
   const events = [];
   for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
-    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps, globalHazardTuning));
+    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps, globalHazardTuning, courseMechanicTuning));
   }
   return events;
 }
 
-function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
+function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
@@ -393,16 +395,19 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
     player.vx += globalHazards.ax * dt;
     player.vy += globalHazards.ay * dt;
   }
+  const mechanicForce = course.mechanics?.length ? courseMechanicForce(course.mechanics, player, (x,y)=>surfaceHeight(course,x,y), courseMechanicTuning) : null;
+  if (mechanicForce) {player.vx+=mechanicForce.x*dt;player.vy+=mechanicForce.y*dt;}
   let f = contactHeight(course, player.x, player.y, R);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
   let air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0);
-  if (!air && globalHazards?.az > 0) { player.vz = Math.max(0, player.vz); air = true; }
+  if (!air && ((globalHazards?.az || 0)+(mechanicForce?.z || 0)) > 0) { player.vz = Math.max(0, player.vz); air = true; }
 
   if (air) {
     player.vz -= GRAVITY * dt;
     if (globalHazards) player.vz += globalHazards.az * dt;
+    if (mechanicForce) player.vz += mechanicForce.z * dt;
   } else {
     player.z = f;
     let k = TURF_FRICTION;
@@ -540,7 +545,9 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
   }
 
   // Step X and check terrain ledge collision
-  const nx = player.x + player.vx * dt;
+  const mechanicMotion = !ghost && course.mechanics?.length ? moveCourseSolids(course.mechanics,player,dt,R,(x,y)=>surfaceHeight(course,x,y), courseMechanicTuning) : null;
+  if (mechanicMotion) for (const id of mechanicMotion.hits) events.push({type:SimulationEventTypes.BOUNCE,target:id,position:[mechanicMotion.x,mechanicMotion.y,player.z]});
+  const nx = mechanicMotion ? mechanicMotion.x : player.x + player.vx * dt;
   if (contactHeight(course, nx, player.y, R) > player.z + BOUNCE.ledgeHeight) {
     player.vx = player.armedPowerups?.sticky ? 0 : player.vx * -BOUNCE.ledgeDamping;
   } else {
@@ -548,7 +555,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
   }
 
   // Step Y and check terrain ledge collision
-  const ny = player.y + player.vy * dt;
+  const ny = mechanicMotion ? mechanicMotion.y : player.y + player.vy * dt;
   if (contactHeight(course, player.x, ny, R) > player.z + BOUNCE.ledgeHeight) {
     player.vy = player.armedPowerups?.sticky ? 0 : player.vy * -BOUNCE.ledgeDamping;
   } else {
@@ -661,6 +668,11 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
     }
   }
 
+  if (course.mechanics?.length) {
+    const portal = applyCoursePortal(course.mechanics,player,dt,R,(x,y)=>surfaceHeight(course,x,y), courseMechanicTuning);
+    if(portal) events.push({type:SimulationEventTypes.HAZARD,hazardType:'teleporter',id:portal,position:[player.x,player.y,player.z]});
+  }
+
   // Rest stop check on gentle slope
   const slope =
     Math.abs(surfaceHeight(course, player.x + 0.2, player.y) - surfaceHeight(course, player.x - 0.2, player.y)) +
@@ -668,6 +680,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning) {
 
   if (
     gnd &&
+    !(mechanicForce && Math.hypot(mechanicForce.x,mechanicForce.y,mechanicForce.z)>0) &&
     !(globalHazards && Math.hypot(globalHazards.ax, globalHazards.ay, globalHazards.az) > 0) &&
     slope < REST.maxSlope &&
     Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) + CUPT.filletWidth &&
