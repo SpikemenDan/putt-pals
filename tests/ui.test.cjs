@@ -129,6 +129,13 @@ function fakeClock() {
     await t.teardown();
   });
 
+  /** The loading screen stays until the ball has rolled into the cup; wait (real time) for it to close. */
+  async function waitGone(t, limitMs = 4000) {
+    const start = Date.now();
+    while (t.within('[data-ui=loading]') && Date.now() - start < limitMs) await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+    assert.equal(t.within('[data-ui=loading]'), null, 'gone once the ball is in the cup');
+  }
+
   await scenario('loading screen: Putt Pals title over the planet scene; reduced motion keeps it still with no balls', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false, connecting: true }));
@@ -138,32 +145,61 @@ function fakeClock() {
     assert.ok(loading.querySelector('canvas[data-ui=loading-planet]'), 'planet layer');
     assert.equal(loading.querySelector('canvas').getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
     await act(async () => t.store.setLocal({ connecting: false }));
-    assert.equal(t.within('[data-ui=loading]'), null);
+    assert.equal(t.within('[data-ui=loading]').dataset.state, 'done', 'stays up while the ball finishes its roll');
+    await waitGone(t);
     await t.teardown();
   });
 
   await scenario('planet scene: biome bands, deterministic planet, ball arcs, reduced motion, live settings, disposal', async () => {
     const scene = await import('../src/ui/planet-scene.js');
     const { DEFAULT_DISPLAY, createDisplay } = await import('../src/shared/display.js');
-    // Gaia regions: snowy poles, desert and tropical bands, forests between, seas and mountains break them up.
-    assert.equal(scene.biomeAt(88, 0.7, 0.3), 'snow');
-    assert.equal(scene.biomeAt(-80, 0.2, 0.3), 'snow', 'the south pole is ice even over water');
-    assert.equal(scene.biomeAt(2, 0.7, 0.3), 'tropical');
-    assert.equal(scene.biomeAt(2, 0.7, 0.7), 'jungle');
-    assert.equal(scene.biomeAt(25, 0.7, 0.3), 'desert');
-    assert.equal(scene.biomeAt(-25, 0.7, 0.3), 'desert');
-    assert.equal(scene.biomeAt(38, 0.7, 0.3), 'temperate');
-    assert.equal(scene.biomeAt(50, 0.7, 0.3), 'boreal');
-    assert.equal(scene.biomeAt(65, 0.7, 0.3), 'tundra');
-    assert.equal(scene.biomeAt(10, 0.36, 0.3), 'ocean');
-    assert.equal(scene.biomeAt(10, 0.2, 0.3), 'deepOcean');
-    const map = scene.buildBiomeMap(scene.mulberry32(5));
-    assert.deepEqual(map, scene.buildBiomeMap(scene.mulberry32(5)), 'same seed, same planet');
-    const rowShare = (row, name) => { let n = 0; for (let x = 0; x < scene.TEX_W; x++) if (map[row * scene.TEX_W + x] === scene.BIOMES.indexOf(name)) n++; return n / scene.TEX_W; };
-    assert.equal(rowShare(0, 'snow'), 1, 'north pole row is all snow');
-    assert.equal(rowShare(scene.TEX_H - 1, 'snow'), 1, 'south pole row is all snow');
-    const present = new Set(scene.BIOMES.filter(b => [...map].includes(scene.BIOMES.indexOf(b))));
-    for (const b of ['snow', 'tundra', 'boreal', 'temperate', 'desert', 'tropical', 'ocean']) assert.ok(present.has(b), 'planet shows ' + b);
+    // Gaia is built from climate: snowy poles, wet green equator, dry sandy subtropics, blue seas, with colours that blend smoothly.
+    const sc = scene.surfaceColour, wet = scene.moistureAt;
+    const white = c => c.every(q => q > 225), blue = c => c[2] > c[0] + 60 && c[2] > c[1];
+    assert.ok(white(sc(88, 0.7, 0.1, 0.5)), 'snow at the north pole');
+    assert.ok(white(sc(-80, 0.2, 0, 0.5)), 'sea ice at the south pole');
+    assert.ok(blue(sc(10, 0.3, 0, 0.5)), 'open water is blue');
+    const lush = sc(2, 0.7, 0.1, wet(2, 0.3, 0.5));
+    assert.ok(lush[1] > lush[0] + 30 && lush[1] > lush[2] + 40, 'the wet equator is green');
+    const dry = sc(25, 0.7, 0.1, wet(25, 0.8, 0.5));
+    assert.ok(dry[0] > 200 && dry[2] < 150 && dry[0] >= dry[1] - 5, 'the dry subtropics are sandy');
+    assert.ok(wet(2, 0.5, 0.5) > wet(25, 0.5, 0.5) + 0.3, 'the equator is wetter than the subtropics');
+    assert.ok(wet(10, 0.0, 0.5) > wet(10, 1.0, 0.5), 'coasts are wetter than continental interiors');
+    for (const [lat, m] of [[5, 0.5], [30, 0.4], [50, 0.6], [70, 0.5]]) { // no hard edges: a tiny change in the inputs moves the colour only a little
+      const a = sc(lat, 0.7, 0.1, m), b = sc(lat + 0.3, 0.7, 0.1, m + 0.01);
+      assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 14, `colours blend smoothly near latitude ${lat}`);
+    }
+    const planet = scene.buildPlanet(scene.mulberry32(5));
+    assert.deepEqual(planet.rgb, scene.buildPlanet(scene.mulberry32(5)).rgb, 'same seed, same planet');
+    const px = i => [planet.rgb[i * 3], planet.rgb[i * 3 + 1], planet.rgb[i * 3 + 2]];
+    let polar = 0, seas = 0, greens = 0, sands = 0;
+    for (let x = 0; x < scene.TEX_W; x++) { if (white(px(x))) polar++; }
+    for (let i = 0; i < scene.TEX_W * scene.TEX_H; i++) { const c = px(i); if (blue(c)) seas++; else if (c[1] > c[0] + 30 && c[1] > c[2] + 40) greens++; else if (c[0] > 200 && c[2] < 150 && c[0] >= c[1] - 5) sands++; }
+    assert.ok(polar > scene.TEX_W * 0.9, 'the pole row is snow');
+    const total = scene.TEX_W * scene.TEX_H;
+    assert.ok(seas / total > 0.35 && seas / total < 0.8, 'mostly sea, like Earth');
+    assert.ok(greens / total > 0.04 && sands / total > 0.01, 'forests and deserts both exist');
+    // The distant worlds: textures are deterministic, detailed and distinct.
+    const worlds = await import('../src/ui/worlds.js');
+    const ares = worlds.buildAresTexture(scene.mulberry32(2)), luna = worlds.buildLunaTexture(scene.mulberry32(2));
+    assert.deepEqual(ares, worlds.buildAresTexture(scene.mulberry32(2)));
+    const avg = t => { let r = 0, g = 0, b = 0; for (let k = 0; k < t.length; k += 3) { r += t[k]; g += t[k + 1]; b += t[k + 2]; } const n = t.length / 3; return [r / n, g / n, b / n]; };
+    const a1 = avg(ares), l1 = avg(luna);
+    assert.ok(a1[0] > a1[2] + 40, 'Ares is rust-coloured');
+    assert.ok(Math.abs(l1[0] - l1[2]) < 15, 'Luna is grey');
+    const spread = t => { const xs = []; for (let k = 0; k < t.length; k += 3 * 97) xs.push(t[k]); const m = xs.reduce((q, v) => q + v, 0) / xs.length; return Math.sqrt(xs.reduce((q, v) => q + (v - m) ** 2, 0) / xs.length); };
+    assert.ok(spread(ares) > 15 && spread(luna) > 15, 'both have real surface detail (craters, plains), not flat colour');
+    // Putt progress: eases toward the cap while loading, then rolls home in finishTime seconds.
+    const { createPuttProgress } = await import('../src/ui/putt-progress.js');
+    const pr = createPuttProgress(createDisplay({ loading: { finishTime: 1 } }));
+    let last = 0;
+    for (let k = 0; k < 600; k++) { const v = pr.step(0.05); assert.ok(v >= last && v < 0.9, 'monotonic and never completes by itself'); last = v; }
+    assert.ok(last > 0.85, 'close to the cap after a long wait');
+    pr.finish();
+    for (let k = 0; k < 10; k++) pr.step(0.05);
+    assert.ok(!pr.done && pr.value > last && pr.value < 1, 'half a second into a one second finish');
+    for (let k = 0; k < 10; k++) pr.step(0.05);
+    assert.ok(pr.done && pr.value === 1, 'in after finishTime');
     // Ball flights are parabolic arcs that start off screen and end near the horizon.
     const flight = { x0: -40, y0: 100, x1: 1320, y1: 400, apex: 150 };
     assert.deepEqual([scene.ballPose(flight, 0).x, scene.ballPose(flight, 0).y], [-40, 100]);
@@ -215,7 +251,10 @@ function fakeClock() {
     const tip = loading.querySelector('[data-ui=loading-tip]').textContent.replace(/^TIP\s*/, '');
     assert.ok(ui.TIPS.includes(tip), 'shows one of the tips');
     await act(async () => t.store.setLocal({ connecting: false }));
-    assert.equal(t.within('[data-ui=loading]'), null, 'gone once connected or failed');
+    await waitGone(t);
+    await act(async () => t.store.setLocal({ connecting: true }));
+    await act(async () => t.store.setLocal({ connecting: false, connectError: 'nope' }));
+    assert.equal(t.within('[data-ui=loading]'), null, 'a failed connection closes the screen at once');
     assert.ok(ui.TIPS.length >= 8 && new Set(ui.TIPS).size === ui.TIPS.length, 'enough distinct tips');
     assert.ok(ui.TIPS.every(x => typeof x === 'string' && x.length > 20 && x.length <= 110), 'tips are short text');
     for (const [start, step] of [[0, 0], [3, 100], [13, 1], [0, -1]]) assert.ok(ui.tipAt(start, step) >= 0 && ui.tipAt(start, step) < ui.TIPS.length);

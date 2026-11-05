@@ -22,6 +22,7 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['loading.horizonHeight', 0.3, 0.9, 'Loading screen: where the top of the planet sits, as a fraction of the screen height measured from the top (higher number = lower planet).'],
   ['loading.cloudCover', 0, 1, 'Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast).'],
   ['loading.cloudDrift', 0, 4, 'Loading screen: cloud layer speed relative to the planet spin (1 = clouds turn with the ground, above 1 they slide ahead of it).'],
+  ['loading.finishTime', 0.1, 3, 'Loading screen: once the game is ready, seconds the ball takes to finish rolling to the cup before the screen closes.'],
   ['loading.ballInterval', 0.5, 120, 'Loading screen: average gap between golf balls flying across the sky. Ignored when the player prefers reduced motion (no balls fly).'],
   ['loading.ballFlightTime', 0.5, 30, 'Loading screen: time one golf ball takes to cross the sky.'],
   ['loading.ballSize', 6, 120, 'Loading screen: diameter of a flying golf ball.'],
@@ -31,7 +32,7 @@ export const DISPLAY_FIELDS = Object.freeze([
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
-  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, ballInterval: 5, ballFlightTime: 4.5, ballSize: 26 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, ballInterval: 5, ballFlightTime: 4.5, ballSize: 26 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

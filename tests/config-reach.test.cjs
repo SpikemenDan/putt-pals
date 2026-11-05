@@ -104,8 +104,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(lbase.size, '26px');
     assert.ok(changed('ballFlightTime', 9).flight > lbase.flight, 'loading.ballFlightTime lengthens the flight');
     assert.ok(Math.abs(lbase.flight - 4.5) < 0.1, 'default flight lasts ballFlightTime');
+    const { createPuttProgress } = await import(url('src/ui/putt-progress.js'));
+    const finishSteps = display => { const pr = createPuttProgress(display); pr.step(1); pr.finish(); let n = 0; while (!pr.done && n < 1000) { pr.step(0.05); n++; } return n * 0.05; };
+    assert.ok(Math.abs(finishSteps(DEFAULT_DISPLAY) - 0.8) < 0.06 && Math.abs(finishSteps(createDisplay({ loading: { finishTime: 2 } })) - 2) < 0.06, 'loading.finishTime sets how long the ball takes to roll home');
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'ballInterval', 'ballFlightTime', 'ballSize'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'finishTime', 'ballInterval', 'ballFlightTime', 'ballSize'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]
