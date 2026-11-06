@@ -26,7 +26,7 @@ On 2026-10-29 the owner delegated implementation ordering (tasks that leave traj
 
 ## Vision backlog
 
-Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), G1b (#89), G1c (#90), G1d (#91), G1e (#92), G1f (#93), G1g (#94), GM1 (#95), SV1 (#87), S3 (#86), N4 (#65), and T2 (#83) are merged and closed; umbrella G1 (#34) is closed; F1 and CL2 are merged and listed under Open work. As of 2026-11-05, GM2a (#185) and K0 (#104) are labelled READY; dependency and overlapping-work checks are still required. #35 (K1) and #96 (GM2) are active tracking umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
+Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHITECTURE.md (Gameplay systems). GitHub issues were opened on 2026-10-29 with native blocked-by links. G1a (#88), G1b (#89), G1c (#90), G1d (#91), G1e (#92), G1f (#93), G1g (#94), GM1 (#95), SV1 (#87), S3 (#86), N4 (#65), and T2 (#83) are merged and closed; umbrella G1 (#34) is closed; F1 and CL2 are merged and listed under Open work. As of 2026-11-05, GM2a (#185) is labelled READY; K0 (#104) is implemented on task branch feat/volumetric-courses; dependency and overlapping-work checks are still required. #35 (K1) and #96 (GM2) are active tracking umbrellas. Each task keeps parity fixtures green when its effect is inactive, adds simulation tests, and lists its own owned paths when its issue is created.
 
 | ID | Depends on | Scope |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | [K1b #98](https://github.com/SpikemenDan/putt-pals/issues/98) Ramps and drops | #97 | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | [K1c #99](https://github.com/SpikemenDan/putt-pals/issues/99) Transport tubes | #98 | Enclosed tubes that carry and fling the ball between islands |
 | [K1d #100](https://github.com/SpikemenDan/putt-pals/issues/100) Difficulty bands | #97-#99 | Difficulty bands by map rating measured with SV1 (par-based, no hole-in-one requirement), optional hole-in-one shortcuts on some putts, re-solved starter maps, fresh sweep |
-| [K0 #104](https://github.com/SpikemenDan/putt-pals/issues/104) | #86, #102 | Volumetric 3D course model: stacked and overlapping surfaces, walls and ceilings over one footprint, solver support; existing courses stay bit-identical |
+| [K0 #104](https://github.com/SpikemenDan/putt-pals/issues/104) | #86, #102 | Implemented on feat/volumetric-courses (PR pending): Volumetric 3D course model: stacked and overlapping surfaces, walls and ceilings over one footprint, clearance rules, solver support, proof chamber; existing courses stay bit-identical |
 | [W2 #105](https://github.com/SpikemenDan/putt-pals/issues/105) | #104, #83 | Water in levels: splash and reset, shallow water, currents, toon water visuals, solver hazard handling |
 | [W3 #106](https://github.com/SpikemenDan/putt-pals/issues/106) | #104, #83 | Wind zones in levels: steady, gusting and updraft fields, airborne-weighted push, visible streamlines; distinct from fans and the G1f Wind hazard |
 

@@ -56,34 +56,80 @@ export function rampHeight(r, x, y) {
 
 /**
  * Computes terrain surface elevation at point (x, y).
+ * When ballZ is supplied on volumetric courses (task K0), selects the
+ * supporting floor under the ball by its height.
  * Returns -999 if out of bounds (off tiles or inside pit).
  *
  * @param {object} course Course definition
  * @param {number} x
  * @param {number} y
+ * @param {number} [ballZ] Ball elevation for multi-tier floor selection
  * @returns {number}
  */
-export function surfaceHeight(course, x, y) {
-  if (course.tiles && !course.tiles.some(r => inside(r, x, y))) return -999;
-  if (course.pit) {
-    for (const p of course.pit) {
-      if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) return -999;
-    }
-  }
-  let m = 0;
-  if (course.pl) {
-    for (const p of course.pl) {
-      if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) m = Math.max(m, p[4]);
-    }
-  }
-  if (course.rp) {
-    for (const r of course.rp) {
-      if (x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]) {
-        m = Math.max(m, rampHeight(r, x, y));
+export function structureRampHeight(s, x, y) {
+  const [rx, ry, rw, rh] = s.rect;
+  let t = 0;
+  if (s.direction === '+x') t = (x - rx) / rw;
+  else if (s.direction === '-x') t = (rx + rw - x) / rw;
+  else if (s.direction === '+y') t = (y - ry) / rh;
+  else if (s.direction === '-y') t = (ry + rh - y) / rh;
+  t = Math.max(0, Math.min(1, t));
+  return s.zStart + (s.zEnd - s.zStart) * t;
+}
+
+export function surfaceHeight(course, x, y, ballZ = undefined) {
+  if (!course.structures?.length) {
+    if (course.tiles && !course.tiles.some(r => inside(r, x, y))) return -999;
+    if (course.pit) {
+      for (const p of course.pit) {
+        if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) return -999;
       }
     }
+    let m = 0;
+    if (course.pl) {
+      for (const p of course.pl) {
+        if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) m = Math.max(m, p[4]);
+      }
+    }
+    if (course.rp) {
+      for (const r of course.rp) {
+        if (x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]) {
+          m = Math.max(m, rampHeight(r, x, y));
+        }
+      }
+    }
+    return m;
   }
-  return m;
+  const onTiles = !course.tiles || course.tiles.some(r => inside(r, x, y));
+  const inPit = course.pit && course.pit.some(p => x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]);
+  const floors = [];
+  if (onTiles && !inPit) {
+    let m = 0;
+    if (course.pl) {
+      for (const p of course.pl) {
+        if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) m = Math.max(m, p[4]);
+      }
+    }
+    if (course.rp) {
+      for (const r of course.rp) {
+        if (x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]) {
+          m = Math.max(m, rampHeight(r, x, y));
+        }
+      }
+    }
+    floors.push(m);
+  }
+  for (const s of course.structures) {
+    if (s.kind === 'surface' && inside(s.rect, x, y)) {
+      floors.push(s.z);
+    } else if (s.kind === 'ramp' && inside(s.rect, x, y)) {
+      floors.push(structureRampHeight(s, x, y));
+    }
+  }
+  if (!floors.length) return -999;
+  if (ballZ === undefined) return Math.max(...floors);
+  const candidates = floors.filter(h => h <= ballZ + 2);
+  return candidates.length ? Math.max(...candidates) : -999;
 }
 
 /**
@@ -111,6 +157,16 @@ function filletDrop(outside) {
   return CUPT.filletDepth * s * s;
 }
 
+export function activeStructureSurface(course, x, y, ballZ) {
+  if (!course.structures?.length || ballZ === undefined) return null;
+  for (const s of course.structures) {
+    if (s.kind === 'surface' && inside(s.rect, x, y) && Math.abs(s.z - ballZ) <= 2) {
+      return s;
+    }
+  }
+  return null;
+}
+
 /**
  * Computes contact height for the bottom of the ball at (x, y).
  * Accounts for cup depression.
@@ -119,12 +175,14 @@ function filletDrop(outside) {
  * @param {number} x
  * @param {number} y
  * @param {number} [ballRadius=BALL_RADIUS]
+ * @param {number} [ballZ] Optional ball height for volumetric courses
  * @returns {number}
  */
-export function contactHeight(course, x, y, ballRadius = BALL_RADIUS) {
+export function contactHeight(course, x, y, ballRadius = BALL_RADIUS, ballZ = undefined) {
   const C = cupOf(course);
-  const base = surfaceHeight(course, x, y);
-  const top = surfaceHeight(course, course.hole[0], course.hole[1]);
+  const base = surfaceHeight(course, x, y, ballZ);
+  if (base === -999) return -999;
+  const top = surfaceHeight(course, course.hole[0], course.hole[1], ballZ);
   const d = Math.hypot(x - course.hole[0], y - course.hole[1]);
   if (Math.abs(base - top) > 1) return base;
   if (d >= C) return base - filletDrop(d - C);
@@ -397,7 +455,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   }
   const mechanicForce = course.mechanics?.length ? courseMechanicForce(course.mechanics, player, (x,y)=>surfaceHeight(course,x,y), courseMechanicTuning) : null;
   if (mechanicForce) {player.vx+=mechanicForce.x*dt;player.vy+=mechanicForce.y*dt;}
-  let f = contactHeight(course, player.x, player.y, R);
+  let f = contactHeight(course, player.x, player.y, R, player.z);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
@@ -442,6 +500,16 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
         }
       }
     }
+    const activeStruct = activeStructureSurface(course, player.x, player.y, player.z);
+    if (activeStruct?.surface === 'ice') {
+      k = SURF.ice.friction;
+      cd = SURF.ice.drag;
+    } else if (activeStruct?.surface === 'sand') {
+      k = SURF.sand.friction;
+    } else if (activeStruct?.surface === 'slime') {
+      k = SURF.slime.friction;
+      cd = SURF.slime.drag;
+    }
 
     // Velocity-dependent friction
     const v = Math.hypot(player.vx, player.vy);
@@ -451,12 +519,12 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
     player.vy *= decay;
 
     const gx =
-      (surfaceHeight(course, player.x + 0.2, player.y) -
-        surfaceHeight(course, player.x - 0.2, player.y)) /
+      (surfaceHeight(course, player.x + 0.2, player.y, player.z) -
+        surfaceHeight(course, player.x - 0.2, player.y, player.z)) /
       0.4;
     const gy =
-      (surfaceHeight(course, player.x, player.y + 0.2) -
-        surfaceHeight(course, player.x, player.y - 0.2)) /
+      (surfaceHeight(course, player.x, player.y + 0.2, player.z) -
+        surfaceHeight(course, player.x, player.y - 0.2, player.z)) /
       0.4;
 
     if (Math.abs(gx) < 20 && Math.abs(gy) < 20) {
@@ -471,7 +539,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
     const fy = player.y - course.hole[1];
     const fd = Math.hypot(fx, fy);
     const outside = fd - cupOf(course);
-    if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y) - surfaceHeight(course, course.hole[0], course.hole[1])) <= 1) {
+    if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y, player.z) - surfaceHeight(course, course.hole[0], course.hole[1], player.z)) <= 1) {
       const s = 1 - outside / CUPT.filletWidth;
       const slope = (2 * CUPT.filletDepth * s) / CUPT.filletWidth;
       const pull = (slope * GRAVITY * dt) / (1 + 0.6 * slope * slope);
@@ -548,7 +616,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   const mechanicMotion = !ghost && course.mechanics?.length ? moveCourseSolids(course.mechanics,player,dt,R,(x,y)=>surfaceHeight(course,x,y), courseMechanicTuning) : null;
   if (mechanicMotion) for (const id of mechanicMotion.hits) events.push({type:SimulationEventTypes.BOUNCE,target:id,position:[mechanicMotion.x,mechanicMotion.y,player.z]});
   const nx = mechanicMotion ? mechanicMotion.x : player.x + player.vx * dt;
-  if (contactHeight(course, nx, player.y, R) > player.z + BOUNCE.ledgeHeight) {
+  if (contactHeight(course, nx, player.y, R, player.z) > player.z + BOUNCE.ledgeHeight) {
     player.vx = player.armedPowerups?.sticky ? 0 : player.vx * -BOUNCE.ledgeDamping;
   } else {
     player.x = nx;
@@ -556,7 +624,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
 
   // Step Y and check terrain ledge collision
   const ny = mechanicMotion ? mechanicMotion.y : player.y + player.vy * dt;
-  if (contactHeight(course, player.x, ny, R) > player.z + BOUNCE.ledgeHeight) {
+  if (contactHeight(course, player.x, ny, R, player.z) > player.z + BOUNCE.ledgeHeight) {
     player.vy = player.armedPowerups?.sticky ? 0 : player.vy * -BOUNCE.ledgeDamping;
   } else {
     player.y = ny;
@@ -575,8 +643,48 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
     }
   }
 
+  // Volumetric 3D walls (K0)
+  if (!ghost && course.structures?.length) {
+    for (const s of course.structures) {
+      if (s.kind === 'wall' && player.z + R >= s.base && player.z - R <= s.base + s.height) {
+        if (bounce(player, s.rect, R)) {
+          events.push({
+            type: SimulationEventTypes.BOUNCE,
+            target: s.id || 'wall',
+            position: [player.x, player.y, player.z],
+          });
+        }
+      }
+    }
+  }
+
   // Step Z
   player.z += player.vz * dt;
+
+  // Ceiling collision (K0)
+  if (course.structures?.length && player.vz > 0) {
+    for (const s of course.structures) {
+      let ceilingZ = null;
+      let restitution = 0.5;
+      if (s.kind === 'ceiling' && inside(s.rect, player.x, player.y)) {
+        ceilingZ = s.z;
+        if (s.restitution !== undefined) restitution = s.restitution;
+      } else if (s.kind === 'surface' && s.ceiling !== false && inside(s.rect, player.x, player.y)) {
+        const thickness = s.thickness ?? 4;
+        ceilingZ = s.z - thickness;
+      }
+      if (ceilingZ !== null && player.z + R >= ceilingZ && player.z - player.vz * dt + R <= ceilingZ + 2) {
+        player.z = ceilingZ - R;
+        player.vz = -Math.abs(player.vz) * restitution;
+        events.push({
+          type: SimulationEventTypes.BOUNCE,
+          target: s.id || 'ceiling',
+          position: [player.x, player.y, player.z],
+        });
+        break;
+      }
+    }
+  }
 
   // Cup collision and sink check
   if (cupCollision(player, course, dt, events)) {
@@ -585,15 +693,15 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
 
   if (player.mode !== 'play') return events;
 
-  f = contactHeight(course, player.x, player.y, R);
+  f = contactHeight(course, player.x, player.y, R, player.z);
   if (player.z <= f) {
     const gx =
-      (surfaceHeight(course, player.x + 0.1, player.y) -
-        surfaceHeight(course, player.x - 0.1, player.y)) /
+      (surfaceHeight(course, player.x + 0.1, player.y, player.z) -
+        surfaceHeight(course, player.x - 0.1, player.y, player.z)) /
       0.2;
     const gy =
-      (surfaceHeight(course, player.x, player.y + 0.1) -
-        surfaceHeight(course, player.x, player.y - 0.1)) /
+      (surfaceHeight(course, player.x, player.y + 0.1, player.z) -
+        surfaceHeight(course, player.x, player.y - 0.1, player.z)) /
       0.2;
     const tangent = Math.abs(gx) < 3 && Math.abs(gy) < 3 ? gx * player.vx + gy * player.vy : 0;
     player.vz =
@@ -653,7 +761,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
         if (Math.hypot(player.x - a[0], player.y - a[1]) < HAZ.teleporterRadius) {
           player.x = b[0];
           player.y = b[1];
-          player.z = surfaceHeight(course, b[0], b[1]);
+          player.z = surfaceHeight(course, b[0], b[1], player.z);
           player.teleporterCooldown = HAZ.teleporterCooldown;
           events.push({
             type: SimulationEventTypes.HAZARD,
@@ -675,8 +783,8 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
 
   // Rest stop check on gentle slope
   const slope =
-    Math.abs(surfaceHeight(course, player.x + 0.2, player.y) - surfaceHeight(course, player.x - 0.2, player.y)) +
-    Math.abs(surfaceHeight(course, player.x, player.y + 0.2) - surfaceHeight(course, player.x, player.y - 0.2));
+    Math.abs(surfaceHeight(course, player.x + 0.2, player.y, player.z) - surfaceHeight(course, player.x - 0.2, player.y, player.z)) +
+    Math.abs(surfaceHeight(course, player.x, player.y + 0.2, player.z) - surfaceHeight(course, player.x, player.y - 0.2, player.z));
 
   if (
     gnd &&

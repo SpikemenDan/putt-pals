@@ -26,7 +26,7 @@
     "test:app": "node tests/app.test.cjs",
     "test:network": "node tests/network.test.cjs",
     "test:session": "node tests/session.test.cjs",
-    "test:courses": "node tests/courses.test.cjs",
+    "test:courses": "node tests/courses.test.cjs && node tests/volumetric-courses.test.cjs",
     "test:physics": "node tests/physics.test.cjs",
     "solve": "node tools/cli/main.mjs solve",
     "rank": "node tools/cli/main.mjs rank",

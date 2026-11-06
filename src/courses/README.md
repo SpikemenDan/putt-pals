@@ -59,6 +59,18 @@ their behavior. Exact fields, units, conservative integrity rules, proof
 chambers and reproduction commands are in
 [the G1g contract](../../docs/G1G_COURSE_MECHANICS.md).
 
+## K0 volumetric 3D structures
+
+Course geometry may include an optional `structures` array. Validated records
+provide 3D elevated surfaces (`kind: 'surface'`), vertical walls with base elevation
+and finite height (`kind: 'wall'`), and ceilings that bounce upward-moving balls
+(`kind: 'ceiling'`). Multi-level courses (such as overpasses) allow travel above and below
+the same 2D footprint, gravity drops between levels, and vertical wall obstruction.
+The browser Three.js renderer, simulation physics, geometry integrity validator,
+and par-solver consume the same structure records. Existing 2D courses omit structures
+and remain bit-identical.
+
+
 `node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
 with development chambers appended. Use `--courses` with the existing CLI
 commands to inspect, shoot and solve them. The normal catalog and voting pool

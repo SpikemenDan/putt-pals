@@ -7,3 +7,4 @@ export * from './document.js';
 export * from './palettes.js';
 export * from './geometry.js';
 export * from './integrity.js';
+export * from './structures.js';

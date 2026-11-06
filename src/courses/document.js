@@ -16,7 +16,8 @@ export function createCourseDocument() {
     ...course,
     description: data.definitions[index].desc ?? '',
     geometry: { ...Object.fromEntries(geometryKeys.map(key => [key, structuredClone(data.definitions[index][key])])),
-      ...(data.definitions[index].mechanics ? {mechanics:structuredClone(data.definitions[index].mechanics)} : {}) },
+      ...(data.definitions[index].mechanics ? {mechanics:structuredClone(data.definitions[index].mechanics)} : {}),
+      ...(data.definitions[index].structures ? {structures:structuredClone(data.definitions[index].structures)} : {}) },
     putts: course.putts.map((putt, pi) => ({ ...putt, id: `${course.id}-putt-${pi + 1}`, index: pi })),
   })) };
   const checked = validateCourseDocument(document);
