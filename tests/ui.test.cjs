@@ -150,7 +150,7 @@ function fakeClock() {
     await t.teardown();
   });
 
-  await scenario('planet scene: biome bands, deterministic planet, ball arcs, reduced motion, live settings, disposal', async () => {
+  await scenario('planet scene: climate colours, cities and traffic, reduced motion, live settings, disposal', async () => {
     const scene = await import('../src/ui/planet-scene.js');
     const { DEFAULT_DISPLAY, createDisplay } = await import('../src/shared/display.js');
     // Gaia is built from climate: snowy poles, wet green equator, dry sandy subtropics, blue seas, with colours that blend smoothly.
@@ -200,42 +200,43 @@ function fakeClock() {
     assert.ok(!pr.done && pr.value > last && pr.value < 1, 'half a second into a one second finish');
     for (let k = 0; k < 10; k++) pr.step(0.05);
     assert.ok(pr.done && pr.value === 1, 'in after finishTime');
-    // Ball flights are parabolic arcs that start off screen and end near the horizon.
-    const flight = { x0: -40, y0: 100, x1: 1320, y1: 400, apex: 150 };
-    assert.deepEqual([scene.ballPose(flight, 0).x, scene.ballPose(flight, 0).y], [-40, 100]);
-    assert.deepEqual([scene.ballPose(flight, 1).x, scene.ballPose(flight, 1).y], [1320, 400]);
-    assert.ok(scene.ballPose(flight, 0.5).y < (100 + 400) / 2 - 100, 'rises above the straight line between the ends');
-    assert.ok(scene.ballPose(flight, 1).scale < scene.ballPose(flight, 0).scale, 'shrinks as it flies away');
-    const planned = scene.planFlight(scene.mulberry32(1), 1280, 720, 26, 450);
-    assert.ok(planned.x0 < 0 && planned.x1 > 1280 || planned.x0 > 1280 && planned.x1 < 0, 'crosses the whole sky');
-    // Running scene: balls appear on the configured schedule, expire, and follow live settings.
+    // Cities are baked into the planet on gentle land, and traffic is placed on the sphere correctly.
+    assert.ok(planet.cities.length >= 15 && planet.cities.every(c => c.u >= 0 && c.u < 1 && Math.abs(c.lat) < 70), 'many cities, none at the poles');
+    assert.ok(planet.seaSites.length >= 8, 'boats have open sea to sail');
+    const centre = scene.projectPoint(0, 0, 0, 0);
+    assert.ok(Math.abs(centre.x) < 1e-9 && Math.abs(centre.y) < 1e-9 && Math.abs(centre.z - 1) < 1e-9, 'lat 0 lon 0 faces the viewer');
+    const east = scene.projectPoint(0, Math.PI / 2, 0, 0);
+    assert.ok(Math.abs(east.y + 1) < 1e-9 && Math.abs(east.z) < 1e-9, 'with the axis horizontal, 90 degrees of longitude is on the lower limb');
+    assert.ok(scene.projectPoint(0, Math.PI, 0, 0).z < -0.99, 'the far side faces away');
+    assert.ok(scene.projectPoint(0, 0, 0.5, 0).z === 1.5, 'altitude lifts a point off the surface');
+    const north = scene.projectPoint(Math.PI / 2, 0, 0, 0);
+    assert.ok(Math.abs(north.x - 1) < 1e-9, 'the pole sits on the right rim');
+    const g1 = { lat: 0.2, lon: 0.3 }, b1 = { lat: -0.5, lon: 1.9 }, mid = scene.greatCircle(g1, b1, 0.5), end0 = scene.greatCircle(g1, b1, 0), end1 = scene.greatCircle(g1, b1, 1);
+    assert.ok(Math.abs(end0.lat - g1.lat) < 1e-9 && Math.abs(end1.lon - b1.lon) < 1e-9, 'a great-circle flight starts and ends at its cities');
+    assert.ok(Math.abs(scene.greatCircle(g1, b1, 0.25).angle - end0.angle) < 1e-9 && mid.angle > 0.5 && mid.angle < 3.2, 'the route angle is the arc length');
+    // Running scene: the planet turns at spinSpeed, traffic follows live counts, reduced motion freezes everything.
     const make = (display, reducedMotion = false) => {
-      const sd = new JSDOM('<canvas></canvas><div></div>', { pretendToBeVisual: true });
-      const canvas = sd.window.document.querySelector('canvas'), layer = sd.window.document.querySelector('div');
+      const sd = new JSDOM('<canvas></canvas><canvas></canvas>', { pretendToBeVisual: true });
+      const [canvas, sprites] = sd.window.document.querySelectorAll('canvas');
       canvas.getContext = () => null;
-      return { sd, layer, scene: scene.createPlanetScene({ canvas, ballLayer: layer, display, random: scene.mulberry32(3), reducedMotion, win: sd.window }) };
+      return { sd, scene: scene.createPlanetScene({ canvas, sprites, display, random: scene.mulberry32(3), reducedMotion, win: sd.window }) };
     };
-    const live = createDisplay({ loading: { ballInterval: 1, ballFlightTime: 2, spinSpeed: 10 } });
-    const a = make(live);
+    const a = make(createDisplay({ loading: { spinSpeed: 10, planes: 3, boats: 4, satellites: 2 } }));
     a.scene.start();
     for (let i = 0; i < 10; i++) a.scene.step(0.1); // 1 s
-    assert.ok(a.scene.balls >= 1 && a.layer.querySelectorAll('[data-ui=loading-ball]').length === a.scene.balls, 'a ball is flying');
     assert.ok(Math.abs(a.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
-    for (let i = 0; i < 400; i++) a.scene.step(0.1);
-    assert.ok(a.scene.balls <= 3, 'at most three balls at once');
+    assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
     a.scene.dispose();
-    assert.equal(a.layer.children.length, 0, 'dispose removes the balls');
-    const frozen = make(createDisplay({ loading: { spinSpeed: 0, ballInterval: 120 } }));
-    frozen.scene.start();
-    for (let i = 0; i < 20; i++) frozen.scene.step(0.1);
-    assert.equal(frozen.scene.spin, 0, 'spinSpeed 0 holds the planet still');
-    assert.equal(frozen.scene.balls, 0, 'a long ballInterval launches nothing in two seconds');
-    frozen.scene.dispose();
+    const none = make(createDisplay({ loading: { spinSpeed: 0, planes: 0, boats: 0, satellites: 0 } }));
+    none.scene.start();
+    for (let i = 0; i < 20; i++) none.scene.step(0.1);
+    assert.equal(none.scene.spin, 0, 'spinSpeed 0 holds the planet still');
+    assert.deepEqual(none.scene.traffic, { planes: 0, boats: 0, satellites: 0 }, '0 hides all traffic');
+    none.scene.dispose();
     const still = make(DEFAULT_DISPLAY, true);
     still.scene.start();
     for (let i = 0; i < 600; i++) still.scene.step(0.1);
     assert.equal(still.scene.spin, 0, 'reduced motion: planet does not turn');
-    assert.equal(still.scene.balls, 0, 'reduced motion: no balls fly');
     still.scene.dispose();
   });
 

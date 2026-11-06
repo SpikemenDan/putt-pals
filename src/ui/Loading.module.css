@@ -1,5 +1,5 @@
 /* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night-to-day sky, the curved horizon of a planet
-   painted by planet-scene.js, Ares and Luna in the distance, golf balls flying across, then the brand, the putt progress and a
+   painted by planet-scene.js, Ares and Luna in the distance, planes, boats and satellites around it, then the brand, the putt progress and a
    tip. Fonts come from the game-wide theme (src/ui/fonts/fonts.css, global.css): Jersey 10 for the title, Pixelify Sans for captions. */
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
   --display:var(--font);--body:var(--pp-body,'Pixelify Sans','Segoe UI',sans-serif);
@@ -9,13 +9,8 @@
     radial-gradient(1px 1px at 6% 40%,#fff,transparent),radial-gradient(1px 1px at 94% 36%,#fff,transparent),radial-gradient(1.5px 1.5px at 66% 4%,#fff,transparent),
     linear-gradient(#0b1240 0%,#1d3f9e 45%,#4aa3ff 80%,#a7e0ff 100%)}
 .planet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.balls{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-/* A golf ball in flight: a dimpled white core with a comet tail of fading copies (scene adds the .ghost elements). */
-.balls :global(.ball),.balls :global(.ghost){position:absolute;left:0;top:0;will-change:transform}
-.balls :global(.core){position:absolute;inset:0;border-radius:50%;border:2px solid var(--ink);box-sizing:border-box;
-  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.24) 0 13%,transparent 17%) 0 0/25% 25%,radial-gradient(circle at 50% 50%,rgba(20,16,42,.24) 0 13%,transparent 17%) 12.5% 12.5%/25% 25%,
-    radial-gradient(circle at 34% 28%,#fff 0 30%,rgba(255,255,255,0) 62%),radial-gradient(circle at 70% 75%,rgba(20,16,42,.3),transparent 60%),#f4f6fb;box-shadow:2px 3px 0 rgba(20,16,42,.45)}
-.balls :global(.ghost){border-radius:50%;background:radial-gradient(circle,#fff 0,rgba(210,236,255,.85) 45%,rgba(170,215,255,0) 72%)}
+/* Planes, boats and satellites (drawn by planet-scene.js) sit above the planet. */
+.sprites{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 /* Shooting stars: three streaks that cross the upper sky now and then. */
 .stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .stars i{position:absolute;display:block;width:90px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#fff);opacity:0;transform:rotate(18deg);animation:streak 9s linear infinite}
@@ -37,15 +32,18 @@
 .track{--p:0;--bx:2;--by:87.5;position:relative;width:min(64vw,640px);aspect-ratio:600/64;margin-top:6px}
 .arc{display:block;width:100%;height:100%;overflow:visible}
 .dots,.lit{fill:none;stroke-linecap:round;stroke-width:4.5;stroke-dasharray:.1 12}
-.dots{stroke:rgba(255,255,255,.4)}
-.lit{stroke:var(--yellow)}
-.green{fill:#35bd5d;stroke:var(--ink);stroke-width:2}
+.dots{stroke:rgba(150,156,172,.32)}
+.lit{stroke:rgba(190,196,210,.55)}
 .hole{fill:var(--ink)}
 .pole{stroke:#fff;stroke-width:2.5;stroke-linecap:round}
 .pennant{fill:var(--pink);stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round}
-.tee{fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;opacity:.8}
-.rollball{position:absolute;left:calc(var(--bx) * 1%);top:calc(var(--by) * 1%);width:3.6%;aspect-ratio:1;margin:0;translate:-50% -50%;border-radius:50%;border:2px solid var(--ink);box-sizing:border-box;
-  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.28) 0 14%,transparent 18%) 0 0/50% 50%,radial-gradient(circle at 34% 30%,#fff 0 35%,#e3e8f4);box-shadow:0 0 14px rgba(255,255,255,.55);transform:rotate(calc(var(--p) * 1800deg))}
+/* The ball: a dimpled white core with an ink seam band, so its spin is easy to see; the ghosts behind it are its comet tail. */
+.rollball,.ghost{position:absolute;left:calc(var(--bx) * 1%);top:calc(var(--by) * 1%);width:3.8%;aspect-ratio:1;margin:0;translate:-50% -50%;border-radius:50%;box-sizing:border-box}
+.rollball{border:2px solid var(--ink);background:linear-gradient(90deg,transparent 40%,rgba(20,16,42,.55) 40% 50%,transparent 50%),radial-gradient(circle at 50% 50%,rgba(20,16,42,.28) 0 14%,transparent 18%) 0 0/50% 50%,radial-gradient(circle at 34% 30%,#fff 0 35%,#e3e8f4);box-shadow:0 0 14px rgba(255,255,255,.55);transform:rotate(calc(var(--p) * 5400deg))}
+.ghost{background:radial-gradient(circle,#fff 0,rgba(210,236,255,.8) 45%,rgba(170,215,255,0) 72%);left:0;top:0}
+.ghost:nth-of-type(1){opacity:.55;scale:.92}.ghost:nth-of-type(2){opacity:.47;scale:.85}.ghost:nth-of-type(3){opacity:.4;scale:.78}.ghost:nth-of-type(4){opacity:.33;scale:.7}
+.ghost:nth-of-type(5){opacity:.26;scale:.62}.ghost:nth-of-type(6){opacity:.19;scale:.54}.ghost:nth-of-type(7){opacity:.12;scale:.46}.ghost:nth-of-type(8){opacity:.07;scale:.38}
+.track[data-state=sunk] .ghost{opacity:0;transition:opacity .2s}
 .track[data-state=sunk] .rollball{animation:sink .35s ease-in forwards}
 @keyframes sink{from{scale:1;opacity:1}to{scale:.15;opacity:0}}
 .tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}

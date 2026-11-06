@@ -56,9 +56,9 @@ export const DISPLAY_UNITS = Object.freeze({
   'loading.cloudCover': 'fraction, 0 to 1',
   'loading.cloudDrift': 'multiplier of spin speed',
   'loading.finishTime': 'seconds',
-  'loading.ballInterval': 'seconds',
-  'loading.ballFlightTime': 'seconds',
-  'loading.ballSize': 'CSS px',
+  'loading.planes': 'count',
+  'loading.boats': 'count',
+  'loading.satellites': 'count',
 });
 
 /** How a change takes effect. */
