@@ -19,6 +19,7 @@ export const SimulationEventTypes = Object.freeze({
   SURFACE_CHANGE: 'surface_change',
   CUP_LIP: 'cup_lip',
   SINK: 'sink',
+  CUP_ELIMINATION: 'cup_elimination',
   HAZARD: 'hazard',
   OUT_OF_BOUNDS: 'out_of_bounds',
   REST: 'rest',
