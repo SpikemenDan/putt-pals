@@ -259,8 +259,7 @@ export function buildPlanet(random) {
   for (let y = 0; y < TEX_H; y++) for (let x = 0; x < TEX_W; x++) { const i = y * TEX_W + x; if (inside[i]) shapes[BIOMES.indexOf(biomeAt(latOf(y), h[i], moisture[i], wetness[i], hot[i]))][i] = 1; }
   const soft = shapes.map(f => blur(f, 3));
   for (let i = 0; i < n; i++) { let best = -1; for (let k = 0; k < soft.length; k++) if (soft[k][i] > best) { best = soft[k][i]; biome[i] = k; } }
-  const visited = new Uint8Array(n); // tiny leftover patches join the neighbour around them
-  for (let s = 0; s < n; s++) {
+  for (let pass = 0; pass < 2; pass++) for (let s = 0, visited = new Uint8Array(n); s < n; s++) { // tiny leftover patches join the neighbour around them
     if (visited[s] || !inside[s]) continue;
     const patch = [s], kind = biome[s]; let edgeKind = -1;
     visited[s] = 1;
@@ -369,9 +368,9 @@ export function buildPlanet(random) {
   const noCity = i => ['polar', 'alpine', 'desert', 'volcanic', 'wetland', 'tundra'].includes(nameAt(i));
   const sites = CITY_SITES.map(([u, lat, tier]) => { // cities are fixed in place; a coast edit only nudges one back onto land
     const cx = Math.floor(u * TEX_W), cy = Math.floor((0.5 - lat / 180) * TEX_H);
-    for (let r = 0; r < 24; r++) for (let k = 0; k < Math.max(1, r * 6); k++) {
+    for (let r = 0; r < 70; r++) for (let k = 0; k < Math.max(1, r * 6); k++) {
       const x = (cx + Math.round(Math.cos(k / Math.max(1, r * 6) * Math.PI * 2) * r) + TEX_W) % TEX_W, y = cy + Math.round(Math.sin(k / Math.max(1, r * 6) * Math.PI * 2) * r);
-      if (land[y * TEX_W + x] >= SEA + 0.02) { const site = { ...siteAt(x, y), tier }; taken.push(site); return site; }
+      if (y > 0 && y < TEX_H && land[y * TEX_W + x] >= SEA + 0.02 && !noCity(y * TEX_W + x)) { const site = { ...siteAt(x, y), tier }; taken.push(site); return site; }
     }
     throw new Error('city site at sea: ' + u + ', ' + lat);
   });
@@ -427,6 +426,43 @@ export function buildPlanet(random) {
   const plain = list => list.map(({ u, lat, tint, sea, biome: b, culture, tier }) => ({ u, lat, tint, biome: b, culture, ...(tier ? { tier } : {}), ...(sea ? { sea } : {}) }));
   return { rgb, landRgb, field, land, biome, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), lighthouses: plain(lighthouses), mills, volcanoes: volcanoes.map(({ u, lat }) => ({ u, lat })), flags, peaks, plants, rivers, seaSites };
 }
+
+/** Biomes that belong to each region's footprint; the Emberfall Isles take all their land. */
+const REGION_LAND = Object.freeze({ polar: ['alpine', 'polar', 'tundra'], temperate: ['temperate'], desert: ['desert'], tropical: ['tropical'], wetland: ['wetland'], volcanic: null });
+
+/**
+ * Each region's actual terrain: the land of its biomes connected to its maps, inside its bounds, with smoothed edges. Returns { byId, at }:
+ * `byId[id]` has { u, lat, spanU, spanLat, texture } (`texture` RGBA bytes, 128 at the footprint edge, for a clean outline), and
+ * `at(u, lat)` names the region at a place, or null. Highlight and click both use these, so they cannot disagree.
+ */
+export function regionFootprints(planet) {
+  const n = TEX_W * TEX_H, owner = new Uint8Array(n), byId = {}, names = GAIA_REGIONS.map(r => r.id);
+  GAIA_REGIONS.forEach((r, k) => {
+    const allowed = REGION_LAND[r.id]?.map(b => BIOMES.indexOf(b)), mask = new Float32Array(n), stack = [];
+    const open = i => { const y = Math.floor(i / TEX_W), u = (i % TEX_W) / TEX_W, lat = (0.5 - (y + 0.5) / TEX_H) * 180, du = Math.min(Math.abs(u - r.u), 1 - Math.abs(u - r.u)) * 360 * Math.cos(lat * Math.PI / 180); return planet.land[i] >= SEA && (!allowed || allowed.includes(planet.biome[i])) && Math.hypot(du / (r.reach[0] * 1.5), (lat - r.lat) / (r.reach[1] * 1.5)) < 1; };
+    for (const m of r.maps) {
+      const c = Math.floor((0.5 - m.lat / 180) * TEX_H) * TEX_W + Math.floor(((m.u % 1) + 1) % 1 * TEX_W);
+      for (let d = -3; d <= 3; d++) for (let e = -3; e <= 3; e++) { const i = c + d * TEX_W + e; if (planet.land[i] >= SEA && !mask[i]) { mask[i] = 1; stack.push(i); } }
+    }
+    while (stack.length) { const i = stack.pop(); for (const j of [i - 1, i + 1, i - TEX_W, i + TEX_W]) if (j >= 0 && j < n && !mask[j] && open(j)) { mask[j] = 1; stack.push(j); } }
+    const soft = blur(blur(mask, 2), 2), texture = new Uint8Array(n * 4);
+    let minLat = 90, maxLat = -90, minU = 1, maxU = 0, su = 0, sl = 0, count = 0;
+    for (let i = 0; i < n; i++) {
+      texture[i * 4] = planet.land[i] >= SEA ? soft[i] * 255 : soft[i] * 110; texture[i * 4 + 3] = 255;
+      if (soft[i] < 0.5 || planet.land[i] < SEA || owner[i]) continue;
+      owner[i] = k + 1;
+      const u = (i % TEX_W) / TEX_W, lat = (0.5 - (Math.floor(i / TEX_W) + 0.5) / TEX_H) * 180;
+      minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat); minU = Math.min(minU, u); maxU = Math.max(maxU, u); su += u; sl += lat; count++;
+    }
+    for (const m of r.maps) { minLat = Math.min(minLat, m.lat); maxLat = Math.max(maxLat, m.lat); minU = Math.min(minU, m.u); maxU = Math.max(maxU, m.u); }
+    byId[r.id] = { u: (minU + maxU) / 2, lat: (minLat + maxLat) / 2, spanU: maxU - minU, spanLat: maxLat - minLat, texture, area: count };
+  });
+  return { byId, at(u, lat) { const k = owner[Math.min(TEX_H - 1, Math.max(0, Math.floor((0.5 - lat / 180) * TEX_H))) * TEX_W + Math.floor(((u % 1) + 1) % 1 * TEX_W)]; return k ? names[k - 1] : null; } };
+}
+
+let footprints = null;
+/** The footprints of the one Gaia. */
+export function gaiaRegions() { footprints ??= regionFootprints(gaiaPlanet()); return footprints; }
 
 let gaia = null;
 /** The one Gaia, built on first use and kept, so every load shows the same world and only the first pays for it. */

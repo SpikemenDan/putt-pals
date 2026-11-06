@@ -1,0 +1,23 @@
+/* The 3D level select: flat printed caption boxes over the atlas (src/ui/WorldSelect.jsx). */
+.stage{position:fixed;inset:0;z-index:3;overflow:hidden;background:#3b9fe2;color:var(--ink)}
+.canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+.layer{position:absolute;inset:0;pointer-events:none}
+.layer>*{pointer-events:auto}
+.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.lines line{stroke:var(--ink);stroke-width:2.5;stroke-dasharray:1 6;stroke-linecap:round}
+.region{position:absolute;left:0;top:0;margin:0;padding:3px 8px 4px;background:#fff8e4;color:var(--ink);border:2px solid var(--ink);border-radius:3px;box-shadow:2px 2px 0 var(--ink);font:400 clamp(11px,1.1vw,15px)/1.05 'Titan One','Arial Black',sans-serif;white-space:nowrap;cursor:pointer}
+.region.lit,.region:hover{background:var(--yellow)}
+.region:focus-visible{outline:4px solid #fff;outline-offset:2px}
+.region:disabled{opacity:.72;cursor:default;box-shadow:none}
+.course{position:absolute;left:0;top:0;display:grid;grid-template-columns:30px 1fr;column-gap:7px;align-items:center;width:168px;margin:0;padding:5px 8px;background:#fff8e4;color:var(--ink);border:3px solid var(--ink);border-radius:4px;box-shadow:3px 3px 0 var(--ink);text-align:left;cursor:pointer;animation:reveal .28s ease-out backwards}
+.course i{grid-row:span 2;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;border:2px solid var(--ink);font:900 14px var(--pp-body,'Nunito',sans-serif)}
+.course b{font:400 14px/1.1 'Titan One','Arial Black',sans-serif}
+.course small{font:700 11px/1.1 var(--pp-body,'Nunito',sans-serif);color:#5a5270}
+.course:hover{background:#ffe9a8}
+.course:focus-visible{outline:4px solid #fff;outline-offset:2px}
+.course.picked{background:var(--yellow)}
+.course.picked i{background:var(--ink)}
+@keyframes reveal{from{opacity:0;scale:.8}}
+.back{position:absolute;z-index:2;left:16px;bottom:18px;margin:0;padding:8px 14px;background:var(--yellow);color:var(--ink);border:3px solid var(--ink);border-radius:4px;box-shadow:3px 3px 0 var(--ink);font:800 15px var(--pp-body,'Nunito',sans-serif);cursor:pointer}
+.back:focus-visible{outline:4px solid #fff;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.course{animation:none}}

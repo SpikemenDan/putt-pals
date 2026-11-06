@@ -49,6 +49,15 @@ export const GAIA_REGIONS = Object.freeze([
   },
 ].map(({ maps, ...region }) => Object.freeze({ ...region, maps: Object.freeze(maps.map(([name, u, lat, marker]) => Object.freeze({ id: name.toLowerCase().replace(/\W+/g, '-'), name, u, lat, ...(marker ? { marker } : {}) }))) })));
 
+/**
+ * Which real courses sit in which region, by theme: lists of map indices (the course ids used by voting, see src/courses). Each takes the site
+ * at the same position in its region's `maps`. All 22 courses appear once.
+ */
+export const REGION_COURSES = Object.freeze({
+  polar: Object.freeze([20, 9, 6, 2]), temperate: Object.freeze([0, 1, 7, 4]), desert: Object.freeze([8, 13, 11]),
+  tropical: Object.freeze([12, 16, 3, 15]), wetland: Object.freeze([21, 5, 10, 14]), volcanic: Object.freeze([18, 19, 17]),
+});
+
 /** How far inside region `r` a place is: 1 in the heart, falling to 0 at its edge. */
 export function regionWeight(r, u, lat) {
   const du = Math.min(Math.abs(u - r.u), 1 - Math.abs(u - r.u)) * 360 * Math.cos(lat * Math.PI / 180);

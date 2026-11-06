@@ -1,6 +1,6 @@
 # Map of Gaia
 
-Gaia is an invented planet built on the logic of real Earth. Regions and ranges live in `src/shared/gaia-map.js`; coastlines live in `src/shared/gaia-coast.js` as closed paths you can edit by hand. The globe fills those paths and the atlas strokes them, so one edit moves both. Each map has a small flag on the globe. Open the atlas with `?map` on the dev server. Its pins are a preview: the game still picks courses in the normal map vote.
+Gaia is an invented planet built on the logic of real Earth. Regions and ranges live in `src/shared/gaia-map.js`; coastlines live in `src/shared/gaia-coast.js` as closed paths you can edit by hand. The globe fills those paths and the atlas strokes them, so one edit moves both. Each map has a small flag on the globe. The level select is this world laid flat in 3D (`src/render/atlas-scene.js`, `src/ui/WorldSelect.jsx`): `?map` on the dev server goes straight to it. `REGION_COURSES` places the 22 real courses in the regions, and picking one casts the normal vote. Without WebGL the plain course list shows.
 
 ## How it follows Earth
 

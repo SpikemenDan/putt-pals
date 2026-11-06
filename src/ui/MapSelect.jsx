@@ -1,5 +1,7 @@
+import { useCallback, useState } from 'react';
 import { UiCommands } from './commands.js';
-import { useCommands, useView } from './context.js';
+import { useCommands, useUiContext, useView } from './context.js';
+import { WorldSelect } from './WorldSelect.jsx';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
 import styles from './MapSelect.module.css';
@@ -19,21 +21,38 @@ export function CoursePreview({ preview: p }) {
   );
 }
 
-/** Course voting and practice selection (legacy #mapselect). */
+/** Course voting and practice selection (legacy #mapselect): the 3D atlas of Gaia where WebGL is available, otherwise the plain course list. */
 export function MapSelect({ hidden }) {
   const { send, session } = useCommands();
+  const { createAtlasScene } = useUiContext();
   const voting = useView(v => v.voting);
+  const [noAtlas, setNoAtlas] = useState(false);
+  const fallBack = useCallback(() => setNoAtlas(true), []);
+  const pick = mapIndex => session({ type: 'CAST_VOTE', mapIndex });
+  const header = <div className={app.menubar}><h1>Choose your course</h1><button type="button" className={buttons.ghost} onClick={() => send(UiCommands.LEAVE)}>Leave room</button></div>;
+  const putts = (
+    <div className={styles.puttpick} hidden={!voting?.puttPicker}>
+      {voting?.puttPicker?.putts.map(p => <button type="button" key={p.index} onClick={() => session({ type: 'START_ROUND', puttIndex: p.index })}>{p.label}</button>)}
+    </div>
+  );
+  if (!hidden && createAtlasScene && !noAtlas && voting) {
+    return (
+      <div data-ui="map-select">
+        <WorldSelect cards={voting.cards} onPick={pick} onUnavailable={fallBack}>
+          <div className={styles.bar}>{header}<p className={app.status}>{voting.status}</p>{putts}</div>
+        </WorldSelect>
+      </div>
+    );
+  }
   return (
     <div className={`${app.card} ${app.wide}`} hidden={hidden} data-ui="map-select">
-      <div className={app.menubar}><h1>Choose your course</h1><button type="button" className={buttons.ghost} onClick={() => send(UiCommands.LEAVE)}>Leave room</button></div>
+      {header}
       <p className={app.status}>{voting?.status}</p>
-      <div className={styles.puttpick} hidden={!voting?.puttPicker}>
-        {voting?.puttPicker?.putts.map(p => <button type="button" key={p.index} onClick={() => session({ type: 'START_ROUND', puttIndex: p.index })}>{p.label}</button>)}
-      </div>
+      {putts}
       <div className={styles.grid}>
         {voting?.cards.map(card => (
           <button type="button" key={card.index} className={`${styles.mapcard}${card.selected ? ' ' + styles.selected : ''}`} data-v={card.votes} aria-pressed={card.selected}
-            onClick={() => session({ type: 'CAST_VOTE', mapIndex: card.index })}>
+            onClick={() => pick(card.index)}>
             <CoursePreview preview={card.preview} />
             <strong>{card.number + ' · ' + card.name}</strong><small>{card.desc}</small><small>{'Par ' + card.par}</small>
           </button>

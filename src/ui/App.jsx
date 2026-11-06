@@ -43,11 +43,12 @@ function Screens({ onCanvas, initialName, initialRoomCode }) {
  * @param {{subscribeAim: Function}} [props.aim] The input adapter (power meter source)
  * @param {(canvas: HTMLCanvasElement|null) => void} [props.onCanvas]
  * @param {typeof DISPLAY} [props.display] Presentation settings (read live by the planet behind the menu and loading screen); defaults to DISPLAY
+ * @param {Function} [props.createAtlasScene] Builds the 3D level select on a canvas; without it the plain course list shows
  * @param {Function} [props.createLoadingScene] Builds the 3D planet behind the menu and loading screen; without it only the CSS sky shows
  */
-export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', display = DISPLAY, createLoadingScene = null }) {
+export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', display = DISPLAY, createLoadingScene = null, createAtlasScene = null }) {
   return (
-    <UiContext.Provider value={{ store, dispatch, aim, display, createLoadingScene }}>
+    <UiContext.Provider value={{ store, dispatch, aim, display, createLoadingScene, createAtlasScene }}>
       <Screens onCanvas={onCanvas} initialName={initialName} initialRoomCode={initialRoomCode} />
     </UiContext.Provider>
   );

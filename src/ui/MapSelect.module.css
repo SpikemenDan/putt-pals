@@ -9,3 +9,7 @@
 .mapcard[data-v]:not([data-v="0"])::after{content:"🗳 " attr(data-v) " vote(s)";display:block;color:var(--pink-d);font-weight:900;margin-top:6px}
 @media (max-width:640px){.grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
 .puttpick{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+/* The strip across the top of the atlas: a flat printed caption. */
+.bar{position:absolute;left:12px;right:12px;top:10px;padding:6px 12px;background:#fff8e4;color:var(--ink);border:3px solid var(--ink);border-radius:4px;box-shadow:3px 3px 0 var(--ink)}
+.bar h1{font-size:22px;margin:0}
+.bar p{margin:2px 0 0;min-height:0;font-size:14px}

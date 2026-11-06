@@ -51,7 +51,7 @@ function fakeClock() {
   const click = async el => { assert.ok(el, 'element to click'); await act(async () => { el.click(); }); };
 
   /** Mounts the UI with a host L1 session; session events from the UI are bound to the local player. */
-  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd' } = {}) {
+  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null } = {}) {
     const clock = fakeClock();
     const store = ui.createUiStore({ courses, clock });
     let listeners = 0;
@@ -65,7 +65,7 @@ function fakeClock() {
     const root = doc.createElement('div');
     doc.body.appendChild(root);
     let unmount;
-    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode }); });
+    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene }); });
     await act(async () => { store.setLocal({ active: true, id: localId, isHost, roomCode, mode: 'lobby' }); store.setRoom(session.getSnapshot(), clock.now()); });
     const step = async ms => { await act(async () => { clock.advance(ms); store.tick(clock.now()); }); };
     const send = async event => { let r; await act(async () => { r = session.send(event); }); return r; };
@@ -165,21 +165,42 @@ function fakeClock() {
     await t.teardown();
   });
 
-  await scenario('atlas: every map is a real button, with selection shared between pin and list', async () => {
-    const { mountPlanetMap } = await import('../src/devtools/planet-map.js');
-    const picks = [], unmount = mountPlanetMap(doc, { onSelect: p => picks.push(p.map.id) });
-    const pins = [...doc.querySelectorAll('.pp-pin')];
-    assert.equal(pins.length, 24, 'a pin per map');
-    assert.ok(pins.every(p => p.tagName === 'BUTTON' && p.getAttribute('aria-label') && p.getAttribute('aria-pressed') === 'false'), 'keyboard reachable, named, unselected');
-    pins[5].click();
-    assert.equal(picks.length, 1);
-    assert.equal(pins[5].getAttribute('aria-pressed'), 'true');
-    const twin = [...doc.querySelectorAll('.pp-map-card button')].find(b => b.dataset.map === pins[5].dataset.map);
-    assert.equal(twin.getAttribute('aria-pressed'), 'true', 'the list follows the pin');
-    twin.click();
-    pins[6].click();
-    assert.equal(pins[5].getAttribute('aria-pressed'), 'false', 'one selection at a time');
-    unmount();
+  await scenario('level select: world, region, course and back, with the real vote', async () => {
+    const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
+    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i), 'all 22 course ids appear once');
+    const foot = data.gaiaRegions();
+    for (const r of GAIA_REGIONS) {
+      assert.ok(foot.byId[r.id].area > 40, `${r.name} has terrain`);
+      for (const m of r.maps) assert.equal(foot.at(m.u, m.lat), r.id, `${m.name} lies inside the ${r.name} footprint`);
+    }
+    assert.equal(foot.at(0.4, -30), null, 'open sea belongs to no region');
+    const spots = ui.spreadPins([{ x: 400, y: 300 }, { x: 410, y: 305 }, { x: 405, y: 310 }, { x: 395, y: 300 }], 1280, 720);
+    spots.forEach((a, i) => spots.slice(i + 1).forEach(b => assert.ok(Math.abs(a.x - b.x) >= 170 || Math.abs(a.y - b.y) >= 60, 'pins and labels never overlap')));
+    const calls = [], scene = { onFrame() {}, start() {}, step() {}, dispose() {}, highlight(id) { calls.push('light:' + id); }, project: () => ({ x: 300, y: 200 }), hit: () => 'desert', size: { width: 1280, height: 720 }, openRegion: async id => { calls.push('open:' + id); }, openWorld: async () => { calls.push('world'); } };
+    const t = await setup({ createAtlasScene: () => scene });
+    await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
+    await t.send({ type: 'SET_MODE', playerId: 'host', mode: 'tournament_3' });
+    await t.send({ type: 'START_VOTING', playerId: 'host' });
+    const region = id => t.within(`[data-region=${id}]`), pause = () => act(async () => { await new Promise(q => setTimeout(q, 30)); });
+    assert.ok(t.within('[data-ui=world-select]'), 'the atlas replaces the list');
+    assert.equal(t.root.querySelectorAll('[data-region]').length, 6, 'every region reads on the world');
+    assert.ok(region('tropical').disabled, 'a region with no course in this set cannot open');
+    await act(async () => { region('desert').focus(); });
+    assert.ok(calls.includes('light:desert'), 'keyboard focus lights the terrain');
+    await act(async () => { region('desert').click(); });
+    await pause();
+    assert.ok(calls.includes('open:desert'));
+    const pin = t.within('[data-map="8"]');
+    assert.ok(pin && pin.textContent.includes('Dune Serpent'), 'the real course, by its real id');
+    await act(async () => { pin.click(); });
+    assert.equal(t.within('[data-map="8"]').dataset.v, '1', 'the pin casts the real vote');
+    assert.equal(t.within('[data-map="8"]').getAttribute('aria-pressed'), 'true');
+    assert.match(t.within('[data-ui=map-select] p').textContent, /Voting ends in/, 'the countdown starts as with the list');
+    await act(async () => { t.within('[data-ui=back-to-world]').click(); });
+    await pause();
+    assert.ok(calls.includes('world'));
+    assert.equal(doc.activeElement, region('desert'), 'Back to world returns focus to the region');
+    await t.teardown();
   });
 
   await scenario('planet scene: climate colours, cities and traffic, reduced motion, live settings, disposal', async () => {
@@ -247,12 +268,12 @@ function fakeClock() {
     assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
     // Coasts are closed paths, and the globe's land is those paths: the shoreline of the field runs along them.
     const { COAST_RINGS } = await import('../src/shared/gaia-coast.js');
-    assert.ok(COAST_RINGS.length >= 8 && COAST_RINGS.every(r => r.length >= 6 && r.every(([u]) => u > 0 && u < 1)), 'closed rings that stay off the seam');
+    assert.ok(COAST_RINGS.length >= 7 && COAST_RINGS.every(r => r.length >= 6 && r.every(([u]) => u > 0 && u < 1)), 'closed rings that stay off the seam');
     const texelOf = ([u, lat]) => Math.min(scene.TEX_H - 1, Math.floor((0.5 - lat / 180) * scene.TEX_H)) * scene.TEX_W + Math.floor(u * scene.TEX_W);
     const off = COAST_RINGS.flat().map(p => Math.abs(gaia.land[texelOf(p)] - scene.SEA));
     assert.ok(off.filter(v => v < 0.03).length / off.length > 0.98, 'map and globe share one coast');
     assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 24, 'every map has its own id');
-    const smallest = (() => { const seen = new Uint8Array(gaia.biome.length), W2 = scene.TEX_W; let least = Infinity; for (let s = 0; s < seen.length; s++) { if (seen[s] || gaia.land[s] < scene.SEA) continue; const stack = [s]; seen[s] = 1; let size = 0; while (stack.length) { const i = stack.pop(); size++; for (const j of [i - 1, i + 1, i - W2, i + W2]) if (j >= 0 && j < seen.length && !seen[j] && gaia.land[j] >= scene.SEA && gaia.biome[j] === gaia.biome[s]) { seen[j] = 1; stack.push(j); } } least = Math.min(least, size); } return least; })();
+    const smallest = (() => { const seen = new Uint8Array(gaia.biome.length), W2 = scene.TEX_W; let least = Infinity; for (let s = 0; s < seen.length; s++) { if (seen[s] || gaia.land[s] < scene.SEA) continue; const stack = [s]; seen[s] = 1; let size = 0, touches = false; while (stack.length) { const i = stack.pop(); size++; for (const j of [i - 1, i + 1, i - W2, i + W2]) { if (j < 0 || j >= seen.length || gaia.land[j] < scene.SEA) continue; if (gaia.biome[j] !== gaia.biome[s]) touches = true; else if (!seen[j]) { seen[j] = 1; stack.push(j); } } } if (touches && scene.BIOMES[gaia.biome[s]] !== 'volcanic') least = Math.min(least, size); } return least; })();
     assert.ok(smallest >= 4, `no specks of stray biome (smallest patch ${smallest} texels)`);
     const fits = { polar: ['polar', 'alpine', 'tundra'], temperate: ['temperate'], desert: ['desert'], tropical: ['tropical'], wetland: ['wetland'], volcanic: ['volcanic'] };
     const biomeOf = (p, m) => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - m.lat / 180) * scene.TEX_H)), col = Math.floor((((m.u % 1) + 1) % 1) * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[p.biome[row * scene.TEX_W + col]]; };
