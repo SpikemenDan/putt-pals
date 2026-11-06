@@ -129,14 +129,14 @@ function fakeClock() {
     await t.teardown();
   });
 
-  /** The loading screen stays until the ball has rolled into the cup; wait (real time) for it to close. */
+  /** The loading screen stays lit for a moment once the game is ready; wait (real time) for it to close. */
   async function waitGone(t, limitMs = 4000) {
     const start = Date.now();
     while (t.within('[data-ui=loading]') && Date.now() - start < limitMs) await act(async () => { await new Promise(r => setTimeout(r, 50)); });
-    assert.equal(t.within('[data-ui=loading]'), null, 'gone once the ball is in the cup');
+    assert.equal(t.within('[data-ui=loading]'), null, 'gone after the finish pause');
   }
 
-  await scenario('loading screen: Putt Pals title over the planet scene; reduced motion keeps it still with no balls', async () => {
+  await scenario('loading screen: Putt Pals title over the planet scene, three balls, a pause when ready', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false, connecting: true }));
     const loading = t.within('[data-ui=loading]');
@@ -144,14 +144,20 @@ function fakeClock() {
     assert.match(loading.textContent, /Setting up your game/);
     assert.ok(loading.querySelector('canvas[data-ui=loading-planet]'), 'planet layer');
     assert.equal(loading.querySelector('canvas').getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
+    assert.equal(loading.querySelectorAll('[data-ui=loading-balls] i').length, 3, 'three balls, no putts or cups');
     await act(async () => t.store.setLocal({ connecting: false }));
-    assert.equal(t.within('[data-ui=loading]').dataset.state, 'done', 'stays up while the ball finishes its roll');
-    await waitGone(t);
+    assert.equal(t.within('[data-ui=loading]').dataset.state, 'done', 'stays up, all lit, for the finish pause');
+    await act(async () => { await new Promise(r => setTimeout(r, 400)); });
+    assert.ok(t.within('[data-ui=loading]'), 'still up partway through the default 0.8 s');
+    await waitGone(t, 1500);
     await t.teardown();
   });
 
   await scenario('planet scene: climate colours, cities and traffic, reduced motion, live settings, disposal', async () => {
-    const scene = await import('../src/ui/planet-scene.js');
+    const scene = await import('../src/render/planet-data.js');
+    const { createPlanetScene, frameCamera, PLANET_RADIUS } = await import('../src/render/planet-scene.js');
+    const models = await import('../src/render/sky-models.js');
+    const THREE = await import('three');
     const { DEFAULT_DISPLAY, createDisplay } = await import('../src/shared/display.js');
     // Gaia is built from climate: snowy poles, wet green equator, dry sandy subtropics, blue seas, with colours that blend smoothly.
     const sc = scene.surfaceColour, wet = scene.moistureAt;
@@ -180,7 +186,7 @@ function fakeClock() {
     assert.ok(seas / total > 0.35 && seas / total < 0.8, 'mostly sea, like Earth');
     assert.ok(greens / total > 0.04 && sands / total > 0.01, 'forests and deserts both exist');
     // The distant worlds: textures are deterministic, detailed and distinct.
-    const worlds = await import('../src/ui/worlds.js');
+    const worlds = await import('../src/render/worlds.js');
     const ares = worlds.buildAresTexture(scene.mulberry32(2)), luna = worlds.buildLunaTexture(scene.mulberry32(2));
     assert.deepEqual(ares, worlds.buildAresTexture(scene.mulberry32(2)));
     const avg = t => { let r = 0, g = 0, b = 0; for (let k = 0; k < t.length; k += 3) { r += t[k]; g += t[k + 1]; b += t[k + 2]; } const n = t.length / 3; return [r / n, g / n, b / n]; };
@@ -189,54 +195,62 @@ function fakeClock() {
     assert.ok(Math.abs(l1[0] - l1[2]) < 15, 'Luna is grey');
     const spread = t => { const xs = []; for (let k = 0; k < t.length; k += 3 * 97) xs.push(t[k]); const m = xs.reduce((q, v) => q + v, 0) / xs.length; return Math.sqrt(xs.reduce((q, v) => q + (v - m) ** 2, 0) / xs.length); };
     assert.ok(spread(ares) > 15 && spread(luna) > 15, 'both have real surface detail (craters, plains), not flat colour');
-    // Putt progress: eases toward the cap while loading, then rolls home in finishTime seconds.
-    const { createPuttProgress } = await import('../src/ui/putt-progress.js');
-    const pr = createPuttProgress(createDisplay({ loading: { finishTime: 1 } }));
-    let last = 0;
-    for (let k = 0; k < 600; k++) { const v = pr.step(0.05); assert.ok(v >= last && v < 0.9, 'monotonic and never completes by itself'); last = v; }
-    assert.ok(last > 0.85, 'close to the cap after a long wait');
-    pr.finish();
-    for (let k = 0; k < 10; k++) pr.step(0.05);
-    assert.ok(!pr.done && pr.value > last && pr.value < 1, 'half a second into a one second finish');
-    for (let k = 0; k < 10; k++) pr.step(0.05);
-    assert.ok(pr.done && pr.value === 1, 'in after finishTime');
-    // Cities are baked into the planet on gentle land, and traffic is placed on the sphere correctly.
+    // Sites and routes: a place maps to the same texel both ways; sea routes never touch land, all the way round.
     assert.ok(planet.cities.length >= 15 && planet.cities.every(c => c.u >= 0 && c.u < 1 && Math.abs(c.lat) < 70), 'many cities, none at the poles');
-    const sky = await import('../src/ui/sky-models.js');
-    assert.equal(sky.CITY_STYLES.length, 4, 'four skyline styles to choose from');
-    const skyline = sky.makeSkyline(scene.mulberry32(4), 9);
-    assert.deepEqual(skyline, sky.makeSkyline(scene.mulberry32(4), 9), 'a city is laid out the same way for the same seed');
-    const placed = sky.placeModel(sky.PLANE.faces, { x: 100, y: 100 }, { f: [1, 0, 0], b: [0, 1, 0], n: [0, 0, 1] }, 10);
-    assert.ok(placed.length === sky.PLANE.faces.length && placed.every((f, i, all) => i === 0 || all[i - 1].depth <= f.depth), 'model faces are sorted far to near');
-    const edgeOn = sky.placeModel(sky.PLANE.faces, { x: 0, y: 0 }, { f: [1, 0, 0], b: [0, 0, 1], n: [0, -1, 0] }, 10); // the same plane seen from its side as it passes the limb
-    const span = f => { const xs = f.flatMap(q => q.xy.map(p => p[1])); return Math.max(...xs) - Math.min(...xs); };
-    assert.ok(span(edgeOn) !== span(placed), 'a plane turned over the limb is foreshortened differently');
-    assert.ok(planet.seaSites.length >= 8, 'boats have open sea to sail');
-    const centre = scene.projectPoint(0, 0, 0, 0);
-    assert.ok(Math.abs(centre.x) < 1e-9 && Math.abs(centre.y) < 1e-9 && Math.abs(centre.z - 1) < 1e-9, 'lat 0 lon 0 faces the viewer');
-    const east = scene.projectPoint(0, Math.PI / 2, 0, 0);
-    assert.ok(Math.abs(east.y + 1) < 1e-9 && Math.abs(east.z) < 1e-9, 'with the axis horizontal, 90 degrees of longitude is on the lower limb');
-    assert.ok(scene.projectPoint(0, Math.PI, 0, 0).z < -0.99, 'the far side faces away');
-    assert.ok(scene.projectPoint(0, 0, 0.5, 0).z === 1.5, 'altitude lifts a point off the surface');
-    const north = scene.projectPoint(Math.PI / 2, 0, 0, 0);
-    assert.ok(Math.abs(north.x - 1) < 1e-9, 'the pole sits on the right rim');
-    const g1 = { lat: 0.2, lon: 0.3 }, b1 = { lat: -0.5, lon: 1.9 }, mid = scene.greatCircle(g1, b1, 0.5), end0 = scene.greatCircle(g1, b1, 0), end1 = scene.greatCircle(g1, b1, 1);
-    assert.ok(Math.abs(end0.lat - g1.lat) < 1e-9 && Math.abs(end1.lon - b1.lon) < 1e-9, 'a great-circle flight starts and ends at its cities');
-    assert.ok(Math.abs(scene.greatCircle(g1, b1, 0.25).angle - end0.angle) < 1e-9 && mid.angle > 0.5 && mid.angle < 3.2, 'the route angle is the arc length');
-    // Running scene: the planet turns at spinSpeed, traffic follows live counts, reduced motion freezes everything.
-    const make = (display, reducedMotion = false) => {
-      const sd = new JSDOM('<canvas></canvas><canvas></canvas>', { pretendToBeVisual: true });
-      const [canvas, sprites] = sd.window.document.querySelectorAll('canvas');
-      canvas.getContext = () => null;
-      return { sd, scene: scene.createPlanetScene({ canvas, sprites, display, random: scene.mulberry32(3), reducedMotion, win: sd.window }) };
+    assert.ok(planet.cities.every(c => scene.landUnder(planet, scene.surfaceDir(c.u, c.lat)) >= scene.SEA), 'every city stands on land');
+    const routes = scene.shipRoutes(planet, scene.mulberry32(8));
+    assert.ok(routes.length >= 9, 'enough sea routes for the default fleet');
+    for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
+    // Models: a plane's nose is at +x; a ship's hull crosses the waterline; a tower is much taller than it is wide.
+    const box = g => { g.computeBoundingBox(); return g.boundingBox; };
+    const jet = box(models.makePlane(THREE)), hull = box(models.makeShip(THREE, scene.mulberry32(4)));
+    assert.ok(jet.max.x > 2.5 && jet.min.x < -3 && jet.max.y > 1.2, 'a jet, nose forward, with a tail fin');
+    assert.ok(hull.min.y < -0.3 && hull.max.y > 1, 'a ship is partly under the water line');
+    const city = models.makeCity(THREE, scene.mulberry32(4));
+    assert.ok(city.userData.top > 10 && box(city).max.x - box(city).min.x < 18, 'cities are tall for their width');
+    assert.deepEqual([...city.attributes.position.array.slice(0, 30)], [...models.makeCity(THREE, scene.mulberry32(4)).attributes.position.array.slice(0, 30)], 'a city is the same for the same seed');
+    const puff = models.makeCumulus(THREE, scene.mulberry32(4), { puffs: 8, detail: 1 });
+    assert.ok(box(puff).min.y > -0.3 && puff.attributes.soft.count === puff.attributes.position.count, 'clouds have flat bases and a whole-cloud normal for volume');
+    // Camera framing: the limb sits where horizonHeight asks.
+    const limb = (w, h, height) => {
+      const { y, z } = frameCamera(w, h, height), angle = Math.asin(PLANET_RADIUS / Math.hypot(y, z)) - Math.atan2(y, z);
+      return Math.tan(angle) / Math.tan(16 * Math.PI / 180);
     };
-    const a = make(createDisplay({ loading: { spinSpeed: 10, planes: 3, boats: 4, satellites: 2 } }));
+    assert.ok(Math.abs(limb(1280, 720, 0.48) - 0.04) < 1e-6 && Math.abs(limb(800, 800, 0.7) + 0.4) < 1e-6, 'the limb lands on the asked height');
+    // Running scene, on a real scene graph with a stand-in renderer.
+    const make = (display, reducedMotion = false) => {
+      const sd = new JSDOM('<canvas></canvas>', { pretendToBeVisual: true });
+      sd.window.HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: (_, k) => (k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}), set: () => true });
+      const canvas = sd.window.document.querySelector('canvas');
+      let frames = 0;
+      const createWebGLRenderer = () => ({ render() { frames++; }, setPixelRatio() {}, getPixelRatio: () => 1, setSize() {}, setClearColor() {}, dispose() {}, capabilities: { getMaxAnisotropy: () => 1 } });
+      return { sd, frames: () => frames, scene: createPlanetScene({ THREE, canvas, display, random: scene.mulberry32(3), planet, reducedMotion, win: sd.window, createWebGLRenderer }) };
+    };
+    const a = make(createDisplay({ loading: { spinSpeed: 0, planes: 3, boats: 4, satellites: 2 } })); // ground held still, so a ship's motion is its own
     a.scene.start();
-    for (let i = 0; i < 10; i++) a.scene.step(0.1); // 1 s
-    assert.ok(Math.abs(a.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
+    for (const kind of ['planes', 'ships']) { // nose first, always: the body moves the way it points, and keeps doing so all the way round
+      for (let lap = 0; lap < 4; lap++) {
+        const before = a.scene.bodies(kind);
+        a.scene.step(0.1);
+        a.scene.bodies(kind).forEach((now, i) => {
+          const move = now.position.map((q, k) => q - before[i].position[k]);
+          assert.ok(move.reduce((q, v, k) => q + v * now.forward[k], 0) > 0, `${kind} travel nose first`);
+          const radial = now.position.map(q => q / Math.hypot(...now.position));
+          assert.ok(radial.reduce((q, v, k) => q + v * now.up[k], 0) > 0.99, `${kind} stay upright on the sphere`);
+        });
+      }
+      for (let k = 0; k < 400; k++) a.scene.step(0.1);
+    }
+    for (const ship of a.scene.bodies('ships')) assert.ok(Math.abs(Math.hypot(...ship.position) - PLANET_RADIUS) < 1e-6, 'ships sit at sea level, hull in the water');
+    for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 5, 'planes fly above the ground');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
-    assert.ok(a.scene.stats.pixelSize === 5 && a.scene.stats.levels > 6, 'the surface draws at the default pixel size');
+    assert.ok(a.frames() > 400, 'each step draws');
     a.scene.dispose();
+    const fresh = make(createDisplay({ loading: { spinSpeed: 10 } }));
+    fresh.scene.start();
+    for (let i = 0; i < 10; i++) fresh.scene.step(0.1); // 1 s
+    assert.ok(Math.abs(fresh.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
+    fresh.scene.dispose();
     const none = make(createDisplay({ loading: { spinSpeed: 0, planes: 0, boats: 0, satellites: 0 } }));
     none.scene.start();
     for (let i = 0; i < 20; i++) none.scene.step(0.1);
@@ -245,9 +259,14 @@ function fakeClock() {
     none.scene.dispose();
     const still = make(DEFAULT_DISPLAY, true);
     still.scene.start();
+    const parked = still.scene.bodies('planes')[0].position;
     for (let i = 0; i < 600; i++) still.scene.step(0.1);
     assert.equal(still.scene.spin, 0, 'reduced motion: planet does not turn');
+    assert.deepEqual(still.scene.bodies('planes')[0].position, parked, 'and nothing flies');
     still.scene.dispose();
+    const noGl = createPlanetScene({ THREE, canvas: make(DEFAULT_DISPLAY).sd.window.document.querySelector('canvas'), display: DEFAULT_DISPLAY, random: scene.mulberry32(3), planet, createWebGLRenderer: () => { throw new Error('no WebGL'); } });
+    noGl.step(0.1);
+    noGl.dispose();
   });
 
   // ------------------------------------------------------------------ Part B: flows through the real session

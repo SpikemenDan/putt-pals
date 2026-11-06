@@ -1,17 +1,15 @@
 /**
- * Ares and Luna for the loading-screen sky (VIS-M1): small, detailed, slowly turning spheres painted procedurally into their own
- * canvases, so a later planet menu can zoom into them. Original art: invented terrain, not maps of Mars or the Moon.
+ * Surface maps of Ares and Luna for the loading-screen sky (VIS-M1), drawn as real spheres by planet-scene.js so a later planet menu can
+ * fly to them. Original art: invented terrain, not maps of Mars or the Moon.
  *
- * Ares is rugged and rust-coloured with dark basalt plains, a long canyon, big volcanoes, craters and small polar caps under a
- * thin dusty haze. Luna is Gaia's barren moon: pale highlands, dark maria, many overlapping craters with bright rims. Both use
- * comic cel shading (banded light, an ink outline). Presentation only; randomness is injected.
+ * Ares is rugged and rust-coloured with dark basalt plains, a long canyon, big volcanoes, craters and small polar caps. Luna is Gaia's
+ * barren moon: pale highlands, dark maria, many overlapping craters with bright rims. Plain data; randomness is injected.
  */
 
 import { clamp, makeFbm, makeNoise, mix, smooth } from './noise.js';
 
 export const WORLD_TEX_W = 512;
 export const WORLD_TEX_H = 256;
-export const WORLD_KINDS = Object.freeze(['ares', 'luna']);
 
 const INK = [20, 16, 42];
 
@@ -79,50 +77,4 @@ export function buildLunaTexture(random) {
     }
   }
   return rgb;
-}
-
-/**
- * Creates one world on `canvas` (square, `size` buffer pixels). `draw(turn)` paints it rotated by `turn` full turns.
- * @param {{canvas: HTMLCanvasElement, kind: 'ares'|'luna', random: () => number, size?: number}} options
- */
-export function createWorld({ canvas, kind, random, size = 168 }) {
-  if (!WORLD_KINDS.includes(kind)) throw new Error('Unknown world ' + kind);
-  const texture = kind === 'ares' ? buildAresTexture(random) : buildLunaTexture(random);
-  const ctx = canvas.getContext?.('2d') ?? null;
-  canvas.width = canvas.height = size;
-  const image = ctx?.createImageData?.(size, size) ?? null;
-  const rows = new Uint16Array(size * size), lon = new Float32Array(size * size), shade = new Float32Array(size * size), rim = new Float32Array(size * size), edge = new Float32Array(size * size);
-  const kindOf = new Uint8Array(size * size);
-  const tilt = kind === 'ares' ? 0.42 : 0.12, ct = Math.cos(tilt), st = Math.sin(tilt), sun = [-0.55, 0.5, 0.67];
-  const half = size / 2, haze = kind === 'ares' ? [255, 170, 110] : null;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const i = y * size + x, dx = (x + 0.5 - half) / (half - 2), dy = (half - (y + 0.5)) / (half - 2), r2 = dx * dx + dy * dy;
-      if (r2 > 1) continue;
-      const dz = Math.sqrt(1 - r2), y2 = dy * ct - dz * st, z2 = dy * st + dz * ct;
-      kindOf[i] = 1;
-      rows[i] = Math.min(WORLD_TEX_H - 1, Math.floor((0.5 - Math.asin(clamp(y2, -1, 1)) / Math.PI) * WORLD_TEX_H));
-      lon[i] = (Math.atan2(dx, z2) / (2 * Math.PI) + 1) % 1;
-      const lit = clamp(dx * sun[0] + dy * sun[1] + dz * sun[2], 0, 1);
-      shade[i] = 0.3 + 0.85 * (0.62 * (Math.floor(lit * 4 + 0.35) / 4) + 0.38 * lit); // cel-shaded bands over a little smooth light
-      rim[i] = haze ? Math.pow(1 - dz, 3) * 0.55 : 0;
-      edge[i] = r2 > 0.9 ? 1 : 0; // the ink outline
-    }
-  }
-  return {
-    texture,
-    /** Paints the world turned by `turn` (fraction of a full rotation). */
-    draw(turn = 0) {
-      if (!ctx || !image) return;
-      const px = image.data;
-      for (let i = 0, n = size * size; i < n; i++) {
-        const o = i * 4;
-        if (!kindOf[i]) { px[o + 3] = 0; continue; }
-        if (edge[i]) { px[o] = INK[0]; px[o + 1] = INK[1]; px[o + 2] = INK[2]; px[o + 3] = 255; continue; }
-        const col = ((((lon[i] + turn) % 1) + 1) % 1 * WORLD_TEX_W) | 0, t = (rows[i] * WORLD_TEX_W + col) * 3, k = shade[i], a = rim[i];
-        px[o] = Math.min(255, texture[t] * k + (haze ? haze[0] * a : 0)); px[o + 1] = Math.min(255, texture[t + 1] * k + (haze ? haze[1] * a : 0)); px[o + 2] = Math.min(255, texture[t + 2] * k + (haze ? haze[2] * a : 0)); px[o + 3] = 255;
-      }
-      ctx.putImageData(image, 0, 0);
-    },
-  };
 }

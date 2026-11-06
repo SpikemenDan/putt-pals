@@ -18,6 +18,7 @@ import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, p
 import { BALL_RADIUS, MAX_DEPLOYABLES, STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
+import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
 import { createPutt } from './putt.js';
 import { openRoom } from './room.js';
@@ -569,7 +570,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
   const onPress = event => { if (buttonOf(event)) audio.handleEvent({ type: 'ui', kind: 'click' }); };
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display });
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }) });
 
   return {
     store,

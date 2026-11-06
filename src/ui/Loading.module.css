@@ -1,5 +1,5 @@
 /* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night-to-day sky, the curved horizon of a planet
-   painted by planet-scene.js, Ares and Luna in the distance, planes, boats and satellites around it, then the brand, the three-ball putt progress and a
+   drawn in 3D by src/render/planet-scene.js with clouds, cities, ships, planes, Ares and Luna, then the brand, the three-ball progress and a
    tip. Fonts come from the game-wide theme (src/ui/fonts/fonts.css, global.css): Jersey 10 for the title, Nunito for captions. */
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
   --display:var(--font);--body:var(--pp-body,'Nunito','Segoe UI',sans-serif);
@@ -9,8 +9,6 @@
     radial-gradient(1px 1px at 6% 40%,#fff,transparent),radial-gradient(1px 1px at 94% 36%,#fff,transparent),radial-gradient(1.5px 1.5px at 66% 4%,#fff,transparent),
     linear-gradient(#0b1240 0%,#1d3f9e 45%,#4aa3ff 80%,#a7e0ff 100%)}
 .planet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-/* Planes, boats and satellites (drawn by planet-scene.js) sit above the planet. */
-.sprites{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 /* Shooting stars: three streaks that cross the upper sky now and then. */
 .stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .stars i{position:absolute;display:block;width:90px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#fff);opacity:0;transform:rotate(18deg);animation:streak 9s linear infinite}
@@ -18,33 +16,18 @@
 .stars i:nth-child(2){left:24%;top:16%;animation-delay:3.4s;animation-duration:12s}
 .stars i:nth-child(3){left:82%;top:27%;animation-delay:6.8s;animation-duration:10s}
 @keyframes streak{0%,90%{opacity:0;translate:0 0}91%{opacity:.9}100%{opacity:0;translate:-170px 55px}}
-/* Ares and Luna in the distance (their own canvases, painted by worlds.js): the next destinations, where a later planet menu can zoom in. */
-.worlds{position:absolute;inset:0;pointer-events:none}
-.world{position:absolute;display:block;aspect-ratio:1;animation:bob 7s ease-in-out infinite alternate;filter:drop-shadow(0 0 14px rgba(255,255,255,.18))}
-/* Luna is Gaia's moon: big and close, low by the planet. Ares is far away: small, high and hazy. */
-.ares{left:clamp(14px,15vw,240px);top:10%;width:clamp(30px,4vw,66px);opacity:.82;filter:saturate(.8) brightness(.92)}
-.luna{right:clamp(10px,5vw,100px);top:30%;width:clamp(76px,10.5vw,176px);animation-delay:-3s}
-@keyframes bob{from{transform:translateY(-4px)}to{transform:translateY(5px)}}
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
 .brand{margin:0;font:400 clamp(64px,12vw,128px)/1 var(--display);letter-spacing:4px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
 .status{margin:0;font:700 clamp(17px,2.6vw,24px)/1.2 var(--body);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
-/* Progress: three putt balls, each beside its cup. They bounce while they wait; as loading advances each one is putted and rolls into its cup
-   (data-sunk on .putts counts how many are in), and the last drop closes the screen. */
-.putts{display:flex;gap:clamp(20px,5vw,44px);align-items:flex-end;margin-top:6px}
-.slot{position:relative;display:block;width:clamp(78px,11vw,104px);height:58px}
-.ball{position:absolute;left:4px;bottom:11px;width:24px;height:24px;border-radius:50%;border:2px solid var(--ink);box-sizing:border-box;
-  background:linear-gradient(90deg,transparent 40%,rgba(20,16,42,.5) 40% 50%,transparent 50%),radial-gradient(circle at 50% 50%,rgba(20,16,42,.28) 0 14%,transparent 18%) 0 0/50% 50%,radial-gradient(circle at 34% 30%,#fff 0 35%,#e3e8f4);
-  box-shadow:0 0 12px rgba(255,255,255,.5);animation:hop 1.1s ease-in-out infinite}
-.slot:nth-child(2) .ball{animation-delay:.18s}
-.slot:nth-child(3) .ball{animation-delay:.36s}
-.cup{position:absolute;right:6px;bottom:7px;display:block;width:34px;height:12px;border-radius:50%;background:var(--ink);box-shadow:inset 0 3px 0 #000,0 3px 0 rgba(255,255,255,.35)}
-.cup::after{content:"";position:absolute;right:6px;bottom:6px;width:3px;height:0;background:#fff;border-radius:2px;transition:height .25s .35s}
-.putts[data-sunk="1"] .slot:nth-child(-n+1) .ball,.putts[data-sunk="2"] .slot:nth-child(-n+2) .ball,.putts[data-sunk="3"] .slot:nth-child(-n+3) .ball{animation:putt .55s ease-in forwards}
-.putts[data-sunk="1"] .slot:nth-child(-n+1) .cup::after,.putts[data-sunk="2"] .slot:nth-child(-n+2) .cup::after,.putts[data-sunk="3"] .slot:nth-child(-n+3) .cup::after{height:28px}
-.cup::before{content:"";position:absolute;right:-12px;bottom:34px;width:0;height:0;border-left:14px solid var(--pink);border-top:7px solid transparent;border-bottom:7px solid transparent;opacity:0;transition:opacity .2s .5s}
-.putts[data-sunk="1"] .slot:nth-child(-n+1) .cup::before,.putts[data-sunk="2"] .slot:nth-child(-n+2) .cup::before,.putts[data-sunk="3"] .slot:nth-child(-n+3) .cup::before{opacity:1}
-@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px) rotate(120deg)}}
-@keyframes putt{0%{transform:translateX(0) rotate(0)}70%{transform:translateX(calc(clamp(78px,11vw,104px) - 42px)) rotate(540deg);opacity:1;scale:1}100%{transform:translateX(calc(clamp(78px,11vw,104px) - 42px)) translateY(10px) rotate(600deg);opacity:0;scale:.2}}
+/* Progress: three golf balls. A highlight runs across them left to right, again and again, until the game is ready; then all three stay lit. */
+.balls{display:flex;gap:clamp(14px,2.4vw,24px);margin-top:6px}
+.ball{--size:clamp(30px,4vw,42px);display:block;width:var(--size);height:var(--size);border-radius:50%;border:3px solid var(--ink);box-sizing:border-box;
+  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.2) 0 22%,transparent 26%) 0 0/28% 28%,radial-gradient(circle at 34% 28%,#fff 0 30%,#d9dfee 72%,#aeb7d0);
+  filter:brightness(.62) saturate(.6);box-shadow:2px 3px 0 var(--ink);animation:sweep 1.35s linear infinite}
+.ball:nth-child(2){animation-delay:.225s}
+.ball:nth-child(3){animation-delay:.45s}
+@keyframes sweep{0%,46%,100%{filter:brightness(.62) saturate(.6);transform:none;box-shadow:2px 3px 0 var(--ink)}14%{filter:brightness(1.08);transform:translateY(-5px) scale(1.14);box-shadow:2px 3px 0 var(--ink),0 0 20px 5px var(--yellow)}}
+.loading[data-state="done"] .ball{animation:none;filter:brightness(1.08);box-shadow:2px 3px 0 var(--ink),0 0 20px 5px var(--yellow)}
 .tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}
 .tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 15px var(--display);letter-spacing:2px}
-@media (prefers-reduced-motion:reduce){.world,.stars i,.ball{animation:none}.stars{display:none}}
+@media (prefers-reduced-motion:reduce){.stars i,.ball{animation:none}.stars{display:none}.ball{filter:none}}

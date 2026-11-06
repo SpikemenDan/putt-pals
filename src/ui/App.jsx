@@ -43,10 +43,11 @@ function Screens({ onCanvas, initialName, initialRoomCode }) {
  * @param {{subscribeAim: Function}} [props.aim] The input adapter (power meter source)
  * @param {(canvas: HTMLCanvasElement|null) => void} [props.onCanvas]
  * @param {typeof DISPLAY} [props.display] Presentation settings (read live by the loading screen); defaults to DISPLAY
+ * @param {Function} [props.createLoadingScene] Builds the loading screen's 3D sky on a canvas; without it only the CSS sky shows
  */
-export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', display = DISPLAY }) {
+export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', display = DISPLAY, createLoadingScene = null }) {
   return (
-    <UiContext.Provider value={{ store, dispatch, aim, display }}>
+    <UiContext.Provider value={{ store, dispatch, aim, display, createLoadingScene }}>
       <Screens onCanvas={onCanvas} initialName={initialName} initialRoomCode={initialRoomCode} />
     </UiContext.Provider>
   );

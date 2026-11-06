@@ -1,85 +1,59 @@
 import { useEffect, useRef, useState } from 'react';
 import { TIPS, TIP_MS, tipAt } from './tips.js';
 import { useUiContext } from './context.js';
-import { createPlanetScene, mulberry32 } from './planet-scene.js';
-import { createPuttProgress } from './putt-progress.js';
 import styles from './Loading.module.css';
-
-/** Number of putt balls in the progress indicator; each one drops into its cup as progress passes its share. */
-const BALLS = 3;
 
 /** Successive loads start on different tips, and paint different planets and flights, without wall-clock randomness. */
 let loads = 0;
 
+/** Small seeded generator for the scene, so a load's planet is reproducible. */
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
 /**
- * Loading screen shown over the start screen while a room is being opened (M1c, VIS-M1): the brand over the curved horizon of Gaia
- * with cities, planes, boats and satellites, Ares and Luna in the distance, a rotating gameplay tip, and the progress itself: one
- * spinning ball with a comet tail flying left to right along a dotted shot arc toward the flag. When `done` is set (the game is ready) the ball flies the
- * rest of the way in and `onDone` is called so the owner can close the screen. Mounted only while loading, so its timers and
- * animation loops never outlive the wait. Under `prefers-reduced-motion` the planet is still and nothing flies.
+ * Loading screen shown over the start screen while a room is being opened (M1c, VIS-M1): the brand over a 3D flight through the clouds
+ * above Gaia (src/render/planet-scene.js, built by the app and passed down as `createLoadingScene`), a rotating gameplay tip and three
+ * golf balls with a highlight running across them until the game is ready. When `done` is set all three stay lit for
+ * `display.loading.finishTime` seconds, then `onDone` closes the screen. Mounted only while loading, so its timers and animation loops
+ * never outlive the wait. Under `prefers-reduced-motion` the scene is one still frame and the balls do not animate.
  */
 export function Loading({ done = false, onDone }) {
-  const { display } = useUiContext();
+  const { display, createLoadingScene } = useUiContext();
   const [load] = useState(() => loads++);
   const [step, setStep] = useState(0);
   const canvasRef = useRef(null);
-  const spritesRef = useRef(null);
-  const aresRef = useRef(null);
-  const lunaRef = useRef(null);
-  const puttRef = useRef(null);
-  const progress = useRef(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
-  if (!progress.current) progress.current = createPuttProgress(display);
   useEffect(() => {
     const id = setInterval(() => setStep(s => s + 1), TIP_MS);
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return undefined;
+    if (!canvas || !createLoadingScene) return undefined;
     const win = canvas.ownerDocument.defaultView;
     const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const scene = createPlanetScene({ canvas, sprites: spritesRef.current, display, random: mulberry32(0x9a1a + load * 7919), worlds: { ares: aresRef.current, luna: lunaRef.current }, reducedMotion, win });
-    scene.start();
-    return () => scene.dispose();
-  }, [display, load]);
-  useEffect(() => { if (done) progress.current.finish(); }, [done]);
-  useEffect(() => { // drives the putt progress: the ball position is a CSS variable, so React does not re-render each frame
-    const track = puttRef.current, win = track?.ownerDocument.defaultView;
-    if (!track || !win?.requestAnimationFrame) return undefined;
-    let frame = null, last = null, closed = false, timer = null;
-    const tick = now => {
-      const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
-      last = now;
-      const p = progress.current;
-      const v = p.step(dt);
-      track.dataset.sunk = String(Math.min(BALLS, Math.floor(v * BALLS + 1e-6))); // balls already in their cups
-      if (p.done && !closed) {
-        closed = true;
-        track.dataset.state = 'sunk'; // the last ball drops in
-        timer = setTimeout(() => doneRef.current?.(), 650);
-      }
-      if (!closed) frame = win.requestAnimationFrame(tick);
-    };
-    frame = win.requestAnimationFrame(tick);
-    return () => { if (frame !== null) win.cancelAnimationFrame(frame); clearTimeout(timer); };
-  }, []);
+    let scene = null;
+    const build = setTimeout(() => { // after the first paint, so the title and balls show at once
+      try { scene = createLoadingScene({ canvas, display, random: seeded(0x9a1a + load * 7919), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
+    }, 0);
+    return () => { clearTimeout(build); scene?.dispose(); };
+  }, [display, load, createLoadingScene]);
+  useEffect(() => {
+    if (!done) return undefined;
+    const id = setTimeout(() => doneRef.current?.(), display.loading.finishTime * 1000);
+    return () => clearTimeout(id);
+  }, [done, display]);
   return (
     <div className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
-      <canvas ref={canvasRef} className={styles.planet} aria-hidden="true" data-ui="loading-planet" />
-      <div className={styles.worlds} aria-hidden="true">
-        <canvas ref={aresRef} className={`${styles.world} ${styles.ares}`} data-world="ares" />
-        <canvas ref={lunaRef} className={`${styles.world} ${styles.luna}`} data-world="luna" />
-      </div>
-      <canvas ref={spritesRef} className={styles.sprites} aria-hidden="true" data-ui="loading-traffic" />
       <div className={styles.stars} aria-hidden="true"><i /><i /><i /></div>
+      <canvas ref={canvasRef} className={styles.planet} aria-hidden="true" data-ui="loading-planet" />
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>
         <p className={styles.status}>Setting up your game…</p>
-        <div ref={puttRef} className={styles.putts} aria-hidden="true" data-ui="loading-putt" data-sunk="0">
-          {Array.from({ length: BALLS }, (_, k) => <span key={k} className={styles.slot}><u className={styles.ball} /><i className={styles.cup} /></span>)}
-        </div>
+        <div className={styles.balls} aria-hidden="true" data-ui="loading-balls"><i className={styles.ball} /><i className={styles.ball} /><i className={styles.ball} /></div>
       </div>
       <p className={styles.tip} data-ui="loading-tip"><b>TIP</b> {TIPS[tipAt(load * 5, step)]}</p>
     </div>
@@ -87,8 +61,8 @@ export function Loading({ done = false, onDone }) {
 }
 
 /**
- * Owns when the loading screen is on screen: shown while `connecting`, and kept for the finishing roll after a successful load so
- * the last ball visibly drops in before the game appears. A failed connection (`failed`) closes it at once.
+ * Owns when the loading screen is on screen: shown while `connecting`, and kept for a moment after a successful load with all three
+ * balls lit. A failed connection (`failed`) closes it at once.
  */
 export function LoadingGate({ connecting, failed = false }) {
   const [state, setState] = useState(connecting ? 'running' : 'idle');

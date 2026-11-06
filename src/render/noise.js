@@ -1,4 +1,4 @@
-/** Small seeded noise helpers shared by the loading-screen planet and moons (src/ui/planet-scene.js, src/ui/worlds.js). */
+/** Small seeded noise helpers shared by the loading-screen planet and moons (planet-data.js, worlds.js). */
 
 /** Seeded generator so the same load always paints the same worlds. */
 export function mulberry32(seed) {

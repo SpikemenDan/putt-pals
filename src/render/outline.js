@@ -49,15 +49,21 @@ void main(){
   if(len>1e-4&&clip.w>0.)clip.xy+=dir/len*ink*2./res*clip.w;
   gl_Position=clip;
 }`;
-const INK_FRAGMENT = `
+const inkFragment = color => `
 #ifdef INK_CUP
 varying vec3 cupWorld;uniform vec2 cupCenter;uniform float cupRadius;
+#endif
+#ifdef INK_DISSOLVE
+uniform float fade;
 #endif
 void main(){
 #ifdef INK_CUP
   if(distance(cupWorld.xz,cupCenter)<cupRadius)discard;
 #endif
-  gl_FragColor=vec4(${INK_COLOR},1.);
+#ifdef INK_DISSOLVE
+  if(fade<.995&&length(mod(gl_FragCoord.xy,3.)-1.5)>fade*2.2)discard;
+#endif
+  gl_FragColor=vec4(${color},1.);
 }`;
 
 /**
@@ -85,19 +91,22 @@ export function sizeInk(uniforms, width, height) {
  * @param {{center: [number, number], radius: number}|null} [options.cup=null] Cup cutout (world x/z), as on the turf
  * @param {number} [options.lift=0] Moves the hull this far toward the camera (view units). A ball's back
  *   half can touch a wall it rests against; a small lift (a third of its radius) keeps the ring in front.
+ * @param {string} [options.color=INK_COLOR] GLSL vec3 of the line
+ * @param {{value: number}|null} [options.dissolve=null] Shared fade uniform (0 to 1): the line dissolves through fine dots with its owner
  */
-export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null, lift = 0 } = {}) {
+export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null, lift = 0, color = INK_COLOR, dissolve = null } = {}) {
   const defines = {};
   const own = { ink: uniforms.ink, res: uniforms.res };
   if (planar) defines.INK_PLANAR = '';
   if (lift) { defines.INK_LIFT = ''; own.inkLift = { value: lift }; }
+  if (dissolve) { defines.INK_DISSOLVE = ''; own.fade = dissolve; }
   if (cup) {
     defines.INK_CUP = '';
     own.cupCenter = { value: new THREE.Vector2(...cup.center) };
     own.cupRadius = { value: cup.radius };
   }
   const material = new THREE.ShaderMaterial({
-    defines, uniforms: own, vertexShader: INK_VERTEX, fragmentShader: INK_FRAGMENT,
+    defines, uniforms: own, vertexShader: INK_VERTEX, fragmentShader: inkFragment(color),
     side: planar ? THREE.DoubleSide : THREE.BackSide, fog: false,
     polygonOffset: planar, polygonOffsetFactor: planar ? 1 : 0, polygonOffsetUnits: planar ? 1 : 0,
     // Translucent owners and planar hulls draw after their owner (see addInk).
