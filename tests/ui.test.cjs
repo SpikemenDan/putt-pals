@@ -142,14 +142,26 @@ function fakeClock() {
     const loading = t.within('[data-ui=loading]');
     assert.equal(loading.querySelector('[data-ui=loading-title]').textContent, 'Putt Pals', 'current product name until the rename is approved');
     assert.match(loading.textContent, /Setting up your game/);
-    assert.ok(loading.querySelector('canvas[data-ui=loading-planet]'), 'planet layer');
-    assert.equal(loading.querySelector('canvas').getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
+    const stage = t.within('[data-ui=planet-stage]');
+    assert.ok(stage?.querySelector('canvas[data-ui=loading-planet]'), 'the planet stands behind it');
+    assert.equal(stage.getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
     assert.equal(loading.querySelectorAll('[data-ui=loading-balls] i').length, 3, 'three balls, no putts or cups');
     await act(async () => t.store.setLocal({ connecting: false }));
     assert.equal(t.within('[data-ui=loading]').dataset.state, 'done', 'stays up, all lit, for the finish pause');
     await act(async () => { await new Promise(r => setTimeout(r, 400)); });
     assert.ok(t.within('[data-ui=loading]'), 'still up partway through the default 0.8 s');
     await waitGone(t, 1500);
+    await t.teardown();
+  });
+
+  await scenario('main menu: the planet stays up from the menu through the loading screen', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    assert.ok(t.within('[data-ui=landing]').querySelector('h1').textContent === 'Putt Pals', 'the big title');
+    const canvas = t.within('[data-ui=planet-stage] canvas');
+    assert.ok(canvas, 'the menu stands on the planet');
+    await act(async () => t.store.setLocal({ connecting: true }));
+    assert.ok(t.within('[data-ui=planet-stage] canvas') === canvas, 'the same canvas carries on into the loading screen: no reload');
     await t.teardown();
   });
 

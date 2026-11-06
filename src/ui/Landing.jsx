@@ -8,18 +8,17 @@ import buttons from './buttons.module.css';
 import menu from './Landing.module.css';
 
 const COSMETIC_FIELDS = [['ball', 'Ball', BALL_SKINS], ['trail', 'Trail', TRAIL_SKINS], ['celebration', 'Celebration', CELEBRATIONS]];
-const TAGLINE = { display: 'block', fontSize: '12px', letterSpacing: '4px', color: 'var(--pink-d)', margin: '12px 0' };
 
-/** Start screen: name and room code for online rooms, or solo play. */
+/** Start screen, over the planet: name and room code for online rooms, or solo play. The title sits where the loading screen's does. */
 export function Landing({ hidden, initialName = '', initialRoomCode = '' }) {
   const { send } = useCommands();
   const { connecting, error, cosmetics, color } = useView(v => v.landing);
   const [name, setName] = useState(initialName);
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   return (
-    <div className={menu.menu} hidden={hidden} data-ui="landing">
+    <div className={menu.menu} hidden={hidden} data-ui="landing" data-connecting={connecting || undefined}>
+    <h1 className={menu.brand}>Putt Pals</h1>
     <div className={menu.panel}>
-      <h1>⛳ Putt Pals <span style={TAGLINE}>PARTY CIRCUIT · 20 MAPS</span></h1>
       <label>Your name<input maxLength={14} autoComplete="off" value={name} onChange={e => setName(e.target.value)} /></label>
       <div style={{ textAlign: 'left' }}>Ball colour<ColorPicker selected={color} onPick={c => send(UiCommands.SET_COLOR, { color: c })} /></div>
       <button type="button" className={menu.solo} disabled={connecting} onClick={() => send(UiCommands.PLAY_SOLO, { name })}>Play solo</button>

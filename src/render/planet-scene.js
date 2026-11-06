@@ -1,5 +1,5 @@
 /**
- * The loading-screen sky (VIS-M1): the view from high in Gaia's atmosphere, with the planet's curved horizon, banks of cumulus sailing
+ * The sky behind the main menu and the loading screen (VIS-M1): the view from high in Gaia's atmosphere, with the planet's curved horizon, banks of cumulus sailing
  * round the globe, and a living world below: biomes from polar ice to jungle, mountains and volcanoes, cities, towns, villages, ports,
  * lighthouses, forests, mills, ships, airliners, balloons and satellites. Beyond it, a night sky of stars, clusters and two faint galaxies, a rare shooting star, Luna at its true distance and Ares
  * far away, each with polar ice, signs of life and one tiny base.
@@ -44,7 +44,7 @@ export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS
 }
 
 /**
- * Creates the scene on `canvas`. If WebGL is unavailable it stays inert (the CSS sky remains), and its clock and counts still work.
+ * Creates the scene on `canvas`. If WebGL is unavailable it stays inert and the CSS sky remains.
  * @param {object} options
  * @param {object} options.THREE
  * @param {HTMLCanvasElement} options.canvas
@@ -58,10 +58,11 @@ export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS
  */
 export function createPlanetScene({ THREE, canvas, display, random, planet: prebuilt = null, reducedMotion = false, focus = null, win = canvas.ownerDocument.defaultView, createWebGLRenderer = defaultRenderer }) {
   const doc = canvas.ownerDocument, settings = () => display.loading;
-  const planet = prebuilt ?? gaiaPlanet();
   let renderer = null;
   try { renderer = createWebGLRenderer(THREE, canvas); } catch { renderer = null; }
-  renderer?.setClearColor?.(0x000000, 0);
+  if (!renderer) return { start() {}, step() {}, dispose() {} }; // no WebGL: nothing to draw or build; the CSS sky stays
+  const planet = prebuilt ?? gaiaPlanet();
+  renderer.setClearColor?.(0x000000, 0);
   const library = createMaterialLibrary({ THREE, createCanvas: () => doc.createElement('canvas'), random, maxAnisotropy: renderer?.capabilities?.getMaxAnisotropy?.() ?? 1 });
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 1, 60000);
   const sun = new THREE.Vector3(...SUN).normalize();
@@ -521,6 +522,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       for (const mesh of instanced) mesh.dispose();
       library.dispose();
       renderer?.dispose?.();
+      renderer?.forceContextLoss?.();
     },
   };
 }

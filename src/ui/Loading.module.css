@@ -1,9 +1,11 @@
 /* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night sky, the curved horizon of a planet
    drawn in 3D by src/render/planet-scene.js with clouds, cities, ships, planes, Ares and Luna, then the brand, the three-ball progress and a
    tip. Fonts come from the game-wide theme (src/ui/fonts/fonts.css, global.css): Jersey 10 for the title, Nunito for captions. */
+/* The sky and planet, behind the main menu and the loading screen. */
+.stage{position:fixed;inset:0;z-index:0;background:linear-gradient(#03050f 0%,#060b24 48%,#0d1c52 74%,#1b3f96 100%)}
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
-  --display:var(--font);--body:var(--pp-body,'Nunito','Segoe UI',sans-serif);
-  background:linear-gradient(#03050f 0%,#060b24 48%,#0d1c52 74%,#1b3f96 100%)}
+  --display:var(--font);--body:var(--pp-body,'Nunito','Segoe UI',sans-serif);animation:fadein .35s ease-out}
+@keyframes fadein{from{opacity:0}}
 .planet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
 .brand{margin:0;font:400 clamp(64px,12vw,128px)/1 var(--display);letter-spacing:4px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
@@ -19,4 +21,4 @@
 .loading[data-state="done"] .ball{animation:none;filter:brightness(1.08);box-shadow:2px 3px 0 var(--ink),0 0 20px 5px var(--yellow)}
 .tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}
 .tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 15px var(--display);letter-spacing:2px}
-@media (prefers-reduced-motion:reduce){.ball{animation:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.ball{animation:none;filter:none}.loading{animation:none}}

@@ -13,17 +13,39 @@ function seeded(seed) {
 }
 
 /**
- * Loading screen shown over the start screen while a room is being opened (M1c, VIS-M1): the brand over a 3D flight through the clouds
- * above Gaia (src/render/planet-scene.js, built by the app and passed down as `createLoadingScene`), a rotating gameplay tip and three
- * golf balls with a highlight running across them until the game is ready. When `done` is set all three stay lit for
- * `display.loading.finishTime` seconds, then `onDone` closes the screen. Mounted only while loading, so its timers and animation loops
- * never outlive the wait. Under `prefers-reduced-motion` the scene is one still frame and the balls do not animate.
+ * The 3D planet behind the main menu and the loading screen (src/render/planet-scene.js, built by the app and passed down as
+ * `createLoadingScene`). One scene serves both, so the menu turns into the loading screen with no reload or jump. Rendered only while
+ * one of them is up: the scene is built after the first paint and released when the game takes over. Under `prefers-reduced-motion`
+ * it is one still frame.
+ */
+export function PlanetStage() {
+  const { display, createLoadingScene } = useUiContext();
+  const [load] = useState(() => loads);
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !createLoadingScene) return undefined;
+    const win = canvas.ownerDocument.defaultView;
+    const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let scene = null;
+    const build = setTimeout(() => { // after the first paint, so the title and form show at once
+      try { scene = createLoadingScene({ canvas, display, random: seeded(load * 7919 + 1), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
+    }, 0);
+    return () => { clearTimeout(build); scene?.dispose(); };
+  }, [display, load, createLoadingScene]);
+  return <div className={styles.stage} aria-hidden="true" data-ui="planet-stage"><canvas ref={canvasRef} className={styles.planet} data-ui="loading-planet" /></div>;
+}
+
+/**
+ * Loading screen shown while a room is being opened (M1c, VIS-M1): over the planet stage, the brand, a rotating gameplay tip and three golf
+ * balls with a highlight running across them until the game is ready. When `done` is set all three stay lit for
+ * `display.loading.finishTime` seconds, then `onDone` closes the screen. Mounted only while loading, so its timers never outlive the wait.
+ * Under `prefers-reduced-motion` the balls do not animate.
  */
 export function Loading({ done = false, onDone }) {
-  const { display, createLoadingScene } = useUiContext();
+  const { display } = useUiContext();
   const [load] = useState(() => loads++);
   const [step, setStep] = useState(0);
-  const canvasRef = useRef(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   useEffect(() => {
@@ -31,24 +53,12 @@ export function Loading({ done = false, onDone }) {
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !createLoadingScene) return undefined;
-    const win = canvas.ownerDocument.defaultView;
-    const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    let scene = null;
-    const build = setTimeout(() => { // after the first paint, so the title and balls show at once
-      try { scene = createLoadingScene({ canvas, display, random: seeded(load * 7919 + 1), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
-    }, 0);
-    return () => { clearTimeout(build); scene?.dispose(); };
-  }, [display, load, createLoadingScene]);
-  useEffect(() => {
     if (!done) return undefined;
     const id = setTimeout(() => doneRef.current?.(), display.loading.finishTime * 1000);
     return () => clearTimeout(id);
   }, [done, display]);
   return (
     <div className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
-      <canvas ref={canvasRef} className={styles.planet} aria-hidden="true" data-ui="loading-planet" />
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>
         <p className={styles.status}>Setting up your game…</p>
@@ -61,13 +71,18 @@ export function Loading({ done = false, onDone }) {
 
 /**
  * Owns when the loading screen is on screen: shown while `connecting`, and kept for a moment after a successful load with all three
- * balls lit. A failed connection (`failed`) closes it at once.
+ * balls lit. A failed connection (`failed`) closes it at once. The planet stage stays up for the `menu` and the loading screen alike.
  */
-export function LoadingGate({ connecting, failed = false }) {
+export function LoadingGate({ connecting, failed = false, menu = false }) {
   const [state, setState] = useState(connecting ? 'running' : 'idle');
   if (connecting && state !== 'running') setState('running');
   else if (!connecting && state === 'running') setState(failed ? 'idle' : 'finishing');
   else if (failed && state === 'finishing') setState('idle');
-  if (state === 'idle' || (!connecting && state === 'running')) return null;
-  return <Loading done={state === 'finishing'} onDone={() => setState('idle')} />;
+  const loading = state !== 'idle' && (connecting || state !== 'running');
+  return (
+    <>
+      {(menu || loading) && <PlanetStage />}
+      {loading && <Loading done={state === 'finishing'} onDone={() => setState('idle')} />}
+    </>
+  );
 }
