@@ -57,7 +57,7 @@ export function validServerCommand(c) {
   }
   const fields = { LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
     RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'],
-    DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'] }[c.type];
+    DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'], PONG_SHOT: ['hit', 'cupId', 'timedOut'] }[c.type];
   if (!Array.isArray(fields) || !exact(c, ['type', ...fields])) return false;
   switch (c.type) {
     case 'SET_COLOR': return isColorIndex(c.color);
@@ -70,6 +70,7 @@ export function validServerCommand(c) {
     case 'REPORT_SCORE': return count(c.strokes) && typeof c.timedOut === 'boolean';
     case 'DEPLOY_OBJECT': return validDeployCommand(c);
     case 'DEPLOY_HIT': return validRoomId(c.id);
+    case 'PONG_SHOT': return typeof c.hit === 'boolean' && (c.cupId === null || typeof c.cupId === 'string') && (c.timedOut === undefined || typeof c.timedOut === 'boolean');
     default: return true;
   }
 }

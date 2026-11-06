@@ -23,6 +23,7 @@ export const GameModes = Object.freeze({
   TOURNAMENT_7: 'tournament_7', // 7 starter maps
   PRACTICE: 'practice', // Solo course practice
   PUTT_PRACTICE: 'putt_practice', // Single-putt practice replay
+  PONG: 'pong', // Putt Pong 1v1 (GM2)
 });
 
 export const SessionCommands = Object.freeze({
@@ -37,6 +38,7 @@ export const SessionCommands = Object.freeze({
   ADVANCE_PUTT: 'ADVANCE_PUTT',
   FINISH_ROUND: 'FINISH_ROUND',
   RETURN_TO_LOBBY: 'RETURN_TO_LOBBY',
+  PONG_SHOT: 'PONG_SHOT', // Putt Pong turn-based shot (GM2b)
 });
 
 /**
