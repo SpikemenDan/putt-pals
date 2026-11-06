@@ -3,6 +3,7 @@ import { spawnPool } from '../gameplay/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import { PowerMeter } from './PowerMeter.jsx';
+import { PongHud } from './PongHud.jsx';
 import { Row } from './Row.jsx';
 import buttons from './buttons.module.css';
 import hud from './Hud.module.css';
@@ -41,6 +42,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
           </span>
         </div>
         <canvas className={hud.canvas} width="800" height="500" ref={onCanvas} aria-label="Course. Drag back from the ball and release to putt." />
+        {!!view?.pong && <PongHud pong={view.pong} />}
         {!!view?.activeHazards?.length && <div className={hud.hazardIndicators} aria-label="Active gameplay hazards">
           {view.activeHazards.map(h => <span key={h.id}>{h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
         </div>}

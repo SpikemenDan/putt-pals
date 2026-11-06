@@ -1,4 +1,5 @@
 import { buildCourseMechanics } from './course-mechanics.js';
+import { createPongCupRack } from './pong-cups.js';
 /**
  * Builds the Three.js scene graph for one course putt.
  *
@@ -98,7 +99,7 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const toon = library.style === 'toon';
   // Toon surfaces are one flat palette colour; the legacy style keeps its patterned textures.
   const surface = (role, texture, repeatX, repeatY, overrides) => toon ? library.toon(palette.surfaces[role], overrides) : library.patterned(texture, repeatX, repeatY, overrides);
-  const solid = (role, params) => toon ? library.toon(palette.surfaces[role], params) : new THREE.MeshStandardMaterial(params);
+  const solid = (role, params) => toon ? library.toon(palette.surfaces[role] ?? params?.color, params) : new THREE.MeshStandardMaterial(params);
   // Meshes that get an ink outline once the cup cutouts are known.
   const inked = [];
   const ink = (mesh, options) => { if (toon) inked.push([mesh, options || {}]); return mesh; };
@@ -470,6 +471,9 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
 
   buildCourseMechanics({THREE,course:hl,group:g,transform,solids});
 
+  // Putt Pong multi-cup rack (GM2c): build visible cup rack meshes when course.cups is present.
+  const pongCups = createPongCupRack(library, course.cups, transform, g);
+
   let disposed = false;
   return {
     group: g,
@@ -478,12 +482,15 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     puttIndex,
     transform,
     flags, fans, vortices, movers, wallFade, powerBlocks,
+    /** Cup rack animation/elimination controller; no-op when course has no cups. */
+    pongCups,
     /** Cup centre in world space (legacy holePos: surface height, no ball offset). */
     holePosition: transform.ground(hl.hole[0], hl.hole[1], holeHeight),
     /** Releases every geometry, material and texture this build created. Idempotent. */
     dispose() {
       if (disposed) return;
       disposed = true;
+      pongCups.dispose();
       g.parent?.remove(g);
       const geometries = new Set(), materials = new Set(orphans), maps = new Set();
       g.traverse(o => {

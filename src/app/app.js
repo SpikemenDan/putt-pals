@@ -410,6 +410,7 @@ export function createApp({ root, THREE, window: win = root.ownerDocument.defaul
         const out = putt.frame(t, dt);
         checkGlobalHazardAwaiting(t);
         for (const id of out.deployHits) { audio.handleEvent({ type: 'deployable_hit', kind: seenKinds.get(id) }, { speed: 300 }); room.deployHit(id); }
+        for (const cupId of (out.cupEliminations || [])) renderer?.eliminatePongCup(cupId);
         checkAwaiting(t);
         if (out.cancelInput) input?.cancel();
         if (out.aim !== null) input?.setAimAngle(out.aim);

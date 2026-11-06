@@ -254,6 +254,24 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     },
 
     /**
+     * Triggers a visual cup elimination animation for the given cup id.
+     * No-op when no pong cup rack is built (standard courses).
+     * @param {string} cupId
+     */
+    eliminatePongCup(cupId) {
+      build?.pongCups?.eliminateCup(cupId);
+    },
+
+    /**
+     * Syncs the full active/inactive cup state without animation (for reconnects
+     * and scene rebuilds mid-match).
+     * @param {Array<{ id: string, active: boolean }>} activeCups
+     */
+    syncPongCups(activeCups) {
+      build?.pongCups?.syncActive(activeCups);
+    },
+
+    /**
      * Updates actors/effects and draws one frame.
      *
      * @param {object} frame
@@ -344,6 +362,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       if (me.mode === 'sunk' && lastMode !== 'sunk') confetti.burst(localBall.position, cosmetics.celebration);
       lastMode = me.mode;
       confetti.update(dt);
+      build.pongCups?.update(dt);
       for (const { mesh, mover } of build.movers) {
         const r = movingRect(mover, hazardTime);
         mesh.position.x = r[0] + r[2] / 2;
