@@ -1,3 +1,4 @@
+import { checkMechanicIntegrity } from './mechanics-integrity.js';
 /**
  * Static geometry integrity check (roadmap CL1).
  *
@@ -63,6 +64,7 @@ export function checkGeometryIntegrity({ id, name, index, geometry, putts = [] }
   const all = [];
   const add = (putt, rule, elements, message) => all.push({ map, mapId: courseId, mapIndex: index ?? null, putt, rule, elements, message });
   const g = geometry ?? {};
+  for (const finding of checkMechanicIntegrity(g,putts,(x,y)=>surfaceHeight(g,x,y))) add(null,'mechanic-clearance',finding.elements,finding.message);
   const walls = listOf(g.w), ramps = listOf(g.rp), plats = listOf(g.pl), pits = listOf(g.pit), tiles = listOf(g.tiles), movers = listOf(g.movers);
   const wallHit = point => {
     let best = null;

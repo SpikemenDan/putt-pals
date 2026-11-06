@@ -1,3 +1,4 @@
+import { validateCourseMechanics } from './mechanics.js';
 import { courseDefinitions, courseRules, courseSourceHashes } from './definitions.js';
 import { buildCourseCatalog } from './legacy.js';
 
@@ -22,6 +23,7 @@ export function validateCourseGeometry(course) {
       if (key === 'tornado' && !(row[2] > 0)) errors.push(`${label} radius must be positive`);
     });
   }
+  errors.push(...validateCourseMechanics(course.mechanics));
   if (!course.tiles?.length) errors.push('Course must have playable tiles');
   return { valid: errors.length === 0, errors };
 }

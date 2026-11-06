@@ -10,6 +10,11 @@
 
 /** [pattern, units], first match wins. Every TUNING field must match one (tests/config-meta.test.cjs). */
 export const TUNING_UNITS = Object.freeze([
+  [/^courseMechanics\.(?:bodyHeight|fanHeight|vortexHeight|portalRadius|portalHeight|portalClearance)$/, 'world units'],
+  [/^courseMechanics\.(?:wedgeRestitution|bouncerRestitution|vortexPull)$/, 'factor'],
+  [/^courseMechanics\.bouncerKick$/, 'units/s'],
+  [/^courseMechanics\.(?:fanAcceleration|vortexAcceleration|vortexLift)$/, 'units/s²'],
+  [/^courseMechanics\.portalCooldown$/, 'seconds'],
   [/^globalHazards\.(?:rainFrictionMultiplier|rainDragMultiplier|snowFrictionMultiplier|snowDragMultiplier)$/, 'factor'],
   [/^globalHazards\.(?:windAcceleration|vortexAcceleration|tornadoLift)$/, 'units/s²'],
   [/^globalHazards\.lightningImpulse$/, 'units/s'],

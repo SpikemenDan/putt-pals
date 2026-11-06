@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "method": "SV1 verification of explicit mechanic proof shots; nine perturbations; stripped counterfactual",
+  "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+  "results": [
+    {
+      "kind": "wedge",
+      "map": 22,
+      "putt": 0,
+      "par": 3,
+      "strokes": 1,
+      "shot": {
+        "deg": 358,
+        "power": 0.485
+      },
+      "verified": true,
+      "margin": 1,
+      "strippedSunk": false,
+      "provenance": {
+        "version": 2,
+        "courseId": "g1g-wedge",
+        "puttId": "g1g-wedge-putt",
+        "gravity": 700,
+        "courseSha256": "e769c26ccaa98cd31020549f8c696bf12d75e2d798f8d4a9270b150533555743",
+        "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "fast"
+      }
+    },
+    {
+      "kind": "bouncer",
+      "map": 23,
+      "putt": 0,
+      "par": 3,
+      "strokes": 1,
+      "shot": {
+        "deg": 0,
+        "power": 0.3
+      },
+      "verified": true,
+      "margin": 3,
+      "strippedSunk": false,
+      "provenance": {
+        "version": 2,
+        "courseId": "g1g-bouncer",
+        "puttId": "g1g-bouncer-putt",
+        "gravity": 700,
+        "courseSha256": "19fa99fd4b612d42601ab4afff3860895ad497ccbffab5f26adf8dc7a3fa0676",
+        "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "fast"
+      }
+    },
+    {
+      "kind": "fan",
+      "map": 24,
+      "putt": 0,
+      "par": 3,
+      "strokes": 1,
+      "shot": {
+        "deg": 0,
+        "power": 0.5
+      },
+      "verified": true,
+      "margin": 2,
+      "strippedSunk": false,
+      "provenance": {
+        "version": 2,
+        "courseId": "g1g-fan",
+        "puttId": "g1g-fan-putt",
+        "gravity": 700,
+        "courseSha256": "45385ecb6ac9c0d697068158990e5b7eda997dc43c5578eea096987fec3bd58d",
+        "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "fast"
+      }
+    },
+    {
+      "kind": "vortex",
+      "map": 25,
+      "putt": 0,
+      "par": 3,
+      "strokes": 1,
+      "shot": {
+        "deg": 13.5,
+        "power": 0.65
+      },
+      "verified": true,
+      "margin": 1,
+      "strippedSunk": false,
+      "provenance": {
+        "version": 2,
+        "courseId": "g1g-vortex",
+        "puttId": "g1g-vortex-putt",
+        "gravity": 700,
+        "courseSha256": "f7effe37c85469deb19c15d1cbafaa280ca7bc0ed484f49b99c42692f9d01a99",
+        "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "fast"
+      }
+    },
+    {
+      "kind": "portal",
+      "map": 26,
+      "putt": 0,
+      "par": 3,
+      "strokes": 1,
+      "shot": {
+        "deg": 0,
+        "power": 0.4
+      },
+      "verified": true,
+      "margin": 1,
+      "strippedSunk": false,
+      "provenance": {
+        "version": 2,
+        "courseId": "g1g-portal",
+        "puttId": "g1g-portal-putt",
+        "gravity": 700,
+        "courseSha256": "03da8984af6ccdbfed8da596628b685cf61ef762263ac0209ffbd107039817a5",
+        "simulationSha256": "c04f112f33a9838580b5859c20f4c84a3ec2f0956816f52faef4eb96f41cdcc5",
+        "configurationSha256": "8f2e8abecb9c22bbee4a198641a22e581a86c939964ee58cfe4b953faccd3884",
+        "searchMode": "fast"
+      }
+    }
+  ]
+}
