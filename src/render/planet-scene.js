@@ -27,7 +27,7 @@ const CLOUDS = 210;
  * The size audit: one scale per kind of object, so the world keeps a sensible order from trees up to mountains (docs/GAIA_MAP.md has the
  * resulting sizes, tests/ui.test.cjs checks the order). Buildings also follow `loading.citySize`.
  */
-export const SIZES = Object.freeze({ city: 0.52, town: 0.44, village: 0.56, port: 0.5, lighthouse: 0.5, mill: 0.55, flag: 0.5, volcano: [9, 7, 8, 6.5], plant: 0.5, peakBase: 3.5, peakRise: 8.5, plane: 0.72, balloon: 0.62, satellite: 0.62, ship: { cargo: 0.6, ferry: 0.58, tanker: 0.64, trawler: 0.5, yacht: 0.46 } });
+export const SIZES = Object.freeze({ city: 0.52, town: 0.44, village: 0.56, port: 0.5, lighthouse: 0.5, mill: 0.55, flag: 0.5, volcano: [9, 7, 8, 6.5], plant: 0.5, peakBase: 3.5, peakRise: 9.5, plane: 0.72, balloon: 0.62, satellite: 0.62, ship: { cargo: 0.6, ferry: 0.58, tanker: 0.64, trawler: 0.5, yacht: 0.46 } });
 const SHOOTING_GAP = [35, 110]; // seconds between shooting stars
 
 const count = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
@@ -132,9 +132,9 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     if (!shapeCache.has(key)) shapeCache.set(key, Array.from({ length: designs }, () => own(make())));
     return pick(shapeCache.get(key), Math.floor(random() * designs));
   };
-  const cities = planet.cities.map(c => settle(c, variant('city:' + c.biome + c.tint.map(q => Math.round(q / 96)).join(), 3, () => makeCity(THREE, random, c.tint, c.biome)), SIZES.city));
-  const towns = planet.towns.map(c => settle(c, variant('town:' + c.biome, 3, () => makeTown(THREE, random, c.biome)), SIZES.town));
-  const villages = planet.villages.map(c => settle(c, variant('village:' + c.biome, 2, () => makeVillage(THREE, random, c.biome)), SIZES.village));
+  const cities = planet.cities.map(c => settle(c, variant('city:' + c.culture, 3, () => makeCity(THREE, random, c.tint, c.culture)), SIZES.city * (c.tier ?? 1)));
+  const towns = planet.towns.map(c => settle(c, variant('town:' + c.culture, 3, () => makeTown(THREE, random, c.culture)), SIZES.town));
+  const villages = planet.villages.map(c => settle(c, variant('village:' + c.culture, 2, () => makeVillage(THREE, random, c.culture)), SIZES.village));
   const portShapes = [0, 1].map(k => own(makePort(THREE, k)));
   const ports = planet.ports.map((p, k) => {
     const place = settle(p, pick(portShapes, k), SIZES.port), up = new THREE.Vector3(...place.dir), out = new THREE.Vector3(...p.sea).sub(up);
@@ -158,7 +158,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), spinQ = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), d = new THREE.Vector3(), c = new THREE.Color();
     list.forEach((item, i) => {
       d.set(...surfaceDir(item.u, item.lat));
-      const k = size(item), shade = 0.86 + random() * 0.26;
+      const k = size(item), shade = (item.shade ?? 1) * (0.9 + random() * 0.2);
       q.setFromUnitVectors(yAxis, d).multiply(spinQ.setFromAxisAngle(yAxis, random() * Math.PI * 2));
       mesh.setMatrixAt(i, m.compose(p.copy(d).multiplyScalar(PLANET_RADIUS - 0.05), q, sc.set(k, k * (0.9 + random() * 0.3), k)));
       mesh.setColorAt(i, c.setRGB(shade, shade, shade));

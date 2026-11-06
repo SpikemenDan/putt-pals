@@ -145,14 +145,30 @@ export function makeBalloon(THREE, color = 0xff3d6e, band = 0xffd640) {
   ]);
 }
 
-/** Palettes per building style: walls, accents and roofs. */
+/**
+ * Building styles per culture: palettes, building designs and village huts, each loosely inspired by real places, with nothing copied:
+ * `oldworld` Paris and Prague (spires, mansard rows), `mediterranean` Lisbon and Athens (white walls, terracotta), `northern` Oslo and Moscow
+ * (dark timber, onion domes), `metro` New York and Sydney (stepped glass towers), `prairie` Chicago and Toronto, `carnival` Rio and Havana
+ * (bright stacked houses), `desert` Cairo and Marrakech (sand domes, minarets), `savanna` Nairobi and Lagos, `palace` Jaipur and Delhi (pink stone,
+ * domed pavilions), `silk` Samarkand (turquoise domes), `eastern` Kyoto and Tokyo (pagodas, neon towers), `canal` Venice and Amsterdam.
+ */
 const STYLES = Object.freeze({
-  temperate: { walls: [0xc9d3de, 0xa9c4dc, 0xeeeae2, 0xd8b9a0, 0x8fb0cf, 0xb86b52], accent: 0x3b5a86, roofs: [0xe2554a, 0x6e7c94, 0xc9772e], types: ['glass', 'stepped', 'round', 'spire', 'tower', 'row', 'twist'] },
-  tropical: { walls: [0xfff1d6, 0xff9d8a, 0xa8ecc5, 0xffdf80, 0x8fe0e8, 0xf8f8fc], accent: 0x2c8c9c, roofs: [0xff7a59, 0x2fbf9b, 0xffc24a], types: ['round', 'hall', 'twist', 'glass', 'stepped'] },
-  desert: { walls: [0xecd2a2, 0xdcb782, 0xf3e3c3, 0xcf9f6c], accent: 0x8a5a36, roofs: [0x3fa7a0, 0xd9a03f, 0xf3e3c3], types: ['stepped', 'hall', 'spire', 'round'] },
-  boreal: { walls: [0x7a8596, 0xb6a48e, 0x8c5a48, 0xd9dde4], accent: 0x2c3442, roofs: [0x3e6e7e, 0x54403a, 0xeef1f6], types: ['spire', 'row', 'pagoda', 'glass', 'tower'] },
+  oldworld: { walls: [0xeadfc8, 0xd8c7a8, 0xc9b6a0, 0xb86b52], accent: 0x57617a, roofs: [0x4f5d78, 0xc9652f, 0x5a6b6e], types: ['cathedral', 'row', 'row', 'stepped', 'spire', 'hall'], village: 'thatch' },
+  mediterranean: { walls: [0xfaf6ec, 0xf3ead8, 0xf6dfb4, 0xe8cfa6], accent: 0x3e7fb5, roofs: [0xd2693a, 0xc95b34, 0x3e7fb5], types: ['row', 'row', 'hall', 'minaret', 'stepped'], village: 'thatch', flat: false },
+  northern: { walls: [0x8c5a48, 0xb6a48e, 0x7a8596, 0xc9a24e], accent: 0x2c3442, roofs: [0x2f7a5e, 0xe2c04a, 0x3e6e7e, 0xc0392b], types: ['onion', 'onion', 'spire', 'row', 'glass'], village: 'cabin' },
+  metro: { walls: [0xa9c4dc, 0x8fb0cf, 0xc9d3de, 0xd8b9a0, 0x7fa0c0], accent: 0x2f4f78, roofs: [0xdfe6ee, 0x6e7c94, 0xe0a030], types: ['glass', 'glass', 'deco', 'deco', 'tower', 'twist'], village: 'thatch' },
+  prairie: { walls: [0xb86b52, 0xc9d3de, 0x9fb4c8, 0xa9764f], accent: 0x3b4a5e, roofs: [0x6e7c94, 0x3b4a5e, 0xdfe6ee], types: ['deco', 'glass', 'glass', 'stepped', 'row'], village: 'cabin' },
+  carnival: { walls: [0xff9d8a, 0xffdf80, 0xa8ecc5, 0x8fe0e8, 0xf8c8e0, 0xfff1d6], accent: 0x2c8c9c, roofs: [0xff7a59, 0x2fbf9b, 0xffc24a], types: ['row', 'row', 'glass', 'round', 'twist', 'hall'], village: 'stilt' },
+  desert: { walls: [0xecd2a2, 0xdcb782, 0xf3e3c3, 0xcf9f6c], accent: 0x8a5a36, roofs: [0x3fa7a0, 0xd9a03f, 0xf3e3c3], types: ['minaret', 'hall', 'stepped', 'sail', 'stepped'], village: 'adobe', flat: true },
+  savanna: { walls: [0xc98a5a, 0xdcb782, 0xe8c9a0, 0x9fb4c8], accent: 0x6a3f2a, roofs: [0xa8562f, 0xd9a03f, 0x6e7c94], types: ['glass', 'stepped', 'hall', 'round'], village: 'thatch' },
+  palace: { walls: [0xf0a890, 0xf4c6a4, 0xfaf0e0, 0xe8866e], accent: 0xb5502e, roofs: [0xfaf0e0, 0xe8b04a, 0xf0a890], types: ['pavilion', 'pavilion', 'hall', 'minaret', 'stepped'], village: 'adobe', flat: true },
+  silk: { walls: [0xe0c49a, 0xcfae80, 0xf0e0c0], accent: 0x2f9fb0, roofs: [0x2fb4c4, 0x2f9fb0, 0xe0c49a], types: ['hall', 'hall', 'minaret', 'pavilion', 'stepped'], village: 'adobe', flat: true },
+  eastern: { walls: [0xe8e4dc, 0x9fb4c8, 0xcf5a48, 0x3a4a68, 0xd8dde4], accent: 0xff3d8a, roofs: [0x3a4a5e, 0xc0392b, 0x2f7a5e], types: ['pagoda', 'pagoda', 'glass', 'tower', 'twist', 'glass'], village: 'cabin' },
+  canal: { walls: [0xb86b52, 0xe8c9a0, 0xf0e4d0, 0x9c5a44], accent: 0x3b5a56, roofs: [0x8a4a3a, 0x4f5d78], types: ['canalrow', 'canalrow', 'row', 'cathedral', 'minaret'], village: 'stilt' },
 });
-const styleOf = biome => (biome === 'tropical' || biome === 'wetland' ? 'tropical' : biome === 'desert' || biome === 'savanna' ? 'desert' : biome === 'boreal' || biome === 'tundra' ? 'boreal' : 'temperate');
+/** Style for a culture, or for a plain biome name. */
+const BIOME_STYLE = Object.freeze({ temperate: 'oldworld', tropical: 'carnival', wetland: 'canal', desert: 'desert', savanna: 'savanna', boreal: 'northern', tundra: 'northern', mediterranean: 'mediterranean', grassland: 'prairie' });
+const styleOf = name => STYLES[name] ?? STYLES[BIOME_STYLE[name]] ?? STYLES.oldworld;
 
 /** Adds one building of `type` at (x, z), `h` tall, its foot sunk to y = -3. Returns its top. */
 function addBuilding(THREE, parts, type, x, z, w, h, wall, style, random) {
@@ -169,6 +185,13 @@ function addBuilding(THREE, parts, type, x, z, w, h, wall, style, random) {
   if (type === 'tower') { round(w * 0.16, w * 0.3, foot, h); dome(w * 0.46, h * 0.86, wall, 0.62); round(w * 0.5, w * 0.5, h * 0.84, h * 0.87, style.accent); parts.push({ geometry: new THREE.ConeGeometry(0.1, 2.6, 8), color: roof, at: moved(THREE, x, h + 1.3, z) }); return h + 2.6; }
   if (type === 'hall') { round(w * 0.92, w * 0.96, foot, h * 0.42); dome(w * 0.92, h * 0.42, roof, 0.72); round(0.09, 0.09, h * 0.4, h * 0.42 + w, style.accent); return h * 0.42 + w; }
   if (type === 'pagoda') { const steps = 4; for (let k = 0; k < steps; k++) { const y0 = k ? h * k / steps : foot, y1 = h * (k + 1) / steps, bw = w * (1 - k * 0.17); block(bw * 0.72, y0, y1); parts.push({ geometry: new THREE.ConeGeometry(bw * 0.88, 1, 4), color: roof, at: moved(THREE, x, y1 + 0.1, z, 0, Math.PI / 4) }); } return h + 0.6; }
+  if (type === 'onion') { round(w * 0.42, w * 0.5, foot, h * 0.7); parts.push({ geometry: new THREE.SphereGeometry(w * 0.62, 16, 12), color: roof, at: stretched(THREE, x, h * 0.78, z, 1, 1.05, 1) }, { geometry: new THREE.ConeGeometry(w * 0.34, w * 1.1, 14), color: roof, at: moved(THREE, x, h * 0.78 + w * 0.92, z) }, { geometry: new THREE.ConeGeometry(0.08, 1, 6), color: 0xe2c04a, at: moved(THREE, x, h * 0.78 + w * 1.7, z) }); return h * 0.78 + w * 2.2; }
+  if (type === 'minaret') { round(w * 0.2, w * 0.28, foot, h); round(w * 0.36, w * 0.36, h * 0.7, h * 0.74, style.accent); parts.push({ geometry: new THREE.ConeGeometry(w * 0.24, 1.6, 12), color: roof, at: moved(THREE, x, h + 0.8, z) }); block(w * 1.1, foot, h * 0.28); return h + 1.6; }
+  if (type === 'cathedral') { block(w * 1.2, foot, h * 0.42); parts.push({ geometry: gable(THREE, w * 1.3, h * 0.2, w * 1.3), color: roof, at: moved(THREE, x, h * 0.42, z) }); for (const dx of [-0.48, 0.48]) { parts.push({ geometry: new THREE.BoxGeometry(w * 0.4, h * 0.72 + 3, w * 0.4), color: wall, at: moved(THREE, x + dx * w, h * 0.36 - 1.5, z + w * 0.5) }, { geometry: new THREE.ConeGeometry(w * 0.3, h * 0.28, 4), color: roof, at: moved(THREE, x + dx * w, h * 0.86, z + w * 0.5, 0, Math.PI / 4) }); } return h; }
+  if (type === 'deco') { const steps = 5; for (let k = 0; k < steps; k++) { const y0 = k ? h * (k / steps) ** 0.8 : foot, y1 = h * ((k + 1) / steps) ** 0.8, bw = w * (1 - k * 0.17); block(bw, y0, y1); bands(bw, Math.max(0, y0), y1); } parts.push({ geometry: new THREE.ConeGeometry(w * 0.2, 3.4, 8), color: roof, at: moved(THREE, x, h + 1.7, z) }); return h + 3.4; }
+  if (type === 'sail') { const shape = new THREE.Shape([[-w * 0.8, 0], [w * 0.7, 0], [w * 0.15, h], [-w * 0.2, h * 0.55]].map(([a, b]) => new THREE.Vector2(a, b))); parts.push({ geometry: new THREE.ExtrudeGeometry(shape, { depth: w * 0.6, bevelEnabled: false }), color: wall, at: moved(THREE, x, 0, z - w * 0.3) }); block(w * 1.2, foot, 0.4); return h; }
+  if (type === 'pavilion') { block(w * 1.2, foot, h * 0.5); for (const [dx, dz] of [[-0.42, -0.42], [0.42, -0.42], [-0.42, 0.42], [0.42, 0.42]]) { round(w * 0.14, w * 0.14, h * 0.5, h * 0.72, style.accent); parts.push({ geometry: new THREE.SphereGeometry(w * 0.22, 10, 8), color: roof, at: moved(THREE, x + dx * w, h * 0.54, z + dz * w) }); } dome(w * 0.56, h * 0.58, roof, 1.05); return h * 0.58 + w * 0.6; }
+  if (type === 'canalrow') { for (let k = -1; k <= 1; k++) { const tall = h * (0.8 + (k + 1) * 0.12); parts.push({ geometry: new THREE.BoxGeometry(w * 0.56, tall + 3, w * 0.9), color: style.walls[(k + 3) % style.walls.length], at: moved(THREE, x + k * w * 0.58, tall / 2 - 1.5, z) }, { geometry: gable(THREE, w * 0.6, 1.3, w * 0.95).rotateY(Math.PI / 2), color: roof, at: moved(THREE, x + k * w * 0.58, tall, z) }); } return h * 1.04 + 1.3; }
   block(w * 1.3, foot, h * 0.6); parts.push({ geometry: gable(THREE, w * 1.42, 1.4, w * 1.42), color: roof, at: moved(THREE, x, h * 0.6, z) }); // row house
   return h * 0.6 + 1.4;
 }
@@ -177,12 +200,12 @@ function addBuilding(THREE, parts, type, x, z, w, h, wall, style, random) {
 export const CITY_TOP = 23;
 
 /**
- * One city, styled for its `biome`: about fourteen buildings of mixed designs, tallest in the middle, about 15 units across, sunk a
+ * One city, styled for its `culture` (see STYLES): about fourteen buildings of mixed designs, tallest in the middle, about 15 units across, sunk a
  * little so it sits on the curve of the planet. `tint` is the local ground colour [r, g, b], mixed into the walls so it belongs to
  * its land.
  */
-export function makeCity(THREE, random, tint = [150, 150, 130], biome = 'temperate') {
-  const ground = new THREE.Color(`rgb(${tint.map(q => Math.round(q)).join(',')})`), parts = [], style = STYLES[styleOf(biome)];
+export function makeCity(THREE, random, tint = [150, 150, 130], culture = 'oldworld') {
+  const ground = new THREE.Color(`rgb(${tint.map(q => Math.round(q)).join(',')})`), parts = [], style = styleOf(culture);
   let top = 0;
   for (let k = 0; k < 14; k++) {
     const a = k * 2.4 + random(), dist = k === 0 ? 0 : 0.28 + 0.72 * Math.sqrt(k / 14), x = Math.cos(a) * dist * 6.6, z = Math.sin(a) * dist * 6.6, core = (1 - dist) ** 1.5;
@@ -204,9 +227,9 @@ function house(THREE, parts, x, z, yaw, wall, roof, s = 1, flat = false) {
   else parts.push({ geometry: gable(THREE, 1.8 * s, 1 * s, 1.5 * s), color: roof, at: moved(THREE, x, 1.5 * s, z, 0, yaw + Math.PI / 2) });
 }
 
-/** A town styled for its `biome`: houses of different sizes round a landmark (church, market hall or mosque-like dome tower). About 8 units across. */
-export function makeTown(THREE, random, biome = 'temperate') {
-  const name = styleOf(biome), style = STYLES[name], parts = [], flat = name === 'desert';
+/** A town styled for its `culture`: houses of different sizes round a landmark (church, market hall or mosque-like dome tower). About 8 units across. */
+export function makeTown(THREE, random, culture = 'oldworld') {
+  const style = styleOf(culture), parts = [], flat = !!style.flat;
   const pickOf = list => list[Math.floor(random() * list.length)];
   const landmark = Math.floor(random() * 3);
   if (landmark === 0) { // tower with a pointed roof
@@ -226,19 +249,19 @@ export function makeTown(THREE, random, biome = 'temperate') {
   return mergeParts(THREE, parts);
 }
 
-/** A village: huts built from what the `biome` offers: thatch, adobe, log cabins with snow, or stilt huts over the marsh. */
-export function makeVillage(THREE, random, biome = 'temperate') {
-  const name = styleOf(biome), parts = [];
+/** A village: huts built from what the land offers, by `culture`: thatch, adobe, log cabins with snow, or stilt huts over the marsh. */
+export function makeVillage(THREE, random, culture = 'oldworld') {
+  const name = styleOf(culture).village, parts = [];
   for (let k = 0; k < 4 + Math.floor(random() * 2); k++) {
     const a = k * 1.4 + random(), x = Math.cos(a) * 1.9, z = Math.sin(a) * 1.9;
-    if (name === 'tropical') {
+    if (name === 'stilt') {
       for (const [dx, dz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) parts.push({ geometry: new THREE.CylinderGeometry(0.07, 0.07, 1.4, 6), color: 0x7a5a3a, at: moved(THREE, x + dx, 0.2, z + dz) });
       parts.push({ geometry: new THREE.BoxGeometry(1.3, 0.8, 1.3), color: 0xd9b37a, at: moved(THREE, x, 1.2, z) });
       parts.push({ geometry: new THREE.ConeGeometry(1.2, 1, 4), color: 0xc9a03f, at: moved(THREE, x, 2.1, z, 0, Math.PI / 4) });
-    } else if (name === 'desert') {
+    } else if (name === 'adobe') {
       parts.push({ geometry: new THREE.BoxGeometry(1.5, 1.4, 1.5), color: 0xdcb782, at: moved(THREE, x, 0.3, z, 0, a) });
       parts.push({ geometry: new THREE.SphereGeometry(0.62, 12, 8), color: 0xf3e3c3, at: stretched(THREE, x, 1, z, 1, 0.7, 1) });
-    } else if (name === 'boreal') {
+    } else if (name === 'cabin') {
       parts.push({ geometry: new THREE.BoxGeometry(1.7, 1.2, 1.3), color: 0x7a4e30, at: moved(THREE, x, 0.3, z, 0, a) });
       parts.push({ geometry: gable(THREE, 2, 1, 1.5), color: 0xf4f6fa, at: moved(THREE, x, 0.9, z, 0, a + Math.PI / 2) });
     } else {
@@ -389,7 +412,7 @@ export function makePeak(THREE, random = Math.random, variant = 0) {
   ]);
 }
 
-export const PLANT_KINDS = Object.freeze(['broadleaf', 'birch', 'autumn', 'blossom', 'pine', 'snowpine', 'palm', 'jungle', 'acacia', 'cactus', 'shrub', 'mangrove', 'reeds', 'deadtree']);
+export const PLANT_KINDS = Object.freeze(['broadleaf', 'birch', 'autumn', 'blossom', 'pine', 'snowpine', 'palm', 'jungle', 'bamboo', 'acacia', 'baobab', 'olive', 'cypress', 'cactus', 'shrub', 'mangrove', 'reeds', 'deadtree']);
 
 /** One plant of `kind`, about 2 units tall, drawn with instances. Few triangles each, as thousands are on the planet. */
 export function makePlant(THREE, kind) {
@@ -415,6 +438,10 @@ export function makePlant(THREE, kind) {
     shrub: () => [crown(0.46, 0, 0.3, 0, 0x6fae4a, 0.72), crown(0.3, 0.3, 0.24, 0.12, 0x8fc25a, 0.8)],
     mangrove: () => [...[-0.3, 0.3].map(x => ({ geometry: new THREE.CylinderGeometry(0.05, 0.08, 0.9, 4), color: 0x5a4632, at: moved(THREE, x, 0.3, 0, 0, 0, x) })), crown(0.62, 0, 0.98, 0, 0x2a8a68, 0.72)],
     reeds: () => [-0.2, 0, 0.2].map((x, k) => ({ geometry: new THREE.ConeGeometry(0.1, 1.1 + k * 0.2, 4), color: k % 2 ? 0x9fbf5a : 0x6fa84a, at: moved(THREE, x, 0.5, x * 0.6) })),
+    bamboo: () => [-0.16, 0.05, 0.2].map((x, k) => ({ geometry: new THREE.CylinderGeometry(0.04, 0.06, 1.7 + k * 0.2, 4), color: k % 2 ? 0x7cc24a : 0x5aa83f, at: moved(THREE, x, 0.8, x * 0.7) })).concat([crown(0.32, 0, 1.75, 0, 0x4cb84a, 0.8)]),
+    baobab: () => [{ geometry: new THREE.CylinderGeometry(0.2, 0.36, 1.2, 7), color: 0x9a7a5c, at: moved(THREE, 0, 0.5, 0) }, crown(0.72, 0, 1.3, 0, 0x7a9a3a, 0.36)],
+    olive: () => [trunk(0.1, 0.7, 0x7a6a58), crown(0.56, 0, 0.92, 0, 0x8ea878, 0.74), crown(0.3, 0.3, 0.8, 0.1, 0xa5b98c, 0.8)],
+    cypress: () => [trunk(0.06, 0.4, 0x6a5a48), { geometry: new THREE.ConeGeometry(0.26, 2, 7), color: 0x2f6a4a, at: moved(THREE, 0, 1.2, 0) }],
     deadtree: () => [trunk(0.1, 1.4, 0x3a3238), { geometry: new THREE.CylinderGeometry(0.03, 0.05, 0.7, 4), color: 0x3a3238, at: moved(THREE, 0.2, 1, 0, 0, 0, -0.8) }],
   };
   return mergeParts(THREE, table[kind]());

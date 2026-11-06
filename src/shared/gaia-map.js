@@ -1,36 +1,66 @@
 /**
- * The map of Gaia: the six regions in the vision (MODERNIZATION_PLAN.md, "Worlds and gravity"), four named maps in each. One source for
- * both the planet (src/render/planet-data.js shapes its land and climate around these regions, and plants a flag on each map) and any
- * later menu or flat map, so the globe and the map always agree.
+ * The map of Gaia: invented continents laid out on real-Earth logic, and the six regions of the vision (MODERNIZATION_PLAN.md, "Worlds and
+ * gravity"), four named maps in each. One source for both the planet (src/render/planet-data.js builds its land, climate and people from
+ * this) and any later menu or flat map, so the globe and the map always agree.
  *
- * `u` is a fraction of a full turn east, `lat` degrees north. `reach` is the region's half width and half height in degrees. Map names are
- * proposals: these are places on the globe, not playable courses yet. Plain data, no dependencies.
+ * Why things sit where they do (docs/GAIA_MAP.md): most land lies north of the equator; long mountain chains run down western coasts and
+ * where landmasses meet; hot deserts sit near 25 degrees on the dry western side of continents; rainforest sits on the equator; wet
+ * forests face the westerlies; volcanoes follow island arcs in the open sea; wetlands lie where great rivers meet the coast.
+ *
+ * `u` is a fraction of a full turn east, `lat` degrees north. Map names are proposals, not playable courses yet. Plain data.
  */
+
+/** Land as overlapping blobs: [centre u, centre latitude, half width in u, half height in degrees]. */
+export const CONTINENTS = Object.freeze([
+  // Norvane, the north-western continent, tapering south to a land bridge
+  [0.14, 60, 0.085, 13], [0.125, 46, 0.075, 14], [0.15, 33, 0.052, 11], [0.185, 19, 0.024, 9], [0.205, 11, 0.012, 6],
+  // Sudara, the southern continent, wide at the equator
+  [0.25, 1, 0.058, 13], [0.26, -14, 0.05, 13], [0.245, -32, 0.026, 13], [0.235, -46, 0.012, 9],
+  // Aurelia, the great eastern landmass
+  [0.56, 47, 0.075, 11], [0.64, 57, 0.15, 13], [0.72, 42, 0.135, 15], [0.85, 58, 0.09, 11], [0.86, 40, 0.035, 12],
+  [0.665, 21, 0.032, 11], [0.77, 20, 0.032, 11], [0.615, 28, 0.03, 8],
+  // Kesh, straddling the equator below Aurelia
+  [0.5, 21, 0.08, 13], [0.535, 3, 0.058, 13], [0.54, -18, 0.04, 13], [0.585, -19, 0.01, 7],
+  // Ostrel, the dry southern island continent
+  [0.865, -25, 0.052, 11],
+  // Ice: the far north island and the southern cap
+  [0.36, 75, 0.05, 9], [0.5, -90, 0.7, 7],
+]);
+
+/** Mountain chains: { line: [[u, lat], ...], width (degrees), height (0..1) }. */
+export const RANGES = Object.freeze([
+  { line: [[0.065, 64], [0.075, 50], [0.1, 36], [0.14, 24]], width: 5, height: 0.78 }, // down the western coast of Norvane
+  { line: [[0.205, 8], [0.203, -8], [0.215, -26], [0.226, -44]], width: 3.6, height: 0.86 }, // down the western coast of Sudara
+  { line: [[0.655, 37], [0.7, 36], [0.74, 37], [0.79, 33]], width: 6, height: 1 }, // where Aurelia's southern block meets the rest
+  { line: [[0.535, 45], [0.585, 44]], width: 3.2, height: 0.72 },
+  { line: [[0.64, 50], [0.645, 66]], width: 2.6, height: 0.42 },
+  { line: [[0.565, 6], [0.57, -16]], width: 3, height: 0.5 }, // the rift of eastern Kesh
+]);
 
 export const GAIA_REGIONS = Object.freeze([
   {
-    id: 'polar', name: 'Frostreach', biome: 'Polar and alpine', u: 0.75, lat: 58, reach: [40, 17], blurb: 'Ice fields and high snowy ranges in the far north.',
-    maps: [['Frostbite Falls', 0.69, 54], ['Glacier Glide', 0.74, 66], ['Aurora Ridge', 0.8, 60], ['Summit Drift', 0.76, 50]],
+    id: 'polar', name: 'Frostreach', biome: 'Polar and alpine', u: 0.72, lat: 38, reach: [26, 9], blurb: 'The roof of the world, high ice and snow above the great range.',
+    maps: [['Frostbite Falls', 0.685, 36.5], ['Glacier Glide', 0.71, 37], ['Aurora Ridge', 0.735, 37.5], ['Summit Drift', 0.76, 35.5]],
   },
   {
-    id: 'temperate', name: 'Evergreen Vale', biome: 'Temperate forest', u: 0.1, lat: 44, reach: [38, 19], blurb: 'Rolling woods, mills and farm country.',
-    maps: [['Maple Hollow', 0.05, 48], ['Mossy Mill', 0.11, 54], ['Fernwood Bend', 0.15, 42], ['Bramble Bridge', 0.09, 36]],
+    id: 'temperate', name: 'Evergreen Vale', biome: 'Temperate forest', u: 0.55, lat: 51, reach: [22, 11], blurb: 'Rainy western woods, mills and farm country.',
+    maps: [['Maple Hollow', 0.525, 52], ['Mossy Mill', 0.55, 56], ['Fernwood Bend', 0.575, 52], ['Bramble Bridge', 0.55, 47.5]],
   },
   {
-    id: 'desert', name: 'Sunspire Sands', biome: 'Desert', u: 0.44, lat: 26, reach: [36, 15], blurb: 'Dunes, mesas and hidden oases.',
-    maps: [['Dune Crossing', 0.39, 28], ['Mirage Mesa', 0.44, 34], ['Oasis Run', 0.49, 25], ['Canyon Echo', 0.44, 19]],
+    id: 'desert', name: 'Sunspire Sands', biome: 'Desert', u: 0.49, lat: 23, reach: [28, 10], blurb: 'Dunes and mesas under the dry high-pressure belt.',
+    maps: [['Dune Crossing', 0.45, 23], ['Mirage Mesa', 0.485, 27], ['Oasis Run', 0.52, 23], ['Canyon Echo', 0.485, 19]],
   },
   {
-    id: 'tropical', name: 'Palm Reef', biome: 'Tropical', u: 0.16, lat: -4, reach: [24, 22], blurb: 'Jungle coasts, lagoons and coral shallows.',
-    maps: [['Coral Cove', 0.13, -14], ['Lagoon Loop', 0.19, -8], ['Jungle Vines', 0.15, 3], ['Mango Falls', 0.18, -20]],
+    id: 'tropical', name: 'Palm Reef', biome: 'Tropical', u: 0.265, lat: 0, reach: [20, 10], blurb: 'Equatorial jungle, lagoons and coral shallows.',
+    maps: [['Coral Cove', 0.295, -3], ['Lagoon Loop', 0.27, 5], ['Jungle Vines', 0.245, 0], ['Mango Falls', 0.27, -6]],
   },
   {
-    id: 'wetland', name: 'Mirewater', biome: 'Wetlands', u: 0.56, lat: 48, reach: [24, 13], blurb: 'Slow rivers, reeds and misty mangroves.',
-    maps: [['Lily Pad Lane', 0.52, 46], ['Mangrove Maze', 0.56, 52], ['Foggy Bayou', 0.59, 45], ['Reed Rapids', 0.55, 41]],
+    id: 'wetland', name: 'Mirewater', biome: 'Wetlands', u: 0.178, lat: 29, reach: [15, 8], blurb: 'Where the great river of Norvane spreads out into the gulf.',
+    maps: [['Lily Pad Lane', 0.158, 29], ['Mangrove Maze', 0.178, 25], ['Foggy Bayou', 0.195, 29], ['Reed Rapids', 0.176, 33]],
   },
   {
-    id: 'volcanic', name: 'Emberfall Isles', biome: 'Volcanic', u: 0.96, lat: 8, reach: [20, 17], blurb: 'Black beaches and fire mountains in the open sea.',
-    maps: [['Cinder Steps', 0.93, 12], ['Magma Run', 0.97, 17], ['Ashen Caldera', 0.99, 5], ['Obsidian Edge', 0.95, -1]],
+    id: 'volcanic', name: 'Emberfall Isles', biome: 'Volcanic', u: 0.94, lat: 14, reach: [18, 18], blurb: 'An island arc of fire mountains in the open eastern sea.',
+    maps: [['Cinder Steps', 0.925, 26], ['Magma Run', 0.945, 17], ['Ashen Caldera', 0.955, 7], ['Obsidian Edge', 0.935, 0]],
   },
 ].map(({ maps, ...region }) => Object.freeze({ ...region, maps: Object.freeze(maps.map(([name, u, lat]) => Object.freeze({ name, u, lat }))) })));
 
@@ -41,4 +71,20 @@ export function regionWeight(r, u, lat) {
   if (d >= 1) return 0;
   const t = Math.min(1, (1 - d) / 0.42);
   return t * t * (3 - 2 * t);
+}
+
+/**
+ * The culture of a place, by where it lies, each loosely inspired by real building traditions (see STYLES in src/render/sky-models.js).
+ * `biome` is its biome name.
+ */
+export function cultureAt(u, lat, biome) {
+  if (biome === 'wetland') return 'canal';
+  if (biome === 'boreal' || biome === 'tundra') return 'northern';
+  if (u < 0.21) return lat > 42 ? 'prairie' : 'metro';
+  if (u < 0.36) return 'carnival';
+  if (u > 0.8 && lat < 0) return 'metro';
+  if (u < 0.6 && lat < 36) return lat > 10 ? 'desert' : 'savanna';
+  if (u < 0.63) return lat < 44 ? 'mediterranean' : 'oldworld';
+  if (u < 0.72) return lat < 34 ? 'palace' : 'silk';
+  return 'eastern';
 }

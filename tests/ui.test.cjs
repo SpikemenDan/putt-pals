@@ -247,8 +247,23 @@ function fakeClock() {
     assert.equal(scene.biomeAt(30, 0.1, 0.5, 1), 'wetland');
     assert.equal(scene.biomeAt(30, 0.1, 0.5, 0, 1), 'volcanic');
     assert.ok(planet.cities.every(c => !['polar', 'alpine', 'desert', 'volcanic', 'wetland', 'tundra'].includes(c.biome)), 'no cities on ice, peaks, lava or in the desert');
+    // Earth's patterns on the real Gaia: rain and deserts fall where they do on Earth, and people settle as they do on Earth.
+    const earth = scene.gaiaPlanet(), at = (u, lat) => scene.BIOMES[earth.biome[Math.min(scene.TEX_H - 1, Math.floor((0.5 - lat / 180) * scene.TEX_H)) * scene.TEX_W + Math.floor(u * scene.TEX_W)]];
+    const northLand = Array.from(earth.land).reduce((q, v, i) => q + (v >= scene.SEA && i < earth.land.length / 2 ? 1 : 0), 0), allLand = Array.from(earth.land).reduce((q, v) => q + (v >= scene.SEA ? 1 : 0), 0);
+    assert.ok(northLand / allLand > 0.58, 'most land lies north of the equator');
+    assert.ok(allLand / earth.land.length > 0.24 && allLand / earth.land.length < 0.38, 'about a third of the planet is land');
+    const count = (b, lo, hi) => { let n = 0; for (let y = 0; y < scene.TEX_H; y++) { const lat = Math.abs(90 - (y + 0.5) / scene.TEX_H * 180); if (lat >= lo && lat < hi) for (let x = 0; x < scene.TEX_W; x++) if (earth.land[y * scene.TEX_W + x] >= scene.SEA && scene.BIOMES[earth.biome[y * scene.TEX_W + x]] === b) n++; } return n; };
+    assert.ok(count('desert', 15, 40) > count('desert', 0, 12) * 4, 'hot deserts sit in the subtropics, not on the equator');
+    assert.ok(count('tropical', 0, 15) > count('tropical', 25, 90) * 4, 'rainforest sits on the equator');
+    assert.ok(count('boreal', 45, 75) > count('boreal', 0, 40) * 4, 'boreal forest sits in the high north');
+    const shoreward = c => { const row = Math.floor((0.5 - c.lat / 180) * scene.TEX_H), col = Math.floor(c.u * scene.TEX_W); for (let r = 0; r < 56; r += 4) for (let k = 0; k < 12; k++) { const y = row + Math.round(Math.sin(k / 6 * Math.PI) * r), x = (col + Math.round(Math.cos(k / 6 * Math.PI) * r) + scene.TEX_W) % scene.TEX_W; if (y >= 0 && y < scene.TEX_H && earth.land[y * scene.TEX_W + x] < scene.SEA) return true; } return false; };
+    assert.ok(earth.cities.filter(shoreward).length / earth.cities.length > 0.6, 'most cities lie near a coast');
+    assert.ok(earth.cities.filter(c => c.lat > 0).length / earth.cities.length > 0.7, 'most cities lie in the north, where most land is');
+    assert.ok([...earth.towns, ...earth.villages].filter(c => ['desert', 'tundra', 'alpine', 'polar'].includes(c.biome)).length < 8, 'hardly anyone lives in desert, tundra, peaks or ice');
+    assert.ok(earth.cities[0].tier > earth.cities[earth.cities.length - 1].tier, 'a few giant cities, many small ones');
+    assert.ok(new Set(earth.cities.map(c => c.culture)).size >= 6, 'cities of many cultures');
     const texel = p => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - p.lat / 180) * scene.TEX_H)), col = Math.floor(p.u * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[planet.biome[row * scene.TEX_W + col]]; };
-    const homes = { palm: ['tropical'], jungle: ['tropical'], cactus: ['desert'], mangrove: ['wetland'], pine: ['boreal', 'temperate'], snowpine: ['boreal'] };
+    const homes = { palm: ['tropical'], jungle: ['tropical'], cactus: ['desert'], mangrove: ['wetland'], pine: ['boreal', 'temperate'], snowpine: ['boreal'], olive: ['mediterranean'], cypress: ['mediterranean'], baobab: ['savanna'] };
     const strays = planet.plants.filter(p => homes[p.kind] && !homes[p.kind].includes(texel(p))).length;
     assert.ok(strays / planet.plants.length < 0.02, 'plants grow in their own biomes');
     assert.ok(new Set(planet.plants.map(p => p.kind)).size >= 9, 'many kinds of plant');
@@ -269,7 +284,9 @@ function fakeClock() {
     assert.ok(Math.abs(cone.max.y - 1) < 0.05 && cone.max.x > 0.9, 'a volcano is a broad cone');
     assert.equal(new Set(models.PLANE_KINDS.map(k => size(models.makePlane(THREE, k)))).size, models.PLANE_KINDS.length, 'each plane is its own design');
     assert.equal(new Set(models.PLANT_KINDS.map(k => { const g = models.makePlant(THREE, k), c = g.attributes.color; return [size(g), c.getX(c.count - 1).toFixed(3), c.getY(c.count - 1).toFixed(3)].join(); })).size, models.PLANT_KINDS.length, 'each plant is its own design');
-    assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'temperate')), 'towns differ by climate');
+    assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'oldworld')), 'towns differ by culture');
+    const skyline = culture => models.makeCity(THREE, scene.mulberry32(6), [120, 140, 100], culture);
+    assert.equal(new Set(['oldworld', 'mediterranean', 'northern', 'metro', 'desert', 'palace', 'eastern', 'canal', 'carnival'].map(k => size(skyline(k)))).size, 9, 'every culture builds its own skyline');
     const city = models.makeCity(THREE, scene.mulberry32(4));
     assert.ok(city.userData.top > 12 && city.userData.top <= models.CITY_TOP + 3 && box(city).max.x - box(city).min.x < 20, 'cities are tall for their width');
     assert.deepEqual([...city.attributes.position.array.slice(0, 30)], [...models.makeCity(THREE, scene.mulberry32(4)).attributes.position.array.slice(0, 30)], 'a city is the same for the same seed');
