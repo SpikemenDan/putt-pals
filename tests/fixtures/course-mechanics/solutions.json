@@ -23,7 +23,7 @@
         "gravity": 700,
         "courseSha256": "e769c26ccaa98cd31020549f8c696bf12d75e2d798f8d4a9270b150533555743",
         "simulationSha256": "693933690d1ccac17ec04879acbd09df1f2765ddbac9120e089f2e7a82a9e171",
-        "configurationSha256": "bdb48e3b6ebef58fad71490557a623702c5aeb61b874d6eec13ad36648ecd114",
+        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "fast"
       }
     },
@@ -47,7 +47,7 @@
         "gravity": 700,
         "courseSha256": "19fa99fd4b612d42601ab4afff3860895ad497ccbffab5f26adf8dc7a3fa0676",
         "simulationSha256": "693933690d1ccac17ec04879acbd09df1f2765ddbac9120e089f2e7a82a9e171",
-        "configurationSha256": "bdb48e3b6ebef58fad71490557a623702c5aeb61b874d6eec13ad36648ecd114",
+        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "fast"
       }
     },
@@ -71,7 +71,7 @@
         "gravity": 700,
         "courseSha256": "45385ecb6ac9c0d697068158990e5b7eda997dc43c5578eea096987fec3bd58d",
         "simulationSha256": "693933690d1ccac17ec04879acbd09df1f2765ddbac9120e089f2e7a82a9e171",
-        "configurationSha256": "bdb48e3b6ebef58fad71490557a623702c5aeb61b874d6eec13ad36648ecd114",
+        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "fast"
       }
     },
@@ -95,7 +95,7 @@
         "gravity": 700,
         "courseSha256": "f7effe37c85469deb19c15d1cbafaa280ca7bc0ed484f49b99c42692f9d01a99",
         "simulationSha256": "693933690d1ccac17ec04879acbd09df1f2765ddbac9120e089f2e7a82a9e171",
-        "configurationSha256": "bdb48e3b6ebef58fad71490557a623702c5aeb61b874d6eec13ad36648ecd114",
+        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "fast"
       }
     },
@@ -119,7 +119,7 @@
         "gravity": 700,
         "courseSha256": "03da8984af6ccdbfed8da596628b685cf61ef762263ac0209ffbd107039817a5",
         "simulationSha256": "693933690d1ccac17ec04879acbd09df1f2765ddbac9120e089f2e7a82a9e171",
-        "configurationSha256": "bdb48e3b6ebef58fad71490557a623702c5aeb61b874d6eec13ad36648ecd114",
+        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "fast"
       }
     }

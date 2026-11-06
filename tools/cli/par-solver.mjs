@@ -157,7 +157,6 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
       for (const power of powers(config, powerStep)) {
         if (!run(state, angle, power).sunk) continue;
         if (robustSink(state, angle, power)) return { angle, power };
-        if (!screen) continue;
         for (const da of [-0.5, 0.5, -0.25, 0.25]) for (const dp of [0, -0.05, 0.05]) {
           const a = angle + da * stepDeg * DEG;
           const p = +(power + dp).toFixed(4);
