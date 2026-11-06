@@ -36,7 +36,7 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {(map: number, putt: number, x: number, y: number) => (number|null)} [options.floorAt] Host course check for Bumper / Orbital Bumper placement (G1e): the floor height to stand on, or null
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt }) {
+async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt, soloHazards = false }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
@@ -82,7 +82,7 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
 
   if (transport.isHost) {
     session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
-    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, floorAt });
+    unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, floorAt, soloHazards });
     stops.push(session.subscribe(s => {
       last = s;
       for (const [id, v] of presence) if (v.roundNumber !== s.roundNumber || v.puttIndex !== s.puttIndex || !s.players[id]?.connected) presence.delete(id);

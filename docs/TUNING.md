@@ -64,21 +64,24 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `deployables.bodyHeight` | 12 | 1 to 200 | Height of the solid Bumper or Orbital Bumper body above the floor it stands on (world units); a ball whose underside is above it passes over. |
 | `deployables.orbitalReach` | 40 | 1 to 500 | Height of the Orbital Bumper pull volume above its floor (world units); a ball above it is not pulled. |
 | `deployables.placementSlopeTolerance` | 2 | 0 to 50 | Largest floor-height difference allowed across a Bumper footprint when it is placed (world units); rejects ramps, ledges and pit edges. |
-| `globalHazards.rainFrictionMultiplier` | 0.5 | 0 to 2 | Rain multiplier on grounded rolling friction. G1f defaults accepted in the owner preview on 2026-11-04. |
-| `globalHazards.rainDragMultiplier` | 0.5 | 0 to 2 | Rain multiplier on grounded constant drag. |
-| `globalHazards.snowFrictionMultiplier` | 1.6 | 0 to 5 | Snow multiplier on grounded rolling friction. |
-| `globalHazards.snowDragMultiplier` | 1.8 | 0 to 5 | Snow multiplier on grounded constant drag. |
-| `globalHazards.windAcceleration` | 90 | 0 to 5000 | Wind acceleration along the selected direction (world units/s²). |
-| `globalHazards.lightningImpulse` | 600 | 0 to 10000 | Horizontal speed impulse of a targeted Lightning strike (world units/s). |
-| `globalHazards.vortexRange` | 65 | 0 to 1000 | Horizontal force reach for Tornado and Hurricane (world units). |
-| `globalHazards.vortexAcceleration` | 220 | 0 to 10000 | Horizontal Tornado fling or Hurricane pull at the vortex centre (world units/s²). |
-| `globalHazards.tornadoLift` | 1400 | 0 to 10000 | Upward acceleration at a Tornado centre (world units/s²). |
-| `globalHazards.roamRadius` | 120 | 0 to 10000 | Maximum roaming distance from the course-bounds centre (world units). |
-| `globalHazards.roamPeriod` | 24 | 0.1 to 600 | Time for one deterministic vortex roaming cycle (seconds). |
-| `globalHazards.durationSeconds` | 20 | 1 to 600 | Lifetime of each timed global hazard activation (seconds). |
-| `globalHazards.lightningWindowSeconds` | 0.5 | 0.1 to 5 | One-shot delivery window for a targeted Lightning strike; late reconnects do not replay expired strikes. |
 | `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
 | `powerups.tallBallScale` | 1.5 | 1 to 1.6 | Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup). |
+| `globalHazards.rainFrictionMultiplier` | 0.4 | 0 to 2 | Rain multiplier on grounded rolling friction while Rain is active. |
+| `globalHazards.rainDragMultiplier` | 0.4 | 0 to 2 | Rain multiplier on grounded constant drag while Rain is active. |
+| `globalHazards.snowFrictionMultiplier` | 0.08 | 0 to 5 | Snow multiplier on grounded rolling friction while Snow is active. |
+| `globalHazards.snowDragMultiplier` | 0 | 0 to 5 | Snow multiplier on grounded constant drag while Snow is active. |
+| `globalHazards.windAcceleration` | 110 | 0 to 5000 | Wind acceleration along the chosen direction at the peak of the gust (world units/s^2). |
+| `globalHazards.windDurationSeconds` | 24 | 1 to 600 | Lifetime of a Wind gust (seconds); the push rises and falls over it. |
+| `globalHazards.windWakeAccel` | 20 | 0 to 1000 | Wind push below which a gust cannot start a resting ball or keep a slow one from stopping (world units/s^2). |
+| `globalHazards.lightningImpulse` | 600 | 0 to 10000 | Horizontal speed impulse delivered by a targeted Lightning strike (world units/s). |
+| `globalHazards.vortexRange` | 65 | 0 to 1000 | Horizontal reach of Tornado and Hurricane force (world units). |
+| `globalHazards.vortexAcceleration` | 220 | 0 to 10000 | Tornado fling or Hurricane pull acceleration at the vortex centre (world units/s^2). |
+| `globalHazards.tornadoLift` | 1400 | 0 to 10000 | Upward acceleration at a Tornado centre (world units/s^2). |
+| `globalHazards.roamRadius` | 60 | 0 to 10000 | How far a placed Tornado or Hurricane wanders from the spot it was placed at (world units). |
+| `globalHazards.roamInset` | 0.06 | 0 to 0.45 | Fraction of the course width and depth kept clear at the edges; a placed vortex never leaves this box. |
+| `globalHazards.roamPeriod` | 24 | 0.1 to 600 | Time for one deterministic vortex roaming cycle (seconds). |
+| `globalHazards.durationSeconds` | 20 | 1 to 600 | Lifetime of a timed global hazard activation (seconds). |
+| `globalHazards.lightningWindowSeconds` | 0.5 | 0.1 to 5 | Time window after activation during which a target can receive its one-shot Lightning strike. |
 | `hazards.padRadius` | 18 | 0 to 100 | Jump pad trigger radius. |
 | `hazards.padLaunch` | 400 | 0 to 5000 | Jump pad launch speed (vertical). |
 | `hazards.padCooldown` | 0.6 | 0 to 10 | Seconds before a pad can fire again. |

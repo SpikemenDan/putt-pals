@@ -306,10 +306,10 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert(!files.includes(unrelated), `${unrelated} must not invalidate recorded difficulty`);
     }
   });
-  run('all 36 starters retain nominal hole-in-ones; 34 meet the recorded robustness margin (S3/U2 tuning)', () => {
+  run('all 36 starters retain nominal hole-in-ones; 33 meet the recorded robustness margin', () => {
     const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/cup-capture/solutions.json'), 'utf8'));
     assert.equal(baseline.results.length, 36);
-    assert.equal(baseline.results.filter(r => r.best).length, 34, 'two course-tuning gaps remain after S3/U2 tuning (19/0, 19/2)');
+    assert.equal(baseline.results.filter(r => r.best).length, 33, 'three course-tuning gaps remain (19/0, 19/2 and 5/5, which lost its robust route to later physics changes)');
     assert.equal(baseline.simulationSha256, provenanceTools.hashSimulationSources(), 'S2 measurements must match simulation source');
     for (const ref of baseline.results) {
       const shot = ref.best || ref.nominal;

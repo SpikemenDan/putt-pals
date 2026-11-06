@@ -136,7 +136,7 @@ async function run() {
   assert.equal(shared.validateVote({ map: 'str' }), false);
 
   const envelope = shared.createMessageEnvelope('vote', { map: 8 }, 'player1');
-  assert.equal(envelope.version, 4, 'protocol version 4 adds synchronized global hazard records');
+  assert.equal(envelope.version, 5, 'protocol version 5 places Tornado and Hurricane; 4 added synchronized global hazard records');
   assert.equal(envelope.type, 'vote');
   assert.equal(envelope.senderId, 'player1');
   assert.equal(envelope.payload.map, 8);
