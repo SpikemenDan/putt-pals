@@ -14,6 +14,13 @@ const DISPLAY_FONTS = {
   'Paytone One': () => import('@fontsource/paytone-one/latin-400.css'),
   'Lilita One': () => import('@fontsource/lilita-one/latin-400.css'),
   Orbitron: () => import('@fontsource/orbitron/latin-800.css'),
+  'Pixelify Sans': () => import('@fontsource/pixelify-sans/latin-400.css'),
+  'Jersey 10': () => import('@fontsource/jersey-10/latin-400.css'),
+  Silkscreen: () => import('@fontsource/silkscreen/latin-400.css'),
+  'Press Start 2P': () => import('@fontsource/press-start-2p/latin-400.css'),
+  'Bungee Shade': () => import('@fontsource/bungee-shade/latin-400.css'),
+  'Bungee Inline': () => import('@fontsource/bungee-inline/latin-400.css'),
+  'Londrina Shadow': () => import('@fontsource/londrina-shadow/latin-400.css'),
   'Three-D (AidenFont, CC BY)': async () => { await import('../ui/fonts/three-d/three-d.css'); await document.fonts.load("48px 'Three-D'"); },
 };
 const BODY_FONTS = {
