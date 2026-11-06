@@ -32,6 +32,9 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
   openRef.current = open;
   const pinsOf = useMemo(() => Object.fromEntries(GAIA_REGIONS.map(r => [r.id, (REGION_COURSES[r.id] ?? []).map((index, k) => ({ index, site: r.maps[k], card: cards.find(c => c.index === index) })).filter(p => p.card)])), [cards]);
 
+  const pinsRef = useRef(pinsOf);
+  pinsRef.current = pinsOf; // votes change the cards every second: the scene must not be rebuilt for that
+
   useEffect(() => {
     const canvas = canvasRef.current, win = canvas.ownerDocument.defaultView;
     const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -44,7 +47,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
       const id = openRef.current;
       if (!id) return;
       const spots = spotsRef.current[id] ?? [];
-      (pinsOf[id] ?? []).forEach((pin, k) => {
+      (pinsRef.current[id] ?? []).forEach((pin, k) => {
         const el = courseRefs.current[pin.index], spot = spots[k], line = lineRefs.current[pin.index];
         if (!el || !spot) return;
         el.style.transform = `translate(${spot.x}px,${spot.y}px) translate(-50%,-14px)`;
@@ -66,7 +69,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     };
     build();
     return () => { clearTimeout(retry); sceneRef.current = null; scene?.dispose(); };
-  }, [createAtlasScene, onUnavailable, pinsOf]);
+  }, [createAtlasScene, onUnavailable]);
 
   const light = id => { setHover(id); sceneRef.current?.highlight(id); };
   const openRegion = async id => {

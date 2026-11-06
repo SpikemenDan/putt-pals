@@ -176,8 +176,9 @@ function fakeClock() {
     assert.equal(foot.at(0.4, -30), null, 'open sea belongs to no region');
     const spots = ui.spreadPins([{ x: 400, y: 300 }, { x: 410, y: 305 }, { x: 405, y: 310 }, { x: 395, y: 300 }], 1280, 720);
     spots.forEach((a, i) => spots.slice(i + 1).forEach(b => assert.ok(Math.abs(a.x - b.x) >= 170 || Math.abs(a.y - b.y) >= 60, 'pins and labels never overlap')));
-    const calls = [], scene = { onFrame() {}, start() {}, step() {}, dispose() {}, highlight(id) { calls.push('light:' + id); }, project: () => ({ x: 300, y: 200 }), hit: () => 'desert', size: { width: 1280, height: 720 }, openRegion: async id => { calls.push('open:' + id); }, openWorld: async () => { calls.push('world'); } };
-    const t = await setup({ createAtlasScene: () => scene });
+    let builds = 0;
+    const calls = [], scene = { onFrame() {}, start() {}, step() {}, dispose() { calls.push('disposed'); }, highlight(id) { calls.push('light:' + id); }, project: () => ({ x: 300, y: 200 }), hit: () => 'desert', size: { width: 1280, height: 720 }, openRegion: async id => { calls.push('open:' + id); }, openWorld: async () => { calls.push('world'); } };
+    const t = await setup({ createAtlasScene: () => { builds++; return scene; } });
     await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
     await t.send({ type: 'SET_MODE', playerId: 'host', mode: 'tournament_3' });
     await t.send({ type: 'START_VOTING', playerId: 'host' });
@@ -190,12 +191,15 @@ function fakeClock() {
     await act(async () => { region('desert').click(); });
     await pause();
     assert.ok(calls.includes('open:desert'));
+    const built = builds, gone = calls.filter(c => c === 'disposed').length;
     const pin = t.within('[data-map="8"]');
     assert.ok(pin && pin.textContent.includes('Dune Serpent'), 'the real course, by its real id');
     await act(async () => { pin.click(); });
     assert.equal(t.within('[data-map="8"]').dataset.v, '1', 'the pin casts the real vote');
     assert.equal(t.within('[data-map="8"]').getAttribute('aria-pressed'), 'true');
     assert.match(t.within('[data-ui=map-select] p').textContent, /Voting ends in/, 'the countdown starts as with the list');
+    assert.equal(builds, built, 'a vote never rebuilds the world');
+    assert.ok(calls.filter(c => c === 'disposed').length === gone && !calls.includes('world'), 'and the camera stays in the region');
     await act(async () => { t.within('[data-ui=back-to-world]').click(); });
     await pause();
     assert.ok(calls.includes('world'));
