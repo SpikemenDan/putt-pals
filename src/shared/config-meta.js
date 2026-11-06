@@ -22,6 +22,7 @@ export const TUNING_UNITS = Object.freeze([
   [/^globalHazards\.(?:roamPeriod|durationSeconds|lightningWindowSeconds)$/, 'seconds'],
   [/^water\.(?:shallowDragMultiplier|shallowFrictionMultiplier)$/, 'multiplier'],
   [/^water\.splashHeight$/, 'world units'],
+  [/^wind\.(?:groundMultiplier|airMultiplier)$/, 'factor'],
   [/^gravity$/, 'units/s²'],
   [/^shotPower$/, 'units/s (launch speed at full charge)'],
   [/^(?:ball\.radius|wallHeight|cup\.(?:defaultRadius|minRadius|depth|sinkMargin|filletWidth|filletDepth)|bounce\.ledgeHeight|rest\.(?:airTolerance|groundTolerance)|powerups\.(?:magnetRange|auraRange)|hazards\.(?:padRadius|teleporterRadius)|aim\.arrowMaxLength)$/, 'world units'],

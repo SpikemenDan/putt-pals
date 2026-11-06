@@ -26,7 +26,7 @@
     "test:app": "node tests/app.test.cjs",
     "test:network": "node tests/network.test.cjs",
     "test:session": "node tests/session.test.cjs",
-    "test:courses": "node tests/courses.test.cjs && node tests/volumetric-courses.test.cjs && node tests/islands-courses.test.cjs && node tests/ramps-drops.test.cjs && node tests/transport-tubes.test.cjs && node tests/difficulty-bands.test.cjs && node tests/water.test.cjs",
+    "test:courses": "node tests/courses.test.cjs && node tests/volumetric-courses.test.cjs && node tests/islands-courses.test.cjs && node tests/ramps-drops.test.cjs && node tests/transport-tubes.test.cjs && node tests/difficulty-bands.test.cjs && node tests/water.test.cjs && node tests/wind.test.cjs",
     "test:physics": "node tests/physics.test.cjs",
     "solve": "node tools/cli/main.mjs solve",
     "rank": "node tools/cli/main.mjs rank",
