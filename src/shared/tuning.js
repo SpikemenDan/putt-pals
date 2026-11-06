@@ -109,6 +109,10 @@ export const TUNING_FIELDS = Object.freeze([
   ['hazards.teleporterRadius', 0, 100, 'Teleporter trigger radius.'],
   ['hazards.teleporterCooldown', 0, 10, 'Seconds before a teleporter can fire again.'],
 
+  ['water.shallowDragMultiplier', 0.1, 10, 'Constant drag multiplier applied when the ball rolls through shallow water.'],
+  ['water.shallowFrictionMultiplier', 0.1, 10, 'Rolling friction multiplier applied when the ball rolls through shallow water.'],
+  ['water.splashHeight', 0, 50, 'Vertical distance above water surface where deep water catches and resets the ball.'],
+
   ['aim.swayPeriod', 0.1, 60, 'Seconds per aim sway cycle.'],
   ['aim.spinPeriod', 0.5, 60, '360° Aim: seconds for the aim indicator to turn one full circle.'],
   ['aim.sweepPeriod', 0.5, 60, '180° Aim: seconds for the aim indicator to sweep across 180° and back.'],
@@ -148,6 +152,7 @@ export const DEFAULT_TUNING = {
   globalHazards: { rainFrictionMultiplier: 0.5, rainDragMultiplier: 0.5, snowFrictionMultiplier: 1.6, snowDragMultiplier: 1.8, windAcceleration: 90, lightningImpulse: 600, vortexRange: 65, vortexAcceleration: 220, tornadoLift: 1400, roamRadius: 120, roamPeriod: 24, durationSeconds: 20, lightningWindowSeconds: 0.5 },
   courseMechanics: { bodyHeight: 40, wedgeRestitution: 0.9, bouncerRestitution: 1.05, bouncerKick: 180, fanAcceleration: 600, fanHeight: 100, vortexAcceleration: 400, vortexPull: 0.5, vortexLift: 1400, vortexHeight: 130, portalRadius: 18, portalHeight: 25, portalCooldown: 0.6, portalClearance: 2 },
   hazards: { padRadius: 18, padLaunch: 400, padCooldown: 0.6, teleporterRadius: 16, teleporterCooldown: 0.8 },
+  water: { shallowDragMultiplier: 2.5, shallowFrictionMultiplier: 2.0, splashHeight: 14 },
   aim: {
     swayPeriod: 1.4, spinPeriod: 3, sweepPeriod: 2.4, spreadBase: 0.002, spreadGain: 0.14, spreadExponent: 2.6,
     fullPullPx: 380, canvasPullFraction: 0.18, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
