@@ -16,7 +16,7 @@ const courseDefinitions = createCourseData().definitions;
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
   'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
-  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last', 'pong',
+  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last',
 ];
 const commandRate = { burst: SERVER_ROOM_LIMITS.commandBurst, perSecond: SERVER_ROOM_LIMITS.commandsPerSecond };
 const presenceRate = { burst: SERVER_ROOM_LIMITS.presenceBurst, perSecond: SERVER_ROOM_LIMITS.presencePerSecond };
@@ -482,6 +482,7 @@ export class RoomDurableObject {
     this.syncDeployables(room, state);
     this.syncGlobalHazards(room, state);
     const context = Object.fromEntries(CONTEXT_FIELDS.map(field => [field, state[field]]));
+    if (state.pong) context.pong = state.pong;
     const snapshot = {
       roomCode: room.roomCode, sessionId: room.sessionId, rulesVersion: ROOM_RULES_VERSION,
       courseHash: room.courseHash, revision: room.revision, serverTime: this.now(room),

@@ -69,7 +69,13 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   };
   const resetPlayers = (c, clearScores) => Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, { ...p, strokes: 0, done: false, timedOut: false, score: null, scores: clearScores ? [] : p.scores }]));
   const round = (c, mapIndex, puttIndex, newMap) => {
-    let pong = null;
+    const nextRound = {
+      mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
+      roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
+      roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
+      roster: newMap ? newMapRoster(c) : c.roster,
+      players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
+    };
     if (c.mode === GameModes.PONG) {
       const roster = newMap ? newMapRoster(c) : c.roster;
       const homeId = roster[0] || controller(c);
@@ -77,16 +83,9 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       const homePlayer = { id: homeId, name: c.players[homeId]?.name || 'Home', color: c.players[homeId]?.color };
       const awayPlayer = { id: awayId, name: c.players[awayId]?.name || 'Away', color: c.players[awayId]?.color };
       const pongSession = createPongSession({ homePlayer, awayPlayer, rackSize: 10 });
-      pong = pongSession.getSnapshot();
+      nextRound.pong = pongSession.getSnapshot();
     }
-    return {
-      mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
-      roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
-      roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
-      roster: newMap ? newMapRoster(c) : c.roster,
-      players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
-      pong,
-    };
+    return nextRound;
   };
   const recordPutt = c => replay(c) ? {} : { players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, {
     ...p, scores: c.roster.includes(id) ? [...p.scores, (p.connected || (serverOwned && isReserved(id))) ? { score: p.score ?? timeoutScore(c, p), timedOut: p.timedOut || !p.done, par: rule(c).par, penalty: rule(c).penalty } : null] : p.scores,
