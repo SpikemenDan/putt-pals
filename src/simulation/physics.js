@@ -24,7 +24,7 @@ export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;
 export const CUP_DEPTH = TUNING.cup.depth;
 
-const { surface: SURF, bounce: BOUNCE, rest: REST, hazards: HAZ, powerups: POW, cup: CUPT } = TUNING;
+const { surface: SURF, bounce: BOUNCE, rest: REST, hazards: HAZ, powerups: POW, cup: CUPT, water: WAT } = TUNING;
 
 /**
  * Checks if 2D point (x, y) is inside rectangle r: [x, y, w, h].
@@ -223,11 +223,19 @@ export function samplePath(path, dist, totalLen) {
 }
 
 export function surfaceHeight(course, x, y, ballZ = undefined) {
-  if (!course.structures?.length && !course.curvedRamps?.length && !course.drops?.length) {
+  if (!course.structures?.length && !course.curvedRamps?.length && !course.drops?.length && !course.water?.length) {
     if (course.tiles && !course.tiles.some(r => inside(r, x, y))) return -999;
     if (course.pit) {
       for (const p of course.pit) {
         if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) return -999;
+      }
+    }
+    if (course.water) {
+      for (const wb of course.water) {
+        if (inside(wb.bounds, x, y)) {
+          if (!wb.shallow && (wb.z == null || wb.z === 0)) return -999;
+          if (wb.shallow) return wb.z ?? 0;
+        }
       }
     }
     let m = 0;
@@ -247,22 +255,29 @@ export function surfaceHeight(course, x, y, ballZ = undefined) {
   }
   const onTiles = !course.tiles || course.tiles.some(r => inside(r, x, y));
   const inPit = course.pit && course.pit.some(p => x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]);
+  const inDeepWaterAtZ0 = course.water && course.water.some(wb => !wb.shallow && inside(wb.bounds, x, y) && (wb.z == null || wb.z <= 0));
   const floors = [];
-  if (onTiles && !inPit) {
-    let m = 0;
-    if (course.pl) {
-      for (const p of course.pl) {
-        if (x >= p[0] && x <= p[0] + p[2] && y >= p[1] && y <= p[1] + p[3]) m = Math.max(m, p[4]);
+  if (onTiles && !inPit && !inDeepWaterAtZ0) {
+    floors.push(0);
+  }
+  if (course.pl) {
+    for (const p of course.pl) {
+      if (inside(p, x, y)) floors.push(p[4]);
+    }
+  }
+  if (course.rp) {
+    for (const r of course.rp) {
+      if (inside(r, x, y)) {
+        floors.push(rampHeight(r, x, y));
       }
     }
-    if (course.rp) {
-      for (const r of course.rp) {
-        if (x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]) {
-          m = Math.max(m, rampHeight(r, x, y));
-        }
+  }
+  if (course.water) {
+    for (const wb of course.water) {
+      if (wb.shallow && inside(wb.bounds, x, y)) {
+        floors.push(wb.z ?? 0);
       }
     }
-    floors.push(m);
   }
   if (course.structures) {
     for (const s of course.structures) {
@@ -732,6 +747,18 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
       k = SURF.slime.friction;
       cd = SURF.slime.drag;
     }
+    if (course.water) {
+      for (const wb of course.water) {
+        if (wb.shallow && inside(wb.bounds, player.x, player.y)) {
+          const wz = wb.z ?? 0;
+          if (Math.abs(player.z - wz) <= REST.groundTolerance + 1) {
+            k *= WAT.shallowFrictionMultiplier;
+            cd *= WAT.shallowDragMultiplier;
+            break;
+          }
+        }
+      }
+    }
 
     // Velocity-dependent friction
     const v = Math.hypot(player.vx, player.vy);
@@ -813,6 +840,20 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
           }
           player.vz += GRAVITY * 1.6 * dt;
           player.padCooldown = 0.05;
+        }
+      }
+    }
+  }
+
+  // Water currents
+  if (course.water) {
+    for (const wb of course.water) {
+      if (wb.current && inside(wb.bounds, player.x, player.y)) {
+        const wz = wb.z ?? 0;
+        if (Math.abs(player.z - wz) <= 12) {
+          player.vx += wb.current[0] * dt;
+          player.vy += wb.current[1] * dt;
+          break;
         }
       }
     }
@@ -965,6 +1006,26 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   ) {
     outOfBounds(player, course, events);
     return events;
+  }
+
+  // Deep water bodies splash & penalty reset (W2)
+  if (course.water) {
+    for (const wb of course.water) {
+      if (!wb.shallow && inside(wb.bounds, player.x, player.y)) {
+        const wz = wb.z ?? 0;
+        const sz = surfaceHeight(course, player.x, player.y, player.z);
+        if (sz <= wz && player.z < wz + WAT.splashHeight && player.z >= wz - 20) {
+          events.push({
+            type: SimulationEventTypes.HAZARD,
+            hazardType: 'water',
+            id: wb.id,
+            position: [player.x, player.y, player.z],
+          });
+          outOfBounds(player, course, events);
+          return events;
+        }
+      }
+    }
   }
 
   // Out of bounds / NaN check

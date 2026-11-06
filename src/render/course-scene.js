@@ -259,6 +259,42 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     water.position.set(...at(p[0] + p[2] / 2, p[1] + p[3] / 2, 1.2));
     g.add(ink(water, { planar: true, centred: true }));
   }
+  if (hl.water) {
+    for (const wb of hl.water) {
+      const [x, y, w, h] = wb.bounds;
+      const z = (wb.z ?? 0) + 1.2;
+      const geom = new THREE.PlaneGeometry(w, h);
+      const isShallow = !!wb.shallow;
+      const mat = isShallow
+        ? (toon ? library.toon(0x52b6ff, { transparent: true, opacity: 0.8, roughness: 0.2 }) : new THREE.MeshStandardMaterial({ color: 0x52b6ff, transparent: true, opacity: 0.8, roughness: 0.2 }))
+        : library.water;
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(...at(x + w / 2, y + h / 2, z));
+      mesh.userData.water = true;
+      mesh.userData.shallow = isShallow;
+      g.add(ink(mesh, { planar: true, centred: true }));
+
+      const shoreline = new THREE.Mesh(
+        new THREE.BoxGeometry(w + 2, 2, h + 2),
+        toon ? library.toon(0xd8ecf8, { roughness: 0.5 }) : new THREE.MeshStandardMaterial({ color: 0xd8ecf8, roughness: 0.5 })
+      );
+      shoreline.position.set(...at(x + w / 2, y + h / 2, z - 0.5));
+      g.add(shoreline);
+
+      if (wb.current && (wb.current[0] !== 0 || wb.current[1] !== 0)) {
+        const flowAngle = Math.atan2(wb.current[1], wb.current[0]);
+        const arrow = new THREE.Mesh(
+          new THREE.ConeGeometry(3, 8, 8),
+          toon ? library.toon(0xffffff, { opacity: 0.7, transparent: true }) : new THREE.MeshStandardMaterial({ color: 0xffffff, opacity: 0.7, transparent: true })
+        );
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.rotation.z = -flowAngle;
+        arrow.position.set(...at(x + w / 2, y + h / 2, z + 0.3));
+        g.add(arrow);
+      }
+    }
+  }
   for (const p of hl.pd) {
     const pad = new THREE.Mesh(new THREE.CircleGeometry(18, 32), library.pad);
     pad.rotation.x = -Math.PI / 2; pad.position.set(...at(p[0], p[1], 1.6)); g.add(pad);
