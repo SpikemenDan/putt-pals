@@ -12,3 +12,5 @@ export * from './islands.js';
 export * from './island-chambers.js';
 export * from './ramps-drops.js';
 export * from './ramp-drop-chambers.js';
+export * from './tubes.js';
+export * from './tube-chambers.js';

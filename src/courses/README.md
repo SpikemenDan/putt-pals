@@ -109,6 +109,21 @@ Multi-tier drop records (`validTierDrop`) declare vertical transitions between d
 
 Simulation evaluates curved ramp heights and surface gradients analytically, allowing balls to naturally accelerate and bank along the curve under gravity. When falling from upper tiers onto lower landing floors, airborne balls land with restitution dampening downward speed and emitting domain bounce events. The Three.js renderer generates sector mesh geometry and cel ink outlines for curved ramps and landing tiers. The par solver (SV1) proves robust multi-stroke routes within par (2 to 6). Existing 2D courses omit curved ramps and drops and remain 100% bit-identical.
 
+## K1c transport tubes
+
+Course geometry and per-putt definitions may include an optional `tubes` array.
+Validated transport tube records (`validCourseTube`) define 3D enclosed paths connecting disparate surfaces or islands:
+- `id`: unique string identifier
+- `entry`: `[x, y, z]` tube entrance coordinate
+- `exit`: `[x, y, z]` tube exit coordinate
+- `path`: array of at least 2 3D waypoints `[[x, y, z], ...]` interpolating the tube trajectory
+- `speed`: travel speed (units per second) inside the tube
+- `exitVelocity`: `[vx, vy, vz]` velocity vector imparted to the ball upon exiting
+- `radius`: optional tube radius (default: 14)
+- `color`: optional hex color value for the tube mesh
+
+Simulation checks ball proximity to tube entrances during active play ticks. When captured, the ball traverses along the 3D path at constant speed without friction or gravity, emitting hazard enter events. Upon reaching the end of the tube path, the ball exits at the designated exit coordinate with the assigned 3D `exitVelocity`, flinging through the air into its next trajectory arc, with re-entry cooldown to prevent immediate recapture. The Three.js renderer builds 3D `THREE.TubeGeometry` using Catmull-Rom spline curves with toon materials and entry/exit collar indicators. The par solver (SV1) proves robust routes within par using transport tubes. Existing courses omit tubes and remain 100% bit-identical.
+
 
 `node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
 with development chambers appended. Use `--courses` with the existing CLI
