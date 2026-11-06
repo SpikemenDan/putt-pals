@@ -266,8 +266,7 @@ export function makePort(THREE, variant = 0) {
   return mergeParts(THREE, parts);
 }
 
-/** A tall striped lighthouse on a rock, its lamp at LIGHTHOUSE_LAMP. */
-export const LIGHTHOUSE_LAMP = 11;
+/** A tall striped lighthouse on a rock. */
 export function makeLighthouse(THREE) {
   const parts = [
     { geometry: new THREE.DodecahedronGeometry(2.2, 0), color: 0x8a8378, at: stretched(THREE, 0, -0.4, 0, 1.2, 0.7, 1.2) },

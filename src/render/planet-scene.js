@@ -14,7 +14,7 @@ import { createMaterialLibrary } from './materials.js';
 import { createInkMaterial, sizeInk, smoothHullGeometry } from './outline.js';
 import { ATMOSPHERE_FRAGMENT, ATMOSPHERE_VERTEX, CLOUD_FRAGMENT, CLOUD_SHELL_FRAGMENT, CLOUD_VERTEX, CONTRAIL_FRAGMENT, GALAXY_FRAGMENT, GALAXY_VERTEX, PLANET_FRAGMENT, SPHERE_VERTEX, STAR_FRAGMENT, STAR_VERTEX, STREAK_FRAGMENT, STREAK_VERTEX, TRAIL_VERTEX, WAKE_FRAGMENT } from './planet-shaders.js';
 import { MAX_BOATS, MAX_PLANES, MAX_SATELLITES, TEX_W, TEX_H, gaiaPlanet, laneRoutes, shipRoutes, surfaceDir } from './planet-data.js';
-import { LIGHTHOUSE_LAMP, PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
+import { PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
 import { buildAresTexture, buildLunaTexture, WORLD_TEX_H, WORLD_TEX_W } from './worlds.js';
 
 export const PLANET_RADIUS = 100;
@@ -142,16 +142,9 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     place.mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(out, up, new THREE.Vector3().crossVectors(out, up)));
     return place;
   });
-  // Lighthouses: one or two tall lights on bare headlands, with a sweeping beam.
-  const lighthouseShape = own(makeLighthouse(THREE)), beamShape = own(new THREE.ConeGeometry(2.4, 26, 14, 1, true).rotateZ(Math.PI / 2).translate(13, 0, 0));
-  const beamMaterial = own(new THREE.MeshBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-  const lighthouses = planet.lighthouses.map(site => {
-    const place = settle(site, lighthouseShape, SIZES.lighthouse), beam = new THREE.Group();
-    beam.position.y = LIGHTHOUSE_LAMP + 0.3;
-    for (const turn of [0, Math.PI]) { const ray = new THREE.Mesh(beamShape, beamMaterial); ray.rotation.y = turn; beam.add(ray); }
-    place.mesh.add(beam);
-    return { ...place, beam };
-  });
+  // Lighthouses: one or two tall towers on bare headlands.
+  const lighthouseShape = own(makeLighthouse(THREE));
+  const lighthouses = planet.lighthouses.map(site => settle(site, lighthouseShape, SIZES.lighthouse));
   // Volcanoes on their basalt fields, each with a small plume.
   const volcanoes = planet.volcanoes.map((site, k) => settle(site, own(makeVolcano(THREE, random)), pick(SIZES.volcano, k)));
   // A small flag on every map of the world map (src/shared/gaia-map.js).
@@ -271,10 +264,11 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   // ---- Clouds circle the globe in layers of their own, above the mountains and clear of the air lanes: many small soft bodies, all
   // see-through to some degree, with no outline, spaced so none run through each other. Each draws after a depth pass, so only its nearest
   // surface shows: a rounded volume rather than a jumble of lobes. They are drawn far to near each frame, and melt away near the horizon.
-  const cloudMaterial = (opacity, tint = [1, 1, 1]) => own(new THREE.ShaderMaterial({ vertexShader: CLOUD_VERTEX, fragmentShader: CLOUD_FRAGMENT, transparent: true, depthWrite: false, uniforms: { sun: shared.sun, haze: { value: 0.06 }, opacity: { value: opacity }, tint: { value: new THREE.Vector3(...tint) } } }));
+  const cloudMaterial = (opacity, tint = [1, 1, 1]) => own(new THREE.ShaderMaterial({ vertexShader: CLOUD_VERTEX, fragmentShader: CLOUD_FRAGMENT, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1, uniforms: { sun: shared.sun, haze: { value: 0.06 }, opacity: { value: opacity }, tint: { value: new THREE.Vector3(...tint) } } }));
   const cloudShapes = Array.from({ length: 5 }, (_, k) => own(makeCumulus(THREE, random, { puffs: 9 + k, detail: 2, stretch: 1.6 + k * 0.3 })));
   const cloudSkins = [0.42, 0.6, 0.76, 0.88].map(o => cloudMaterial(o));
-  const depthOnly = own(new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true }));
+  // The depth pass runs the same vertex shader as the colour pass: two different shaders round depth differently and the passes flicker.
+  const depthOnly = own(new THREE.ShaderMaterial({ vertexShader: CLOUD_VERTEX, fragmentShader: 'void main(){gl_FragColor=vec4(0.);}', colorWrite: false, transparent: true }));
   const spots = [], deckClouds = [];
   for (let k = 0; k < CLOUDS; k++) {
     let dir = null;
@@ -371,7 +365,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   baseOn(ares, [-0.3, 0.3, 0.9], 0.012, 0xa8ffcc); // far tinier still
 
   // ---- Per-frame state
-  let frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, sizeKey = '', framing = { y: 0, z: 0 };
+  let lastCloudSort = -1, slowFrames = 0, quality = 1, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, sizeKey = '', framing = { y: 0, z: 0 };
   const stats = { limb: 0, deckClouds: 0, tallestCity: 0, ink: 0, lunaPixels: 0 };
   const scratch = new THREE.Vector3(), scratch2 = new THREE.Vector3();
 
@@ -381,7 +375,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     const key = `${w}x${h}:${s.horizonHeight}:${s.lunaSize}`;
     if (key === sizeKey) return;
     sizeKey = key;
-    const ratio = Math.min(win?.devicePixelRatio || 1, 1.5);
+    const ratio = Math.min(win?.devicePixelRatio || 1, 1.5) * quality;
     renderer?.setPixelRatio?.(ratio);
     renderer?.setSize?.(w, h, false);
     sizeInk(library.inkUniforms, w * ratio, h * ratio);
@@ -423,11 +417,14 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     stats.deckClouds = count(s.cloudCover * 1.6 * deckClouds.length, deckClouds.length);
     show(deckClouds, focus ? 0 : stats.deckClouds);
     placeSmoke();
-    deck.updateMatrixWorld(true); // far to near, so a near cloud never blanks one behind it
-    deckClouds.map(mesh => ({ mesh, gap: mesh.getWorldPosition(scratch).distanceToSquared(camera.position) })).sort((a, b) => b.gap - a.gap).forEach(({ mesh }, i) => {
-      mesh.renderOrder = 10 + i * 2;
-      mesh.children[0].renderOrder = 11 + i * 2;
-    });
+    if (clock - lastCloudSort > 0.5 || lastCloudSort < 0) { // far to near, so a near cloud never blanks one behind it; clouds move slowly, so twice a second is plenty
+      lastCloudSort = clock;
+      deck.updateMatrixWorld(true);
+      deckClouds.map(mesh => ({ mesh, gap: mesh.getWorldPosition(scratch).distanceToSquared(camera.position) })).sort((a, b) => b.gap - a.gap).forEach(({ mesh }, i) => {
+        mesh.renderOrder = 10 + i * 2;
+        mesh.children[0].renderOrder = 11 + i * 2;
+      });
+    }
     shell.visible = s.cloudCover > 0;
   }
 
@@ -491,7 +488,6 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       for (const m of [...planes, ...satellites, ...ships]) m.turn.rotation.y += m.speed * dt;
       for (const b of balloons) b.body.position.set(...b.dir).multiplyScalar(PLANET_RADIUS + 11 + Math.sin(clock * 0.5 + b.phase) * 0.5);
       for (const t of turbines) t.blades.rotation.x += t.speed * dt;
-      for (const l of lighthouses) l.beam.rotation.y += dt * 0.7;
       luna.mesh.rotation.y += dt * 0.01;
       stepStreak(dt);
     }
@@ -503,6 +499,8 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     if (disposed) return;
     const dt = last === null ? 0 : Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
+    slowFrames = dt > 1 / 40 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
+    if (slowFrames > 45 && quality > 0.6) { quality -= 0.2; slowFrames = 0; sizeKey = ''; } // a struggling machine draws fewer pixels rather than stutter
     step(dt);
     frameId = win.requestAnimationFrame(frame);
   }
