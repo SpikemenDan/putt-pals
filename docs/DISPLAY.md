@@ -22,7 +22,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.cloudCover` | 0.6 | 0 to 1 | Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast). |
 | `loading.cloudDrift` | 1.4 | 0 to 4 | Loading screen: cloud speed relative to the planet spin (1 = with the ground; higher slides ahead of it). |
 | `loading.finishTime` | 0.8 | 0.1 to 3 | Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes. |
-| `loading.atmosphere` | 0.7 | 0 to 1 | Loading screen: strength of the blue air glow around the planet. |
+| `loading.atmosphere` | 0.75 | 0 to 1 | Loading screen: strength of the blue air around the planet. |
+| `loading.atmosphereHeight` | 0.62 | 0.1 to 0.8 | Loading screen: how high the blue air reaches above the ground, fraction of the planet radius. |
 | `loading.citySize` | 1.6 | 0.5 to 3 | Loading screen: size of cities, towns, villages and ports (the globe stays the same size). |
 | `loading.lunaSize` | 2.6 | 1 to 8 | Loading screen: Luna's size in the sky; 1 is its true apparent size at the real Earth-Moon distance. |
 | `loading.outlineWidth` | 1.6 | 0 to 4 | Loading screen: ink outline width on cities, ships, planes and clouds, px at 1280 wide; 0 is off. |

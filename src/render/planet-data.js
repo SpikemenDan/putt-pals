@@ -3,7 +3,9 @@
  *
  * Original art, built procedurally. Invented continents give elevation; temperature falls with latitude and altitude; moisture follows
  * Earth's wind belts (wet equator, dry subtropics, wetter mid-latitudes), drops inland and rises near coasts. Colours blend across
- * that temperature/moisture plane (tundra, taiga, forest, grassland, savanna, desert, jungle), with snow, rock and ice.
+ * that temperature/moisture plane (tundra, taiga, forest, grassland, savanna, desert, jungle), with snow, rock, ice, marsh and basalt.
+ * Rivers run downhill to the sea. People live where it makes sense: cities near coasts in kind climates, each with its harbour, farms round
+ * towns, huts built for the local climate. Plants follow the biome map.
  *
  * Plain data only: no Three.js, no DOM, randomness is injected. Latitude is in degrees unless a name says otherwise, `u` is a fraction
  * of a full turn. `surfaceDir` matches THREE.SphereGeometry's uv layout, so a site found here lands on the same texel in the shader.
@@ -16,7 +18,7 @@ export { mulberry32 };
 export const TEX_W = 1024;
 export const TEX_H = 512;
 export const SEA = 0.4; // land value at the shoreline
-export const MAX_PLANES = 12, MAX_BOATS = 20, MAX_SATELLITES = 8;
+export const MAX_PLANES = 12, MAX_BOATS = 20, MAX_SATELLITES = 8, MAX_PLANTS = 12000;
 
 /** Palette (r, g, b), lifelike and saturated. Rows run cold to hot, columns dry to wet. */
 const CLIMATE = Object.freeze([
@@ -107,22 +109,55 @@ function blur(field, radius) {
   return out;
 }
 
+/** Gaia's biomes (the vision's polar, alpine, desert, tropical, temperate forest, wetlands and volcanic, plus the bands between). */
+export const BIOMES = Object.freeze(['polar', 'alpine', 'tundra', 'boreal', 'temperate', 'grassland', 'savanna', 'desert', 'tropical', 'wetland', 'volcanic']);
+
+/** The biome of a place. `wet` and `hot` are 0..1 masks for wetland and volcanic ground; the other inputs are as in `surfaceColour`. */
+export function biomeAt(lat, h, moist, wet = 0, hot = 0) {
+  const t = temperatureAt(lat, h);
+  if (hot > 0.5) return 'volcanic';
+  if (t < 0.14) return 'polar';
+  if (h > 0.7) return 'alpine';
+  if (t < 0.27) return 'tundra';
+  if (t < 0.43) return 'boreal';
+  if (wet > 0.5) return 'wetland';
+  if (t > 0.74) return moist > 0.6 ? 'tropical' : moist > 0.4 ? 'savanna' : 'desert';
+  if (moist < 0.3) return t > 0.6 ? 'desert' : 'grassland';
+  return moist > 0.48 ? 'temperate' : 'grassland';
+}
+
+/** What grows in each biome: [kind, chance], the chance of a sampled spot getting that plant. Kinds are drawn by makePlant in sky-models.js. */
+const FLORA = Object.freeze({
+  tundra: [['shrub', 0.2]],
+  boreal: [['pine', 0.75], ['snowpine', 0.25]],
+  temperate: [['broadleaf', 0.5], ['birch', 0.16], ['pine', 0.12], ['autumn', 0.1], ['blossom', 0.06]],
+  grassland: [['broadleaf', 0.1], ['shrub', 0.16]],
+  savanna: [['acacia', 0.2], ['shrub', 0.12]],
+  desert: [['cactus', 0.05], ['shrub', 0.03]],
+  tropical: [['jungle', 0.6], ['palm', 0.34]],
+  wetland: [['mangrove', 0.6], ['reeds', 0.3]],
+  volcanic: [['deadtree', 0.1]],
+});
+
 /**
  * Builds Gaia once. Returns:
  * - `rgb`: the finished surface colours (3 bytes per texel, row 0 at the north pole).
- * - `landRgb`: RGBA land colours everywhere, even under the sea, so the shader can cut a sharp coast anywhere without a colour fringe.
- * - `field`: RGBA data: r the land value around the shore (0.5 at the coast, see `decodeLand`), g elevation, b city density.
- * - `land`: the land value per texel (below SEA is sea). `cloud`: 0..255 cloud density.
- * - `cities`, `towns`, `villages`: [{u, lat, tint}], `tint` the local ground colour. `ports`: the same on the shore, plus `sea`, a unit
- *   vector toward the water. `forests`: [{u, lat, tint}] for single trees. `seaSites`: [{u, lat}] on open sea.
+ * - `landRgb`: RGBA land colours everywhere, even under the sea, so the shader can cut a sharp coast anywhere without a colour fringe,
+ *   with rivers painted in; alpha is farmland around settlements.
+ * - `field`: RGBA data: r the land value around the shore (0.5 at the coast), g elevation, b city density, a volcanic ground.
+ * - `land`: the land value per texel (below SEA is sea). `biome`: index into BIOMES per texel. `cloud`: 0..255 cloud density.
+ * - `cities`, `towns`, `villages`: [{u, lat, tint, biome}], `tint` the local ground colour. `ports`, `lighthouses`: the same on the shore,
+ *   plus `sea`, a unit vector toward the water. `mills`: [{u, lat, biome}] on windy open ground. `volcanoes`, `peaks`: [{u, lat}].
+ *   `plants`: [{u, lat, kind}]. `seaSites`: [{u, lat}] on open sea.
  */
 export function buildPlanet(random) {
   const n = TEX_W * TEX_H;
   const coast = makeFbm(random, 7, 3, 5), warpU = makeNoise(random, 6, 3), warpV = makeNoise(random, 7, 4);
-  const range = makeFbm(random, 10, 5, 4), wetNoise = makeFbm(random, 5, 3, 4);
+  const range = makeFbm(random, 10, 5, 4), wetNoise = makeFbm(random, 5, 3, 4), marsh = makeFbm(random, 9, 5, 3);
   const land = new Float32Array(n), h = new Float32Array(n), mask = new Float32Array(n);
+  const latOf = y => (0.5 - (y + 0.5) / TEX_H) * 180;
   for (let y = 0; y < TEX_H; y++) {
-    const v = (y + 0.5) / TEX_H, lat = (0.5 - v) * 180;
+    const v = (y + 0.5) / TEX_H, lat = latOf(y);
     for (let x = 0; x < TEX_W; x++) {
       const u = x / TEX_W, i = y * TEX_W + x;
       const wu = (u + (warpU(u, v) - 0.5) * 0.05 + 1) % 1, wl = lat + (warpV(u, v) - 0.5) * 12; // gentle warp: shapes stay readable
@@ -133,32 +168,81 @@ export function buildPlanet(random) {
     }
   }
   const inland = blur(mask, 20);
-  const rgb = new Uint8Array(n * 3), landRgb = new Uint8Array(n * 4), field = new Uint8Array(n * 4);
-  for (let y = 0; y < TEX_H; y++) {
-    const v = (y + 0.5) / TEX_H, lat = (0.5 - v) * 180;
-    for (let x = 0; x < TEX_W; x++) {
-      const u = x / TEX_W, i = y * TEX_W + x;
-      const moist = moistureAt(lat, clamp((inland[i] - 0.2) / 0.8), wetNoise(u, v));
-      const c = surfaceColour(lat, land[i], h[i], moist), g = landColour(lat, h[i], moist);
-      for (let k = 0; k < 3; k++) { rgb[i * 3 + k] = clamp(c[k], 0, 255); landRgb[i * 4 + k] = clamp(g[k], 0, 255); }
-      landRgb[i * 4 + 3] = 255;
-      field[i * 4] = clamp(0.5 + (land[i] - SEA) * 2, 0, 1) * 255; field[i * 4 + 1] = clamp(h[i]) * 255; field[i * 4 + 3] = 255;
+  // Volcanic ground: a few hot spots on land, each a patch of dark basalt.
+  const hot = new Float32Array(n), volcanoes = [];
+  for (let tries = 0; tries < 4000 && volcanoes.length < 5; tries++) {
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.2 + random() * 0.6) * TEX_H), i = y * TEX_W + x;
+    if (land[i] < SEA + 0.08 || volcanoes.some(c => Math.hypot(Math.min(Math.abs(c.x - x), TEX_W - Math.abs(c.x - x)), c.y - y) < 120)) continue;
+    volcanoes.push({ x, y, u: x / TEX_W, lat: latOf(y) });
+    const r = 13, stretch = 1 / Math.max(0.3, Math.cos(latOf(y) * Math.PI / 180));
+    for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
+      const yy = y + dy, xx = (x + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r;
+      if (d < 1 && yy >= 0 && yy < TEX_H && land[yy * TEX_W + xx] >= SEA) hot[yy * TEX_W + xx] = Math.max(hot[yy * TEX_W + xx], smooth(1, 0.55, d));
     }
   }
-  // Settlements on gentle, warm-enough land, big ones first and spread out; ships on open sea away from the ice.
+  const rgb = new Uint8Array(n * 3), landRgb = new Uint8Array(n * 4), field = new Uint8Array(n * 4), biome = new Uint8Array(n);
+  for (let y = 0; y < TEX_H; y++) {
+    const v = (y + 0.5) / TEX_H, lat = latOf(y);
+    for (let x = 0; x < TEX_W; x++) {
+      const u = x / TEX_W, i = y * TEX_W + x;
+      const moist = clamp(moistureAt(lat, clamp((inland[i] - 0.2) / 0.8), wetNoise(u, v)) + 0.2); // a green planet: deserts stay the exception
+      const wet = smooth(0.54, 0.62, marsh(u, v)) * smooth(0.62, 0.4, inland[i]) * smooth(0.3, 0.12, h[i]);
+      const c = surfaceColour(lat, land[i], h[i], moist);
+      let g = landColour(lat, h[i], moist);
+      g = lerp3(g, [62, 124, 96], wet * 0.8); // marsh: dark, blue-green
+      g = lerp3(g, [58, 48, 56], hot[i] * 0.92); // basalt
+      biome[i] = BIOMES.indexOf(biomeAt(lat, h[i], moist, wet, hot[i]));
+      for (let k = 0; k < 3; k++) { rgb[i * 3 + k] = clamp(land[i] >= SEA ? mix(c[k], g[k], 0.8) : c[k], 0, 255); landRgb[i * 4 + k] = clamp(g[k], 0, 255); }
+      field[i * 4] = clamp(0.5 + (land[i] - SEA) * 2, 0, 1) * 255; field[i * 4 + 1] = clamp(h[i]) * 255; field[i * 4 + 3] = hot[i] * 255;
+    }
+  }
+  const nameAt = i => BIOMES[biome[i]];
+  // Rivers: from the high ground, downhill to the sea, painted into the land colours. Ones that find no way out end in a lake.
+  const paint = (x, y, r) => {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const yy = y + dy, xx = (x + dx + TEX_W) % TEX_W;
+      if (yy < 0 || yy >= TEX_H || Math.hypot(dx, dy) > r + 0.2) continue;
+      const o = (yy * TEX_W + xx) * 4;
+      landRgb[o] = 52; landRgb[o + 1] = 150; landRgb[o + 2] = 226;
+    }
+  };
+  for (let k = 0, tries = 0; k < 34 && tries < 4000; tries++) {
+    let x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H);
+    if (h[y * TEX_W + x] < 0.3 || temperatureAt(latOf(y), 0) < 0.3) continue;
+    k++;
+    const seen = new Set();
+    for (let s = 0; s < 260; s++) {
+      const i = y * TEX_W + x;
+      if (land[i] < SEA) break;
+      seen.add(i);
+      paint(x, y, s > 90 ? 1 : 0);
+      let best = null, bestV = Infinity;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = Math.min(TEX_H - 1, Math.max(0, y + dy)), xx = (x + dx + TEX_W) % TEX_W, j = yy * TEX_W + xx;
+        if (seen.has(j)) continue;
+        const value = land[j] + random() * 0.012;
+        if (value < bestV) { bestV = value; best = [xx, yy]; }
+      }
+      if (!best) { paint(x, y, 3); break; }
+      [x, y] = best;
+    }
+  }
+  // Settlements. Big places sit near the coast in kind climates; towns round them; villages anywhere people can live.
   const taken = [], seaSites = [];
-  const place = (limit, gap, ok = () => true) => {
+  const siteAt = (x, y) => { const i = y * TEX_W + x; return { x, y, u: x / TEX_W, lat: latOf(y), tint: [landRgb[i * 4], landRgb[i * 4 + 1], landRgb[i * 4 + 2]], biome: nameAt(i) }; };
+  const gapTo = (a, x, y) => Math.hypot(Math.min(Math.abs(a.x - x), TEX_W - Math.abs(a.x - x)) * Math.cos(latOf(y) * Math.PI / 180), a.y - y);
+  const place = (limit, gap, ok) => {
     const out = [];
-    for (let tries = 0; tries < 5000 && out.length < limit; tries++) {
-      const x = Math.floor(random() * TEX_W), y = Math.floor((0.14 + random() * 0.72) * TEX_H), i = y * TEX_W + x, lat = (0.5 - (y + 0.5) / TEX_H) * 180;
-      if (h[i] > 0.35 || temperatureAt(lat, h[i]) < 0.28 || !ok(i, x, y)) continue;
-      if (taken.some(c => Math.hypot(Math.min(Math.abs(c.x - x), TEX_W - Math.abs(c.x - x)) * Math.cos(lat * Math.PI / 180), c.y - y) < gap)) continue;
-      const site = { x, y, u: x / TEX_W, lat, tint: [landRgb[i * 4], landRgb[i * 4 + 1], landRgb[i * 4 + 2]] };
+    for (let tries = 0; tries < 12000 && out.length < limit; tries++) {
+      const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x;
+      if (land[i] < SEA + 0.03 || !ok(i, x, y) || taken.some(c => gapTo(c, x, y) < gap)) continue;
+      const site = siteAt(x, y);
       taken.push(site); out.push(site);
     }
     return out;
   };
-  const inlandEnough = i => land[i] >= SEA + 0.06;
+  const kind = (...names) => i => names.includes(nameAt(i));
+  const liveable = kind('temperate', 'grassland', 'tropical', 'savanna', 'boreal');
   /** The nearest texel of sea within a few texels of a shore texel, or null. */
   const seaBeside = (x, y) => {
     for (let r = 2; r <= 7; r++) for (let k = 0; k < 16; k++) {
@@ -167,34 +251,65 @@ export function buildPlanet(random) {
     }
     return null;
   };
-  const sites = place(22, 42, inlandEnough);
-  const ports = place(16, 22, (i, x, y) => land[i] >= SEA + 0.005 && land[i] < SEA + 0.05 && !!seaBeside(x, y)).map(p => {
-    const [sx, sy] = seaBeside(p.x, p.y);
-    return { ...p, sea: surfaceDir(sx / TEX_W, (0.5 - (sy + 0.5) / TEX_H) * 180) };
-  });
-  const towns = place(46, 20, inlandEnough), villages = place(80, 12, inlandEnough);
-  const forests = [];
-  for (let tries = 0; tries < 30000 && forests.length < 900; tries++) { // trees where the land is green
-    const x = Math.floor(random() * TEX_W), y = Math.floor((0.08 + random() * 0.84) * TEX_H), i = y * TEX_W + x, r = landRgb[i * 4], g = landRgb[i * 4 + 1], b = landRgb[i * 4 + 2];
-    if (land[i] < SEA + 0.02 || h[i] > 0.5 || g < r + 22 || g < b + 30) continue;
-    forests.push({ u: x / TEX_W, lat: (0.5 - (y + 0.5) / TEX_H) * 180, tint: [r * 0.72, g * 0.82, b * 0.66] });
+  const shoreNear = (cx, cy, reach) => { // the closest shore texel to a place, walking outward
+    for (let r = 2; r <= reach; r += 2) for (let k = 0; k < 24; k++) {
+      const x = (cx + Math.round(Math.cos(k / 12 * Math.PI) * r) + TEX_W) % TEX_W, y = cy + Math.round(Math.sin(k / 12 * Math.PI) * r);
+      if (y < 1 || y >= TEX_H - 1) continue;
+      const i = y * TEX_W + x;
+      if (land[i] >= SEA + 0.004 && land[i] < SEA + 0.05 && h[i] < 0.4 && seaBeside(x, y)) return [x, y];
+    }
+    return null;
+  };
+  const onShore = ([x, y]) => { const [sx, sy] = seaBeside(x, y); return { ...siteAt(x, y), sea: surfaceDir(sx / TEX_W, latOf(sy)) }; };
+  const sites = place(22, 42, i => inland[i] < 0.85 && h[i] < 0.3 && liveable(i));
+  const ports = [];
+  for (const city of sites) { // every coastal city has a harbour
+    const spot = ports.length < 16 && shoreNear(city.x, city.y, 44);
+    if (spot) { const p = onShore(spot); ports.push(p); taken.push(p); }
   }
-  for (const c of [...sites, ...ports, ...towns.filter((_, k) => k % 2)]) { // suburbs: a soft patch around each place, tinted by the shader and lit at night
-    const r = sites.includes(c) ? 11 : 5, stretch = 1 / Math.max(0.3, Math.cos(c.lat * Math.PI / 180));
+  const towns = place(46, 20, i => h[i] < 0.34 && liveable(i));
+  const villages = place(80, 12, i => h[i] < 0.42 && (liveable(i) || kind('wetland', 'tundra')(i) || (nameAt(i) === 'desert' && random() < 0.2)));
+  const lighthouses = [];
+  for (let tries = 0; tries < 8000 && lighthouses.length < 2; tries++) { // two lights, on bare headlands far from each other
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.2 + random() * 0.6) * TEX_H), i = y * TEX_W + x;
+    if (land[i] < SEA + 0.004 || land[i] > SEA + 0.04 || !seaBeside(x, y) || taken.some(c => gapTo(c, x, y) < 12) || lighthouses.some(c => gapTo(c, x, y) < 200)) continue;
+    lighthouses.push(onShore([x, y]));
+  }
+  // Windmills on open windy ground: plains and marsh edges, always within reach of a town.
+  const mills = towns.filter((_, k) => k % 3 === 0).map(t => ({ u: t.u + 0.006, lat: t.lat + 1.1, biome: t.biome }));
+  // Farmland round towns and villages in farming country, and suburbs round the bigger places.
+  const patch = (c, r, write) => {
+    const stretch = 1 / Math.max(0.3, Math.cos(c.lat * Math.PI / 180));
     for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
       const y = c.y + dy, x = (c.x + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r;
-      if (d >= 1 || y < 0 || y >= TEX_H) continue;
-      const o = (y * TEX_W + x) * 4 + 2;
-      field[o] = Math.max(field[o], (1 - d * d) * 255 * (land[y * TEX_W + x] >= SEA ? 1 : 0));
+      if (d < 1 && y >= 0 && y < TEX_H && land[y * TEX_W + x] >= SEA) write(y * TEX_W + x, 1 - d * d);
+    }
+  };
+  for (const c of [...towns, ...villages]) if (['temperate', 'grassland', 'savanna'].includes(c.biome)) patch(c, towns.includes(c) ? 11 : 7, (i, f) => { landRgb[i * 4 + 3] = Math.max(landRgb[i * 4 + 3], smooth(0, 0.35, f) * 255); });
+  for (const c of [...sites, ...ports, ...towns.filter((_, k) => k % 2)]) patch(c, sites.includes(c) ? 11 : 5, (i, f) => { field[i * 4 + 2] = Math.max(field[i * 4 + 2], f * 255); });
+  // Plants and peaks follow the biome map, thinning out near towns and leaving farmland and suburbs clear.
+  const plants = [];
+  for (let tries = 0; tries < 260000 && plants.length < MAX_PLANTS; tries++) {
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.05 + random() * 0.9) * TEX_H), i = y * TEX_W + x;
+    if (land[i] < SEA + 0.008 || field[i * 4 + 2] > 40 || landRgb[i * 4 + 3] > 90 || landRgb[i * 4] === 52) continue;
+    let roll = random();
+    for (const [plant, chance] of FLORA[nameAt(i)] ?? []) {
+      if (roll < chance) { plants.push({ u: (x + random()) / TEX_W, lat: latOf(y) + (random() - 0.5) * 0.35, kind: plant }); break; }
+      roll -= chance;
     }
   }
+  const peaks = [];
+  for (let tries = 0; tries < 60000 && peaks.length < 420; tries++) {
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.06 + random() * 0.88) * TEX_H), i = y * TEX_W + x;
+    if (land[i] > SEA + 0.02 && h[i] > 0.5) peaks.push({ u: x / TEX_W, lat: latOf(y), height: h[i] });
+  }
   for (let tries = 0; tries < 6000 && seaSites.length < MAX_BOATS * 2; tries++) {
-    const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = (0.5 - (y + 0.5) / TEX_H) * 180;
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = latOf(y);
     if (land[i] > SEA - 0.1 || temperatureAt(lat, 0) < 0.4) continue;
     seaSites.push({ u: x / TEX_W, lat });
   }
-  const plain = list => list.map(({ u, lat, tint, sea }) => ({ u, lat, tint, ...(sea ? { sea } : {}) }));
-  return { rgb, landRgb, field, land, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), forests, seaSites };
+  const plain = list => list.map(({ u, lat, tint, sea, biome: b }) => ({ u, lat, tint, biome: b, ...(sea ? { sea } : {}) }));
+  return { rgb, landRgb, field, land, biome, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), lighthouses: plain(lighthouses), mills, volcanoes: volcanoes.map(({ u, lat }) => ({ u, lat })), peaks, plants, seaSites };
 }
 
 /** Cloud density (0..255 per texel): stretched along the equator, thicker near the equator and mid-latitude storm belts. */

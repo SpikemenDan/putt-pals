@@ -23,7 +23,8 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['loading.cloudCover', 0, 1, 'Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast).'],
   ['loading.cloudDrift', 0, 4, 'Loading screen: cloud layer speed relative to the planet spin (1 = clouds turn with the ground, above 1 they slide ahead of it).'],
   ['loading.finishTime', 0.1, 3, 'Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes.'],
-  ['loading.atmosphere', 0, 1, 'Loading screen: strength of the blue air glow around the planet, from none (0) to thick (1).'],
+  ['loading.atmosphere', 0, 1, 'Loading screen: strength of the blue air around the planet, from thin (0) to thick (1).'],
+  ['loading.atmosphereHeight', 0.1, 0.8, 'Loading screen: how high the blue air reaches above the ground, as a fraction of the planet radius.'],
   ['loading.citySize', 0.5, 3, 'Loading screen: size of cities, towns, villages and ports as a multiplier (the globe stays the same size).'],
   ['loading.lunaSize', 1, 8, 'Loading screen: size of Luna in the sky: 1 is its true apparent size at the real Earth-Moon distance, higher is magnified.'],
   ['loading.outlineWidth', 0, 4, 'Loading screen: ink outline width on cities, ships, planes and clouds, in pixels at 1280 wide; 0 turns outlines off.'],
@@ -36,7 +37,7 @@ export const DISPLAY_FIELDS = Object.freeze([
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
-  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.7, citySize: 1.6, lunaSize: 2.6, outlineWidth: 1.6, planes: 5, boats: 9, satellites: 3 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1.6, lunaSize: 2.6, outlineWidth: 1.6, planes: 5, boats: 9, satellites: 3 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

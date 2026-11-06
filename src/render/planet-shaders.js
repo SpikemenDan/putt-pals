@@ -41,7 +41,13 @@ void main(){
   ground=mix(ground,ground*vec3(1.1,1.04,.72),smoothstep(.5,.66,broad)*.45); // sunlit meadows
   ground=mix(ground,vec3(.98,.55,.75),smoothstep(.66,.7,fine)*smoothstep(.5,.6,broad)*smoothstep(.45,.7,warm)*.3); // flowering plains
   ground=mix(ground,vec3(.94,.87,.67),(1.-smoothstep(.006,.02,land))*smoothstep(.25,.42,warm)*.9);
+  vec4 lm=texture2D(landMap,uv);
+  vec3 cell=floor(vObj*vec3(62.,58.,66.)+vec3(fine*1.4));float crop=hash3(cell);
+  vec3 field3=crop<.3?vec3(.93,.8,.32):crop<.55?vec3(.62,.82,.3):crop<.8?vec3(.4,.72,.3):vec3(.72,.56,.34);
+  ground=mix(ground,field3,lm.a*.78); // patchwork farms round towns and villages
   ground=mix(ground,vec3(.8,.74,.66),f.b*.6);
+  float lava=f.a*smoothstep(.55,.6,fine*.7+broad*.35);
+  ground=mix(ground,vec3(1.,.42,.08),lava);
   vec3 albedo=mix(sea,ground,isLand);
   // Relief: the elevation map tilts the normal, so mountains catch the sun.
   vec3 N=normalize(vN);
@@ -64,12 +70,13 @@ void main(){
   c+=vec3(1.,.96,.84)*glint*.85*(1.-isLand)*step(0.,ndl);
   // Ink coastline, a fixed number of pixels wide.
   c=mix(c,vec3(.05,.05,.13),(1.-smoothstep(inkPx*.55,inkPx*1.1,abs(land)/aa))*.82);
+  c=mix(c,vec3(1.,.5,.12),lava*.8); // lava glows through shadow
   // City lights on the night side.
   float lights=f.b*step(.5,vnoise(vObj*230.))*(1.-smoothstep(-.08,.14,ndl));
   c+=vec3(1.,.78,.4)*lights*1.2;
   // Air: the limb fades into a lit blue haze.
-  float rim=pow(1.-max(dot(N,V),0.),3.2);
-  c=mix(c,vec3(.56,.8,1.),rim*atmosphere*(.2+.8*smoothstep(-.2,.5,dot(N,sun))));
+  float rim=pow(1.-max(dot(N,V),0.),2.2);
+  c=mix(c,vec3(.62,.84,1.),rim*(.25+atmosphere*.75)*(.2+.8*smoothstep(-.2,.5,dot(N,sun))));
   gl_FragColor=vec4(c,1.);
 }`;
 
@@ -93,7 +100,7 @@ void main(){
   gl_FragColor=vec4(c,a*.94);
 }`;
 
-/** Glow of the air above the limb: strongest at the ground, gone by the top of the shell, brighter toward the sun. */
+/** The air above the limb: pale at the ground, deepening to blue, gone by the top of the shell, brighter toward the sun. */
 export const ATMOSPHERE_VERTEX = 'varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}';
 export const ATMOSPHERE_FRAGMENT = `
 uniform vec3 sun;uniform float radius,shell,atmosphere;varying vec3 vW;
@@ -101,22 +108,25 @@ void main(){
   vec3 rd=normalize(vW-cameraPosition);
   vec3 closest=cameraPosition+rd*dot(-cameraPosition,rd);
   float h=clamp((length(closest)-radius)/(shell-radius),0.,1.);
-  float g=(exp(-h*3.4)-exp(-3.4))*atmosphere;
-  g*=.45+.55*smoothstep(-.3,.7,dot(normalize(closest),sun));
-  vec3 c=mix(vec3(.22,.5,1.),vec3(.78,.93,1.),exp(-h*5.));
+  float g=(1.-pow(h,1.5))*(.5+atmosphere*.75);
+  g*=.6+.4*smoothstep(-.3,.7,dot(normalize(closest),sun));
+  g=clamp(g,0.,1.);
+  vec3 c=mix(vec3(.08,.24,.72),vec3(.26,.58,.98),exp(-h*2.4));
+  c=mix(c,vec3(.8,.94,1.),exp(-h*9.));
   gl_FragColor=vec4(c*g,g);
 }`;
 
 export const CLOUD_VERTEX = `
-attribute vec3 soft;attribute float ao;varying vec3 vN;varying vec3 vS;varying float vAo;
-void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft);vAo=ao;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+attribute vec3 soft;attribute float ao;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;
+void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft);vAo=ao;vec4 w=modelMatrix*vec4(position,1.);vV=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}`;
 
 /**
  * Volumetric comic cloud: light comes mostly from the whole cloud's soft normal, so a pile of lobes reads as one big body, with each
- * lobe billowing on top; the underside falls into cool shadow in flat bands with the game's halftone dots. `haze` melts clouds into the air.
+ * lobe billowing on top; the underside falls into cool shadow in flat bands with the game's halftone dots. `haze` melts clouds into the air,
+ * `opacity` below 1 makes a thin cloud with soft edges, `tint` and `flash` make storm clouds.
  */
 export const CLOUD_FRAGMENT = `
-uniform vec3 sun;uniform float dotCell,haze;varying vec3 vN;varying vec3 vS;varying float vAo;
+uniform vec3 sun,tint;uniform float dotCell,haze,opacity,flash;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;
 ${NOISE}
 void main(){
   vec3 n=normalize(mix(normalize(vN),normalize(vS),.6));
@@ -127,7 +137,10 @@ void main(){
   c=mix(c,vec3(.83,.89,1.),smoothstep(.45-e,.45+e,l));
   c=mix(c,vec3(1.,.995,.97),smoothstep(.61-e,.61+e,l));
   if(l<.61)c*=1.-.12*halftone(dotCell,l<.45?.62:.4);
-  gl_FragColor=vec4(mix(c,vec3(.72,.86,1.),haze),1.);
+  c=mix(c*tint,vec3(.72,.86,1.),haze)+flash*vec3(.8,.85,1.)*smoothstep(.2,.6,vAo);
+  float a=opacity;
+  if(opacity<1.)a*=smoothstep(.04,.62,dot(n,normalize(vV))); // thin clouds melt away at their edges
+  gl_FragColor=vec4(c,a);
 }`;
 
 /** A soft, tapering ribbon: contrails and ship wakes. `line` runs 0 at the source to 1 at the far end, `across` -1 to 1 side to side. */

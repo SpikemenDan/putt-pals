@@ -103,6 +103,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(changed('cloudDrift', 4).cloudLead > lbase.cloudLead, 'loading.cloudDrift slides the clouds ahead of the ground');
     assert.deepEqual(lbase.traffic, { planes: 5, boats: 9, satellites: 3 });
     assert.ok(changed('atmosphere', 0.1).glow < lbase.glow && changed('atmosphere', 1).glow > lbase.glow, 'loading.atmosphere sets the air glow');
+    assert.ok(changed('atmosphereHeight', 0.8).stats.airTop > lbase.stats.airTop && Math.abs(lbase.stats.airTop - 162) < 1e-9, 'loading.atmosphereHeight lifts the top of the air');
     assert.ok(changed('citySize', 3).stats.tallestCity > lbase.stats.tallestCity * 1.5 && lbase.stats.tallestCity > 8, 'loading.citySize makes the skylines taller');
     assert.ok(Math.abs(changed('outlineWidth', 3).stats.ink - 3) < 1e-9 && Math.abs(lbase.stats.ink - 1.6) < 1e-9, 'loading.outlineWidth sets the ink width in pixels at 1280 wide');
     assert.ok(Math.abs(changed('lunaSize', 1).stats.lunaPixels * 2.6 - lbase.stats.lunaPixels) < 1e-6 && changed('lunaSize', 1).stats.lunaPixels > 5 && changed('lunaSize', 1).stats.lunaPixels < 16, 'loading.lunaSize scales Luna, and 1 is its true size at the real distance');
@@ -111,7 +112,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(changed('satellites', 6).traffic.satellites, 6, 'loading.satellites sets the number of satellites');
     // loading.finishTime is checked in tests/ui.test.cjs, where the screen really closes after it.
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

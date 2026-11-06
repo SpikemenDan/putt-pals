@@ -205,7 +205,26 @@ function fakeClock() {
     const routes = scene.shipRoutes(planet, scene.mulberry32(8));
     assert.ok(routes.length >= 9, 'enough sea routes for the default fleet');
     for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
-    assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.forests.length >= 300, 'a lived-in world: towns, villages, ports and forests');
+    assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.plants.length >= 5000, 'a lived-in world: towns, villages, ports and dense foliage');
+    assert.ok(planet.lighthouses.length >= 1 && planet.lighthouses.length <= 2, 'one or two lighthouses');
+    // Biomes: every one in the vision exists; the land is mostly green; people and plants live where they should.
+    const shares = {};
+    for (let i = 0; i < planet.biome.length; i++) if (planet.land[i] >= scene.SEA) { const b = scene.BIOMES[planet.biome[i]]; shares[b] = (shares[b] || 0) + 1; }
+    const landTexels = Object.values(shares).reduce((q, v) => q + v, 0);
+    for (const b of ['polar', 'alpine', 'desert', 'tropical', 'temperate', 'wetland', 'volcanic']) assert.ok(shares[b] > 0, `Gaia has ${b} land`);
+    const green = ['temperate', 'tropical', 'grassland', 'boreal', 'savanna', 'wetland'].reduce((q, b) => q + (shares[b] || 0), 0);
+    assert.ok(green / landTexels > 0.55 && (shares.desert || 0) / landTexels < 0.15, `mostly green (${Math.round(green / landTexels * 100)}% green land)`);
+    assert.equal(scene.biomeAt(85, 0.1, 0.5), 'polar');
+    assert.equal(scene.biomeAt(2, 0.1, 0.8), 'tropical');
+    assert.equal(scene.biomeAt(25, 0.1, 0.1), 'desert');
+    assert.equal(scene.biomeAt(30, 0.1, 0.5, 1), 'wetland');
+    assert.equal(scene.biomeAt(30, 0.1, 0.5, 0, 1), 'volcanic');
+    assert.ok(planet.cities.every(c => !['polar', 'alpine', 'desert', 'volcanic', 'wetland', 'tundra'].includes(c.biome)), 'no cities on ice, peaks, lava or in the desert');
+    const texel = p => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - p.lat / 180) * scene.TEX_H)), col = Math.floor(p.u * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[planet.biome[row * scene.TEX_W + col]]; };
+    const homes = { palm: ['tropical'], jungle: ['tropical'], cactus: ['desert'], mangrove: ['wetland'], pine: ['boreal', 'temperate'], snowpine: ['boreal'] };
+    const strays = planet.plants.filter(p => homes[p.kind] && !homes[p.kind].includes(texel(p))).length;
+    assert.ok(strays / planet.plants.length < 0.02, 'plants grow in their own biomes');
+    assert.ok(new Set(planet.plants.map(p => p.kind)).size >= 9, 'many kinds of plant');
     assert.ok([...planet.towns, ...planet.villages].every(c => scene.landUnder(planet, scene.surfaceDir(c.u, c.lat)) >= scene.SEA), 'settlements stand on land');
     for (const port of planet.ports) {
       assert.ok(scene.landUnder(planet, scene.surfaceDir(port.u, port.lat)) >= scene.SEA, 'a port stands on the shore');
@@ -216,6 +235,11 @@ function fakeClock() {
     const jet = box(models.makePlane(THREE)), hull = box(models.makeShip(THREE));
     assert.ok(jet.max.x > 2.5 && jet.min.x < -3 && jet.max.y > 1.2, 'a jet, nose forward, with a tail fin');
     assert.ok(hull.min.y < -0.3 && hull.max.y > 1, 'a ship is partly under the water line');
+    for (const k of models.SHIP_KINDS) assert.ok(box(models.makeShip(THREE, k)).min.y < 0, `the ${k} sits in the water`);
+    const size = g => g.attributes.position.count;
+    assert.equal(new Set(models.PLANE_KINDS.map(k => size(models.makePlane(THREE, k)))).size, models.PLANE_KINDS.length, 'each plane is its own design');
+    assert.equal(new Set(models.PLANT_KINDS.map(k => size(models.makePlant(THREE, k)))).size > 8, true, 'plants come in many designs');
+    assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'temperate')), 'towns differ by climate');
     const city = models.makeCity(THREE, scene.mulberry32(4));
     assert.ok(city.userData.top > 12 && city.userData.top <= models.CITY_TOP + 3 && box(city).max.x - box(city).min.x < 20, 'cities are tall for their width');
     assert.deepEqual([...city.attributes.position.array.slice(0, 30)], [...models.makeCity(THREE, scene.mulberry32(4)).attributes.position.array.slice(0, 30)], 'a city is the same for the same seed');
@@ -255,7 +279,7 @@ function fakeClock() {
     for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 5, 'planes fly above the ground');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
     assert.ok(a.frames() > 400, 'each step draws');
-    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3, 'the living world is in the scene');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2, 'the living world is in the scene');
     a.scene.dispose();
     const fresh = make(createDisplay({ loading: { spinSpeed: 10 } }));
     fresh.scene.start();
