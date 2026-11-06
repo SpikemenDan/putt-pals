@@ -7,5 +7,6 @@
 .row span{color:var(--mut);min-width:70px;text-align:right}
 .row.hd span{color:var(--yellow)}
 .row.inRoster{padding:14px 0}
-.row.inSb span{min-width:48px}
+.row.inSb{gap:6px}
+.row.inSb span{min-width:36px}
 .row.inSb b{min-width:0}

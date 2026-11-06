@@ -12,7 +12,7 @@ const app = createApp({ root: document.getElementById('root'), THREE,
 });
 if (tuner) {
   window.__ppTuner = tuner;
-  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/deployables-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountDeployablesPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountDeployablesPreview(document, app); });
+  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); });
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
 if (window.__PP_APP_HOOK) window.__ppApp = app;

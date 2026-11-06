@@ -8,7 +8,7 @@
  * clock (the same time base as roundStartTime and votingDeadline).
  */
 
-import { isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
+import { getPowerup, isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
@@ -236,7 +236,7 @@ export function hudView(room, local, now, courses) {
   }));
   const inventory = [0, 1, 2].map(i => {
     const item = (local.inventory || [])[i];
-    return { index: i, label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
+    return { index: i, id: item || '', name: item ? powerupName(item) : '', ability: item ? getPowerup(item)?.toast || '' : '', label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
   });
   return {
     info,
@@ -259,6 +259,7 @@ export function hudView(room, local, now, courses) {
     })).filter(h => h.seconds > 0),
     viewLabel: 'View: ' + (local.viewLabel || 'Ball cam'),
     soundLabel: 'Sound: ' + (local.soundOn === false ? 'Off' : 'On'),
+    volume: Number.isFinite(local.volume) ? local.volume : 1,
     qualityLabel: 'Quality: ' + (local.qualityHigh === false ? 'Low' : 'High'),
   };
 }

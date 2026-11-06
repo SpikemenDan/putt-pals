@@ -503,10 +503,13 @@ function fakeClock() {
     await act(async () => t.store.setLocal({ mode: 'play', inventory: ['mag', 'steady'], soundOn: false, qualityHigh: false, viewLabel: 'Hole view' }));
     const inv = [...t.within('[data-ui=game]').querySelectorAll('canvas ~ div')].find(d => d.textContent.includes('empty'));
     const slots = [...inv.children];
-    assert.deepEqual(slots.map(b => b.textContent), ['1. Hole Magnet', '2. Steady Aim', '3. empty']);
-    const ghostClass = button('Card').className;
-    assert.equal(slots[2].className, ghostClass, 'empty slot uses the ghost style');
-    assert.notEqual(slots[1].className, ghostClass); assert.equal(slots[1].className, slots[0].className, 'self power-ups share the item style');
+    assert.deepEqual(slots.map(b => b.firstChild.textContent), ['1. Hole Magnet', '2. Steady Aim', '3. empty'], 'each slot keeps a screen-reader label');
+    assert.notEqual(slots[2].className, slots[1].className, 'an empty slot is drawn as an empty box');
+    assert.equal(slots[1].className, slots[0].className, 'self power-ups share the item style');
+    assert.ok(slots[0].querySelector('svg') && !slots[2].querySelector('svg'), 'a held power-up shows its icon; an empty box shows none');
+    assert.match(slots[0].textContent, /Hole Magnet armed for this shot/, 'the hover tip gives the name and ability');
+    assert.doesNotMatch(slots[2].textContent.replace('3. empty', ''), /empty/i, 'no visible empty wording');
+    await click(button('Settings')); // sound and quality live in the settings panel
     assert.ok(button('View: Hole view') && button('Sound: Off') && button('Quality: Low'));
     t.commands.length = 0;
     for (const b of [slots[1], button('View: Hole view'), button('Sound: Off'), button('Quality: Low'), button('Invite')]) await click(b);

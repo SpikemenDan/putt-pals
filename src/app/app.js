@@ -536,6 +536,11 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
         renderer?.setQuality(quality, win.devicePixelRatio);
         setLocal({ qualityHigh: quality });
         break;
+      case UiCommands.SET_VOLUME:
+        if (!(command.volume >= 0 && command.volume <= 1)) break;
+        audio.setVolume?.(command.volume);
+        setLocal({ volume: command.volume });
+        break;
       case UiCommands.TOGGLE_SOUND:
         Promise.resolve(audio.toggleMute()).finally(() => setLocal({ soundOn: !audio.getStatus().muted }));
         setLocal({ soundOn: audio.getStatus().muted });
@@ -626,13 +631,14 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   const onPress = event => { if (buttonOf(event)) audio.handleEvent({ type: 'ui', kind: 'click' }); };
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
+  setLocal({ volume: audio.getStatus?.().volume ?? 1 });
   const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '' });
 
   return {
     store,
     get room() { return room; },
     get putt() { return putt; },
-    /** Development preview only (src/devtools/deployables-preview.js): puts a power-up in the local inventory. Returns whether it fit. */
+    /** Development preview only (src/devtools/powerup-catalog.js): puts a power-up in the local inventory. Returns whether it fit. */
     grantItem(kind) {
       if (!putt || !room?.connected || putt.player.mode !== 'play' || !addToInventory(putt.player.inventory, kind)) return false;
       setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });

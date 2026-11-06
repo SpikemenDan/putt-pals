@@ -11,18 +11,15 @@
 .pw{flex:1;min-width:120px;height:22px;border:var(--line) solid var(--ink);border-radius:11px;background:#fff;overflow:hidden;container-type:inline-size}
 .pwi{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green) 0 55%,var(--yellow) 55% 80%,var(--red) 80%);background-size:100cqw 100%;border-right:var(--line) solid var(--ink)}
 .accuracy{font:900 12px var(--font);color:var(--ink);min-width:160px}
-.inv{margin:4px 0}
 .toast{min-height:22px;color:#fff;font:900 18px var(--font);margin:4px 0;text-shadow:-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink),2px 2px 0 var(--ink),0 3px 0 var(--ink)}
 .sb{margin-top:16px;border:var(--line) solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);overflow:hidden;box-shadow:var(--shadow)}
 .guide{display:none}
 .bar,.ctl,.inv,.toast,.sb{position:absolute;z-index:5;margin:0}
 .bar{left:12px;right:12px;top:12px;pointer-events:none}.bar>*{pointer-events:auto}
-.bar>span:last-child,.ctl{background:var(--paper);border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);color:var(--ink)}
-.bar>span:last-child{padding:4px 8px}
-.bar button{padding:6px 11px;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+.ctl{background:var(--paper);border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);color:var(--ink)}
 .ctl{left:12px;right:12px;bottom:12px;padding:8px 14px}
-.inv{left:14px;bottom:76px}.toast{left:50%;bottom:78px;transform:translateX(-50%);text-align:center}
-.sb{top:68px;right:12px;width:250px;max-height:55%;overflow:auto;margin-top:0}
+.inv{left:14px;bottom:76px;display:flex;gap:8px}.toast{left:50%;bottom:78px;transform:translateX(-50%);text-align:center}
+.sb{top:64px;right:12px;width:216px;max-height:50%;overflow:auto;margin-top:0;border-width:2px;box-shadow:3px 3px 0 var(--ink)}
 .hazardIndicators{position:absolute;z-index:5;left:14px;top:64px;display:flex;flex-wrap:wrap;gap:5px;max-width:50%;pointer-events:none}
 .hazardIndicators span,.hazardPrompt{border:2px solid var(--ink);border-radius:8px;background:var(--paper);color:var(--ink);padding:5px 8px;box-shadow:3px 3px 0 var(--ink);font:900 12px var(--font)}
 .hazardPrompt{position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;max-width:min(90%,600px)}
@@ -30,13 +27,41 @@
 @media (max-width:640px){
 .bar,.ctl,.inv,.toast,.sb{position:static}
 .bar{display:block;margin-bottom:6px}.info{display:block;font-size:12px;letter-spacing:1px;padding:7px 10px;margin-bottom:6px}
-.bar>span:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 6px}.bar button{padding:6px 9px;font-size:12px;margin:2px}
+.tools{flex-wrap:wrap}
 .ctl{margin:8px 0;padding:8px 10px}.hit{padding:6px 10px}.accuracy{min-width:0;flex:1 1 100%}
 .toast{transform:none;text-align:center;min-height:24px;margin:4px 0}
 .hazardPrompt{position:static;transform:none;max-width:none;margin:8px 0}
 .inv{margin:4px 0}
 .sb{width:auto;max-height:none;margin:8px 0 0}
 }
+
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.tools{display:flex;align-items:center;gap:6px}
+.tools[hidden]{display:none}
+.tool{position:relative;width:38px;height:38px;margin:0;padding:6px;border-radius:10px;border-width:2px;background:var(--paper);box-shadow:2px 2px 0 var(--ink)}
+.toolOn{background:var(--yellow)}
+.tool::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);right:0;padding:4px 8px;border-radius:7px;background:var(--ink);color:#fff;font:700 11px var(--font);letter-spacing:.3px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.tool:hover::after,.tool:focus-visible::after{opacity:1}
+.icon,.chipIcon,.slotIcon{display:block;line-height:0}
+.icon{width:100%;height:100%}
+.chipIcon{display:inline-block;width:15px;height:15px;margin-right:5px;vertical-align:-3px}
+.settings{position:absolute;z-index:7;top:62px;right:12px;width:216px;padding:12px;border:2px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.settings h2{margin:0 0 8px;font:900 13px var(--font);letter-spacing:1px;text-transform:uppercase}
+.settings button{display:block;width:100%;margin:0 0 8px;padding:7px 10px;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+.settings label{margin:0 0 10px;font:700 12px var(--font);color:var(--ink)}
+.settings input[type=range]{padding:0;margin-top:6px;border:0;box-shadow:none;accent-color:var(--pink);background:transparent}
+.settings .conn{margin:2px 0 0;font-size:12px}
+.slot{position:relative;width:56px;height:56px;margin:0;padding:7px;border-radius:12px;background:var(--paper);box-shadow:3px 3px 0 var(--ink)}
+.slotAttack{background:var(--cyan)}
+.slotEmpty{background:rgba(255,248,228,.45);border-style:dashed;box-shadow:none;cursor:default}
+.slotIcon{width:100%;height:100%}
+.slotKey{position:absolute;top:-8px;left:-8px;width:20px;height:20px;border:2px solid var(--ink);border-radius:50%;background:var(--yellow);color:var(--ink);font:900 11px/16px var(--font);text-align:center}
+.slotEmpty .slotKey{background:var(--paper)}
+.slotTip{position:absolute;left:0;bottom:calc(100% + 12px);width:210px;padding:8px 10px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink);font:700 12px/1.35 "Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif;letter-spacing:0;text-align:left;opacity:0;pointer-events:none;transition:opacity .12s}
+.slotTip b{display:block;margin-bottom:2px;font:900 13px var(--font)}
+.slot:hover .slotTip,.slot:focus-visible .slotTip{opacity:1}
+.sb>*{padding:5px 9px;font-size:12px}
+.sb>:first-child{font-size:11px}
 
 /* Start-screen panorama (M1b): the always-mounted game canvas fills the page behind the menu; the HUD is hidden. */
 .backdrop{position:fixed;inset:0;z-index:0;pointer-events:none}
