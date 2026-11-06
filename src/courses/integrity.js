@@ -12,7 +12,7 @@ import { checkMechanicIntegrity } from './mechanics-integrity.js';
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
-import { rampHeight, surfaceHeight } from '../simulation/physics.js';
+import { rampHeight, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 import { moverSweep, overlapExtent, pointInRect, pointRectDistance, rectCovered } from './geometry.js';
 import { slugify } from './legacy.js';
 
@@ -72,19 +72,72 @@ export function checkGeometryIntegrity({ id, name, index, geometry, putts = [] }
     return best;
   };
 
-  // Elevated solids: ramps and platforms.
-  const elevated = [...ramps.map((r, i) => ({ id: label('rp', i), rect: r, ramp: true, z: Math.max(r[5], r[6]) })),
-    ...plats.map((p, i) => ({ id: label('pl', i), rect: p, ramp: false, z: p[4] }))];
+  // Elevated solids: ramps and platforms, plus K0 volumetric structures.
+  const structures = listOf(g.structures);
+  const elevated = [
+    ...ramps.map((r, i) => ({ id: label('rp', i), rect: r, ramp: true, z: Math.max(r[5], r[6]), base: -10, top: Math.max(r[5], r[6]) })),
+    ...plats.map((p, i) => ({ id: label('pl', i), rect: p, ramp: false, z: p[4], base: -10, top: p[4] })),
+    ...structures.filter(s => s.kind === 'surface').map(s => ({
+      id: s.id, rect: s.rect, ramp: false, z: s.z,
+      base: s.z - (s.thickness ?? 4), top: s.z, volumetric: true
+    })),
+    ...structures.filter(s => s.kind === 'ramp').map(s => ({
+      id: s.id, rect: s.rect, ramp: true, z: Math.max(s.zStart, s.zEnd),
+      base: Math.min(s.zStart, s.zEnd) - (s.thickness ?? 4), top: Math.max(s.zStart, s.zEnd), volumetric: true
+    }))
+  ];
+  const allWalls = [
+    ...walls.map((w, i) => ({ id: label('w', i), rect: w, base: 0, height: WALL_HEIGHT })),
+    ...structures.filter(s => s.kind === 'wall').map(s => ({ id: s.id, rect: s.rect, base: s.base, height: s.height }))
+  ];
+
   for (const e of elevated) {
-    walls.forEach((w, i) => { if (overlaps(e.rect, w)) add(null, 'wall-through-solid', [label('w', i), e.id], `${label('w', i)} passes through ${e.id}`); });
-    pits.forEach((p, i) => { if (overlaps(e.rect, p)) add(null, 'solid-over-pit', [e.id, label('pit', i)], `${e.id} overlaps ${label('pit', i)}`); });
-    if (!rectCovered(e.rect, tiles)) add(null, 'solid-off-floor', [e.id], `${e.id} extends beyond the playable floor tiles`);
+    allWalls.forEach(w => {
+      if (overlaps(e.rect, w.rect)) {
+        const wTop = w.base + w.height;
+        if (!(wTop <= e.base + OVERLAP_TOLERANCE || w.base >= e.top - OVERLAP_TOLERANCE)) {
+          add(null, 'wall-through-solid', [w.id, e.id], `${w.id} passes through ${e.id}`);
+        }
+      }
+    });
+    pits.forEach((p, i) => {
+      if (overlaps(e.rect, p)) {
+        if (!e.volumetric || e.base < 10) {
+          add(null, 'solid-over-pit', [e.id, label('pit', i)], `${e.id} overlaps ${label('pit', i)}`);
+        }
+      }
+    });
+    if (!e.volumetric && !rectCovered(e.rect, tiles)) {
+      add(null, 'solid-off-floor', [e.id], `${e.id} extends beyond the playable floor tiles`);
+    }
   }
+
+  // Check vertical clearance of elevated volumetric structures over ground floor tiles
+  for (const s of elevated.filter(e => e.volumetric)) {
+    tiles.forEach((t, i) => {
+      if (overlaps(s.rect, t)) {
+        if (s.base >= 0 && s.base < 2 * BALL_RADIUS) {
+          add(null, 'insufficient-vertical-clearance', [s.id, label('tiles', i)], `${s.id} over ${label('tiles', i)} has insufficient vertical clearance (${s.base.toFixed(1)} < ${2 * BALL_RADIUS})`);
+        }
+      }
+    });
+  }
+
   for (let a = 0; a < elevated.length; a++) {
     for (let b = a + 1; b < elevated.length; b++) {
       const A = elevated[a], B = elevated[b];
       if (!overlaps(A.rect, B.rect)) continue;
-      if (!A.ramp && !B.ramp && A.z === B.z) continue; // coplanar platforms merge
+      if (!A.ramp && !B.ramp && A.z === B.z && A.base === B.base) continue; // coplanar platforms merge
+
+      const aAboveB = A.base >= B.top - OVERLAP_TOLERANCE;
+      const bAboveA = B.base >= A.top - OVERLAP_TOLERANCE;
+      if (aAboveB || bAboveA) {
+        const clearance = aAboveB ? A.base - B.top : B.base - A.top;
+        if (clearance < 2 * BALL_RADIUS) {
+          add(null, 'insufficient-vertical-clearance', [A.id, B.id], `${aAboveB ? A.id : B.id} over ${aAboveB ? B.id : A.id} has insufficient vertical clearance (${clearance.toFixed(1)} < ${2 * BALL_RADIUS})`);
+        }
+        continue;
+      }
       add(null, 'solids-interpenetrate', [A.id, B.id], `${A.id} and ${B.id} interpenetrate`);
     }
   }

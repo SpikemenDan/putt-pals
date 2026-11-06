@@ -121,6 +121,28 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     platform.userData.fade = true;
     g.add(ink(platform));
   }
+  if (hl.structures) {
+    for (const s of hl.structures) {
+      if (s.kind === 'surface') {
+        const thickness = s.thickness ?? 4;
+        const color = s.surface === 'ice' ? T.ice : s.surface === 'sand' ? T.sand : s.surface === 'slime' ? T.slime : T.turf;
+        const mat = surface(s.surface ?? 'turf', color, s.rect[2] / 80, s.rect[3] / 80, { roughness: s.surface === 'ice' ? 0.08 : 0.8 });
+        const mesh = box(THREE, s.rect[2], thickness, s.rect[3], mat, at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.z - thickness / 2), true);
+        mesh.userData.fade = true;
+        g.add(ink(mesh));
+      } else if (s.kind === 'wall') {
+        const wall = box(THREE, s.rect[2], s.height, s.rect[3], surface('wall', T.brick, Math.max(s.rect[2], s.rect[3]) / 90, 1, { transparent: true }), at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.base + s.height / 2), true);
+        wall.userData.fade = true;
+        wall.userData.wall = true;
+        g.add(ink(wall));
+      } else if (s.kind === 'ceiling') {
+        const thickness = s.thickness ?? 4;
+        const ceil = box(THREE, s.rect[2], thickness, s.rect[3], surface('platform', T.plat, s.rect[2] / 90, s.rect[3] / 90, { roughness: 0.6 }), at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.z + thickness / 2), true);
+        ceil.userData.fade = true;
+        g.add(ink(ceil));
+      }
+    }
+  }
   for (const r of hl.rp) {
     const geometry = new THREE.BufferGeometry(), verts = [], uv = [], N = 48;
     const alongX = r[4][1] === 'x';
