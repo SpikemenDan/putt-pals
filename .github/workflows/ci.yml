@@ -147,17 +147,26 @@ jobs:
       - name: Cache the Playwright browser
         if: steps.scope.outputs.docs-only != 'true'
         uses: actions/cache@v4
+        id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - name: Install the Playwright browser and its system libraries
         if: steps.scope.outputs.docs-only != 'true'
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps ${{ matrix.browser }}
+          else
+            npx playwright install --with-deps ${{ matrix.browser }}
+          fi
       # GPU-less runners: headless Firefox gets no WebGL and Chromium's SwiftShader is too slow for the
       # real-time putt timers, so both run headed on a virtual display with Mesa's software GL.
       - name: Install a virtual display and software OpenGL
         if: matrix.browser != 'webkit' && steps.scope.outputs.docs-only != 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
+        run: |
+          if ! command -v xvfb-run >/dev/null 2>&1 || ! dpkg -s libgl1-mesa-dri >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libegl1 libegl-mesa0 libgl1 libglx-mesa0
+          fi
       # PR #51 accidentally merged the diagnostic workflow. Restore the normal gates;
       # keep the diagnostic probe available explicitly, outside the default acceptance run.
       - name: Run real-browser solo, practice and server-room WebSocket flows
