@@ -410,7 +410,7 @@ function fakeClock() {
     await t.step(2600);
     await act(async () => t.store.setLocal({ mode: 'play', strokes: 1 }));
     assert.match(t.within('[data-ui=hud-info]').textContent, /^Switchback Garden · PUTT 1\/6 · PAR 2 · STROKES 1 · \d:\d\d$/);
-    assert.equal(t.within('[data-ui=hud-info] ~ span > span').hidden, true, 'no putt-practice bar in course practice');
+    assert.equal(t.within('[data-ui=practice-bar]').hidden, true, 'no putt-practice bar in course practice');
     for (let k = 0; k < 6; k++) {
       const s = t.session.getSnapshot();
       await t.send({ type: 'REPORT_SCORE', playerId: 'host', roundNumber: s.roundNumber, puttIndex: s.puttIndex, strokes: 2 });
@@ -438,14 +438,14 @@ function fakeClock() {
     await act(async () => p.store.setLocal({ mode: 'play', strokes: 4 }));
     await p.step(100);
     assert.equal(p.within('[data-ui=hud-info]').textContent, 'Dune Serpent · PUTT 4/6 · PAR 3 · STROKES 4 · PRACTICE');
-    const bar = p.within('[data-ui=hud-info] ~ span > span');
+    const bar = p.within('[data-ui=practice-bar]');
     assert.equal(bar.hidden, false, 'host sees the putt-practice bar');
-    await click([...bar.children].find(b => b.textContent === 'Next putt ›'));
+    await click([...bar.querySelectorAll('button')].find(b => b.textContent === 'Next putt ›'));
     assert.equal(p.session.getSnapshot().puttIndex, 4);
-    await click([...bar.children].find(b => b.textContent === '‹ Prev putt'));
-    await click([...bar.children].find(b => b.textContent === '‹ Prev putt'));
+    await click([...bar.querySelectorAll('button')].find(b => b.textContent === '‹ Prev putt'));
+    await click([...bar.querySelectorAll('button')].find(b => b.textContent === '‹ Prev putt'));
     assert.equal(p.session.getSnapshot().puttIndex, 2);
-    await click([...bar.children].find(b => b.textContent === 'Maps'));
+    await click([...bar.querySelectorAll('button')].find(b => b.textContent === 'Maps'));
     assert.equal(p.session.getSnapshot().phase, 'select');
     await p.teardown();
   });

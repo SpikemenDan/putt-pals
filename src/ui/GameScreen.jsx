@@ -17,12 +17,17 @@ import hud from './Hud.module.css';
  */
 const POWERUP_COUNT = spawnPool().length;
 
-/** Square icon button; the label stays in the DOM for screen readers and shows as a tooltip on hover. */
+/**
+ * Square icon button with a hover tooltip. The label stays in the DOM for screen readers. The tooltip belongs to the wrapper, not the
+ * button, because generated text inside a button becomes part of its accessible name.
+ */
 function Tool({ icon, label, tip = label, active, onClick }) {
   return (
-    <button type="button" className={`${hud.tool}${active ? ' ' + hud.toolOn : ''}`} data-tip={tip} aria-pressed={active === undefined ? undefined : active} onClick={onClick}>
-      <Svg markup={HUD_ICONS[icon]} /><span className={hud.sr}>{label}</span>
-    </button>
+    <span className={hud.toolWrap} data-tip={tip}>
+      <button type="button" className={`${hud.tool}${active ? ' ' + hud.toolOn : ''}`} aria-pressed={active === undefined ? undefined : active} onClick={onClick}>
+        <Svg markup={HUD_ICONS[icon]} /><span className={hud.sr}>{label}</span>
+      </button>
+    </span>
   );
 }
 
@@ -57,7 +62,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
             <Tool icon="view" label={view?.viewLabel || 'View: Ball cam'} onClick={() => send(UiCommands.CYCLE_CAMERA)} />
             <Tool icon="card" label="Card" tip="Scorecard" onClick={() => send(UiCommands.TOGGLE_CARD)} />
             <Tool icon="scoreboard" label="Scoreboard" active={scoreOpen} onClick={() => setScoreOpen(open => !open)} />
-            <span className={hud.tools} hidden={!view?.practiceBar}>
+            <span className={hud.tools} data-ui="practice-bar" hidden={!view?.practiceBar}>
               <Tool icon="prev" label="‹ Prev putt" tip="Previous putt" onClick={() => session({ type: 'PRACTICE_STEP', step: -1 })} />
               <Tool icon="restart" label="Restart" onClick={() => session({ type: 'PRACTICE_STEP', step: 0 })} />
               <Tool icon="next" label="Next putt ›" tip="Next putt" onClick={() => session({ type: 'PRACTICE_STEP', step: 1 })} />

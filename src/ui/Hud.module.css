@@ -59,8 +59,9 @@
 .tool:hover:not(:disabled){transform:translate(-1px,-1px) rotate(-2deg);filter:none}
 .tool:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 .toolOn{background:var(--yellow)}
-.tool::after{content:attr(data-tip);position:absolute;z-index:9;top:calc(100% + 8px);right:0;padding:4px 9px;border:var(--line) solid var(--ink);background:var(--yellow);color:var(--ink);font:900 11px var(--font);white-space:nowrap;box-shadow:3px 3px 0 var(--ink);opacity:0;pointer-events:none}
-.tool:hover::after,.tool:focus-visible::after{opacity:1}
+.toolWrap{position:relative;display:inline-flex}
+.toolWrap::after{content:attr(data-tip);position:absolute;z-index:9;top:calc(100% + 8px);right:0;padding:4px 9px;border:var(--line) solid var(--ink);background:var(--yellow);color:var(--ink);font:900 11px var(--font);white-space:nowrap;box-shadow:3px 3px 0 var(--ink);opacity:0;pointer-events:none}
+.toolWrap:hover::after,.toolWrap:focus-within::after{opacity:1}
 .icon,.chipIcon,.slotIcon{display:block;line-height:0}
 .icon{width:100%;height:100%}
 .chipIcon{display:inline-block;width:17px;height:17px;margin-right:5px;vertical-align:-4px}
