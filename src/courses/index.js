@@ -16,4 +16,6 @@ export * from './tubes.js';
 export * from './tube-chambers.js';
 export * from './water.js';
 export * from './water-chambers.js';
+export * from './wind.js';
+export * from './wind-chambers.js';
 export * from './difficulty.js';

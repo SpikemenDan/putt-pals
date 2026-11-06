@@ -295,6 +295,57 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
       }
     }
   }
+  if (hl.wind) {
+    for (const wz of hl.wind) {
+      const [bx, by, bw, bh] = wz.bounds;
+      const minZ = wz.minZ ?? 0;
+      const maxZ = wz.maxZ ?? 60;
+      const midZ = (minZ + maxZ) / 2;
+      const depthZ = Math.max(10, maxZ - minZ);
+      const windColor = palette?.surfaces?.wind ?? 0xffffff;
+
+      const zoneBox = new THREE.Mesh(
+        new THREE.BoxGeometry(bw, depthZ, bh),
+        new THREE.MeshBasicMaterial({
+          color: windColor,
+          transparent: true,
+          opacity: 0.12,
+          wireframe: true,
+          depthWrite: false,
+        })
+      );
+      zoneBox.position.set(...at(bx + bw / 2, by + bh / 2, midZ));
+      zoneBox.userData.windZone = true;
+      zoneBox.userData.zoneId = wz.id;
+      g.add(zoneBox);
+
+      const count = 12;
+      const streaks = createWindStreaks({ THREE, count, color: windColor });
+      streaks.mesh.userData.windStreaks = true;
+      streaks.mesh.userData.zoneId = wz.id;
+
+      const f = wz.force || [100, 0, 0];
+      const dirX = f[0] || 0;
+      const dirY = f[1] || 0;
+      const heads = new Float32Array(count * 3);
+      const lengths = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const u = random ? random() : (i + 0.5) / count;
+        const v = random ? random() : ((i * 3) % count + 0.5) / count;
+        const w = random ? random() : 0.5;
+        const px = bx + u * bw;
+        const py = by + v * bh;
+        const pz = minZ + w * depthZ;
+        const pos = at(px, py, pz);
+        heads[i * 3] = pos[0];
+        heads[i * 3 + 1] = pos[1];
+        heads[i * 3 + 2] = pos[2];
+        lengths[i] = 18;
+      }
+      streaks.write(heads, dirX, dirY, lengths, 2.0);
+      g.add(streaks.mesh);
+    }
+  }
   for (const p of hl.pd) {
     const pad = new THREE.Mesh(new THREE.CircleGeometry(18, 32), library.pad);
     pad.rotation.x = -Math.PI / 2; pad.position.set(...at(p[0], p[1], 1.6)); g.add(pad);

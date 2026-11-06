@@ -24,7 +24,7 @@ export const GRAVITY = TUNING.gravity;
 export const WALL_HEIGHT = TUNING.wallHeight;
 export const CUP_DEPTH = TUNING.cup.depth;
 
-const { surface: SURF, bounce: BOUNCE, rest: REST, hazards: HAZ, powerups: POW, cup: CUPT, water: WAT } = TUNING;
+const { surface: SURF, bounce: BOUNCE, rest: REST, hazards: HAZ, powerups: POW, cup: CUPT, water: WAT, wind: WIND } = TUNING;
 
 /**
  * Checks if 2D point (x, y) is inside rectangle r: [x, y, w, h].
@@ -853,6 +853,32 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
         if (Math.abs(player.z - wz) <= 12) {
           player.vx += wb.current[0] * dt;
           player.vy += wb.current[1] * dt;
+          break;
+        }
+      }
+    }
+  }
+
+  // Wind zones (Task W3, issue #106)
+  if (course.wind) {
+    for (const wz of course.wind) {
+      if (inside(wz.bounds, player.x, player.y)) {
+        const minZ = wz.minZ ?? -50;
+        const maxZ = wz.maxZ ?? 200;
+        if (player.z >= minZ && player.z <= maxZ) {
+          let factor = 1.0;
+          if (wz.gust && wz.gust.period > 0) {
+            const phase = wz.gust.phase || 0;
+            const cycle = (hazardTime + phase) / wz.gust.period;
+            factor = Math.max(0, 1 + wz.gust.amplitude * Math.sin(2 * Math.PI * cycle));
+          }
+          const mult = air ? (wz.airMultiplier ?? WIND.airMultiplier) : (wz.groundMultiplier ?? WIND.groundMultiplier);
+          const fx = (wz.force[0] || 0) * factor * mult;
+          const fy = (wz.force[1] || 0) * factor * mult;
+          const fz = (wz.force[2] || 0) * factor * mult;
+          player.vx += fx * dt;
+          player.vy += fy * dt;
+          player.vz += fz * dt;
           break;
         }
       }

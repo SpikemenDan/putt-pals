@@ -23,7 +23,8 @@ export function createCourseDocument() {
       ...(data.definitions[index].curvedRamps ? {curvedRamps:structuredClone(data.definitions[index].curvedRamps)} : {}),
       ...(data.definitions[index].drops ? {drops:structuredClone(data.definitions[index].drops)} : {}),
       ...(data.definitions[index].tubes ? {tubes:structuredClone(data.definitions[index].tubes)} : {}),
-      ...(data.definitions[index].water ? {water:structuredClone(data.definitions[index].water)} : {}) },
+      ...(data.definitions[index].water ? {water:structuredClone(data.definitions[index].water)} : {}),
+      ...(data.definitions[index].wind ? {wind:structuredClone(data.definitions[index].wind)} : {}) },
     putts: course.putts.map((putt, pi) => ({ ...putt, id: `${course.id}-putt-${pi + 1}`, index: pi })),
   })) };
   const checked = validateCourseDocument(document);
@@ -65,7 +66,8 @@ export function validateCourseDocument(document) {
         curvedRamps: p.curvedRamps,
         drops: p.drops,
         tubes: p.tubes,
-        water: p.water
+        water: p.water,
+        wind: p.wind
       }));
       const integrity = checkGeometryIntegrity({ id: validId(course.id) ? course.id : undefined, name: course.name, index, geometry: course.geometry, putts });
       errors.push(...integrity.violations.map(v => `Course ${index}: ${formatIntegrityViolation(v)}`));
