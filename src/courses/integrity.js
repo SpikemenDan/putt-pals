@@ -1,4 +1,5 @@
 import { checkMechanicIntegrity } from './mechanics-integrity.js';
+import { ISLAND_EDGES, normalizeEdge } from './islands.js';
 /**
  * Static geometry integrity check (roadmap CL1).
  *
@@ -52,6 +53,102 @@ export const GEOMETRY_INTEGRITY_EXCEPTIONS = [
 const listOf = value => (Array.isArray(value) ? value : []);
 const label = (key, index) => `${key}[${index}]`;
 const overlaps = (a, b) => { const [w, h] = overlapExtent(a, b); return w > OVERLAP_TOLERANCE && h > OVERLAP_TOLERANCE; };
+
+function checkIslandIntegrity({ islands = [], walls = [], tiles = [], structures = [] }, puttIndex, add) {
+  for (let a = 0; a < islands.length; a++) {
+    for (let b = a + 1; b < islands.length; b++) {
+      const A = islands[a], B = islands[b];
+      if (overlaps(A.rect, B.rect)) {
+        add(puttIndex, 'islands-interpenetrate', [A.id, B.id], `Islands ${A.id} and ${B.id} interpenetrate`);
+      }
+    }
+  }
+
+  const allWallRects = [
+    ...walls.map((w, i) => ({ id: label('w', i), rect: w })),
+    ...structures.filter(s => s.kind === 'wall').map(s => ({ id: s.id, rect: s.rect }))
+  ];
+
+  const allSurfaces = [
+    ...tiles,
+    ...islands.map(isl => isl.rect)
+  ];
+
+  for (const island of islands) {
+    const [ix, iy, iw, ih] = island.rect;
+    const openSet = new Set((island.openEdges ?? []).map(normalizeEdge).filter(Boolean));
+    const explicitGuardSet = Array.isArray(island.guardWalls)
+      ? new Set(island.guardWalls.map(normalizeEdge).filter(Boolean))
+      : null;
+    const defaultGuarded = island.guardWalls === true;
+
+    for (const edge of ISLAND_EDGES) {
+      let blockingWall = null;
+      for (const w of allWallRects) {
+        const [wx, wy, ww, wh] = w.rect;
+        if (edge === 'north') {
+          const xOverlap = Math.min(ix + iw, wx + ww) - Math.max(ix, wx);
+          if (xOverlap > OVERLAP_TOLERANCE && Math.abs((wy + wh / 2) - iy) <= 15) {
+            blockingWall = w;
+            break;
+          }
+        } else if (edge === 'south') {
+          const xOverlap = Math.min(ix + iw, wx + ww) - Math.max(ix, wx);
+          if (xOverlap > OVERLAP_TOLERANCE && Math.abs((wy + wh / 2) - (iy + ih)) <= 15) {
+            blockingWall = w;
+            break;
+          }
+        } else if (edge === 'west') {
+          const yOverlap = Math.min(iy + ih, wy + wh) - Math.max(iy, wy);
+          if (yOverlap > OVERLAP_TOLERANCE && Math.abs((wx + ww / 2) - ix) <= 15) {
+            blockingWall = w;
+            break;
+          }
+        } else if (edge === 'east') {
+          const yOverlap = Math.min(iy + ih, wy + wh) - Math.max(iy, wy);
+          if (yOverlap > OVERLAP_TOLERANCE && Math.abs((wx + ww / 2) - (ix + iw)) <= 15) {
+            blockingWall = w;
+            break;
+          }
+        }
+      }
+
+      if (openSet.has(edge)) {
+        if (blockingWall) {
+          add(puttIndex, 'blocked-open-edge', [island.id, blockingWall.id], `Open drop-off edge "${edge}" of island ${island.id} is blocked by ${blockingWall.id}`);
+        }
+        if (explicitGuardSet && explicitGuardSet.has(edge)) {
+          add(puttIndex, 'blocked-open-edge', [island.id], `Open drop-off edge "${edge}" of island ${island.id} is explicitly declared in guardWalls`);
+        }
+      } else {
+        const hasGuardWall = (explicitGuardSet ? explicitGuardSet.has(edge) : defaultGuarded) || blockingWall !== null;
+        if (!hasGuardWall) {
+          let connected = false;
+          for (const s of allSurfaces) {
+            if (s === island.rect) continue;
+            const [sx, sy, sw, sh] = s;
+            if (edge === 'north') {
+              const xOverlap = Math.min(ix + iw, sx + sw) - Math.max(ix, sx);
+              if (xOverlap > OVERLAP_TOLERANCE && Math.abs((sy + sh) - iy) <= 1) { connected = true; break; }
+            } else if (edge === 'south') {
+              const xOverlap = Math.min(ix + iw, sx + sw) - Math.max(ix, sx);
+              if (xOverlap > OVERLAP_TOLERANCE && Math.abs(sy - (iy + ih)) <= 1) { connected = true; break; }
+            } else if (edge === 'west') {
+              const yOverlap = Math.min(iy + ih, sy + sh) - Math.max(iy, sy);
+              if (yOverlap > OVERLAP_TOLERANCE && Math.abs((sx + sw) - ix) <= 1) { connected = true; break; }
+            } else if (edge === 'east') {
+              const yOverlap = Math.min(iy + ih, sy + sh) - Math.max(iy, sy);
+              if (yOverlap > OVERLAP_TOLERANCE && Math.abs(sx - (ix + iw)) <= 1) { connected = true; break; }
+            }
+          }
+          if (!connected) {
+            add(puttIndex, 'undeclared-open-edge', [island.id], `Edge "${edge}" of island ${island.id} is exposed to void without a guard wall or adjacent tile and is not declared in openEdges`);
+          }
+        }
+      }
+    }
+  }
+}
 
 /**
  * @param {{id?:string,name?:string,index?:number,geometry:object,putts?:Array<{tee:number[],hole:number[],cupRadius:number}>}} input
@@ -142,6 +239,11 @@ export function checkGeometryIntegrity({ id, name, index, geometry, putts = [] }
     }
   }
 
+  // Island geometry integrity (K1a)
+  if (Array.isArray(g.islands) && g.islands.length > 0) {
+    checkIslandIntegrity({ islands: g.islands, walls, tiles, structures }, null, add);
+  }
+
   // Moving obstacles: full travel must stay on the floor and clear of walls and pits.
   movers.forEach((m, i) => {
     const sweep = moverSweep(m), mid = label('movers', i);
@@ -187,6 +289,14 @@ export function checkGeometryIntegrity({ id, name, index, geometry, putts = [] }
 
   // Per-putt spawn and cup placement.
   putts.forEach((putt, pi) => {
+    if (Array.isArray(putt?.islands) && putt.islands.length > 0) {
+      checkIslandIntegrity({
+        islands: putt.islands,
+        walls: putt.w ?? walls,
+        tiles: putt.tiles ?? tiles,
+        structures: putt.structures ?? structures
+      }, pi, add);
+    }
     const cupR = Number.isFinite(putt?.cupRadius) ? putt.cupRadius : 0;
     const checks = [['tee', putt?.tee, SPAWN_WALL_CLEARANCE, BALL_RADIUS], ['hole', putt?.hole, cupR + CUP_WALL_MARGIN, cupR]];
     for (const [field, p, clearance, ring] of checks) {

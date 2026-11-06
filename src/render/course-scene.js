@@ -19,6 +19,7 @@ import { createWindStreaks } from './weather.js';
 import { DEFAULT_PALETTE } from '../courses/palettes.js';
 import { addInk, createInkMaterial } from './outline.js';
 import { createWorldTransform, resolveRenderCourse } from './transform.js';
+import { islandsToTiles, islandsToGuardWalls } from '../courses/islands.js';
 
 /** Text sprite used for tee/cup markers and player names (legacy label()). */
 export function createLabel(library, text) {
@@ -86,6 +87,10 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const { THREE, textures: T } = library;
   const random = library.random;
   const hl = resolveRenderCourse(course, puttIndex);
+  if (hl.islands) {
+    if (!hl.tiles || hl.tiles.length === 0) hl.tiles = islandsToTiles(hl.islands);
+    if (!hl.w || hl.w.length === 0) hl.w = islandsToGuardWalls(hl.islands);
+  }
   const transform = createWorldTransform(origin);
   const at = (x, y, h) => transform.local(x, y, h);
   const orphans = [];

@@ -37,7 +37,7 @@ Breakdown of the product vision in MODERNIZATION_PLAN.md and the design in ARCHI
 | [GM2b #186](https://github.com/SpikemenDan/putt-pals/issues/186) 1v1 turn-based session | #185 | 1v1 turn alternation, 2 balls per turn, bonus balls for double sinks, redemption shot, round resets, win condition |
 | [GM2c #187](https://github.com/SpikemenDan/putt-pals/issues/187) Visuals & HUD | #185 | 3D cup rack rendering, cup elimination feedback effect, HUD rack tracker, lobby game mode selector |
 | [GM2d #188](https://github.com/SpikemenDan/putt-pals/issues/188) Integration & verification | #185-#187 | End-to-end 2-client match, practice solo flow, chip-shot cup landing tuning, Playwright browser tests |
-| [K1a #97](https://github.com/SpikemenDan/putt-pals/issues/97) Islands and walls | #94, #87, #104 | Per-putt floating islands with designed gaps, guard walls, declared open edges |
+| [K1a #97](https://github.com/SpikemenDan/putt-pals/issues/97) Islands and walls | #94, #87, #104 | Per-putt floating islands with designed gaps, guard walls, declared open edges, CL1 integrity checks, SV1 proof chambers and test coverage |
 | [K1b #98](https://github.com/SpikemenDan/putt-pals/issues/98) Ramps and drops | #97 | Curved ramps and multi-tier drops with landing floors; solver and test chambers |
 | [K1c #99](https://github.com/SpikemenDan/putt-pals/issues/99) Transport tubes | #98 | Enclosed tubes that carry and fling the ball between islands |
 | [K1d #100](https://github.com/SpikemenDan/putt-pals/issues/100) Difficulty bands | #97-#99 | Difficulty bands by map rating measured with SV1 (par-based, no hole-in-one requirement), optional hole-in-one shortcuts on some putts, re-solved starter maps, fresh sweep |
