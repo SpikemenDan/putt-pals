@@ -220,6 +220,39 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
       }
     }
   }
+  if (hl.tubes) {
+    for (const tube of hl.tubes) {
+      if (!tube.path || tube.path.length < 2) continue;
+      const points = tube.path.map(p => new THREE.Vector3(...at(p[0], p[1], p[2])));
+      const curve = new THREE.CatmullRomCurve3(points);
+      const radius = tube.radius ?? 14;
+      const geometry = new THREE.TubeGeometry(curve, Math.max(16, tube.path.length * 8), radius, 12, false);
+      const tubeColor = tube.color ?? 0x4aa3ff;
+      const tubeMat = toon
+        ? library.toon(tubeColor, { transparent: true, opacity: 0.75, roughness: 0.2 })
+        : new THREE.MeshStandardMaterial({ color: tubeColor, transparent: true, opacity: 0.75, roughness: 0.2 });
+      const mesh = new THREE.Mesh(geometry, tubeMat);
+      mesh.userData.fade = true;
+      mesh.userData.tube = true;
+      g.add(ink(mesh));
+
+      const entryPos = at(tube.entry[0], tube.entry[1], tube.entry[2]);
+      const entryCollar = new THREE.Mesh(
+        new THREE.TorusGeometry(radius + 2, 3, 8, 24),
+        solid('fanRing', { color: 0xffd23f, metalness: 0.7, roughness: 0.3 })
+      );
+      entryCollar.position.set(...entryPos);
+      g.add(ink(entryCollar));
+
+      const exitPos = at(tube.exit[0], tube.exit[1], tube.exit[2]);
+      const exitCollar = new THREE.Mesh(
+        new THREE.TorusGeometry(radius + 2, 3, 8, 24),
+        solid('fanRing', { color: 0xffa726, metalness: 0.7, roughness: 0.3 })
+      );
+      exitCollar.position.set(...exitPos);
+      g.add(ink(exitCollar));
+    }
+  }
   for (const p of hl.pit) {
     const water = new THREE.Mesh(new THREE.PlaneGeometry(p[2], p[3]), library.water);
     water.rotation.x = -Math.PI / 2;

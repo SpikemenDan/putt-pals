@@ -174,6 +174,54 @@ export function curvedRampBoundingRect(ramp) {
   return [minX, minY, maxX - minX, maxY - minY];
 }
 
+/**
+ * Calculates total 3D path length for an array of points [[x, y, z], ...].
+ *
+ * @param {Array<[number, number, number]>} path
+ * @returns {number}
+ */
+export function pathLength(path) {
+  let len = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    len += Math.hypot(
+      path[i + 1][0] - path[i][0],
+      path[i + 1][1] - path[i][1],
+      path[i + 1][2] - path[i][2]
+    );
+  }
+  return len;
+}
+
+/**
+ * Samples 3D position along a waypoint path at a given arc distance.
+ *
+ * @param {Array<[number, number, number]>} path
+ * @param {number} dist Distance from start
+ * @param {number} totalLen Total precomputed path length
+ * @returns {[number, number, number]}
+ */
+export function samplePath(path, dist, totalLen) {
+  if (!path || path.length === 0) return [0, 0, 0];
+  if (path.length === 1) return [...path[0]];
+  const d = Math.max(0, Math.min(totalLen, dist));
+  let acc = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const p0 = path[i];
+    const p1 = path[i + 1];
+    const segLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+    if (acc + segLen >= d || i === path.length - 2) {
+      const t = segLen > 1e-6 ? (d - acc) / segLen : 0;
+      return [
+        p0[0] + (p1[0] - p0[0]) * t,
+        p0[1] + (p1[1] - p0[1]) * t,
+        p0[2] + (p1[2] - p0[2]) * t,
+      ];
+    }
+    acc += segLen;
+  }
+  return [...path[path.length - 1]];
+}
+
 export function surfaceHeight(course, x, y, ballZ = undefined) {
   if (!course.structures?.length && !course.curvedRamps?.length && !course.drops?.length) {
     if (course.tiles && !course.tiles.some(r => inside(r, x, y))) return -999;
@@ -502,6 +550,8 @@ export function outOfBounds(player, course, events = []) {
   player.vy = 0;
   player.vz = 0;
   player.moving = false;
+  player.tubeState = null;
+  player.tubeCooldown = 0;
   clearAtRest(player);
   player.prevPosition = null;
 
@@ -523,6 +573,8 @@ export function stopBall(player, events = []) {
   player.vy = 0;
   player.vz = 0;
   player.moving = false;
+  player.tubeState = null;
+  player.tubeCooldown = 0;
   clearAtRest(player);
 
   events.push({
@@ -571,6 +623,41 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
+  if (player.tubeState) {
+    const tube = course.tubes?.find(t => t.id === player.tubeState.tubeId);
+    if (!tube) {
+      player.tubeState = null;
+    } else {
+      player.tubeState.distance += player.tubeState.speed * dt;
+      if (player.tubeState.distance < player.tubeState.totalDistance) {
+        const [tx, ty, tz] = samplePath(tube.path, player.tubeState.distance, player.tubeState.totalDistance);
+        player.x = tx;
+        player.y = ty;
+        player.z = tz;
+        player.vx = 0;
+        player.vy = 0;
+        player.vz = 0;
+        return events;
+      }
+      player.x = tube.exit[0];
+      player.y = tube.exit[1];
+      player.z = tube.exit[2];
+      player.vx = tube.exitVelocity[0];
+      player.vy = tube.exitVelocity[1];
+      player.vz = tube.exitVelocity[2];
+      player.tubeCooldown = 0.5;
+      player.tubeState = null;
+      events.push({
+        type: SimulationEventTypes.HAZARD,
+        hazardType: 'tube',
+        action: 'exit',
+        target: tube.id,
+        position: [player.x, player.y, player.z],
+        velocity: [player.vx, player.vy, player.vz],
+      });
+      return events;
+    }
+  }
   if (player.auraSources?.length) { // Love / Hate Ball of other players (G1d); absent or empty leaves every result unchanged
     const [ax, ay] = auraAcceleration(player.auraSources, player.x, player.y, dt);
     player.vx += ax; player.vy += ay;
@@ -936,6 +1023,40 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   if (course.mechanics?.length) {
     const portal = applyCoursePortal(course.mechanics,player,dt,R,(x,y)=>surfaceHeight(course,x,y), courseMechanicTuning);
     if(portal) events.push({type:SimulationEventTypes.HAZARD,hazardType:'teleporter',id:portal,position:[player.x,player.y,player.z]});
+  }
+
+  // Transport tubes (K1c)
+  if (player.tubeCooldown > 0) {
+    player.tubeCooldown -= dt;
+  } else if (course.tubes?.length) {
+    for (const tube of course.tubes) {
+      const entryRadius = tube.entryRadius ?? tube.radius ?? 16;
+      const d = Math.hypot(player.x - tube.entry[0], player.y - tube.entry[1], player.z - tube.entry[2]);
+      if (d <= entryRadius + R) {
+        const totalDistance = pathLength(tube.path);
+        const speed = tube.speed ?? 350;
+        player.tubeState = {
+          tubeId: tube.id,
+          distance: 0,
+          totalDistance,
+          speed,
+        };
+        player.x = tube.entry[0];
+        player.y = tube.entry[1];
+        player.z = tube.entry[2];
+        player.vx = 0;
+        player.vy = 0;
+        player.vz = 0;
+        events.push({
+          type: SimulationEventTypes.HAZARD,
+          hazardType: 'tube',
+          action: 'enter',
+          target: tube.id,
+          position: [player.x, player.y, player.z],
+        });
+        return events;
+      }
+    }
   }
 
   // Rest stop check on gentle slope
