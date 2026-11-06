@@ -10,6 +10,7 @@ import { ScorecardOverlay } from './Scorecard.jsx';
 import { MESSAGES } from './commands.js';
 import { DISPLAY } from '../shared/display.js';
 import app from './App.module.css';
+import './fonts/fonts.css';
 import './global.css';
 
 function Screens({ onCanvas, initialName, initialRoomCode }) {

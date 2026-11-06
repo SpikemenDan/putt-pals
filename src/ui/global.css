@@ -1,18 +1,19 @@
 /* Element defaults and the comic theme (V1d #61): flat saturated colour, thick ink outlines and hard
    offset shadows, matching the toon renderer's ink look. One fixed theme; component styles live in
-   CSS Modules next to each component. No web fonts: the heavy system stack keeps the bundle unchanged. */
+   CSS Modules next to each component. Fonts: Jersey 10 for display text and Pixelify Sans for body text (src/ui/fonts/fonts.css, self-hosted),
+   with the old heavy system stacks as fallbacks. The dev panel can swap them live through --pp-display / --pp-body. */
 :root{
   --ink:#14102a;--paper:#fff8e4;--sky:#2f7cf0;--yellow:#ffd23f;--pink:#ff3d8b;--pink-d:#b5124f;--cyan:#27c8ff;--green:#2fbf5b;--red:#d7261e;
-  --line:3px;--shadow:4px 4px 0 var(--ink);--font:"Arial Black","Segoe UI Black","Helvetica Neue",Arial,sans-serif;
+  --line:3px;--shadow:4px 4px 0 var(--ink);--font:var(--pp-display,"Jersey 10 PP","Arial Black","Segoe UI Black","Helvetica Neue",Arial,sans-serif);
   --bg:var(--sky);--fg:var(--ink);--card:var(--paper);--ac:var(--pink);--mut:#4b4466;--bd:var(--ink);
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
-body{margin:0;color:#fff;font-family:"Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif;
+body{margin:0;color:#fff;font-family:var(--pp-body,"Pixelify Sans","Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif);font-synthesis:none;
   background-color:var(--sky);background-image:radial-gradient(rgba(255,255,255,.3) 2px,transparent 2.6px),linear-gradient(#6fb4ff,var(--sky) 45%);background-size:18px 18px,100% 100%}
-h1{margin:0 0 8px;font:900 36px/1.1 var(--font);letter-spacing:-1px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
+h1{margin:0 0 8px;font:900 36px/1.1 var(--font);letter-spacing:1px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
 p{line-height:1.45}
 label{display:block;margin:12px 0;font-size:14px;font-weight:700;color:var(--mut)}
-input,select,textarea{display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;border-radius:10px;border:var(--line) solid var(--ink);background:#fff;color:var(--ink);box-shadow:inset 2px 2px 0 rgba(20,16,42,.14)}
+input,select,textarea{font-family:inherit;display:block;width:100%;margin-top:4px;padding:10px;font-size:16px;border-radius:10px;border:var(--line) solid var(--ink);background:#fff;color:var(--ink);box-shadow:inset 2px 2px 0 rgba(20,16,42,.14)}
 textarea{height:80px;font-size:13px}
 button{font:900 14px var(--font);letter-spacing:.3px;padding:10px 16px;border-radius:12px;border:var(--line) solid var(--ink);background:var(--yellow);color:var(--ink);box-shadow:var(--shadow);cursor:pointer;margin:4px 8px 4px 0;touch-action:manipulation;user-select:none;transition:transform .06s,box-shadow .06s}
 button:hover:not(:disabled){filter:brightness(1.06)}

@@ -1,9 +1,8 @@
 /* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night-to-day sky, the curved horizon of a planet
    painted by planet-scene.js, Ares and Luna in the distance, golf balls flying across, then the brand, the putt progress and a
-   tip. Fonts (self-hosted, SIL OFL): Bangers for display, Nunito for reading text. The dev preview can swap them by setting
-   --pp-display / --pp-body on the page root. */
+   tip. Fonts come from the game-wide theme (src/ui/fonts/fonts.css, global.css): Jersey 10 for the title, Pixelify Sans for captions. */
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
-  --display:var(--pp-display,'Bangers','Arial Black',sans-serif);--body:var(--pp-body,'Nunito','Segoe UI',sans-serif);
+  --display:var(--font);--body:var(--pp-body,'Pixelify Sans','Segoe UI',sans-serif);
   background-color:#0b1240;background-image:
     radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 27% 9%,#fff,transparent),radial-gradient(1.5px 1.5px at 41% 24%,#ffe9a8,transparent),
     radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 73% 21%,#fff,transparent),radial-gradient(1px 1px at 88% 8%,#cfe6ff,transparent),
@@ -32,8 +31,8 @@
 .luna{right:clamp(10px,12vw,200px);top:11%;width:clamp(44px,6vw,98px);animation-delay:-3s}
 @keyframes bob{from{transform:translateY(-4px)}to{transform:translateY(5px)}}
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
-.brand{margin:0;font:400 clamp(52px,10vw,104px)/1 var(--display);letter-spacing:3px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
-.status{margin:0;font:800 clamp(17px,2.6vw,24px)/1.2 var(--body);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
+.brand{margin:0;font:400 clamp(64px,12vw,128px)/1 var(--display);letter-spacing:4px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
+.status{margin:0;font:700 clamp(17px,2.6vw,24px)/1.2 var(--body);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
 /* Putt progress: one ball rolls left to right along the green. Its position is --p (0..1), set from putt-progress.js; at 1 it drops into the cup. */
 .putt{--w:min(86vw,560px);--p:0;position:relative;width:var(--w);height:54px;margin-top:4px}
 .turf{position:absolute;left:0;right:0;bottom:4px;height:24px;display:block;border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);
@@ -49,6 +48,6 @@
 .putter{position:absolute;left:8px;top:-16px;width:5px;height:46px;border-radius:3px;background:var(--ink);transform-origin:50% 0;transform:rotate(50deg);animation:swing .9s ease-in-out .15s forwards}
 .putter::after{content:"";position:absolute;left:-3px;bottom:-3px;width:14px;height:9px;border-radius:3px;background:var(--yellow);border:2px solid var(--ink)}
 @keyframes swing{0%{transform:rotate(50deg)}45%{transform:rotate(50deg);animation-timing-function:cubic-bezier(.6,0,1,.6)}55%{transform:rotate(-8deg)}100%{transform:rotate(-30deg)}}
-.tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:800 18px/1.25 var(--body)}
+.tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}
 .tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 15px var(--display);letter-spacing:2px}
 @media (prefers-reduced-motion:reduce){.world,.stars i,.putter{animation:none}.stars{display:none}.putter{transform:rotate(-30deg)}.putt[data-state=sunk] .rollball{animation:none;opacity:0}}

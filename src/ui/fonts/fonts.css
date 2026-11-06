@@ -1,0 +1,7 @@
+/* Game fonts (self-hosted, SIL OFL 1.1; no network requests). Jersey 10 (display: titles, buttons, labels) and Pixelify Sans (captions,
+   tips, body text). Jersey 10 is drawn small for its size, so it is re-declared here with size-adjust so the px sizes already used
+   across the screens still read well; weights 100-900 map to its one weight so the browser never fakes a bold. */
+@import '@fontsource/pixelify-sans/latin-400.css';
+@import '@fontsource/pixelify-sans/latin-700.css';
+@font-face{font-family:'Jersey 10 PP';font-style:normal;font-display:swap;font-weight:100 900;size-adjust:128%;
+  src:url('../../../node_modules/@fontsource/jersey-10/files/jersey-10-latin-400-normal.woff2') format('woff2'),url('../../../node_modules/@fontsource/jersey-10/files/jersey-10-latin-400-normal.woff') format('woff')}

@@ -3,8 +3,6 @@ import { TIPS, TIP_MS, tipAt } from './tips.js';
 import { useUiContext } from './context.js';
 import { createPlanetScene, mulberry32 } from './planet-scene.js';
 import { createPuttProgress } from './putt-progress.js';
-import '@fontsource/bangers/latin-400.css';
-import '@fontsource/nunito/latin-800.css';
 import styles from './Loading.module.css';
 
 /** Successive loads start on different tips, and paint different planets and flights, without wall-clock randomness. */

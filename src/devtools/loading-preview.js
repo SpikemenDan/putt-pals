@@ -6,7 +6,10 @@
  * Font files are loaded on demand, only from this dev module. Plain DOM, text only.
  */
 
+const SHIPPED = 'Shipped';
+/** The first choice is the shipped pair: Jersey 10 (display) and Pixelify Sans (body). */
 const DISPLAY_FONTS = {
+  [SHIPPED]: async () => {},
   Bangers: () => import('@fontsource/bangers/latin-400.css'),
   'Luckiest Guy': () => import('@fontsource/luckiest-guy/latin-400.css'),
   'Titan One': () => import('@fontsource/titan-one/latin-400.css'),
@@ -24,6 +27,7 @@ const DISPLAY_FONTS = {
   'Three-D (AidenFont, CC BY)': async () => { await import('../ui/fonts/three-d/three-d.css'); await document.fonts.load("48px 'Three-D'"); },
 };
 const BODY_FONTS = {
+  [SHIPPED]: async () => {},
   Nunito: () => import('@fontsource/nunito/latin-800.css'),
   Fredoka: () => import('@fontsource/fredoka/latin-600.css'),
   'Baloo 2': () => import('@fontsource/baloo-2/latin-700.css'),
@@ -50,6 +54,7 @@ export function mountLoadingPreview(doc, app) {
     for (const name of Object.keys(fonts)) select.append(new Option(name, name));
     select.addEventListener('change', async () => {
       await fonts[select.value]();
+      if (select.value === SHIPPED) { doc.documentElement.style.removeProperty(variable); return; }
       doc.documentElement.style.setProperty(variable, `'${select.value.replace(/ \(.*$/, '')}', 'Arial Black', sans-serif`);
     });
     wrap.append(select);
