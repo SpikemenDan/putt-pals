@@ -482,6 +482,7 @@ export class RoomDurableObject {
     this.syncDeployables(room, state);
     this.syncGlobalHazards(room, state);
     const context = Object.fromEntries(CONTEXT_FIELDS.map(field => [field, state[field]]));
+    if (state.pong) context.pong = state.pong;
     const snapshot = {
       roomCode: room.roomCode, sessionId: room.sessionId, rulesVersion: ROOM_RULES_VERSION,
       courseHash: room.courseHash, revision: room.revision, serverTime: this.now(room),

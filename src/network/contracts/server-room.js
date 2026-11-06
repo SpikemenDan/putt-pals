@@ -96,10 +96,16 @@ const player = p => exact(p, ['id','name','color','connected','strokes','done','
   && typeof p.connected === 'boolean' && count(p.strokes) && typeof p.done === 'boolean' && typeof p.timedOut === 'boolean'
   && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score));
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));
+const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'];
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
 export function validSessionContext(c) {
-  if (!exact(c, ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'])
-    || !modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
+  const hasPong = object(c) && Object.hasOwn(c, 'pong');
+  if (hasPong) {
+    if (!exact(c, [...CONTEXT_KEYS, 'pong']) || c.mode !== GameModes.PONG || (c.pong !== null && !object(c.pong))) return false;
+  } else {
+    if (!exact(c, CONTEXT_KEYS)) return false;
+  }
+  if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))

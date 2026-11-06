@@ -299,7 +299,7 @@ export function createPongMachine(initialContext) {
     },
   }).createMachine({
     id: 'pongSession',
-    initial: 'turn',
+    initial: initialContext?.phase === 'redemption' ? 'redemption' : initialContext?.phase === 'game_over' ? 'gameOver' : 'turn',
     context: initialContext,
     states: {
       turn: {
@@ -369,10 +369,22 @@ export function createPongSession({
   homePlayer,
   awayPlayer,
   rackSize = 10,
+  context = null,
   clock,
 } = {}) {
-  const context = createInitialPongContext({ homePlayer, awayPlayer, rackSize });
-  const machine = createPongMachine(context);
+  const initialContext = context ? {
+    ...context,
+    turn: context.turn ? { ...context.turn } : {
+      turnNumber: context.turnNumber ?? 1,
+      playerId: context.activePlayerId,
+      shotsRemaining: context.shotsRemaining ?? 2,
+      shotsTaken: 0,
+      sinks: context.turnSinks ?? 0,
+      bonusAwarded: context.bonusAwarded ?? false,
+    },
+    history: context.history ? [...context.history] : [],
+  } : createInitialPongContext({ homePlayer, awayPlayer, rackSize });
+  const machine = createPongMachine(initialContext);
   const actor = createActor(machine, { ...(clock ? { clock } : {}) });
 
   let disposed = false;
@@ -401,15 +413,18 @@ export function createPongSession({
       awayCups: c.awayCups.map(cup => ({ ...cup })),
       remainingHomeCups: homeRemaining,
       remainingAwayCups: awayRemaining,
+      rackSize: c.rackSize || 10,
       shotsRemaining: snap.matches('redemption')
         ? (c.redemption?.shotsRemaining ?? 0)
         : (c.turn?.shotsRemaining ?? 0),
+      turn: c.turn ? { ...c.turn } : null,
       turnSinks: c.turn?.sinks ?? 0,
       bonusAwarded: c.turn?.bonusAwarded ?? false,
       redemption: c.redemption ? { ...c.redemption } : null,
       clearedBy: c.clearedBy,
       winner: c.winner,
       isGameOver: snap.matches('gameOver'),
+      history: c.history ? [...c.history] : [],
       historyLength: c.history.length,
     };
   };

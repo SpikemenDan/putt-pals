@@ -79,6 +79,8 @@ const assert = require('node:assert/strict');
     const noFlag=copy(snapshot.session.context);delete noFlag.powerups;assert.equal(c.validSessionContext(noFlag),false,'the flag is part of the context');
     assert.equal(c.validSessionContext({...snapshot.session.context,powerups:'yes'}),false);
     assert.equal(c.validSessionContext({...snapshot.session.context,powerups:false}),true);
+    assert.equal(c.validSessionContext({...snapshot.session.context,mode:'pong',pong:{}}),true,'pong context is valid in pong mode');
+    assert.equal(c.validSessionContext({...snapshot.session.context,mode:'classic',pong:{}}),false,'pong context rejected outside pong mode');
   });
   await test('complete checkpoint differs from public snapshot and rejects incompatible versions',()=>{
     const cp=createServerCheckpointFixture();assert.ok(c.decodeRoomCheckpoint(JSON.stringify(cp)));
