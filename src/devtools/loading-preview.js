@@ -31,6 +31,7 @@ export function mountLoadingPreview(doc, app) {
   const sync = () => { button.textContent = app.store.getSnapshot().landing.connecting ? 'Hide loading screen' : 'Loading screen preview'; };
   button.addEventListener('click', () => { app.store.setLocal({ connecting: !app.store.getSnapshot().landing.connecting }); sync(); });
   sync();
+  if (new URLSearchParams(doc.defaultView.location.search).has('loading')) { app.store.setLocal({ connecting: true }); sync(); } // http://localhost:5173/?loading opens straight onto it
   box.append(button);
   const picker = (label, fonts, variable) => {
     const wrap = doc.createElement('label');
