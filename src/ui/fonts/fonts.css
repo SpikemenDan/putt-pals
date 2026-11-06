@@ -1,6 +1,7 @@
 /* Game fonts (self-hosted, SIL OFL 1.1; no network requests). Jersey 10 (display: titles, buttons, labels) and Nunito (captions,
    tips, body text: a rounded face that stays readable at small sizes). Jersey 10 is drawn small for its size, so it is re-declared here with size-adjust so the px sizes already used
    across the screens still read well; weights 100-900 map to its one weight so the browser never fakes a bold. */
+@import '@fontsource/titan-one/latin-400.css'; /* Titan One: the big Putt Planet title */
 @import '@fontsource/nunito/latin-400.css';
 @import '@fontsource/nunito/latin-700.css';
 @import '@fontsource/nunito/latin-800.css';

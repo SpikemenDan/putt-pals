@@ -60,7 +60,7 @@ export function Loading({ done = false, onDone }) {
   return (
     <div className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
       <div className={styles.copy}>
-        <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>
+        <h2 className={styles.brand} data-ui="loading-title">Putt Planet</h2>
         <p className={styles.status}>Setting up your game…</p>
         <div className={styles.balls} aria-hidden="true" data-ui="loading-balls"><i className={styles.ball} /><i className={styles.ball} /><i className={styles.ball} /></div>
       </div>

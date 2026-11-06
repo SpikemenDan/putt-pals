@@ -17,7 +17,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '' }) {
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   return (
     <div className={menu.menu} hidden={hidden} data-ui="landing" data-connecting={connecting || undefined}>
-    <h1 className={menu.brand}>Putt Pals</h1>
+    <h1 className={menu.brand}>Putt Planet</h1>
     <div className={menu.panel}>
       <label>Your name<input maxLength={14} autoComplete="off" value={name} onChange={e => setName(e.target.value)} /></label>
       <div style={{ textAlign: 'left' }}>Ball colour<ColorPicker selected={color} onPick={c => send(UiCommands.SET_COLOR, { color: c })} /></div>

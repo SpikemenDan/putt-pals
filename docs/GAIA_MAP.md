@@ -26,9 +26,11 @@ The planet's radius is 100 units. On a 1280-wide screen one unit is about 6 pixe
 | Ship | 3 to 5 long | sea level |
 | Map flag | 3 tall | ground |
 | City | 12 tall, 9 across | ground |
-| Mountain | up to 14 tall | ground |
-| Volcano | 10 tall, 25 across | ground |
-| Balloon | 3 tall | 5 to 7 |
-| Cloud | 8 to 20 wide | 3 to 12, thin ones to 26 |
-| Plane | 5 long | 13 to 17 |
-| Satellite | 4 wide | 30 to 50 |
+| Mountain | 4 to 12 tall | ground |
+| Volcano | 7 to 9 tall, 13 to 18 across | ground |
+| Balloon | 3 tall | 11 |
+| Cloud | 8 to 20 wide | 15 to 21, thin ones 31 to 36 |
+| Plane | 5 long | 24 to 27 |
+| Satellite | 4 wide | 46 and up |
+
+The heights are layers, so nothing passes through anything else. Planes and satellites fly parallel lanes the same way at the same speed, so their paths never cross; balloons hang still over open country; sea routes never touch.

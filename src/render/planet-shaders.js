@@ -88,7 +88,7 @@ ${NOISE}
 void main(){
   vec2 uv=vec2(vUv.x,1.-vUv.y);
   float d=texture2D(cloudMap,uv).r+(fbm(vObj*11.)-.47)*.16;
-  float a=smoothstep(cloudGate-.03,cloudGate+.15,d)*.72; // a soft, thin veil
+  float a=smoothstep(cloudGate-.02,cloudGate+.14,d)*.6; // a soft, thin veil
   if(a<.01)discard;
   float thick=smoothstep(cloudGate,cloudGate+.24,d);
   vec3 N=normalize(vN);float ndl=dot(N,sun);
@@ -117,8 +117,8 @@ void main(){
 }`;
 
 export const CLOUD_VERTEX = `
-attribute vec3 soft;attribute float ao;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;
-void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft);vAo=ao;vec4 w=modelMatrix*vec4(position,1.);vV=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}`;
+attribute vec3 soft;attribute float ao,reach;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;varying float vLimb;varying float vEdge;
+void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft);vAo=ao;vec4 w=modelMatrix*vec4(position,1.);vV=normalize(cameraPosition-w.xyz);vEdge=length(vS-vV*dot(vS,vV))*reach;vec3 at=modelMatrix[3].xyz;vLimb=dot(normalize(at),normalize(cameraPosition-at));gl_Position=projectionMatrix*viewMatrix*w;}`;
 
 /**
  * Soft volumetric cloud: light comes mostly from the whole cloud's soft normal, so a pile of lobes reads as one rounded body. It shades
@@ -126,13 +126,15 @@ void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft)
  * `haze` melts it into the air.
  */
 export const CLOUD_FRAGMENT = `
-uniform vec3 sun;uniform float haze,opacity;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;
+uniform vec3 sun,tint;uniform float haze,opacity;varying vec3 vN;varying vec3 vS;varying vec3 vV;varying float vAo;varying float vLimb;varying float vEdge;
 void main(){
   vec3 n=normalize(mix(normalize(vN),normalize(vS),.82));
   float l=clamp((dot(n,sun)*.5+.5)*mix(.66,1.08,vAo),0.,1.);
   vec3 c=mix(vec3(.68,.75,.96),vec3(1.,.995,.97),smoothstep(.34,.74,l));
-  float a=opacity*smoothstep(-.12,.42,dot(normalize(vS),normalize(vV))); // the whole cloud fades at its rim, not each lobe
-  gl_FragColor=vec4(mix(c,vec3(.74,.87,1.),haze),a);
+  float a=opacity*(1.-smoothstep(.55,1.05,vEdge)); // fades with distance from the cloud's centre on screen, so there are no holes between lobes
+  a*=smoothstep(.5,.68,vLimb); // a whole cloud melts away as it nears the horizon, instead of being cut off by it
+  if(a<.004)discard;
+  gl_FragColor=vec4(mix(c*tint,vec3(.74,.87,1.),haze),a);
 }`;
 
 /** A soft, tapering ribbon: contrails and ship wakes. `line` runs 0 at the source to 1 at the far end, `across` -1 to 1 side to side. */

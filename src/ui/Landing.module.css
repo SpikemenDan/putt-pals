@@ -2,7 +2,7 @@
    other without a jump, and the form docks at the left so the planet stays in view. While a room opens the menu fades away. */
 .menu{position:relative;z-index:1;transition:opacity .35s}
 .menu[data-connecting]{opacity:0;pointer-events:none}
-.brand{position:fixed;left:0;right:0;top:clamp(24px,8vh,80px);margin:0;text-align:center;pointer-events:none;font:400 clamp(64px,12vw,128px)/1 var(--font);letter-spacing:4px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
+.brand{position:fixed;left:0;right:0;top:clamp(24px,8vh,80px);margin:0;text-align:center;pointer-events:none;font:400 clamp(52px,9.6vw,116px)/1 var(--pp-display,'Titan One','Arial Black',sans-serif);letter-spacing:2px;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:6px 7px 0 var(--ink)}
 .panel{position:fixed;left:clamp(12px,2.4vw,32px);bottom:20px;width:min(92vw,340px);max-height:calc(100vh - clamp(150px,30vh,240px));overflow:auto;box-sizing:border-box;background:rgba(255,248,228,.92);color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:16px 18px;box-shadow:6px 6px 0 var(--ink);text-align:center}
 .panel label{text-align:left}
 .panel p,.panel details{text-align:left}

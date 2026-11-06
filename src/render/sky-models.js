@@ -8,17 +8,17 @@
  * randomness are injected.
  */
 
-/** One geometry from many parts [{ geometry, color, at? }], `at` a Matrix4, `color` a hex or THREE.Color. */
+/** One geometry from many parts [{ geometry, color, at? }], `at` a Matrix4, `color` a hex or THREE.Color (omit it to keep the part's own colours). */
 export function mergeParts(THREE, parts) {
   const positions = [], normals = [], colors = [];
   for (const { geometry, color, at } of parts) {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
     if (at) flat.applyMatrix4(at);
-    const c = new THREE.Color(color), p = flat.attributes.position, n = flat.attributes.normal;
+    const c = color === undefined ? null : new THREE.Color(color), own = flat.attributes.color, p = flat.attributes.position, n = flat.attributes.normal;
     for (let i = 0; i < p.count; i++) {
       positions.push(p.getX(i), p.getY(i), p.getZ(i));
       normals.push(n.getX(i), n.getY(i), n.getZ(i));
-      colors.push(c.r, c.g, c.b);
+      if (c) colors.push(c.r, c.g, c.b); else colors.push(own.getX(i), own.getY(i), own.getZ(i));
     }
   }
   const merged = new THREE.BufferGeometry();
@@ -302,21 +302,91 @@ export function makeMill(THREE, kind = 'turbine') {
   };
 }
 
-/** A volcano with a glowing crater and lava streams. */
-export function makeVolcano(THREE) {
-  const parts = [
-    { geometry: new THREE.CylinderGeometry(2.1, 9, 8, 14), color: 0x4c3c44, at: moved(THREE, 0, 2.6, 0) },
-    { geometry: new THREE.CylinderGeometry(1.75, 1.75, 0.3, 14), color: 0xff7a1a, at: moved(THREE, 0, 6.56, 0) },
-  ];
-  for (let k = 0; k < 4; k++) { const a = k * 1.7 + 0.4; parts.push({ geometry: new THREE.BoxGeometry(0.5, 7.4, 0.14), color: 0xff5a1a, at: new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a) * 5.65, 2.75, Math.sin(a) * 5.65), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -a, -0.82, 'YXZ')), new THREE.Vector3(1, 1, 1)) }); }
-  return mergeParts(THREE, parts);
+/**
+ * A rough cone, one unit tall, painted face by face. `profile(t)` is its radius at height t (0 to 1), `paint(t, angle)` the colour of a face.
+ * Normals sit halfway between each face and the smooth surface, so the rock shows soft facets instead of hard shards.
+ */
+function roughCone(THREE, random, { sides, rings, profile, paint, wobble = 0.1 }) {
+  const rim = [];
+  for (let r = 0; r <= rings; r++) {
+    const t = r / rings, row = [];
+    for (let k = 0; k < sides; k++) {
+      const a = (k + (r % 2) * 0.5) / sides * Math.PI * 2, radius = profile(t) * (1 + (random() - 0.5) * 2 * wobble * (t > 0 && t < 1 ? 1 : 0.3));
+      row.push([Math.cos(a) * radius, t + (t > 0 && t < 1 ? (random() - 0.5) * 0.5 / rings : 0), Math.sin(a) * radius]);
+    }
+    rim.push(row);
+  }
+  const position = [], normal = [], color = [], paintOf = new THREE.Color();
+  const face = (a, b, e) => {
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [e[0] - a[0], e[1] - a[1], e[2] - a[2]];
+    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const cx = (a[0] + b[0] + e[0]) / 3, cy = (a[1] + b[1] + e[1]) / 3, cz = (a[2] + b[2] + e[2]) / 3;
+    const out = n[0] * cx + n[2] * cz + n[1] * 0.6 < 0;
+    if (out) { n = n.map(q => -q); [b, e] = [e, b]; }
+    const l = Math.hypot(...n) || 1;
+    paintOf.set(paint(cy, Math.atan2(cz, cx)));
+    for (const p of [a, b, e]) {
+      const r = Math.hypot(p[0], p[2]) || 1;
+      const m = [n[0] / l + p[0] / r * 0.75, n[1] / l + 0.4, n[2] / l + p[2] / r * 0.75], ml = Math.hypot(...m) || 1;
+      position.push(...p); normal.push(m[0] / ml, m[1] / ml, m[2] / ml); color.push(paintOf.r, paintOf.g, paintOf.b);
+    }
+  };
+  for (let r = 0; r < rings; r++) for (let k = 0; k < sides; k++) {
+    const a = rim[r][k], b = rim[r][(k + 1) % sides], e = rim[r + 1][k], f = rim[r + 1][(k + 1) % sides];
+    face(a, b, f); face(a, f, e);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(normal, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(color, 3));
+  return g;
 }
 
-/** A rounded mountain with a smooth snow cap, `variant` 0 or 1. About 2 tall and 2 wide; scale it in place. */
-export function makePeak(THREE, variant = 0) {
+/**
+ * A volcano one unit tall and two wide: a sweeping concave cone of dark basalt with winding rivers of lava, ash near the top and a
+ * glowing crater lake. `random` varies the streams.
+ */
+export function makeVolcano(THREE, random = Math.random) {
+  const streams = [0, 1, 2, 3].map(k => ({ at: k * 1.6 + random() * 0.8 - Math.PI, bend: 5 + random() * 4, phase: random() * 6 }));
+  const away = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  const paint = (t, angle) => {
+    if (t > 0.1) for (const s of streams) {
+      const d = away(angle, s.at + Math.sin(t * s.bend + s.phase) * 0.3) * (0.3 + t), width = 0.1 * (1.15 - t * 0.5) * Math.min(1, (t + 0.1) * 2.4);
+      if (d < width * 0.45) return 0xffd23f;
+      if (d < width) return 0xff7a1a;
+    }
+    return t < 0.12 ? 0x5a4a50 : t < 0.5 ? 0x463c48 : t < 0.82 ? 0x3a3340 : 0x6a5c62;
+  };
+  const cone = roughCone(THREE, random, { sides: 34, rings: 18, wobble: 0.035, profile: t => 0.17 + 0.83 * (1 - t) ** 2.3, paint });
   return mergeParts(THREE, [
-    { geometry: new THREE.CylinderGeometry(0.34, 1, 1.5, 12, 1, true), color: variant ? 0x8d7a6c : 0x7c7f8c, at: moved(THREE, 0, 0.55, 0) },
-    { geometry: new THREE.SphereGeometry(0.42, 12, 8), color: 0xf6f9ff, at: stretched(THREE, 0, 1.36, 0, 0.9, 1.24, 0.9) },
+    { geometry: cone },
+    { geometry: new THREE.CylinderGeometry(0.19, 0.19, 0.03, 18), color: 0x2e2833, at: moved(THREE, 0, 0.99, 0) },
+    { geometry: new THREE.CylinderGeometry(0.135, 0.135, 0.04, 18), color: 0xff8a1f, at: moved(THREE, 0, 1, 0) },
+    { geometry: new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14), color: 0xffe066, at: moved(THREE, 0, 1, 0) },
+  ]);
+}
+
+/**
+ * A mountain massif one unit tall, about 1.7 wide: a main summit between lower shoulders, green at the foot, warm rock above, and a snow
+ * cap with a ragged lower edge. `variant` picks the rock; the three designs read as a range when set side by side.
+ */
+export function makePeak(THREE, random = Math.random, variant = 0) {
+  const rock = [[0x8f7f73, 0xa39385, 0x7a6e6a], [0x7f8391, 0x949aa8, 0x6b6f7e], [0x9c7f68, 0xb09580, 0x846a5a]][variant % 3];
+  const peak = (height, snow) => roughCone(THREE, random, {
+    sides: 11, rings: 7, wobble: 0.12, profile: t => 0.62 * (1 - t) ** 0.92,
+    paint: (t, angle) => {
+      const edge = snow + Math.sin(angle * 5 + height * 9) * 0.07;
+      if (t > edge) return t > edge + 0.12 || Math.sin(angle * 3) > 0 ? 0xf8fbff : 0xdce8f8;
+      if (t < 0.2) return 0x4f9a55;
+      if (t < 0.3) return 0x6f9a5c;
+      return rock[Math.floor((Math.sin(angle * 7 + t * 11) + 1) * 1.49)];
+    },
+  });
+  const tall = 1, left = 0.62 + random() * 0.14, right = 0.5 + random() * 0.16;
+  return mergeParts(THREE, [
+    { geometry: peak(tall, 0.56) },
+    { geometry: peak(left, 0.72), at: stretched(THREE, -0.46, 0, 0.1, left, left, left) },
+    { geometry: peak(right, 0.8), at: stretched(THREE, 0.44, 0, -0.14, right, right, right) },
   ]);
 }
 
@@ -387,7 +457,7 @@ export function makeCumulus(THREE, random, { puffs = 18, detail = 2, stretch = 2
     const t = (random() - 0.5) * 1.3, dome = 1 - t * t, r = 0.2 + 0.2 * random();
     lobes.push([t * stretch * 0.6, 0.72 + dome * 0.62, (random() - 0.5) * 0.7, r]);
   }
-  const ball = new THREE.IcosahedronGeometry(1, detail), p = ball.attributes.position, position = [], normal = [], soft = [], ao = [];
+  const ball = new THREE.IcosahedronGeometry(1, detail), p = ball.attributes.position, position = [], normal = [], soft = [], ao = [], reach = [];
   lobes.forEach(([x, y, z, r], index) => {
     const s = index * 1.7 + 0.3;
     for (let i = 0; i < p.count; i++) {
@@ -399,6 +469,7 @@ export function makeCumulus(THREE, random, { puffs = 18, detail = 2, stretch = 2
       const l = Math.hypot(px / stretch, py - 0.3, pz) || 1;
       soft.push(px / stretch / l, (py - 0.3) / l, pz / l);
       ao.push(Math.min(1, Math.max(0, 0.22 + py / 1.15)));
+      reach.push(l / (1 + stretch * 0.12));
     }
   });
   const g = new THREE.BufferGeometry();
@@ -406,5 +477,6 @@ export function makeCumulus(THREE, random, { puffs = 18, detail = 2, stretch = 2
   g.setAttribute('normal', new THREE.Float32BufferAttribute(normal, 3));
   g.setAttribute('soft', new THREE.Float32BufferAttribute(soft, 3));
   g.setAttribute('ao', new THREE.Float32BufferAttribute(ao, 1));
+  g.setAttribute('reach', new THREE.Float32BufferAttribute(reach, 1));
   return g;
 }

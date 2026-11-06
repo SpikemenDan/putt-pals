@@ -183,7 +183,7 @@ export function buildPlanet(random) {
   const hot = new Float32Array(n), volcanoes = [];
   for (const m of REGION.volcanic.maps) {
     const x = Math.floor(((m.u % 1) + 1) % 1 * TEX_W), y = Math.floor((0.5 - m.lat / 180) * TEX_H);
-    volcanoes.push({ x, y, u: m.u + 0.012, lat: m.lat + 2 });
+    volcanoes.push({ x, y, u: m.u + 0.016, lat: m.lat + 2.4 });
     const r = 15, stretch = 1 / Math.max(0.3, Math.cos(latOf(y) * Math.PI / 180));
     for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
       const yy = y + dy, xx = (x + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r;
@@ -312,10 +312,11 @@ export function buildPlanet(random) {
       roll -= chance;
     }
   }
-  const peaks = [];
-  for (let tries = 0; tries < 60000 && peaks.length < 460; tries++) {
+  const peaks = []; // along the high ground, not touching, so ranges read as lines of separate summits
+  for (let tries = 0; tries < 60000 && peaks.length < 240; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.06 + random() * 0.88) * TEX_H), i = y * TEX_W + x;
-    if (land[i] > SEA + 0.03 && h[i] > 0.56) peaks.push({ u: x / TEX_W, lat: latOf(y), height: h[i] });
+    if (land[i] < SEA + 0.03 || h[i] < 0.56 || peaks.some(p => gapTo(p, x, y) < 8)) continue;
+    peaks.push({ x, y, u: x / TEX_W, lat: latOf(y), height: clamp((h[i] - 0.56) / 0.4) });
   }
   for (let tries = 0; tries < 6000 && seaSites.length < MAX_BOATS * 2; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = latOf(y);
@@ -380,18 +381,19 @@ export function shipRoutes(planet, random) {
     const clear = rho => Array.from({ length: 32 }, (_, k) => circlePoint(centre, rho, k / 32 * Math.PI * 2)).every(p => landUnder(planet, p) < SEA - 0.05);
     let rho = 0;
     for (let r = 0.05; r <= 0.3 && clear(r); r += 0.025) rho = r;
-    if (rho) routes.push({ centre, rho, speed: (0.012 + random() * 0.01) / rho * (random() < 0.5 ? -1 : 1) });
+    const dot = r => clamp(r.centre.reduce((q, v, k) => q + v * centre[k], 0), -1, 1);
+    if (rho && routes.every(r => Math.acos(dot(r)) > r.rho + rho + 0.05)) routes.push({ centre, rho, speed: (0.012 + random() * 0.01) / rho * (random() < 0.5 ? -1 : 1) }); // no two routes touch
   }
   return routes;
 }
 
+/** Flight lanes, in degrees of latitude round one shared axis, spread out so the first few already sit far apart. */
+const LANES = Object.freeze([-20, 16, 44, -38, 30, 2, 54, -28, 8, 24, 38, -10]);
+
 /**
- * Flight routes: great circles through a spot near `toward` (a unit vector, the side of the planet the camera sees), so planes keep
- * crossing the view and pass over the horizon. Each is { centre, rho: PI / 2, speed }, `centre` the pole of the circle.
+ * Flight routes: parallel circles round one shared `axis` (a unit vector), all flown the same way at the same speed. Parallel lanes never
+ * cross, so nothing in the air can ever look as if it will hit anything else. Each is { centre, rho, speed }.
  */
-export function flightRoutes(count, random, toward) {
-  return Array.from({ length: count }, () => {
-    const spot = unit(toward.map(q => q + (random() - 0.5) * 1.4)), heading = unit([random() - 0.5, random() - 0.5, random() - 0.5]);
-    return { centre: unit(cross(spot, heading)), rho: Math.PI / 2, speed: (0.09 + random() * 0.06) * (random() < 0.5 ? -1 : 1) };
-  });
+export function laneRoutes(count, axis, speed) {
+  return Array.from({ length: count }, (_, k) => ({ centre: unit(axis), rho: (90 - LANES[k % LANES.length]) * Math.PI / 180, speed }));
 }

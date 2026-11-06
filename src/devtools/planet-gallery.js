@@ -19,7 +19,7 @@ const STYLE = `
 .pp-gal-cell span{position:absolute;left:8px;top:8px;z-index:2;background:#14102a;color:#ffd23f;padding:3px 8px;border-radius:6px;font-weight:700}
 `;
 
-const CELLS = [['Whole view', null], ['City', 'city'], ['Town', 'town'], ['Port', 'port'], ['Ship', 'ship'], ['Plane', 'plane'], ['Luna, close', 'luna'], ['Ares, close', 'ares']];
+const CELLS = [['Whole view', null], ['City', 'city'], ['Town', 'town'], ['Port', 'port'], ['Ship', 'ship'], ['Plane', 'plane'], ['Volcano', 'volcano'], ['Mountains', 'mountain'], ['Luna, close', 'luna'], ['Ares, close', 'ares']];
 
 export function mountPlanetGallery(doc) {
   const el = (tag, props = {}, ...kids) => { const n = doc.createElement(tag); Object.assign(n, props); n.append(...kids); return n; };

@@ -27,9 +27,9 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.citySize` | 1 | 0.5 to 3 | Loading screen: size of cities, towns, villages, ports and mills, as a multiplier of their audited sizes (docs/GAIA_MAP.md). |
 | `loading.lunaSize` | 2.6 | 1 to 8 | Loading screen: Luna's size in the sky; 1 is its true apparent size at the real Earth-Moon distance. |
 | `loading.outlineWidth` | 1.6 | 0 to 4 | Loading screen: ink outline width on cities, ships, planes and clouds, px at 1280 wide; 0 is off. |
-| `loading.planes` | 5 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
+| `loading.planes` | 3 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
 | `loading.boats` | 9 | 0 to 20 | Loading screen: boats on the sea (whole boats; 0 hides them). |
-| `loading.satellites` | 3 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |
+| `loading.satellites` | 2 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |
 
 ## Development tuning panel
 

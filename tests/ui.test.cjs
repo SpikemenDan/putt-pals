@@ -140,7 +140,7 @@ function fakeClock() {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false, connecting: true }));
     const loading = t.within('[data-ui=loading]');
-    assert.equal(loading.querySelector('[data-ui=loading-title]').textContent, 'Putt Pals', 'current product name until the rename is approved');
+    assert.equal(loading.querySelector('[data-ui=loading-title]').textContent, 'Putt Planet', 'the game name on screen');
     assert.match(loading.textContent, /Setting up your game/);
     const stage = t.within('[data-ui=planet-stage]');
     assert.ok(stage?.querySelector('canvas[data-ui=loading-planet]'), 'the planet stands behind it');
@@ -157,7 +157,7 @@ function fakeClock() {
   await scenario('main menu: the planet stays up from the menu through the loading screen', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false, connecting: false }));
-    assert.ok(t.within('[data-ui=landing]').querySelector('h1').textContent === 'Putt Pals', 'the big title');
+    assert.ok(t.within('[data-ui=landing]').querySelector('h1').textContent === 'Putt Planet', 'the big title');
     const canvas = t.within('[data-ui=planet-stage] canvas');
     assert.ok(canvas, 'the menu stands on the planet');
     await act(async () => t.store.setLocal({ connecting: true }));
@@ -216,6 +216,8 @@ function fakeClock() {
     assert.ok(planet.cities.every(c => scene.landUnder(planet, scene.surfaceDir(c.u, c.lat)) >= scene.SEA), 'every city stands on land');
     const routes = scene.shipRoutes(planet, scene.mulberry32(8));
     assert.ok(routes.length >= 9, 'enough sea routes for the default fleet');
+    const between = (a, b) => Math.acos(Math.min(1, a.centre.reduce((q, v, k) => q + v * b.centre[k], 0)));
+    routes.forEach((a, i) => routes.slice(i + 1).forEach(b => assert.ok(between(a, b) > a.rho + b.rho, 'no two sea routes touch, so ships cannot meet')));
     for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
     assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.plants.length >= 5000, 'a lived-in world: towns, villages, ports and dense foliage');
     assert.ok(planet.lighthouses.length >= 1 && planet.lighthouses.length <= 2, 'one or two lighthouses');
@@ -262,6 +264,9 @@ function fakeClock() {
     assert.ok(hull.min.y < -0.3 && hull.max.y > 1, 'a ship is partly under the water line');
     for (const k of models.SHIP_KINDS) assert.ok(box(models.makeShip(THREE, k)).min.y < 0, `the ${k} sits in the water`);
     const size = g => g.attributes.position.count;
+    const peak = box(models.makePeak(THREE, scene.mulberry32(2), 0)), cone = box(models.makeVolcano(THREE, scene.mulberry32(2)));
+    assert.ok(Math.abs(peak.max.y - 1) < 0.05 && peak.max.x - peak.min.x > 1.2, 'a massif is one unit tall and wider than a spike');
+    assert.ok(Math.abs(cone.max.y - 1) < 0.05 && cone.max.x > 0.9, 'a volcano is a broad cone');
     assert.equal(new Set(models.PLANE_KINDS.map(k => size(models.makePlane(THREE, k)))).size, models.PLANE_KINDS.length, 'each plane is its own design');
     assert.equal(new Set(models.PLANT_KINDS.map(k => { const g = models.makePlant(THREE, k), c = g.attributes.color; return [size(g), c.getX(c.count - 1).toFixed(3), c.getY(c.count - 1).toFixed(3)].join(); })).size, models.PLANT_KINDS.length, 'each plant is its own design');
     assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'temperate')), 'towns differ by climate');
@@ -301,8 +306,19 @@ function fakeClock() {
       for (let k = 0; k < 400; k++) a.scene.step(0.1);
     }
     for (const ship of a.scene.bodies('ships')) assert.ok(Math.abs(Math.hypot(...ship.position) - PLANET_RADIUS) < 1e-6, 'ships sit at sea level, hull in the water');
-    for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 5, 'planes fly above the ground');
+    for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 20, 'planes fly above the ground and the clouds');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
+    const full = make(createDisplay({ loading: { planes: 12, satellites: 8 } }));
+    for (let s = 0; s < 120; s++) { // even at the maximum, a long watch never brings two flyers near each other
+      full.scene.step(0.5);
+      for (const kind of ['planes', 'satellites']) {
+        const list = full.scene.bodies(kind);
+        list.forEach((p, i) => list.slice(i + 1).forEach(q => assert.ok(Math.hypot(...p.position.map((v, k) => v - q.position[k])) > 8, `${kind} keep well apart`)));
+      }
+    }
+    const alt = kind => full.scene.bodies(kind).map(b => Math.hypot(...b.position));
+    assert.ok(Math.min(...alt('planes')) > PLANET_RADIUS + 23 && Math.min(...alt('satellites')) > PLANET_RADIUS + 40, 'each has its own layer, above the clouds');
+    full.scene.dispose();
     assert.ok(a.frames() > 400, 'each step draws');
     assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 24, 'the living world is in the scene');
     // The size audit, measured from the real models: a sensible order from trees up.
