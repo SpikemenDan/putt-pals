@@ -10,3 +10,5 @@ export * from './integrity.js';
 export * from './structures.js';
 export * from './islands.js';
 export * from './island-chambers.js';
+export * from './ramps-drops.js';
+export * from './ramp-drop-chambers.js';

@@ -77,8 +77,105 @@ export function structureRampHeight(s, x, y) {
   return s.zStart + (s.zEnd - s.zStart) * t;
 }
 
+/**
+ * Normalizes angular difference between an angle and start angle along arc direction.
+ * Returns fraction t in [0, 1] if angle falls along the arc, or null if outside.
+ *
+ * @param {number} theta Angle in degrees
+ * @param {number} start Start angle in degrees
+ * @param {number} end End angle in degrees
+ * @returns {number|null}
+ */
+export function arcFraction(theta, start, end) {
+  const delta = end - start;
+  if (Math.abs(delta) < 1e-6) return null;
+  if (delta > 0) {
+    const diff = ((theta - start) % 360 + 360) % 360;
+    if (diff <= delta + 1e-4) return Math.min(1, Math.max(0, diff / delta));
+  } else {
+    let diff = (theta - start) % 360;
+    if (diff > 1e-5) diff -= 360;
+    if (diff <= 1e-5 && diff >= delta - 1e-4) return Math.min(1, Math.max(0, diff / delta));
+  }
+  return null;
+}
+
+/**
+ * Tests whether point (x, y) falls on a curved ramp.
+ *
+ * @param {object} ramp
+ * @param {number} x
+ * @param {number} y
+ * @returns {{ inBounds: boolean, t: number, r: number, theta: number }|null}
+ */
+export function pointInCurvedRamp(ramp, x, y) {
+  const dx = x - ramp.center[0];
+  const dy = y - ramp.center[1];
+  const dist = Math.hypot(dx, dy);
+  if (dist < ramp.innerRadius - 1e-3 || dist > ramp.outerRadius + 1e-3) return null;
+  const theta = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  const t = arcFraction(theta, ramp.startAngleDeg, ramp.endAngleDeg);
+  if (t === null) return null;
+  return { inBounds: true, t, r: dist, theta };
+}
+
+/**
+ * Calculates surface elevation on a curved ramp at point (x, y).
+ * Accounts for interpolation curve ('smooth' | 'launch' | 'linear') and banking.
+ *
+ * @param {object} ramp
+ * @param {number} x
+ * @param {number} y
+ * @returns {number}
+ */
+export function curvedRampHeight(ramp, x, y) {
+  const info = pointInCurvedRamp(ramp, x, y);
+  if (!info) return 0;
+  const t = info.t;
+  let e = t;
+  if (ramp.curve === 'launch') {
+    e = t * t;
+  } else if (ramp.curve === 'smooth' || !ramp.curve) {
+    e = t * t * (3 - 2 * t);
+  }
+  let z = ramp.zStart + (ramp.zEnd - ramp.zStart) * e;
+  if (ramp.bankAngleDeg) {
+    const rMid = (ramp.innerRadius + ramp.outerRadius) / 2;
+    const dr = info.r - rMid;
+    z += dr * Math.tan(ramp.bankAngleDeg * Math.PI / 180);
+  }
+  return z;
+}
+
+/**
+ * Computes outer axis-aligned bounding box [x, y, w, h] for a curved ramp.
+ *
+ * @param {object} ramp
+ * @returns {[number, number, number, number]}
+ */
+export function curvedRampBoundingRect(ramp) {
+  const { center: [cx, cy], innerRadius: rIn, outerRadius: rOut, startAngleDeg: start, endAngleDeg: end } = ramp;
+  const angles = [start, end];
+  for (const card of [0, 90, 180, 270]) {
+    if (arcFraction(card, start, end) !== null) angles.push(card);
+  }
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const a of angles) {
+    const rad = a * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    for (const r of [rIn, rOut]) {
+      const x = cx + r * cos, y = cy + r * sin;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  return [minX, minY, maxX - minX, maxY - minY];
+}
+
 export function surfaceHeight(course, x, y, ballZ = undefined) {
-  if (!course.structures?.length) {
+  if (!course.structures?.length && !course.curvedRamps?.length && !course.drops?.length) {
     if (course.tiles && !course.tiles.some(r => inside(r, x, y))) return -999;
     if (course.pit) {
       for (const p of course.pit) {
@@ -119,16 +216,42 @@ export function surfaceHeight(course, x, y, ballZ = undefined) {
     }
     floors.push(m);
   }
-  for (const s of course.structures) {
-    if (s.kind === 'surface' && inside(s.rect, x, y)) {
-      floors.push(s.z);
-    } else if (s.kind === 'ramp' && inside(s.rect, x, y)) {
-      floors.push(structureRampHeight(s, x, y));
+  if (course.structures) {
+    for (const s of course.structures) {
+      if (s.kind === 'surface' && inside(s.rect, x, y)) {
+        floors.push(s.z);
+      } else if (s.kind === 'ramp' && inside(s.rect, x, y)) {
+        floors.push(structureRampHeight(s, x, y));
+      } else if (s.kind === 'curved-ramp' && pointInCurvedRamp(s, x, y)) {
+        floors.push(curvedRampHeight(s, x, y));
+      }
+    }
+  }
+  if (course.curvedRamps) {
+    for (const cr of course.curvedRamps) {
+      if (pointInCurvedRamp(cr, x, y)) {
+        floors.push(curvedRampHeight(cr, x, y));
+      }
+    }
+  }
+  if (course.islands) {
+    for (const isl of course.islands) {
+      if (isl.elevation !== undefined && inside(isl.rect, x, y)) {
+        floors.push(isl.elevation);
+      }
+    }
+  }
+  if (course.drops) {
+    for (const d of course.drops) {
+      const [fx, fy, fw, fh, fz] = d.landingFloor;
+      if (x >= fx && x <= fx + fw && y >= fy && y <= fy + fh) {
+        floors.push(fz);
+      }
     }
   }
   if (!floors.length) return -999;
   if (ballZ === undefined) return Math.max(...floors);
-  const candidates = floors.filter(h => h <= ballZ + 2);
+  const candidates = floors.filter(h => h <= ballZ + 6);
   return candidates.length ? Math.max(...candidates) : -999;
 }
 
@@ -158,10 +281,22 @@ function filletDrop(outside) {
 }
 
 export function activeStructureSurface(course, x, y, ballZ) {
-  if (!course.structures?.length || ballZ === undefined) return null;
-  for (const s of course.structures) {
-    if (s.kind === 'surface' && inside(s.rect, x, y) && Math.abs(s.z - ballZ) <= 2) {
-      return s;
+  if (ballZ === undefined) return null;
+  if (course.structures?.length) {
+    for (const s of course.structures) {
+      if (s.kind === 'surface' && inside(s.rect, x, y) && Math.abs(s.z - ballZ) <= 2) {
+        return s;
+      }
+      if (s.kind === 'curved-ramp' && pointInCurvedRamp(s, x, y) && Math.abs(curvedRampHeight(s, x, y) - ballZ) <= 2) {
+        return s;
+      }
+    }
+  }
+  if (course.curvedRamps?.length) {
+    for (const cr of course.curvedRamps) {
+      if (cr.surface && pointInCurvedRamp(cr, x, y) && Math.abs(curvedRampHeight(cr, x, y) - ballZ) <= 2) {
+        return cr;
+      }
     }
   }
   return null;
@@ -459,7 +594,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
   const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
-  let air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0);
+  let air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0) || (player.z > f && player.vz < -1);
   if (!air && ((globalHazards?.az || 0)+(mechanicForce?.z || 0)) > 0) { player.vz = Math.max(0, player.vz); air = true; }
 
   if (air) {
@@ -704,10 +839,32 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
         surfaceHeight(course, player.x, player.y - 0.1, player.z)) /
       0.2;
     const tangent = Math.abs(gx) < 3 && Math.abs(gy) < 3 ? gx * player.vx + gy * player.vy : 0;
-    player.vz =
-      air && !player.armedPowerups?.sticky && player.vz - tangent < -BOUNCE.landingSpeed
-        ? tangent - (player.vz - tangent) * BOUNCE.landingRestitution
-        : tangent;
+    let landingRestitution = BOUNCE.landingRestitution;
+    let dropTarget = null;
+    if (course.drops?.length) {
+      for (const d of course.drops) {
+        const [fx, fy, fw, fh] = d.landingFloor;
+        if (player.x >= fx && player.x <= fx + fw && player.y >= fy && player.y <= fy + fh) {
+          if (d.restitution !== undefined) landingRestitution = d.restitution;
+          dropTarget = d.id || 'drop';
+          break;
+        }
+      }
+    }
+    const downwardSpeed = tangent - player.vz;
+    const minLandingSpeed = dropTarget ? 40 : BOUNCE.landingSpeed;
+    if (air && !player.armedPowerups?.sticky && downwardSpeed > minLandingSpeed) {
+      player.vz = tangent - (player.vz - tangent) * landingRestitution;
+      if (dropTarget) {
+        events.push({
+          type: SimulationEventTypes.BOUNCE,
+          target: dropTarget,
+          position: [player.x, player.y, player.z],
+        });
+      }
+    } else {
+      player.vz = tangent;
+    }
     player.z = f;
   }
 

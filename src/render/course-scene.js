@@ -12,7 +12,7 @@ import { buildCourseMechanics } from './course-mechanics.js';
  * ink outlines and drops the landscape trees; object layout is unchanged.
  */
 
-import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
+import { cupOf, rampHeight, curvedRampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
 import { TUNING } from '../shared/tuning.js';
 import { displayColor, TELEPORTER_COLORS } from './materials.js';
 import { createWindStreaks } from './weather.js';
@@ -165,6 +165,60 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     const ramp = new THREE.Mesh(geometry, surface('ramp', T.ramp, 2, 2, { side: THREE.DoubleSide }));
     ramp.receiveShadow = ramp.castShadow = true;
     g.add(ink(ramp, { planar: true }));
+  }
+  if (hl.curvedRamps) {
+    for (const cr of hl.curvedRamps) {
+      const geometry = new THREE.BufferGeometry(), verts = [], uv = [], N = 48, M = 4;
+      const { center: [cx, cy], innerRadius: rIn, outerRadius: rOut, startAngleDeg: start, endAngleDeg: end } = cr;
+      for (let k = 0; k < N; k++) {
+        const t0 = k / N, t1 = (k + 1) / N;
+        const a0 = (start + (end - start) * t0) * Math.PI / 180;
+        const a1 = (start + (end - start) * t1) * Math.PI / 180;
+        for (let m = 0; m < M; m++) {
+          const u0 = m / M, u1 = (m + 1) / M;
+          const r0 = rIn + (rOut - rIn) * u0;
+          const r1 = rIn + (rOut - rIn) * u1;
+          const p00 = [cx + r0 * Math.cos(a0), cy + r0 * Math.sin(a0)];
+          const p10 = [cx + r1 * Math.cos(a0), cy + r1 * Math.sin(a0)];
+          const p11 = [cx + r1 * Math.cos(a1), cy + r1 * Math.sin(a1)];
+          const p01 = [cx + r0 * Math.cos(a1), cy + r0 * Math.sin(a1)];
+          const z00 = curvedRampHeight(cr, p00[0], p00[1]);
+          const z10 = curvedRampHeight(cr, p10[0], p10[1]);
+          const z11 = curvedRampHeight(cr, p11[0], p11[1]);
+          const z01 = curvedRampHeight(cr, p01[0], p01[1]);
+          const quad = [
+            [...at(p00[0], p00[1], z00), t0, u0],
+            [...at(p10[0], p10[1], z10), t0, u1],
+            [...at(p11[0], p11[1], z11), t1, u1],
+            [...at(p01[0], p01[1], z01), t1, u0]
+          ];
+          for (const n of [0, 1, 2, 0, 2, 3]) {
+            verts.push(...quad[n].slice(0, 3));
+            uv.push(...quad[n].slice(3));
+          }
+        }
+      }
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geometry.computeVertexNormals();
+      const texture = cr.surface === 'ice' ? T.ice : cr.surface === 'sand' ? T.sand : cr.surface === 'slime' ? T.slime : T.ramp;
+      const role = cr.surface || 'ramp';
+      const ramp = new THREE.Mesh(geometry, surface(role, texture, 2, 2, { side: THREE.DoubleSide }));
+      ramp.receiveShadow = ramp.castShadow = true;
+      ramp.userData.fade = true;
+      ramp.userData.surfaceType = 'curved-ramp';
+      g.add(ink(ramp, { planar: true }));
+    }
+  }
+  if (hl.drops) {
+    for (const d of hl.drops) {
+      if (d.renderLanding !== false && !hl.structures?.some(s => s.kind === 'surface' && s.rect[0] === d.landingFloor[0] && s.rect[1] === d.landingFloor[1])) {
+        const [fx, fy, fw, fh, fz] = d.landingFloor;
+        const mesh = box(THREE, fw, 6, fh, surface('turf', T.turf, fw / 80, fh / 80), at(fx + fw / 2, fy + fh / 2, fz - 3), true);
+        mesh.userData.fade = true;
+        g.add(ink(mesh));
+      }
+    }
   }
   for (const p of hl.pit) {
     const water = new THREE.Mesh(new THREE.PlaneGeometry(p[2], p[3]), library.water);
