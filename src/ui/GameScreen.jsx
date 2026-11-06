@@ -3,7 +3,7 @@ import { courseRules } from '../courses/definitions.js';
 import { spawnPool } from '../gameplay/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
-import { HUD_ICONS, powerupIcon } from './icons.js';
+import { HUD_ICONS, powerupIcon, TITLE_FLAG } from './icons.js';
 import { PowerMeter } from './PowerMeter.jsx';
 import { PongHud } from './PongHud.jsx';
 import { Row } from './Row.jsx';
@@ -26,6 +26,9 @@ function Tool({ icon, label, tip = label, active, onClick }) {
   );
 }
 
+/** One readout in the title plate. */
+const Stat = ({ label, value, timer }) => <div className={`${hud.stat}${timer ? ' ' + hud.statTimer : ''}`}><small>{label}</small><b>{value}</b></div>;
+
 /** Fixed markup from icons.js; never peer content. */
 const Svg = ({ markup, className }) => <span className={className || hud.icon} aria-hidden="true" dangerouslySetInnerHTML={{ __html: markup }} />;
 
@@ -40,7 +43,17 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
     <div hidden={hidden} data-ui={backdrop ? 'backdrop' : 'game'} className={backdrop ? hud.backdrop : undefined} aria-hidden={backdrop || undefined}>
       <div className={hud.stage}>
         <div className={hud.bar}>
-          <span className={`${hud.info}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>
+          <span className={`${hud.sr}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>
+          <div className={`${hud.title}${view?.warn ? ' ' + hud.titleWarn : ''}`} aria-hidden="true">
+            <Svg markup={TITLE_FLAG} className={hud.titleFlag} />
+            <div className={hud.titleMain}>
+              <b>{view?.title?.map}</b>
+              {view?.title?.putt && <i>Putt {view.title.putt}</i>}
+            </div>
+            <Stat label="Par" value={view?.title?.par} />
+            <Stat label={view?.title?.statLabel} value={view?.title?.stat} />
+            {view?.title?.time && <Stat label="Time" value={view.title.time} timer />}
+          </div>
           <span className={hud.tools} role="toolbar" aria-label="Game controls">
             <Tool icon="view" label={view?.viewLabel || 'View: Ball cam'} onClick={() => send(UiCommands.CYCLE_CAMERA)} />
             <Tool icon="card" label="Card" tip="Scorecard" onClick={() => send(UiCommands.TOGGLE_CARD)} />
@@ -74,11 +87,11 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
         <div className={hud.inv}>
           {(view?.inventory || []).map(slot => (
-            <button type="button" key={slot.index} className={`${hud.slot}${slot.kind === 'empty' ? ' ' + hud.slotEmpty : slot.kind === 'attack' ? ' ' + hud.slotAttack : ''}`}
+            <button type="button" key={slot.index} data-tone={slot.tone || undefined} className={`${hud.slot}${slot.kind === 'empty' ? ' ' + hud.slotEmpty : ''}`}
               onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>
               <span className={hud.sr}>{slot.label}</span>
               <span className={hud.slotKey} aria-hidden="true">{slot.index + 1}</span>
-              {slot.id && <Svg markup={powerupIcon(slot.id)} className={hud.slotIcon} />}
+              {slot.id && <Svg key={slot.id} markup={powerupIcon(slot.id)} className={hud.slotIcon} />}
               {slot.id && <span className={hud.slotTip} aria-hidden="true"><b>{slot.name}</b>{slot.ability}</span>}
             </button>
           ))}

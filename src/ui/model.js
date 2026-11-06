@@ -236,10 +236,15 @@ export function hudView(room, local, now, courses) {
   }));
   const inventory = [0, 1, 2].map(i => {
     const item = (local.inventory || [])[i];
-    return { index: i, id: item || '', name: item ? powerupName(item) : '', ability: item ? getPowerup(item)?.toast || '' : '', label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
+    return { index: i, tone: item ? getPowerup(item)?.group || '' : '', id: item || '', name: item ? powerupName(item) : '', ability: item ? getPowerup(item)?.toast || '' : '', label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
   });
   return {
     info,
+    title: {
+      map: course.name, putt: course.hasPutts ? ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '', par: putt.par,
+      stat: spectating ? 'SPECTATE' : String(local.strokes), statLabel: spectating ? 'MODE' : 'STROKES',
+      time: spectating ? '' : practice ? 'FREE' : Math.floor(left / 60) + ':' + pad2(left % 60),
+    },
     pong: pongHudView(room, local),
     warn: local.mode === 'play' && left <= 10,
     practiceBar: !!local.isHost && practice && room.phase === SessionPhases.PLAY,
