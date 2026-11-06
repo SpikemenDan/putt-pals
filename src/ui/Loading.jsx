@@ -48,7 +48,6 @@ export function Loading({ done = false, onDone }) {
   }, [done, display]);
   return (
     <div className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
-      <div className={styles.stars} aria-hidden="true"><i /><i /><i /></div>
       <canvas ref={canvasRef} className={styles.planet} aria-hidden="true" data-ui="loading-planet" />
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>

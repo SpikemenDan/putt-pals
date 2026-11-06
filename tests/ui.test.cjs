@@ -193,6 +193,10 @@ function fakeClock() {
     const a1 = avg(ares), l1 = avg(luna);
     assert.ok(a1[0] > a1[2] + 40, 'Ares is rust-coloured');
     assert.ok(Math.abs(l1[0] - l1[2]) < 15, 'Luna is grey');
+    const row = (t, y) => { let s = 0; for (let x = 0; x < worlds.WORLD_TEX_W; x++) s += Math.min(t[(y * worlds.WORLD_TEX_W + x) * 3], t[(y * worlds.WORLD_TEX_W + x) * 3 + 2]); return s / worlds.WORLD_TEX_W; };
+    assert.ok(row(ares, 2) > 225 && row(luna, 2) > 225, 'both have polar ice');
+    const greenish = t => { let n = 0; for (let k = 0; k < t.length; k += 3) if (t[k + 1] > t[k] + 18) n++; return n; };
+    assert.ok(greenish(ares) > 100 && greenish(luna) > 100, 'both show a hint of life');
     const spread = t => { const xs = []; for (let k = 0; k < t.length; k += 3 * 97) xs.push(t[k]); const m = xs.reduce((q, v) => q + v, 0) / xs.length; return Math.sqrt(xs.reduce((q, v) => q + (v - m) ** 2, 0) / xs.length); };
     assert.ok(spread(ares) > 15 && spread(luna) > 15, 'both have real surface detail (craters, plains), not flat colour');
     // Sites and routes: a place maps to the same texel both ways; sea routes never touch land, all the way round.
@@ -201,13 +205,19 @@ function fakeClock() {
     const routes = scene.shipRoutes(planet, scene.mulberry32(8));
     assert.ok(routes.length >= 9, 'enough sea routes for the default fleet');
     for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
+    assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.forests.length >= 300, 'a lived-in world: towns, villages, ports and forests');
+    assert.ok([...planet.towns, ...planet.villages].every(c => scene.landUnder(planet, scene.surfaceDir(c.u, c.lat)) >= scene.SEA), 'settlements stand on land');
+    for (const port of planet.ports) {
+      assert.ok(scene.landUnder(planet, scene.surfaceDir(port.u, port.lat)) >= scene.SEA, 'a port stands on the shore');
+      assert.ok(scene.landUnder(planet, port.sea) < scene.SEA, 'and its pier faces the sea');
+    }
     // Models: a plane's nose is at +x; a ship's hull crosses the waterline; a tower is much taller than it is wide.
     const box = g => { g.computeBoundingBox(); return g.boundingBox; };
-    const jet = box(models.makePlane(THREE)), hull = box(models.makeShip(THREE, scene.mulberry32(4)));
+    const jet = box(models.makePlane(THREE)), hull = box(models.makeShip(THREE));
     assert.ok(jet.max.x > 2.5 && jet.min.x < -3 && jet.max.y > 1.2, 'a jet, nose forward, with a tail fin');
     assert.ok(hull.min.y < -0.3 && hull.max.y > 1, 'a ship is partly under the water line');
     const city = models.makeCity(THREE, scene.mulberry32(4));
-    assert.ok(city.userData.top > 10 && box(city).max.x - box(city).min.x < 18, 'cities are tall for their width');
+    assert.ok(city.userData.top > 12 && city.userData.top <= models.CITY_TOP + 3 && box(city).max.x - box(city).min.x < 20, 'cities are tall for their width');
     assert.deepEqual([...city.attributes.position.array.slice(0, 30)], [...models.makeCity(THREE, scene.mulberry32(4)).attributes.position.array.slice(0, 30)], 'a city is the same for the same seed');
     const puff = models.makeCumulus(THREE, scene.mulberry32(4), { puffs: 8, detail: 1 });
     assert.ok(box(puff).min.y > -0.3 && puff.attributes.soft.count === puff.attributes.position.count, 'clouds have flat bases and a whole-cloud normal for volume');
@@ -245,11 +255,25 @@ function fakeClock() {
     for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 5, 'planes fly above the ground');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
     assert.ok(a.frames() > 400, 'each step draws');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3, 'the living world is in the scene');
     a.scene.dispose();
     const fresh = make(createDisplay({ loading: { spinSpeed: 10 } }));
     fresh.scene.start();
+    fresh.scene.step(0);
+    const eye = fresh.scene.cameraPosition, cloudsBefore = fresh.scene.deck, gap = cloud => Math.hypot(...cloud.map((q, k) => q - eye[k]));
     for (let i = 0; i < 10; i++) fresh.scene.step(0.1); // 1 s
     assert.ok(Math.abs(fresh.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
+    assert.deepEqual(fresh.scene.cameraPosition, eye, 'the camera stays put');
+    const orbit = fresh.scene.deck;
+    orbit.forEach((cloud, i) => { // each cloud moves along its circle round the globe: same height, no rush at the lens
+      assert.ok(Math.abs(Math.hypot(...cloud) - Math.hypot(...cloudsBefore[i])) < 1e-6, 'clouds keep their height as they circle');
+      assert.ok(gap(cloud) > 60, 'and never come close to the camera');
+    });
+    assert.ok(orbit.some((cloud, i) => Math.hypot(...cloud.map((q, k) => q - cloudsBefore[i][k])) > 1), 'clouds move');
+    let streaks = 0;
+    for (let i = 0; i < 6000; i++) fresh.scene.step(0.1); // 10 minutes
+    streaks = fresh.scene.stats.shootingStars;
+    assert.ok(streaks >= 3 && streaks <= 20, `shooting stars are rare but real (${streaks} in 10 minutes)`);
     fresh.scene.dispose();
     const none = make(createDisplay({ loading: { spinSpeed: 0, planes: 0, boats: 0, satellites: 0 } }));
     none.scene.start();
@@ -263,6 +287,7 @@ function fakeClock() {
     for (let i = 0; i < 600; i++) still.scene.step(0.1);
     assert.equal(still.scene.spin, 0, 'reduced motion: planet does not turn');
     assert.deepEqual(still.scene.bodies('planes')[0].position, parked, 'and nothing flies');
+    assert.equal(still.scene.stats.shootingStars, 0, 'and no shooting stars');
     still.scene.dispose();
     const noGl = createPlanetScene({ THREE, canvas: make(DEFAULT_DISPLAY).sd.window.document.querySelector('canvas'), display: DEFAULT_DISPLAY, random: scene.mulberry32(3), planet, createWebGLRenderer: () => { throw new Error('no WebGL'); } });
     noGl.step(0.1);

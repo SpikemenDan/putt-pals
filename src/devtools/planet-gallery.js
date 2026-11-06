@@ -1,6 +1,6 @@
 /**
- * Development-only close-ups for the loading-screen sky (VIS-M1): the whole view plus a city, a ship and a plane, each followed live by
- * its own camera, so the owner can judge the models before they are approved. Open it with `?gallery` on the dev server.
+ * Development-only close-ups for the loading-screen sky (VIS-M1): the whole view plus a city, town, port, ship, plane, Luna and Ares, each
+ * followed live by its own camera, so the owner can judge the models before they are approved. Open it with `?gallery` on the dev server.
  * Every cell is the real scene with the real settings; nothing here is saved. Plain DOM, text only.
  */
 
@@ -19,7 +19,7 @@ const STYLE = `
 .pp-gal-cell span{position:absolute;left:8px;top:8px;z-index:2;background:#14102a;color:#ffd23f;padding:3px 8px;border-radius:6px;font-weight:700}
 `;
 
-const CELLS = [['Whole view', null], ['City close-up', 'city'], ['Ship close-up', 'ship'], ['Plane close-up', 'plane']];
+const CELLS = [['Whole view', null], ['City', 'city'], ['Town', 'town'], ['Port', 'port'], ['Ship', 'ship'], ['Plane', 'plane'], ['Luna, close', 'luna'], ['Ares, close', 'ares']];
 
 export function mountPlanetGallery(doc) {
   const el = (tag, props = {}, ...kids) => { const n = doc.createElement(tag); Object.assign(n, props); n.append(...kids); return n; };
@@ -36,7 +36,7 @@ export function mountPlanetGallery(doc) {
     status.textContent = 'Live, with the shipped settings. Same planet in every view.';
     for (const [label, focus] of CELLS) {
       const canvas = el('canvas'), box = el('div', { className: 'pp-gal-cell' }, canvas, el('span', { textContent: label }));
-      box.style.width = '600px'; box.style.height = '330px';
+      box.style.width = '410px'; box.style.height = '240px';
       grid.append(box);
       const scene = createPlanetScene({ THREE, canvas, display: createDisplay({}), random: mulberry32(7), planet, focus });
       scene.start();

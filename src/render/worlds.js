@@ -2,8 +2,9 @@
  * Surface maps of Ares and Luna for the loading-screen sky (VIS-M1), drawn as real spheres by planet-scene.js so a later planet menu can
  * fly to them. Original art: invented terrain, not maps of Mars or the Moon.
  *
- * Ares is rugged and rust-coloured with dark basalt plains, a long canyon, big volcanoes, craters and small polar caps. Luna is Gaia's
- * barren moon: pale highlands, dark maria, many overlapping craters with bright rims. Plain data; randomness is injected.
+ * Ares is rugged and rust-coloured with dark basalt plains, a long canyon, big volcanoes, craters and polar ice, with green valleys and
+ * blue lakes hinting at life. Luna is Gaia's moon: pale highlands, dark maria, many craters with bright rims, polar ice, and a few
+ * teal-green crater floors for the same hint. Plain data; randomness is injected.
  */
 
 import { clamp, makeFbm, makeNoise, mix, smooth } from './noise.js';
@@ -51,7 +52,10 @@ export function buildAresTexture(random) {
       c = c.map((q, k) => mix(q, pale[k], d * 0.5 * (1 - p)));
       const w = (warp(u, v) - 0.5) * 0.12, canyon = 1 - Math.min(1, Math.abs(v - 0.54 - w) / 0.018) * (0.4 + ridge(u * 0.7, v) * 0.6); // a long, wandering valley
       if (u > 0.2 && u < 0.62 && canyon > 0.35) c = c.map((q, k) => mix(q, INK[k] + 30, (canyon - 0.35) * 0.9));
-      const capW = smooth(76, 84, lat) * 0.95;
+      const oasis = smooth(0.6, 0.72, plains(u * 1.7 + 0.3, v * 1.7)) * smooth(0.42, 0.6, dust(u + 0.2, v)) * smooth(70, 40, lat); // valleys where something grows
+      c = c.map((q, k) => mix(q, [86, 176, 110][k], oasis * 0.85));
+      if (canyon > 0.5 && u > 0.2 && u < 0.62) c = c.map((q, k) => mix(q, [64, 150, 210][k], 0.5)); // water along the canyon floor
+      const capW = smooth(66, 76, lat + (base(u, v) - 0.5) * 16) * 0.97;
       c = c.map((q, k) => mix(q, cap[k], capW));
       const g = tone[i] * (0.96 + 0.08 * ((x * 7 + y * 13) % 5) / 4);
       rgb[i * 3] = clamp(c[0] * g, 0, 255); rgb[i * 3 + 1] = clamp(c[1] * g, 0, 255); rgb[i * 3 + 2] = clamp(c[2] * g, 0, 255);
@@ -62,7 +66,7 @@ export function buildAresTexture(random) {
 
 /** Luna texture: pale highlands, dark maria with soft edges, and many overlapping craters. */
 export function buildLunaTexture(random) {
-  const base = makeFbm(random, 6, 3, 5), maria = makeFbm(random, 3, 2, 4), fine = makeNoise(random, 64, 32);
+  const base = makeFbm(random, 6, 3, 5), maria = makeFbm(random, 3, 2, 4), fine = makeNoise(random, 64, 32), life = makeFbm(random, 7, 4, 3);
   const tone = new Float32Array(WORLD_TEX_W * WORLD_TEX_H).fill(1);
   stampCraters(tone, random, 90, 2.5, 12);
   stampCraters(tone, random, 14, 12, 26);
@@ -73,7 +77,11 @@ export function buildLunaTexture(random) {
       const u = x / WORLD_TEX_W, i = y * WORLD_TEX_W + x, h = base(u, v), m = smooth(0.5, 0.6, maria(u, v));
       const light = 186 + (h - 0.5) * 70 + (fine(u, v) - 0.5) * 14;
       const g = tone[i], dark = mix(1, 0.52, m); // maria: darker, a little warmer
-      rgb[i * 3] = clamp(light * dark * g * 1.02, 0, 255); rgb[i * 3 + 1] = clamp(light * dark * g, 0, 255); rgb[i * 3 + 2] = clamp(light * dark * g * (1.06 - m * 0.08), 0, 255);
+      let c = [light * dark * g * 1.02, light * dark * g, light * dark * g * (1.06 - m * 0.08)];
+      const lat = Math.abs(0.5 - v) * 180, ice = smooth(68, 78, lat + (h - 0.5) * 14), teal = smooth(0.64, 0.7, life(u, v)) * smooth(0.5, 0.2, m) * smooth(70, 50, lat);
+      c = c.map((q, k) => mix(q, [88, 190, 160][k] * g, teal * 0.7)); // something growing in the deep craters
+      c = c.map((q, k) => mix(q, [240, 248, 255][k], ice));
+      rgb[i * 3] = clamp(c[0], 0, 255); rgb[i * 3 + 1] = clamp(c[1], 0, 255); rgb[i * 3 + 2] = clamp(c[2], 0, 255);
     }
   }
   return rgb;

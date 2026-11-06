@@ -24,7 +24,8 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['loading.cloudDrift', 0, 4, 'Loading screen: cloud layer speed relative to the planet spin (1 = clouds turn with the ground, above 1 they slide ahead of it).'],
   ['loading.finishTime', 0.1, 3, 'Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes.'],
   ['loading.atmosphere', 0, 1, 'Loading screen: strength of the blue air glow around the planet, from none (0) to thick (1).'],
-  ['loading.citySize', 0.5, 3, 'Loading screen: size of the 3D city skylines as a multiplier (the globe stays the same size).'],
+  ['loading.citySize', 0.5, 3, 'Loading screen: size of cities, towns, villages and ports as a multiplier (the globe stays the same size).'],
+  ['loading.lunaSize', 1, 8, 'Loading screen: size of Luna in the sky: 1 is its true apparent size at the real Earth-Moon distance, higher is magnified.'],
   ['loading.outlineWidth', 0, 4, 'Loading screen: ink outline width on cities, ships, planes and clouds, in pixels at 1280 wide; 0 turns outlines off.'],
   ['loading.planes', 0, 12, 'Loading screen: planes flying between cities, with contrails (rounded to whole planes; 0 hides them).'],
   ['loading.boats', 0, 20, 'Loading screen: boats on the sea (rounded to whole boats; 0 hides them).'],
@@ -35,7 +36,7 @@ export const DISPLAY_FIELDS = Object.freeze([
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
-  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.7, citySize: 1.6, outlineWidth: 1.6, planes: 5, boats: 9, satellites: 3 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.7, citySize: 1.6, lunaSize: 2.6, outlineWidth: 1.6, planes: 5, boats: 9, satellites: 3 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

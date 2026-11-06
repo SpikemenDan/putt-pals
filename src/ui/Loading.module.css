@@ -1,21 +1,10 @@
-/* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night-to-day sky, the curved horizon of a planet
+/* Loading screen (M1c, VIS-M1): covers the start screen while a room opens. A night sky, the curved horizon of a planet
    drawn in 3D by src/render/planet-scene.js with clouds, cities, ships, planes, Ares and Luna, then the brand, the three-ball progress and a
    tip. Fonts come from the game-wide theme (src/ui/fonts/fonts.css, global.css): Jersey 10 for the title, Nunito for captions. */
 .loading{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:18px;padding:clamp(24px,8vh,80px) 24px 28px;overflow:hidden;text-align:center;
   --display:var(--font);--body:var(--pp-body,'Nunito','Segoe UI',sans-serif);
-  background-color:#0b1240;background-image:
-    radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 27% 9%,#fff,transparent),radial-gradient(1.5px 1.5px at 41% 24%,#ffe9a8,transparent),
-    radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 73% 21%,#fff,transparent),radial-gradient(1px 1px at 88% 8%,#cfe6ff,transparent),
-    radial-gradient(1px 1px at 6% 40%,#fff,transparent),radial-gradient(1px 1px at 94% 36%,#fff,transparent),radial-gradient(1.5px 1.5px at 66% 4%,#fff,transparent),
-    linear-gradient(#0b1240 0%,#1d3f9e 45%,#4aa3ff 80%,#a7e0ff 100%)}
+  background:linear-gradient(#03050f 0%,#060b24 48%,#0d1c52 74%,#1b3f96 100%)}
 .planet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-/* Shooting stars: three streaks that cross the upper sky now and then. */
-.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.stars i{position:absolute;display:block;width:90px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#fff);opacity:0;transform:rotate(18deg);animation:streak 9s linear infinite}
-.stars i:nth-child(1){left:62%;top:7%}
-.stars i:nth-child(2){left:24%;top:16%;animation-delay:3.4s;animation-duration:12s}
-.stars i:nth-child(3){left:82%;top:27%;animation-delay:6.8s;animation-duration:10s}
-@keyframes streak{0%,90%{opacity:0;translate:0 0}91%{opacity:.9}100%{opacity:0;translate:-170px 55px}}
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
 .brand{margin:0;font:400 clamp(64px,12vw,128px)/1 var(--display);letter-spacing:4px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 6px 0 var(--ink),0 0 28px rgba(255,210,63,.35)}
 .status{margin:0;font:700 clamp(17px,2.6vw,24px)/1.2 var(--body);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
@@ -30,4 +19,4 @@
 .loading[data-state="done"] .ball{animation:none;filter:brightness(1.08);box-shadow:2px 3px 0 var(--ink),0 0 20px 5px var(--yellow)}
 .tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}
 .tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 15px var(--display);letter-spacing:2px}
-@media (prefers-reduced-motion:reduce){.stars i,.ball{animation:none}.stars{display:none}.ball{filter:none}}
+@media (prefers-reduced-motion:reduce){.ball{animation:none;filter:none}}

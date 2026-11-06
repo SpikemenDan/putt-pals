@@ -32,11 +32,16 @@ void main(){
   float depth=clamp(-land,0.,.5);
   vec3 sea=mix(vec3(.27,.77,.84),vec3(.11,.44,.82),smoothstep(0.,.07,depth));
   sea=mix(sea,vec3(.06,.24,.6),smoothstep(.06,.24,depth));
+  sea=mix(sea,vec3(.08,.55,.8),(broad-.4)*.5*step(.1,depth)); // currents: broad teal and blue swirls
+  float reef=(1.-smoothstep(.02,.05,depth))*smoothstep(.5,.62,fine)*smoothstep(.5,.75,warm);
+  sea=mix(sea,vec3(1.,.62,.66),reef*.55); // coral on warm shallows
   sea=mix(sea,vec3(.94,.97,1.),smoothstep(.3,.17,warm+(broad-.5)*.16));
   // Land: climate colours with fine terrain mottling, beaches on warm coasts, suburbs round the cities.
-  vec3 ground=texture2D(landMap,uv).rgb*(.8+.42*fine);
+  vec3 ground=texture2D(landMap,uv).rgb*(.93+.14*broad);
+  ground=mix(ground,ground*vec3(1.1,1.04,.72),smoothstep(.5,.66,broad)*.45); // sunlit meadows
+  ground=mix(ground,vec3(.98,.55,.75),smoothstep(.66,.7,fine)*smoothstep(.5,.6,broad)*smoothstep(.45,.7,warm)*.3); // flowering plains
   ground=mix(ground,vec3(.94,.87,.67),(1.-smoothstep(.006,.02,land))*smoothstep(.25,.42,warm)*.9);
-  ground=mix(ground,vec3(.66,.63,.6)*(.8+.4*fine),f.b*.72);
+  ground=mix(ground,vec3(.8,.74,.66),f.b*.6);
   vec3 albedo=mix(sea,ground,isLand);
   // Relief: the elevation map tilts the normal, so mountains catch the sun.
   vec3 N=normalize(vN);
@@ -48,7 +53,7 @@ void main(){
   float soft=smoothstep(-.16,.72,ndl),band=smoothstep(.1,.13,ndl)*.5+smoothstep(.44,.47,ndl)*.5;
   float day=mix(soft,band,.34);
   vec3 c=albedo*mix(vec3(.13,.17,.38),vec3(1.06,1.03,.98),day);
-  if(day<.72)c*=1.-.2*halftone(dotCell,day<.36?.62:.4);
+  if(day<.5)c*=1.-.14*halftone(dotCell,day<.3?.62:.4);
   // Cloud shadows on the ground.
   float cs=texture2D(cloudMap,uv+vec2(cloudShift+.006,.006)).r;
   c*=1.-.34*smoothstep(cloudGate,cloudGate+.08,cs);
@@ -108,14 +113,12 @@ void main(){mat3 m=mat3(modelMatrix);vN=normalize(m*normal);vS=normalize(m*soft)
 
 /**
  * Volumetric comic cloud: light comes mostly from the whole cloud's soft normal, so a pile of lobes reads as one big body, with each
- * lobe billowing on top; the underside falls into cool shadow in flat bands with the game's halftone dots. `fade` dissolves the cloud
- * through fine dots as it arrives and as the camera flies through it. `haze` melts distant clouds into the sky.
+ * lobe billowing on top; the underside falls into cool shadow in flat bands with the game's halftone dots. `haze` melts clouds into the air.
  */
 export const CLOUD_FRAGMENT = `
-uniform vec3 sun;uniform float fade,dotCell,haze;varying vec3 vN;varying vec3 vS;varying float vAo;
+uniform vec3 sun;uniform float dotCell,haze;varying vec3 vN;varying vec3 vS;varying float vAo;
 ${NOISE}
 void main(){
-  if(fade<.995){vec2 q=mod(gl_FragCoord.xy,3.)-1.5;if(length(q)>fade*2.2)discard;}
   vec3 n=normalize(mix(normalize(vN),normalize(vS),.6));
   float l=(dot(n,sun)*.5+.5)*mix(.5,1.08,vAo);
   float e=.012;
@@ -140,3 +143,21 @@ void main(){
   if(a<.08)discard;
   gl_FragColor=vec4(.95,.99,1.,a);
 }`;
+
+/** Stars: round points with a soft glow, each twinkling at its own pace. */
+export const STAR_VERTEX = 'attribute float size;attribute vec3 tone;attribute float phase;uniform float time,pixel;varying vec3 vTone;varying float vBright;void main(){vTone=tone;vBright=.72+.28*sin(time*(.6+phase*1.8)+phase*40.);gl_PointSize=size*pixel;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
+export const STAR_FRAGMENT = 'varying vec3 vTone;varying float vBright;void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;float a=(1.-smoothstep(.15,1.,r))*vBright;gl_FragColor=vec4(vTone*a,a);}';
+
+/** A small, faint spiral galaxy on a flat quad, far away. */
+export const GALAXY_VERTEX = 'varying vec2 vUv;void main(){vUv=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
+export const GALAXY_FRAGMENT = `uniform vec3 tone;uniform float strength;varying vec2 vUv;
+void main(){float r=length(vUv);if(r>1.)discard;float a=atan(vUv.y,vUv.x);
+  float arms=.5+.5*sin(a*2.-log(r+.04)*5.2);
+  float g=exp(-r*r*16.)*1.5+pow(arms,3.)*exp(-r*3.4)*.75;
+  g*=(1.-r)*strength;
+  vec3 c=mix(tone,vec3(1.,.95,.84),exp(-r*r*20.));
+  gl_FragColor=vec4(c*g,g);}`;
+
+/** A shooting star: a bright head and a fading tail along a quad. `life` runs 0 to 1. */
+export const STREAK_VERTEX = 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
+export const STREAK_FRAGMENT = 'uniform float life;varying vec2 vUv;void main(){float head=smoothstep(0.,1.,vUv.x);float side=1.-abs(vUv.y*2.-1.)/max(head,.02);float g=head*head*smoothstep(0.,.5,side)*sin(life*3.14159);gl_FragColor=vec4(vec3(.95,.97,1.)*g,g);}';

@@ -18,14 +18,14 @@ export const TEX_H = 512;
 export const SEA = 0.4; // land value at the shoreline
 export const MAX_PLANES = 12, MAX_BOATS = 20, MAX_SATELLITES = 8;
 
-/** Palette (r, g, b), natural but bright. Rows run cold to hot, columns dry to wet. */
+/** Palette (r, g, b), lifelike and saturated. Rows run cold to hot, columns dry to wet. */
 const CLIMATE = Object.freeze([
-  [0.15, [[168, 176, 160], [112, 142, 116], [66, 110, 88]]],
-  [0.40, [[166, 172, 110], [96, 156, 88], [54, 126, 78]]],
-  [0.65, [[216, 186, 120], [116, 170, 84], [58, 146, 76]]],
-  [0.95, [[234, 196, 118], [186, 176, 84], [30, 128, 66]]],
+  [0.15, [[176, 170, 150], [116, 158, 118], [62, 128, 96]]],
+  [0.40, [[186, 186, 96], [98, 186, 84], [40, 150, 78]]],
+  [0.65, [[236, 186, 96], [128, 200, 72], [44, 172, 72]]],
+  [0.95, [[246, 186, 88], [206, 196, 66], [16, 156, 62]]],
 ]);
-const SNOW = [248, 252, 255], ROCK = [136, 124, 116], SAND = [240, 222, 170], SHALLOW = [70, 196, 214], SEA_BLUE = [32, 112, 208], DEEP = [18, 66, 156];
+const SNOW = [248, 252, 255], ROCK = [150, 122, 104], SAND = [250, 226, 158], SHALLOW = [64, 224, 216], SEA_BLUE = [24, 128, 232], DEEP = [14, 72, 176];
 
 const lerp3 = (a, b, t) => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 
@@ -113,7 +113,8 @@ function blur(field, radius) {
  * - `landRgb`: RGBA land colours everywhere, even under the sea, so the shader can cut a sharp coast anywhere without a colour fringe.
  * - `field`: RGBA data: r the land value around the shore (0.5 at the coast, see `decodeLand`), g elevation, b city density.
  * - `land`: the land value per texel (below SEA is sea). `cloud`: 0..255 cloud density.
- * - `cities`: [{u, lat, tint}], `tint` the local ground colour. `seaSites`: [{u, lat}] on open sea.
+ * - `cities`, `towns`, `villages`: [{u, lat, tint}], `tint` the local ground colour. `ports`: the same on the shore, plus `sea`, a unit
+ *   vector toward the water. `forests`: [{u, lat, tint}] for single trees. `seaSites`: [{u, lat}] on open sea.
  */
 export function buildPlanet(random) {
   const n = TEX_W * TEX_H;
@@ -144,16 +145,42 @@ export function buildPlanet(random) {
       field[i * 4] = clamp(0.5 + (land[i] - SEA) * 2, 0, 1) * 255; field[i * 4 + 1] = clamp(h[i]) * 255; field[i * 4 + 3] = 255;
     }
   }
-  // Cities on gentle, warm-enough land, spread out; ships on open sea away from the ice.
-  const sites = [], seaSites = [];
-  for (let tries = 0; tries < 4000 && sites.length < 30; tries++) {
-    const x = Math.floor(random() * TEX_W), y = Math.floor((0.14 + random() * 0.72) * TEX_H), i = y * TEX_W + x, lat = (0.5 - (y + 0.5) / TEX_H) * 180;
-    if (land[i] < SEA + 0.06 || h[i] > 0.35 || temperatureAt(lat, h[i]) < 0.28) continue;
-    if (sites.some(c => Math.hypot((c.x - x) * Math.cos(lat * Math.PI / 180), c.y - y) < 40)) continue;
-    sites.push({ x, y, u: x / TEX_W, lat, tint: [landRgb[i * 4], landRgb[i * 4 + 1], landRgb[i * 4 + 2]] });
+  // Settlements on gentle, warm-enough land, big ones first and spread out; ships on open sea away from the ice.
+  const taken = [], seaSites = [];
+  const place = (limit, gap, ok = () => true) => {
+    const out = [];
+    for (let tries = 0; tries < 5000 && out.length < limit; tries++) {
+      const x = Math.floor(random() * TEX_W), y = Math.floor((0.14 + random() * 0.72) * TEX_H), i = y * TEX_W + x, lat = (0.5 - (y + 0.5) / TEX_H) * 180;
+      if (h[i] > 0.35 || temperatureAt(lat, h[i]) < 0.28 || !ok(i, x, y)) continue;
+      if (taken.some(c => Math.hypot(Math.min(Math.abs(c.x - x), TEX_W - Math.abs(c.x - x)) * Math.cos(lat * Math.PI / 180), c.y - y) < gap)) continue;
+      const site = { x, y, u: x / TEX_W, lat, tint: [landRgb[i * 4], landRgb[i * 4 + 1], landRgb[i * 4 + 2]] };
+      taken.push(site); out.push(site);
+    }
+    return out;
+  };
+  const inlandEnough = i => land[i] >= SEA + 0.06;
+  /** The nearest texel of sea within a few texels of a shore texel, or null. */
+  const seaBeside = (x, y) => {
+    for (let r = 2; r <= 7; r++) for (let k = 0; k < 16; k++) {
+      const sx = (x + Math.round(Math.cos(k / 8 * Math.PI) * r) + TEX_W) % TEX_W, sy = Math.min(TEX_H - 1, Math.max(0, y + Math.round(Math.sin(k / 8 * Math.PI) * r)));
+      if (land[sy * TEX_W + sx] < SEA - 0.02) return [sx, sy];
+    }
+    return null;
+  };
+  const sites = place(22, 42, inlandEnough);
+  const ports = place(16, 22, (i, x, y) => land[i] >= SEA + 0.005 && land[i] < SEA + 0.05 && !!seaBeside(x, y)).map(p => {
+    const [sx, sy] = seaBeside(p.x, p.y);
+    return { ...p, sea: surfaceDir(sx / TEX_W, (0.5 - (sy + 0.5) / TEX_H) * 180) };
+  });
+  const towns = place(46, 20, inlandEnough), villages = place(80, 12, inlandEnough);
+  const forests = [];
+  for (let tries = 0; tries < 30000 && forests.length < 900; tries++) { // trees where the land is green
+    const x = Math.floor(random() * TEX_W), y = Math.floor((0.08 + random() * 0.84) * TEX_H), i = y * TEX_W + x, r = landRgb[i * 4], g = landRgb[i * 4 + 1], b = landRgb[i * 4 + 2];
+    if (land[i] < SEA + 0.02 || h[i] > 0.5 || g < r + 22 || g < b + 30) continue;
+    forests.push({ u: x / TEX_W, lat: (0.5 - (y + 0.5) / TEX_H) * 180, tint: [r * 0.72, g * 0.82, b * 0.66] });
   }
-  for (const c of sites) { // suburbs: a soft patch of city density around each site, which the shader tints and lights at night
-    const r = 11, stretch = 1 / Math.max(0.3, Math.cos(c.lat * Math.PI / 180));
+  for (const c of [...sites, ...ports, ...towns.filter((_, k) => k % 2)]) { // suburbs: a soft patch around each place, tinted by the shader and lit at night
+    const r = sites.includes(c) ? 11 : 5, stretch = 1 / Math.max(0.3, Math.cos(c.lat * Math.PI / 180));
     for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
       const y = c.y + dy, x = (c.x + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r;
       if (d >= 1 || y < 0 || y >= TEX_H) continue;
@@ -166,7 +193,8 @@ export function buildPlanet(random) {
     if (land[i] > SEA - 0.1 || temperatureAt(lat, 0) < 0.4) continue;
     seaSites.push({ u: x / TEX_W, lat });
   }
-  return { rgb, landRgb, field, land, cloud: buildCloudMap(random), cities: sites.map(({ u, lat, tint }) => ({ u, lat, tint })), seaSites };
+  const plain = list => list.map(({ u, lat, tint, sea }) => ({ u, lat, tint, ...(sea ? { sea } : {}) }));
+  return { rgb, landRgb, field, land, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), forests, seaSites };
 }
 
 /** Cloud density (0..255 per texel): stretched along the equator, thicker near the equator and mid-latitude storm belts. */

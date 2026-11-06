@@ -1,20 +1,19 @@
 /**
- * 3D models for the loading-screen sky (VIS-M1): a jet, a cargo ship, a satellite, city blocks and cumulus clouds.
+ * 3D models for the loading-screen sky (VIS-M1): chunky, simple toy shapes for a jet, a ship, a satellite, a balloon, cities, towns,
+ * villages, ports, trees, wind turbines, moon bases and cumulus clouds.
  *
  * Every builder returns one BufferGeometry with vertex colours, drawn with the game's own toon material and ink hull (materials.js,
- * outline.js), so these share the look of the courses. Local axes: +x forward (nose, bow), +y up, +z right. A ship's waterline is
- * y = 0. Original models; `THREE` and randomness are injected.
+ * outline.js): few, smooth forms and flat colours, so the cel bands and the ink do the detailing. Local axes: +x forward (nose, bow,
+ * pier), +y up, +z right. A ship's waterline is y = 0. Original models; `THREE` and randomness are injected.
  */
 
-const col = (THREE, hex) => new THREE.Color(hex);
-
-/** One geometry from many parts [{ geometry, color, at? }], `at` a Matrix4. Keeps position, normal and a colour per vertex. */
+/** One geometry from many parts [{ geometry, color, at? }], `at` a Matrix4, `color` a hex or THREE.Color. */
 export function mergeParts(THREE, parts) {
   const positions = [], normals = [], colors = [];
   for (const { geometry, color, at } of parts) {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
     if (at) flat.applyMatrix4(at);
-    const c = col(THREE, color), p = flat.attributes.position, n = flat.attributes.normal;
+    const c = new THREE.Color(color), p = flat.attributes.position, n = flat.attributes.normal;
     for (let i = 0; i < p.count; i++) {
       positions.push(p.getX(i), p.getY(i), p.getZ(i));
       normals.push(n.getX(i), n.getY(i), n.getZ(i));
@@ -37,111 +36,156 @@ function plate(THREE, points, thick) {
   return new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: false }).rotateX(-Math.PI / 2);
 }
 
-/** An airliner about 6.6 units long: rounded fuselage, swept wings with engines under them, a coloured tail. Nose at +x. */
+/** A toy airliner about 6 units long: a fat rounded body, two plain wings, a coloured tail. Nose at +x. */
 export function makePlane(THREE) {
-  const white = 0xf5f6fb, belly = 0xc8d0e0, wing = 0xb9c4d8, pink = 0xff3d6e, yellow = 0xffd640, glass = 0x24324e, metal = 0x6b7488;
-  const tube = (r0, r1, len, seg = 14) => new THREE.CylinderGeometry(r0, r1, len, seg).rotateZ(-Math.PI / 2); // r0 at +x
+  const white = 0xf8f8fc, wing = 0xffd640, pink = 0xff3d6e, glass = 0x2a4a86;
   const parts = [
-    { geometry: tube(0.42, 0.42, 3.8), color: white, at: moved(THREE, 0.1, 0, 0) },
-    { geometry: new THREE.SphereGeometry(0.42, 14, 10), color: white, at: stretched(THREE, 2, -0.02, 0, 2.1, 0.96, 1) }, // nose
-    { geometry: tube(0.42, 0.1, 1.7), color: white, at: moved(THREE, -2.65, 0.1, 0) }, // tail cone
-    { geometry: new THREE.SphereGeometry(0.43, 14, 8), color: belly, at: stretched(THREE, 0.1, -0.13, 0, 4.4, 0.72, 0.97) }, // belly
-    { geometry: tube(0.43, 0.43, 0.34), color: pink, at: moved(THREE, 1.1, 0, 0) }, // livery band
-    { geometry: new THREE.SphereGeometry(0.2, 10, 8), color: glass, at: stretched(THREE, 2.32, 0.14, 0, 1.3, 0.62, 1.55) }, // cockpit
-    { geometry: new THREE.BoxGeometry(2.9, 0.07, 0.88), color: glass, at: moved(THREE, 0.1, 0.17, 0) }, // cabin windows
+    { geometry: new THREE.SphereGeometry(1, 20, 14), color: white, at: stretched(THREE, 0, 0, 0, 3.1, 0.68, 0.68) },
+    { geometry: new THREE.SphereGeometry(0.34, 12, 10), color: glass, at: stretched(THREE, 2.05, 0.2, 0, 1.2, 0.72, 1.3) },
   ];
   for (const s of [1, -1]) {
-    parts.push({ geometry: plate(THREE, [[0.75, 0.3 * s], [-0.55, 3.35 * s], [-1.05, 3.35 * s], [-0.75, 0.3 * s]], 0.1), color: wing, at: moved(THREE, 0, -0.16, 0) });
-    parts.push({ geometry: plate(THREE, [[-0.55, 3.35 * s], [-1.05, 3.35 * s], [-1.1, 3.4 * s], [-0.65, 3.4 * s]], 0.42), color: pink, at: moved(THREE, 0, -0.16, 0) }); // winglet
-    parts.push({ geometry: plate(THREE, [[-2.6, 0.1 * s], [-3.2, 1.2 * s], [-3.5, 1.2 * s], [-3.3, 0.1 * s]], 0.06), color: wing, at: moved(THREE, 0, 0.26, 0) });
-    parts.push({ geometry: tube(0.2, 0.17, 0.82, 12), color: metal, at: moved(THREE, 0.35, -0.36, 1.3 * s) }); // engine
-    parts.push({ geometry: new THREE.CircleGeometry(0.17, 12).rotateY(Math.PI / 2), color: 0x14102a, at: moved(THREE, 0.77, -0.36, 1.3 * s) });
+    parts.push({ geometry: plate(THREE, [[0.7, 0.4 * s], [-0.5, 3.1 * s], [-1.2, 3.1 * s], [-0.8, 0.4 * s]], 0.16), color: wing, at: moved(THREE, 0, -0.2, 0) });
+    parts.push({ geometry: plate(THREE, [[-2.1, 0.2 * s], [-2.7, 1.2 * s], [-3.1, 1.2 * s], [-2.8, 0.2 * s]], 0.12), color: wing, at: moved(THREE, 0, 0.12, 0) });
   }
-  const fin = new THREE.ExtrudeGeometry(new THREE.Shape([[-2.25, 0.3], [-3.25, 1.75], [-3.72, 1.75], [-3.3, 0.3]].map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.09, bevelEnabled: false });
-  parts.push({ geometry: fin, color: pink, at: moved(THREE, 0, 0, -0.045) });
-  parts.push({ geometry: new THREE.BoxGeometry(0.45, 0.16, 0.1), color: yellow, at: moved(THREE, -3.28, 1.32, 0) });
+  const fin = new THREE.ExtrudeGeometry(new THREE.Shape([[-1.9, 0.3], [-2.75, 1.65], [-3.25, 1.65], [-2.95, 0.3]].map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.16, bevelEnabled: false });
+  parts.push({ geometry: fin, color: pink, at: moved(THREE, 0, 0, -0.08) });
   return mergeParts(THREE, parts);
 }
 
-/** A cargo ship about 8 units long: a pointed hull that sits low in the water, stacked containers, a white bridge aft and a funnel. */
-export function makeShip(THREE, random) {
-  const hullOutline = [[-3.8, -0.72], [1.9, -0.72], [3.1, -0.42], [4.1, 0], [3.1, 0.42], [1.9, 0.72], [-3.8, 0.72]];
-  const parts = [
-    { geometry: plate(THREE, hullOutline, 1.15), color: 0x24345e, at: moved(THREE, 0, -0.5, 0) }, // hull: the part below y = 0 is under the sea
-    { geometry: plate(THREE, hullOutline.map(([x, z]) => [x * 0.985, z * 0.97]), 0.08), color: 0xc2523e, at: moved(THREE, 0, 0.62, 0) }, // deck
-    { geometry: new THREE.BoxGeometry(1.2, 1.2, 1.2), color: 0xf4f5f7, at: stretched(THREE, -2.75, 1.3, 0, 1.1, 1.12, 1) }, // bridge block
-    { geometry: new THREE.BoxGeometry(0.75, 0.32, 1.65), color: 0xf4f5f7, at: moved(THREE, -2.5, 2.1, 0) }, // bridge wings
-    { geometry: new THREE.BoxGeometry(0.78, 0.13, 1.68), color: 0x24324e, at: moved(THREE, -2.5, 2.12, 0) }, // bridge windows
-    { geometry: new THREE.CylinderGeometry(0.2, 0.26, 0.95, 10), color: 0xff3d6e, at: moved(THREE, -3.4, 2.15, 0) }, // funnel
-    { geometry: new THREE.CylinderGeometry(0.21, 0.21, 0.16, 10), color: 0x14102a, at: moved(THREE, -3.4, 2.62, 0) },
-  ];
-  const boxes = [0xff3d6e, 0xffa726, 0x2fbf5b, 0x36a2ff, 0xffd640, 0xdce3ee];
-  for (let bay = 0; bay < 6; bay++) for (let row = -1; row <= 1; row++) {
-    const stack = 1 + Math.floor(random() * 3), width = bay > 4 ? 0.8 : 1;
-    for (let tier = 0; tier < stack; tier++) parts.push({ geometry: new THREE.BoxGeometry(0.72, 0.34, 0.4), color: boxes[Math.floor(random() * boxes.length)], at: moved(THREE, -1.65 + bay * 0.78, 0.88 + tier * 0.35, row * 0.42 * width) });
-  }
-  return mergeParts(THREE, parts);
+/** A toy ship about 8 units long: a pointed hull low in the water, one white cabin, one funnel and a block of cargo. */
+export function makeShip(THREE, cargo = 0xffa726) {
+  const outline = [[-3.6, -0.9], [1.6, -0.9], [4, 0], [1.6, 0.9], [-3.6, 0.9]];
+  return mergeParts(THREE, [
+    { geometry: plate(THREE, outline, 1.3), color: 0xd93a4e, at: moved(THREE, 0, -0.55, 0) }, // the part below y = 0 is under the sea
+    { geometry: plate(THREE, outline.map(([x, z]) => [x * 0.94, z * 0.86]), 0.12), color: 0xfff1d6, at: moved(THREE, 0, 0.75, 0) },
+    { geometry: new THREE.BoxGeometry(1.7, 1.25, 1.35), color: 0xf8f8fc, at: moved(THREE, -2.25, 1.45, 0) },
+    { geometry: new THREE.CylinderGeometry(0.34, 0.42, 1, 14), color: 0xffd640, at: moved(THREE, -2.4, 2.5, 0) },
+    { geometry: new THREE.BoxGeometry(2.6, 0.95, 1.25), color: cargo, at: moved(THREE, 0.45, 1.3, 0) },
+  ]);
 }
 
-/** A comic-size satellite: a gold body, a dish and two solar wings. Forward is +x. */
+/** A simple satellite: a gold drum and two blue wings. */
 export function makeSatellite(THREE) {
-  const parts = [
-    { geometry: new THREE.BoxGeometry(1.1, 1.1, 1.3), color: 0xffd640 },
-    { geometry: new THREE.ConeGeometry(0.6, 0.4, 14, 1, true), color: 0xeef1ff, at: moved(THREE, 0, 0.8, 0, Math.PI) },
-  ];
-  for (const s of [1, -1]) {
-    parts.push({ geometry: new THREE.BoxGeometry(0.1, 0.1, 0.7), color: 0x6b7488, at: moved(THREE, 0, 0, 0.95 * s) });
-    parts.push({ geometry: new THREE.BoxGeometry(1.3, 0.06, 2.6), color: 0x2e62c9, at: moved(THREE, 0, 0, 2.5 * s) });
-  }
-  return mergeParts(THREE, parts);
+  return mergeParts(THREE, [
+    { geometry: new THREE.CylinderGeometry(0.8, 0.8, 1.5, 14), color: 0xffd640 },
+    { geometry: new THREE.BoxGeometry(1.5, 0.12, 2.8), color: 0x2e7be0, at: moved(THREE, 0, 0, 2.5) },
+    { geometry: new THREE.BoxGeometry(1.5, 0.12, 2.8), color: 0x2e7be0, at: moved(THREE, 0, 0, -2.5) },
+  ]);
 }
 
-/** Adds the visible faces of a block to `out`. Walls carry window coordinates (`cell` units per window); roofs are marked with -1. */
-function pushBlock(out, x, z, w, d, y0, y1, c, cell) {
-  const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
-  const quad = (a, b, e, f, n, wide, tall) => {
-    for (const [p, u, v] of [[a, 0, 0], [b, wide, 0], [e, wide, tall], [a, 0, 0], [e, wide, tall], [f, 0, tall]]) {
-      out.position.push(...p); out.normal.push(...n); out.color.push(c.r, c.g, c.b); out.win.push(tall < 0 ? -1 : u, tall < 0 ? -1 : v);
-    }
-  };
-  const wide = Math.round(w / cell), deep = Math.round(d / cell), tall = Math.round((y1 - y0) / cell);
-  quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0], deep, tall);
-  quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0], deep, tall);
-  quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], wide, tall);
-  quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1], wide, tall);
-  quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], [0, 1, 0], 1, -1);
+/** A hot-air balloon: a round envelope with one bright band, and a basket. */
+export function makeBalloon(THREE, color = 0xff3d6e) {
+  return mergeParts(THREE, [
+    { geometry: new THREE.SphereGeometry(1.5, 18, 14), color, at: stretched(THREE, 0, 2.3, 0, 1, 1.12, 1) },
+    { geometry: new THREE.CylinderGeometry(1.53, 1.3, 0.62, 18), color: 0xffd640, at: moved(THREE, 0, 1.75, 0) },
+    { geometry: new THREE.BoxGeometry(0.62, 0.5, 0.62), color: 0x9a6a3c, at: moved(THREE, 0, 0, 0) },
+  ]);
 }
+
+const BLOCK_COLOURS = [0xfff1d6, 0x8fd3ff, 0xff9d8a, 0xa8ecc5, 0xffdf80, 0xd6c6ff];
 
 /** Tallest building a city can have, in city units (before `loading.citySize`). */
-export const CITY_TOP = 24;
+export const CITY_TOP = 21;
 
 /**
- * One city: a dense downtown of tiered towers that falls away to low blocks, about 12 units across and up to CITY_TOP tall, sunk a
- * little into the ground so it sits on the curve of the planet. `tint` is the local ground colour [r, g, b], mixed into the stone so a
- * desert city and a forest city each belong to their land. Geometry has a `win` attribute for the window shader.
+ * One city: a dozen big simple towers (blocks, round towers with domes, pointed spires), tall in the middle, about 15 units across, sunk
+ * a little so it sits on the curve of the planet. `tint` is the local ground colour [r, g, b], mixed into the walls so a desert city
+ * and a forest city each belong to their land.
  */
 export function makeCity(THREE, random, tint = [150, 150, 130]) {
-  const out = { position: [], normal: [], color: [], win: [] }, ground = new THREE.Color(`rgb(${tint.map(q => Math.round(q)).join(',')})`);
-  const stone = [0xdfd6c6, 0xc9d3de, 0xa9c4dc, 0xeeeae2, 0xd8b9a0, 0x8fb0cf].map(h => new THREE.Color(h).lerp(ground, 0.22));
+  const ground = new THREE.Color(`rgb(${tint.map(q => Math.round(q)).join(',')})`), parts = [];
+  const tone = () => new THREE.Color(BLOCK_COLOURS[Math.floor(random() * BLOCK_COLOURS.length)]).lerp(ground, 0.14);
   let top = 0;
-  for (let k = 0; k < 46; k++) {
-    const a = random() * Math.PI * 2, dist = Math.sqrt(random()), x = Math.cos(a) * dist * 6.2, z = Math.sin(a) * dist * 6.2, core = (1 - dist) ** 2;
-    const h = 1.6 + random() * 2.2 + core * (9 + random() * 13), w = 0.9 + random() * 0.8 + core * 0.3, d = 0.9 + random() * 0.8 + core * 0.3, c = stone[Math.floor(random() * stone.length)];
-    pushBlock(out, x, z, w, d, -3, h * (h > 9 ? 0.62 : 1), c, 0.32);
-    if (h > 9) { // setbacks: towers narrow as they rise
-      pushBlock(out, x, z, w * 0.74, d * 0.74, h * 0.62, h * 0.88, c, 0.32);
-      pushBlock(out, x, z, w * 0.46, d * 0.46, h * 0.88, h, c, 0.32);
-      pushBlock(out, x, z, 0.1, 0.1, h, h * 1.08, new THREE.Color(0x4a5272), 9);
-    } else if (random() < 0.5) pushBlock(out, x, z, w * 0.5, d * 0.5, h, h + 0.34, new THREE.Color(0xc2523e).lerp(ground, 0.2), 9); // rooftop plant
-    top = Math.max(top, h * (h > 9 ? 1.08 : 1));
+  for (let k = 0; k < 13; k++) {
+    const a = k * 2.4 + random(), dist = k === 0 ? 0 : 0.28 + 0.72 * Math.sqrt(k / 13), x = Math.cos(a) * dist * 6.4, z = Math.sin(a) * dist * 6.4, core = (1 - dist) ** 1.5;
+    const h = 3.4 + random() * 2.4 + core * (12 + random() * 3), w = 1.7 + random() * 1 + core * 0.5, c = tone(), kind = k === 0 ? 2 : Math.floor(random() * 3), base = -3, mid = (h + base) / 2, tall = h - base;
+    if (kind === 0) { // block with a flat cap
+      parts.push({ geometry: new THREE.BoxGeometry(w, tall, w), color: c, at: moved(THREE, x, mid, z) });
+      parts.push({ geometry: new THREE.BoxGeometry(w * 0.68, 0.7, w * 0.68), color: tone(), at: moved(THREE, x, h + 0.35, z) });
+      top = Math.max(top, h + 0.7);
+    } else if (kind === 1) { // round tower with a dome
+      parts.push({ geometry: new THREE.CylinderGeometry(w * 0.56, w * 0.6, tall, 16), color: c, at: moved(THREE, x, mid, z) });
+      parts.push({ geometry: new THREE.SphereGeometry(w * 0.56, 16, 10), color: tone(), at: stretched(THREE, x, h, z, 1, 0.8, 1) });
+      top = Math.max(top, h + w * 0.45);
+    } else { // tapered tower with a spire
+      parts.push({ geometry: new THREE.CylinderGeometry(w * 0.38, w * 0.66, tall, 10), color: c, at: moved(THREE, x, mid, z) });
+      parts.push({ geometry: new THREE.ConeGeometry(w * 0.38, 2.6, 10), color: 0xff6f7d, at: moved(THREE, x, h + 1.3, z) });
+      top = Math.max(top, h + 2.6);
+    }
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(out.position, 3));
-  g.setAttribute('normal', new THREE.Float32BufferAttribute(out.normal, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(out.color, 3));
-  g.setAttribute('win', new THREE.Float32BufferAttribute(out.win, 2));
-  g.userData.top = Math.min(top, CITY_TOP * 1.1);
+  const g = mergeParts(THREE, parts);
+  g.userData.top = top;
   return g;
+}
+
+const house = (THREE, x, z, yaw, wall, roof, s = 1) => [
+  { geometry: new THREE.BoxGeometry(1.5 * s, 2.4 * s, 1.5 * s), color: wall, at: moved(THREE, x, 0.3 * s - 0.2, z, 0, yaw) },
+  { geometry: new THREE.ConeGeometry(1.32 * s, 1.1 * s, 4), color: roof, at: moved(THREE, x, 2 * s - 0.2, z, 0, yaw + Math.PI / 4) },
+];
+
+/** A town: a ring of red-roofed houses around a church. About 8 units across. */
+export function makeTown(THREE, random) {
+  const parts = [
+    { geometry: new THREE.BoxGeometry(1.5, 6, 1.5), color: 0xfff1d6, at: moved(THREE, 0, 1.6, 0) },
+    { geometry: new THREE.ConeGeometry(1.2, 2.2, 4), color: 0x4d6fd6, at: moved(THREE, 0, 5.7, 0, 0, Math.PI / 4) },
+  ];
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + random() * 0.4, r = 2.3 + random() * 1.8; parts.push(...house(THREE, Math.cos(a) * r, Math.sin(a) * r, random() * 3, BLOCK_COLOURS[k % 5], k % 3 ? 0xe2554a : 0xc9772e, 0.8 + random() * 0.35)); }
+  return mergeParts(THREE, parts);
+}
+
+/** A village: a few round thatched huts. */
+export function makeVillage(THREE, random) {
+  const parts = [];
+  for (let k = 0; k < 4; k++) {
+    const a = k / 4 * Math.PI * 2 + random(), x = Math.cos(a) * 1.7, z = Math.sin(a) * 1.7;
+    parts.push({ geometry: new THREE.CylinderGeometry(0.72, 0.8, 1.9, 12), color: 0xf6dfb4, at: moved(THREE, x, 0.1, z) });
+    parts.push({ geometry: new THREE.ConeGeometry(1.08, 1.05, 12), color: 0xd9a03f, at: moved(THREE, x, 1.5, z) });
+  }
+  return mergeParts(THREE, parts);
+}
+
+/** A port on the shore, facing +x: a long pier, a warehouse, a crane, stacked boxes and a striped lighthouse. */
+export function makePort(THREE) {
+  return mergeParts(THREE, [
+    { geometry: new THREE.BoxGeometry(9, 1.5, 1.7), color: 0xc9a06a, at: moved(THREE, 4.2, -0.2, 0) },
+    { geometry: new THREE.BoxGeometry(3.4, 2.6, 2.8), color: 0x8fd3ff, at: moved(THREE, -1.8, 0.6, 2.6) },
+    { geometry: new THREE.BoxGeometry(3.6, 0.5, 3), color: 0xe2554a, at: moved(THREE, -1.8, 2.1, 2.6) },
+    { geometry: new THREE.BoxGeometry(0.6, 5.4, 0.6), color: 0xffd640, at: moved(THREE, 3.2, 2.2, -1.2) },
+    { geometry: new THREE.BoxGeometry(5, 0.5, 0.5), color: 0xffd640, at: moved(THREE, 4.2, 4.8, -1.2) },
+    { geometry: new THREE.BoxGeometry(1.2, 0.8, 0.9), color: 0xff3d6e, at: moved(THREE, 5.6, 0.95, 0) },
+    { geometry: new THREE.BoxGeometry(1.2, 0.8, 0.9), color: 0x2fbf5b, at: moved(THREE, 4.1, 0.95, 0.1) },
+    { geometry: new THREE.CylinderGeometry(0.6, 0.85, 3, 14), color: 0xf8f8fc, at: moved(THREE, -2, 0.9, -2.6) },
+    { geometry: new THREE.CylinderGeometry(0.66, 0.72, 1, 14), color: 0xe2554a, at: moved(THREE, -2, 1.4, -2.6) },
+    { geometry: new THREE.ConeGeometry(0.72, 0.9, 14), color: 0xe2554a, at: moved(THREE, -2, 3.3, -2.6) },
+  ]);
+}
+
+/** A round storybook tree: trunk and crown. Tinted per tree by the instance colour, so it stays white here. */
+export function makeTree(THREE) {
+  return mergeParts(THREE, [
+    { geometry: new THREE.CylinderGeometry(0.16, 0.22, 1.2, 6), color: 0xb9925f, at: moved(THREE, 0, 0.2, 0) },
+    { geometry: new THREE.IcosahedronGeometry(0.85, 1), color: 0xffffff, at: stretched(THREE, 0, 1.4, 0, 1, 1.25, 1) },
+  ]);
+}
+
+/** A wind turbine mast; `makeTurbineBlades` turns on top of it, at `TURBINE_HUB`. */
+export const TURBINE_HUB = 6;
+export function makeTurbine(THREE) {
+  return mergeParts(THREE, [{ geometry: new THREE.CylinderGeometry(0.14, 0.3, 7, 8), color: 0xf8f8fc, at: moved(THREE, 0, 2.5, 0) }]);
+}
+export function makeTurbineBlades(THREE) {
+  return mergeParts(THREE, [0, 1, 2].map(k => ({ geometry: new THREE.BoxGeometry(0.1, 2.7, 0.32).translate(0, 1.35, 0), color: 0xf8f8fc, at: moved(THREE, 0.3, 0, 0, k * Math.PI * 2 / 3) })));
+}
+
+/** A small base: glass domes joined to a low hall, with a beacon. Sits on +y. */
+export function makeBase(THREE, dome = 0x8fe6ff) {
+  return mergeParts(THREE, [
+    { geometry: new THREE.SphereGeometry(1, 14, 10), color: dome, at: stretched(THREE, -1, 0, 0, 1, 0.8, 1) },
+    { geometry: new THREE.SphereGeometry(0.72, 14, 10), color: dome, at: stretched(THREE, 1.2, 0, 0.5, 1, 0.8, 1) },
+    { geometry: new THREE.BoxGeometry(2.5, 0.5, 0.7), color: 0xe8ecf5, at: moved(THREE, 0.1, 0.2, 0.2) },
+    { geometry: new THREE.CylinderGeometry(0.06, 0.06, 1.7, 6), color: 0xe8ecf5, at: moved(THREE, 0.2, 0.9, -0.5) },
+    { geometry: new THREE.SphereGeometry(0.16, 8, 6), color: 0xff3d6e, at: moved(THREE, 0.2, 1.75, -0.5) },
+  ]);
 }
 
 /**
