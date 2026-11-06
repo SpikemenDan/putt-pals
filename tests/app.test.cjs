@@ -223,7 +223,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await W.until(() => ana.ready(), 10000, 'ready');
     await W.run(500);
-    const canvas = ana.$('canvas');
+    const canvas = ana.$('canvas:not([data-ui=loading-planet])');
     const ev = (type, x, y) => canvas.dispatchEvent(new ana.win.w.PointerEvent(type, { bubbles: true, pointerId: 1, button: 0, clientX: x, clientY: y }));
     await act(async () => { ev('pointerdown', 400, 250); ev('pointermove', 330, 300); });
     await W.run(100);

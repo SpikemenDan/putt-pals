@@ -1,7 +1,7 @@
 /**
  * Gaia's data for the loading screen (VIS-M1): the climate maps, city sites and ship and flight routes that planet-scene.js renders.
  *
- * Original art, built procedurally. Invented continents give elevation; temperature falls with latitude and altitude; moisture follows
+ * Original art, built procedurally around the regions of src/shared/gaia-map.js, which set where each special biome lies. Invented continents give elevation; temperature falls with latitude and altitude; moisture follows
  * Earth's wind belts (wet equator, dry subtropics, wetter mid-latitudes), drops inland and rises near coasts. Colours blend across
  * that temperature/moisture plane (tundra, taiga, forest, grassland, savanna, desert, jungle), with snow, rock, ice, marsh and basalt.
  * Rivers run downhill to the sea. People live where it makes sense: cities near coasts in kind climates, each with its harbour, farms round
@@ -11,6 +11,7 @@
  * of a full turn. `surfaceDir` matches THREE.SphereGeometry's uv layout, so a site found here lands on the same texel in the shader.
  */
 
+import { GAIA_REGIONS, regionWeight } from '../shared/gaia-map.js';
 import { clamp, makeFbm, makeNoise, mix, mulberry32, smooth } from './noise.js';
 
 export { mulberry32 };
@@ -18,7 +19,9 @@ export { mulberry32 };
 export const TEX_W = 1024;
 export const TEX_H = 512;
 export const SEA = 0.4; // land value at the shoreline
-export const MAX_PLANES = 12, MAX_BOATS = 20, MAX_SATELLITES = 8, MAX_PLANTS = 12000;
+export const MAX_PLANES = 12, MAX_BOATS = 20, MAX_SATELLITES = 8, MAX_PLANTS = 16000;
+/** Gaia is one fixed place: the same seed every time, so the globe matches the map (src/shared/gaia-map.js). */
+export const GAIA_SEED = 0x9a1a;
 
 /** Palette (r, g, b), lifelike and saturated. Rows run cold to hot, columns dry to wet. */
 const CLIMATE = Object.freeze([
@@ -74,8 +77,9 @@ export function surfaceColour(lat, land, h, moist) {
 /** Invented continents: [centre u (0..1 of a full turn), centre latitude, half-width u, half-height degrees]. */
 const CONTINENTS = Object.freeze([
   [0.10, 46, 0.12, 26], [0.16, -20, 0.06, 30], [0.44, 38, 0.15, 24], [0.50, 4, 0.07, 30],
-  [0.75, 34, 0.13, 26], [0.83, -26, 0.08, 20], [0.30, -62, 0.18, 10], [0.96, 8, 0.05, 14], [0.62, -34, 0.06, 14],
+  [0.75, 38, 0.13, 30], [0.83, -26, 0.08, 20], [0.30, -62, 0.18, 10], [0.96, 8, 0.055, 17], [0.62, -34, 0.06, 14],
 ]);
+const MAP_SITES = GAIA_REGIONS.flatMap(r => r.maps), REGION = Object.fromEntries(GAIA_REGIONS.map(r => [r.id, r]));
 
 /** Land value for a place: the strongest continent falloff plus `coast` roughness (0..1). */
 function landAt(u, lat, coast) {
@@ -84,7 +88,12 @@ function landAt(u, lat, coast) {
     const du = Math.min(Math.abs(u - cu), 1 - Math.abs(u - cu)) / ru, dl = (lat - clat) / rlat;
     best = Math.max(best, 1 - Math.hypot(du, dl));
   }
-  return 0.45 + best * 0.5 + (coast - 0.5) * 0.36;
+  for (const m of MAP_SITES) { // every map stands on firm ground
+    if (Math.abs(lat - m.lat) > 6) continue;
+    const du = Math.min(Math.abs(u - m.u), 1 - Math.abs(u - m.u)) * 360 * Math.cos(lat * Math.PI / 180);
+    best = Math.max(best, 0.64 * (1 - Math.hypot(du, lat - m.lat) / 6));
+  }
+  return 0.45 + best * 0.5 + (coast - 0.5) * 0.3;
 }
 
 /** Wrapping box blur of a TEX_W by TEX_H field (two separable passes), used to measure how inland each place is. */
@@ -117,7 +126,7 @@ export function biomeAt(lat, h, moist, wet = 0, hot = 0) {
   const t = temperatureAt(lat, h);
   if (hot > 0.5) return 'volcanic';
   if (t < 0.14) return 'polar';
-  if (h > 0.7) return 'alpine';
+  if (h > 0.62) return 'alpine';
   if (t < 0.27) return 'tundra';
   if (t < 0.43) return 'boreal';
   if (wet > 0.5) return 'wetland';
@@ -152,7 +161,7 @@ const FLORA = Object.freeze({
  */
 export function buildPlanet(random) {
   const n = TEX_W * TEX_H;
-  const coast = makeFbm(random, 7, 3, 5), warpU = makeNoise(random, 6, 3), warpV = makeNoise(random, 7, 4);
+  const coast = makeFbm(random, 6, 3, 4), warpU = makeNoise(random, 6, 3), warpV = makeNoise(random, 7, 4);
   const range = makeFbm(random, 10, 5, 4), wetNoise = makeFbm(random, 5, 3, 4), marsh = makeFbm(random, 9, 5, 3);
   const land = new Float32Array(n), h = new Float32Array(n), mask = new Float32Array(n);
   const latOf = y => (0.5 - (y + 0.5) / TEX_H) * 180;
@@ -165,16 +174,17 @@ export function buildPlanet(random) {
       mask[i] = land[i] >= SEA ? 1 : 0;
       const base = clamp((land[i] - SEA) / 0.35), ridge = 1 - Math.abs(range(u, v) * 2 - 1);
       h[i] = base * (0.25 + 0.75 * smooth(0.72, 0.98, ridge));
+      const polar = regionWeight(REGION.polar, u, lat), low = Math.max(regionWeight(REGION.wetland, u, lat), regionWeight(REGION.temperate, u, lat) * 0.85, regionWeight(REGION.desert, u, lat) * 0.8, regionWeight(REGION.tropical, u, lat), regionWeight(REGION.volcanic, u, lat));
+      h[i] = mix(mix(h[i], 0.12, low), 0.55 + 0.4 * ridge, polar * 0.9); // the Frostreach is high; the lowlands stay low
     }
   }
   const inland = blur(mask, 20);
-  // Volcanic ground: a few hot spots on land, each a patch of dark basalt.
+  // Volcanic ground: a patch of dark basalt round each map of the Emberfall Isles, with a volcano on it.
   const hot = new Float32Array(n), volcanoes = [];
-  for (let tries = 0; tries < 4000 && volcanoes.length < 5; tries++) {
-    const x = Math.floor(random() * TEX_W), y = Math.floor((0.2 + random() * 0.6) * TEX_H), i = y * TEX_W + x;
-    if (land[i] < SEA + 0.08 || volcanoes.some(c => Math.hypot(Math.min(Math.abs(c.x - x), TEX_W - Math.abs(c.x - x)), c.y - y) < 120)) continue;
-    volcanoes.push({ x, y, u: x / TEX_W, lat: latOf(y) });
-    const r = 13, stretch = 1 / Math.max(0.3, Math.cos(latOf(y) * Math.PI / 180));
+  for (const m of REGION.volcanic.maps) {
+    const x = Math.floor(((m.u % 1) + 1) % 1 * TEX_W), y = Math.floor((0.5 - m.lat / 180) * TEX_H);
+    volcanoes.push({ x, y, u: m.u + 0.012, lat: m.lat + 2 });
+    const r = 15, stretch = 1 / Math.max(0.3, Math.cos(latOf(y) * Math.PI / 180));
     for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
       const yy = y + dy, xx = (x + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r;
       if (d < 1 && yy >= 0 && yy < TEX_H && land[yy * TEX_W + xx] >= SEA) hot[yy * TEX_W + xx] = Math.max(hot[yy * TEX_W + xx], smooth(1, 0.55, d));
@@ -185,13 +195,16 @@ export function buildPlanet(random) {
     const v = (y + 0.5) / TEX_H, lat = latOf(y);
     for (let x = 0; x < TEX_W; x++) {
       const u = x / TEX_W, i = y * TEX_W + x;
-      const moist = clamp(moistureAt(lat, clamp((inland[i] - 0.2) / 0.8), wetNoise(u, v)) + 0.2); // a green planet: deserts stay the exception
-      const wet = smooth(0.54, 0.62, marsh(u, v)) * smooth(0.62, 0.4, inland[i]) * smooth(0.3, 0.12, h[i]);
-      const c = surfaceColour(lat, land[i], h[i], moist);
-      let g = landColour(lat, h[i], moist);
-      g = lerp3(g, [62, 124, 96], wet * 0.8); // marsh: dark, blue-green
+      const weight = id => regionWeight(REGION[id], u, lat), cold = weight('polar');
+      let moist = clamp(moistureAt(lat, clamp((inland[i] - 0.2) / 0.8), wetNoise(u, v)) + 0.2); // a green planet: deserts stay the exception
+      moist = mix(mix(mix(moist, 0.62, weight('temperate')), 0.86, weight('tropical')), 0.1, weight('desert'));
+      const wetland = weight('wetland'), wet = Math.max(smooth(0.54, 0.62, marsh(u, v)) * smooth(0.62, 0.4, inland[i]) * smooth(0.3, 0.12, h[i]), wetland > 0.35 ? 1 : 0);
+      const feel = mix(lat, 80, cold * 0.86); // the climate this place behaves as
+      const c = surfaceColour(feel, land[i], h[i], moist);
+      let g = landColour(feel, h[i], moist);
+      g = lerp3(g, [66, 136, 104], Math.max(wetland, wet * 0.8) * 0.8); // marsh: dark, blue-green
       g = lerp3(g, [58, 48, 56], hot[i] * 0.92); // basalt
-      biome[i] = BIOMES.indexOf(biomeAt(lat, h[i], moist, wet, hot[i]));
+      biome[i] = BIOMES.indexOf(biomeAt(feel, h[i], moist, wet, hot[i]));
       for (let k = 0; k < 3; k++) { rgb[i * 3 + k] = clamp(land[i] >= SEA ? mix(c[k], g[k], 0.8) : c[k], 0, 255); landRgb[i * 4 + k] = clamp(g[k], 0, 255); }
       field[i * 4] = clamp(0.5 + (land[i] - SEA) * 2, 0, 1) * 255; field[i * 4 + 1] = clamp(h[i]) * 255; field[i * 4 + 3] = hot[i] * 255;
     }
@@ -261,14 +274,15 @@ export function buildPlanet(random) {
     return null;
   };
   const onShore = ([x, y]) => { const [sx, sy] = seaBeside(x, y); return { ...siteAt(x, y), sea: surfaceDir(sx / TEX_W, latOf(sy)) }; };
-  const sites = place(22, 42, i => inland[i] < 0.85 && h[i] < 0.3 && liveable(i));
+  const clearOfMaps = (x, y) => MAP_SITES.every(m => gapTo({ x: m.u * TEX_W, y: (0.5 - m.lat / 180) * TEX_H }, x, y) > 9);
+  const sites = place(22, 42, (i, x, y) => inland[i] < 0.85 && h[i] < 0.3 && liveable(i) && clearOfMaps(x, y));
   const ports = [];
   for (const city of sites) { // every coastal city has a harbour
     const spot = ports.length < 16 && shoreNear(city.x, city.y, 44);
     if (spot) { const p = onShore(spot); ports.push(p); taken.push(p); }
   }
-  const towns = place(46, 20, i => h[i] < 0.34 && liveable(i));
-  const villages = place(80, 12, i => h[i] < 0.42 && (liveable(i) || kind('wetland', 'tundra')(i) || (nameAt(i) === 'desert' && random() < 0.2)));
+  const towns = place(46, 20, (i, x, y) => h[i] < 0.34 && liveable(i) && clearOfMaps(x, y));
+  const villages = place(80, 12, (i, x, y) => h[i] < 0.42 && clearOfMaps(x, y) && (liveable(i) || kind('wetland', 'tundra')(i) || (nameAt(i) === 'desert' && random() < 0.2)));
   const lighthouses = [];
   for (let tries = 0; tries < 8000 && lighthouses.length < 2; tries++) { // two lights, on bare headlands far from each other
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.2 + random() * 0.6) * TEX_H), i = y * TEX_W + x;
@@ -299,18 +313,23 @@ export function buildPlanet(random) {
     }
   }
   const peaks = [];
-  for (let tries = 0; tries < 60000 && peaks.length < 420; tries++) {
+  for (let tries = 0; tries < 60000 && peaks.length < 460; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.06 + random() * 0.88) * TEX_H), i = y * TEX_W + x;
-    if (land[i] > SEA + 0.02 && h[i] > 0.5) peaks.push({ u: x / TEX_W, lat: latOf(y), height: h[i] });
+    if (land[i] > SEA + 0.03 && h[i] > 0.56) peaks.push({ u: x / TEX_W, lat: latOf(y), height: h[i] });
   }
   for (let tries = 0; tries < 6000 && seaSites.length < MAX_BOATS * 2; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = latOf(y);
     if (land[i] > SEA - 0.1 || temperatureAt(lat, 0) < 0.4) continue;
     seaSites.push({ u: x / TEX_W, lat });
   }
+  const flags = GAIA_REGIONS.flatMap(r => r.maps.map(m => ({ u: m.u, lat: m.lat, name: m.name, region: r.id })));
   const plain = list => list.map(({ u, lat, tint, sea, biome: b }) => ({ u, lat, tint, biome: b, ...(sea ? { sea } : {}) }));
-  return { rgb, landRgb, field, land, biome, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), lighthouses: plain(lighthouses), mills, volcanoes: volcanoes.map(({ u, lat }) => ({ u, lat })), peaks, plants, seaSites };
+  return { rgb, landRgb, field, land, biome, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), lighthouses: plain(lighthouses), mills, volcanoes: volcanoes.map(({ u, lat }) => ({ u, lat })), flags, peaks, plants, seaSites };
 }
+
+let gaia = null;
+/** The one Gaia, built on first use and kept, so every load shows the same world and only the first pays for it. */
+export function gaiaPlanet() { gaia ??= buildPlanet(mulberry32(GAIA_SEED)); return gaia; }
 
 /** Cloud density (0..255 per texel): stretched along the equator, thicker near the equator and mid-latitude storm belts. */
 function buildCloudMap(random) {

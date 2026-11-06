@@ -312,12 +312,11 @@ export function makeVolcano(THREE) {
   return mergeParts(THREE, parts);
 }
 
-/** A rugged peak: a rocky cone with a snowy top, `variant` 0 or 1. Scale it in place. */
+/** A rounded mountain with a smooth snow cap, `variant` 0 or 1. About 2 tall and 2 wide; scale it in place. */
 export function makePeak(THREE, variant = 0) {
-  const sides = variant ? 6 : 5;
   return mergeParts(THREE, [
-    { geometry: new THREE.CylinderGeometry(0.42, 1, 1.4, sides), color: variant ? 0x8d7a6c : 0x7c7380, at: moved(THREE, 0, 0.5, 0, 0, variant) },
-    { geometry: new THREE.ConeGeometry(0.44, 0.74, sides), color: 0xf6f9ff, at: moved(THREE, 0, 1.54, 0, 0, variant) },
+    { geometry: new THREE.CylinderGeometry(0.34, 1, 1.5, 12, 1, true), color: variant ? 0x8d7a6c : 0x7c7f8c, at: moved(THREE, 0, 0.55, 0) },
+    { geometry: new THREE.SphereGeometry(0.42, 12, 8), color: 0xf6f9ff, at: stretched(THREE, 0, 1.36, 0, 0.9, 1.24, 0.9) },
   ]);
 }
 
@@ -326,7 +325,12 @@ export const PLANT_KINDS = Object.freeze(['broadleaf', 'birch', 'autumn', 'bloss
 /** One plant of `kind`, about 2 units tall, drawn with instances. Few triangles each, as thousands are on the planet. */
 export function makePlant(THREE, kind) {
   const trunk = (r, h, color = 0x8a6a48) => ({ geometry: new THREE.CylinderGeometry(r * 0.7, r, h, 5), color, at: moved(THREE, 0, h / 2 - 0.1, 0) });
-  const crown = (r, x, y, z, color, sy = 1) => ({ geometry: new THREE.IcosahedronGeometry(r, 1), color, at: stretched(THREE, x, y, z, 1, sy, 1) });
+  const crown = (r, x, y, z, color, sy = 1) => { // twenty faces with round normals: smooth at this size, and cheap by the thousand
+    const geometry = new THREE.IcosahedronGeometry(r, 0);
+    const p = geometry.attributes.position, n = geometry.attributes.normal;
+    for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; n.setXYZ(i, p.getX(i) / l, p.getY(i) / l, p.getZ(i) / l); }
+    return { geometry, color, at: stretched(THREE, x, y, z, 1, sy, 1) };
+  };
   const cone = (r, h, y, color) => ({ geometry: new THREE.ConeGeometry(r, h, 7), color, at: moved(THREE, 0, y, 0) });
   const table = {
     broadleaf: () => [trunk(0.18, 1), crown(0.72, 0, 1.3, 0, 0x3f9e4a, 1.1), crown(0.42, 0.42, 1, 0.1, 0x57b95a)],
@@ -345,6 +349,16 @@ export function makePlant(THREE, kind) {
     deadtree: () => [trunk(0.1, 1.4, 0x3a3238), { geometry: new THREE.CylinderGeometry(0.03, 0.05, 0.7, 4), color: 0x3a3238, at: moved(THREE, 0.2, 1, 0, 0, 0, -0.8) }],
   };
   return mergeParts(THREE, table[kind]());
+}
+
+/** A small golf flag marking a map on the globe, about 6 units tall before scaling. */
+export function makeFlag(THREE, color = 0xff2e88) {
+  const pennant = new THREE.ExtrudeGeometry(new THREE.Shape([new THREE.Vector2(0, 5.8), new THREE.Vector2(2.2, 5), new THREE.Vector2(0, 4.2)]), { depth: 0.12, bevelEnabled: false });
+  return mergeParts(THREE, [
+    { geometry: new THREE.CylinderGeometry(1.1, 1.3, 0.3, 16), color: 0x2fbf5b, at: moved(THREE, 0, 0, 0) },
+    { geometry: new THREE.CylinderGeometry(0.1, 0.12, 5.9, 8), color: 0xf8f8fc, at: moved(THREE, 0, 2.95, 0) },
+    { geometry: pennant, color },
+  ]);
 }
 
 /** A small base: glass domes joined to a low hall, with a beacon. Sits on +y. */
@@ -377,7 +391,7 @@ export function makeCumulus(THREE, random, { puffs = 18, detail = 2, stretch = 2
   lobes.forEach(([x, y, z, r], index) => {
     const s = index * 1.7 + 0.3;
     for (let i = 0; i < p.count; i++) {
-      const nx = p.getX(i), ny = p.getY(i), nz = p.getZ(i), bump = 1 + 0.13 * Math.sin(nx * 4.7 + s) * Math.sin(ny * 3.9 + s * 2.1) + 0.07 * Math.sin(nz * 8.3 + s) * Math.sin(nx * 7.1 - s);
+      const nx = p.getX(i), ny = p.getY(i), nz = p.getZ(i), bump = 1 + 0.06 * Math.sin(nx * 3.1 + s) * Math.sin(ny * 2.7 + s * 2.1);
       const px = x + nx * r * bump, pz = z + nz * r * bump;
       let py = y + ny * r * bump;
       if (py < 0) py *= 0.16; // flat base

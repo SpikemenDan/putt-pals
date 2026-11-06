@@ -207,6 +207,19 @@ function fakeClock() {
     for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
     assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.plants.length >= 5000, 'a lived-in world: towns, villages, ports and dense foliage');
     assert.ok(planet.lighthouses.length >= 1 && planet.lighthouses.length <= 2, 'one or two lighthouses');
+    // The world map: six regions of four maps; the fixed planet has each map on land in its own biome, so globe and map agree.
+    const { GAIA_REGIONS } = await import('../src/shared/gaia-map.js');
+    assert.equal(GAIA_REGIONS.length, 6);
+    assert.ok(GAIA_REGIONS.every(r => r.maps.length === 4), 'four maps per region');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 24, 'every map has its own name');
+    const gaia = scene.gaiaPlanet();
+    assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
+    const fits = { polar: ['polar', 'alpine', 'tundra'], temperate: ['temperate'], desert: ['desert'], tropical: ['tropical'], wetland: ['wetland'], volcanic: ['volcanic'] };
+    const biomeOf = (p, m) => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - m.lat / 180) * scene.TEX_H)), col = Math.floor((((m.u % 1) + 1) % 1) * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[p.biome[row * scene.TEX_W + col]]; };
+    for (const r of GAIA_REGIONS) for (const m of r.maps) {
+      assert.ok(scene.landUnder(gaia, scene.surfaceDir(m.u, m.lat)) >= scene.SEA, `${m.name} is on land`);
+      assert.ok(fits[r.id].includes(biomeOf(gaia, m)), `${m.name} lies in ${r.biome}, found ${biomeOf(gaia, m)}`);
+    }
     // Biomes: every one in the vision exists; the land is mostly green; people and plants live where they should.
     const shares = {};
     for (let i = 0; i < planet.biome.length; i++) if (planet.land[i] >= scene.SEA) { const b = scene.BIOMES[planet.biome[i]]; shares[b] = (shares[b] || 0) + 1; }
@@ -238,7 +251,7 @@ function fakeClock() {
     for (const k of models.SHIP_KINDS) assert.ok(box(models.makeShip(THREE, k)).min.y < 0, `the ${k} sits in the water`);
     const size = g => g.attributes.position.count;
     assert.equal(new Set(models.PLANE_KINDS.map(k => size(models.makePlane(THREE, k)))).size, models.PLANE_KINDS.length, 'each plane is its own design');
-    assert.equal(new Set(models.PLANT_KINDS.map(k => size(models.makePlant(THREE, k)))).size > 8, true, 'plants come in many designs');
+    assert.equal(new Set(models.PLANT_KINDS.map(k => { const g = models.makePlant(THREE, k), c = g.attributes.color; return [size(g), c.getX(c.count - 1).toFixed(3), c.getY(c.count - 1).toFixed(3)].join(); })).size, models.PLANT_KINDS.length, 'each plant is its own design');
     assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'temperate')), 'towns differ by climate');
     const city = models.makeCity(THREE, scene.mulberry32(4));
     assert.ok(city.userData.top > 12 && city.userData.top <= models.CITY_TOP + 3 && box(city).max.x - box(city).min.x < 20, 'cities are tall for their width');
@@ -279,7 +292,11 @@ function fakeClock() {
     for (const plane of a.scene.bodies('planes')) assert.ok(Math.hypot(...plane.position) > PLANET_RADIUS + 5, 'planes fly above the ground');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
     assert.ok(a.frames() > 400, 'each step draws');
-    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2, 'the living world is in the scene');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 24, 'the living world is in the scene');
+    // The size audit, measured from the real models: a sensible order from trees up.
+    const sz = a.scene.sizes;
+    assert.ok(sz.tree < sz.house * 1.3 && sz.house < sz.mill && sz.mill < sz.lighthouse + 1 && sz.lighthouse < sz.city && sz.city <= sz.peak, `trees < houses < mills < lighthouses < cities <= mountains (${JSON.stringify(sz)})`);
+    assert.ok(sz.ship < sz.city && sz.plane < 7 && sz.balloon < 5 && sz.city < 16, 'nothing dwarfs the planet');
     a.scene.dispose();
     const fresh = make(createDisplay({ loading: { spinSpeed: 10 } }));
     fresh.scene.start();

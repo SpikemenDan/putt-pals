@@ -13,16 +13,21 @@
 import { createMaterialLibrary } from './materials.js';
 import { createInkMaterial, sizeInk, smoothHullGeometry } from './outline.js';
 import { ATMOSPHERE_FRAGMENT, ATMOSPHERE_VERTEX, CLOUD_FRAGMENT, CLOUD_SHELL_FRAGMENT, CLOUD_VERTEX, CONTRAIL_FRAGMENT, GALAXY_FRAGMENT, GALAXY_VERTEX, PLANET_FRAGMENT, SPHERE_VERTEX, STAR_FRAGMENT, STAR_VERTEX, STREAK_FRAGMENT, STREAK_VERTEX, TRAIL_VERTEX, WAKE_FRAGMENT } from './planet-shaders.js';
-import { MAX_BOATS, MAX_PLANES, MAX_SATELLITES, TEX_H, TEX_W, buildPlanet, flightRoutes, shipRoutes, surfaceDir } from './planet-data.js';
-import { LIGHTHOUSE_LAMP, PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
+import { MAX_BOATS, MAX_PLANES, MAX_SATELLITES, TEX_W, TEX_H, flightRoutes, gaiaPlanet, shipRoutes, surfaceDir } from './planet-data.js';
+import { LIGHTHOUSE_LAMP, PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
 import { buildAresTexture, buildLunaTexture, WORLD_TEX_H, WORLD_TEX_W } from './worlds.js';
 
 export const PLANET_RADIUS = 100;
 /** Real distances and sizes in Earth radii, at this planet's radius: the Moon is 60 away and 0.27 across. */
 export const LUNA_DISTANCE = 60 * PLANET_RADIUS, LUNA_RADIUS = 0.27 * PLANET_RADIUS;
 const ARES_DISTANCE = 24000, ARES_SHARE = 0.0042; // Ares shows as a small far disc: its radius as a share of the screen height
-const FOV = 32, SUN = [-0.55, 0.62, 0.56], CITY_UNIT = 0.62, AXIS_LEAN = 30 * Math.PI / 180;
-const DECK_CLOUDS = 74, GLOBE_CLOUDS = 60, CLOUD_INK = 'vec3(.2,.26,.52)';
+const FOV = 32, SUN = [-0.55, 0.62, 0.56], AXIS_LEAN = 30 * Math.PI / 180;
+const CLOUDS = 210;
+/**
+ * The size audit: one scale per kind of object, so the world keeps a sensible order from trees up to mountains (docs/GAIA_MAP.md has the
+ * resulting sizes, tests/ui.test.cjs checks the order). Buildings also follow `loading.citySize`.
+ */
+export const SIZES = Object.freeze({ city: 0.52, town: 0.44, village: 0.56, port: 0.5, lighthouse: 0.5, mill: 0.55, flag: 0.5, volcano: 1.45, plant: 0.5, peakBase: 1.6, peakRise: 6.4, plane: 0.72, balloon: 0.62, satellite: 0.62, ship: { cargo: 0.6, ferry: 0.58, tanker: 0.64, trawler: 0.5, yacht: 0.46 } });
 const SHOOTING_GAP = [35, 110]; // seconds between shooting stars
 
 const count = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
@@ -45,7 +50,7 @@ export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS
  * @param {HTMLCanvasElement} options.canvas
  * @param {{loading: object}} options.display live settings
  * @param {() => number} options.random seeded generator (same seed, same planet and traffic)
- * @param {ReturnType<typeof buildPlanet>} [options.planet] a planet already built, to share between scenes
+ * @param {object} [options.planet] planet data; defaults to the one Gaia (planet-data.js)
  * @param {boolean} [options.reducedMotion] draw one still frame
  * @param {'city'|'port'|'town'|'ship'|'plane'|'luna'|'ares'|null} [options.focus] preview gallery: look closely at one object
  * @param {Window} [options.win]
@@ -53,7 +58,7 @@ export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS
  */
 export function createPlanetScene({ THREE, canvas, display, random, planet: prebuilt = null, reducedMotion = false, focus = null, win = canvas.ownerDocument.defaultView, createWebGLRenderer = defaultRenderer }) {
   const doc = canvas.ownerDocument, settings = () => display.loading;
-  const planet = prebuilt ?? buildPlanet(random);
+  const planet = prebuilt ?? gaiaPlanet();
   let renderer = null;
   try { renderer = createWebGLRenderer(THREE, canvas); } catch { renderer = null; }
   renderer?.setClearColor?.(0x000000, 0);
@@ -113,12 +118,12 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
 
   // ---- Settlements. A few shapes per kind, reused with a turn, so no two neighbours match.
   const pick = (list, k) => list[k % list.length];
-  const settle = (site, geometry, parent = spinner) => {
+  const settle = (site, geometry, unit, parent = spinner) => {
     const dir = surfaceDir(site.u, site.lat), mesh = inked(new THREE.Mesh(geometry, painted));
     mesh.position.set(...dir).multiplyScalar(PLANET_RADIUS);
     standUp(mesh, dir).rotateY(random() * Math.PI * 2);
     parent.add(mesh);
-    return { mesh, dir, top: geometry.userData.top ?? 0 };
+    return { mesh, dir, unit, top: geometry.userData.top ?? 0 };
   };
   const shapeCache = new Map();
   /** A shape from a small pool per key, so places of one kind and climate come in a few designs. */
@@ -126,12 +131,12 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     if (!shapeCache.has(key)) shapeCache.set(key, Array.from({ length: designs }, () => own(make())));
     return pick(shapeCache.get(key), Math.floor(random() * designs));
   };
-  const cities = planet.cities.map(c => settle(c, variant('city:' + c.biome + c.tint.map(q => Math.round(q / 96)).join(), 3, () => makeCity(THREE, random, c.tint, c.biome))));
-  const towns = planet.towns.map(c => settle(c, variant('town:' + c.biome, 3, () => makeTown(THREE, random, c.biome))));
-  const villages = planet.villages.map(c => settle(c, variant('village:' + c.biome, 2, () => makeVillage(THREE, random, c.biome))));
+  const cities = planet.cities.map(c => settle(c, variant('city:' + c.biome + c.tint.map(q => Math.round(q / 96)).join(), 3, () => makeCity(THREE, random, c.tint, c.biome)), SIZES.city));
+  const towns = planet.towns.map(c => settle(c, variant('town:' + c.biome, 3, () => makeTown(THREE, random, c.biome)), SIZES.town));
+  const villages = planet.villages.map(c => settle(c, variant('village:' + c.biome, 2, () => makeVillage(THREE, random, c.biome)), SIZES.village));
   const portShapes = [0, 1].map(k => own(makePort(THREE, k)));
   const ports = planet.ports.map((p, k) => {
-    const place = settle(p, pick(portShapes, k)), up = new THREE.Vector3(...place.dir), out = new THREE.Vector3(...p.sea).sub(up);
+    const place = settle(p, pick(portShapes, k), SIZES.port), up = new THREE.Vector3(...place.dir), out = new THREE.Vector3(...p.sea).sub(up);
     out.addScaledVector(up, -out.dot(up)).normalize(); // the pier points out to sea
     place.mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(out, up, new THREE.Vector3().crossVectors(out, up)));
     return place;
@@ -140,7 +145,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   const lighthouseShape = own(makeLighthouse(THREE)), beamShape = own(new THREE.ConeGeometry(2.4, 26, 14, 1, true).rotateZ(Math.PI / 2).translate(13, 0, 0));
   const beamMaterial = own(new THREE.MeshBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
   const lighthouses = planet.lighthouses.map(site => {
-    const place = settle(site, lighthouseShape), beam = new THREE.Group();
+    const place = settle(site, lighthouseShape, SIZES.lighthouse), beam = new THREE.Group();
     beam.position.y = LIGHTHOUSE_LAMP + 0.3;
     for (const turn of [0, Math.PI]) { const ray = new THREE.Mesh(beamShape, beamMaterial); ray.rotation.y = turn; beam.add(ray); }
     place.mesh.add(beam);
@@ -148,8 +153,11 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   });
   // Volcanoes on their basalt fields, each with a small plume.
   const volcanoShape = own(makeVolcano(THREE));
-  const volcanoes = planet.volcanoes.map(site => settle(site, volcanoShape));
-  const places = [...cities, ...towns, ...villages, ...ports, ...lighthouses, ...volcanoes];
+  const volcanoes = planet.volcanoes.map(site => settle(site, volcanoShape, SIZES.volcano));
+  // A small flag on every map of the world map (src/shared/gaia-map.js).
+  const flagShapes = [0xff2e88, 0xffd640].map(colour => own(makeFlag(THREE, colour)));
+  const flags = planet.flags.map((site, k) => settle(site, pick(flagShapes, k), SIZES.flag));
+  const places = [...cities, ...towns, ...villages, ...ports, ...lighthouses, ...flags];
 
   // ---- Plants and peaks: instanced, far too many for separate meshes, each with a little variety of size, turn and shade.
   const scatter = (geometry, list, size) => {
@@ -169,16 +177,16 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   const instanced = [];
   for (const kind of PLANT_KINDS) {
     const list = planet.plants.filter(plant => plant.kind === kind);
-    if (list.length) scatter(own(makePlant(THREE, kind)), list, () => 0.72 + random() * 0.6);
+    if (list.length) scatter(own(makePlant(THREE, kind)), list, () => SIZES.plant * (0.8 + random() * 0.5));
   }
-  [0, 1].forEach(k => scatter(own(makePeak(THREE, k)), planet.peaks.filter((_, i) => i % 2 === k), peak => 2.6 + peak.height * 4.4 + random() * 1.4));
+  [0, 1].forEach(k => scatter(own(makePeak(THREE, k)), planet.peaks.filter((_, i) => i % 2 === k), peak => SIZES.peakBase + peak.height * SIZES.peakRise * (0.7 + random() * 0.4)));
 
   // ---- Mills on open ground: classic windmills in farm and marsh country, wind turbines elsewhere. Both turn by themselves.
   const millKinds = { windmill: makeMill(THREE, 'windmill'), turbine: makeMill(THREE, 'turbine') };
   for (const m of Object.values(millKinds)) { own(m.mast); own(m.blades); }
   const turbines = planet.mills.map((site, k) => {
     const mill = millKinds[['temperate', 'wetland'].includes(site.biome) && k % 3 ? 'windmill' : 'turbine'];
-    const place = settle(site, mill.mast), blades = inked(new THREE.Mesh(mill.blades, painted));
+    const place = settle(site, mill.mast, SIZES.mill), blades = inked(new THREE.Mesh(mill.blades, painted));
     blades.position.y = mill.hub;
     place.mesh.add(blades);
     return { ...place, blades, speed: 1.1 + random() * 1.4 };
@@ -210,10 +218,10 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     g.setIndex(index);
     return own(g);
   })();
-  const shipShapes = SHIP_KINDS.flatMap((kind, k) => [0xffa726, 0x2fbf5b, 0x36a2ff].slice(0, k < 2 ? 2 : 1).map(c => own(makeShip(THREE, kind, c))));
+  const shipShapes = SHIP_KINDS.flatMap((kind, k) => [0xffa726, 0x2fbf5b, 0x36a2ff].slice(0, k < 2 ? 2 : 1).map(c => ({ kind, geometry: own(makeShip(THREE, kind, c)) })));
   const ships = shipRoutes(planet, random).slice(0, MAX_BOATS).map((route, k) => {
-    const body = inked(new THREE.Mesh(pick(shipShapes, k), painted));
-    body.scale.setScalar(0.9);
+    const { kind, geometry } = pick(shipShapes, k), body = inked(new THREE.Mesh(geometry, painted));
+    body.scale.setScalar(SIZES.ship[kind]);
     body.add(new THREE.Mesh(wakeGeometry, wakeMaterial));
     return rig(spinner, route, PLANET_RADIUS, body, random() * Math.PI * 2);
   });
@@ -227,7 +235,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   const contrail = (radius, sign) => {
     const position = [], trail = [], index = [], rows = 26, ring = 6;
     for (let i = 0; i <= rows; i++) for (let j = 0; j < ring; j++) {
-      const f = i / rows, a = sign * (0.02 + f * 0.3), w = 0.3 + f * 0.6, q = j / ring * Math.PI * 2, r = radius + Math.cos(q) * w;
+      const f = i / rows, a = sign * (0.02 + f * 0.3), w = 0.14 + f * 0.34, q = j / ring * Math.PI * 2, r = radius + Math.cos(q) * w;
       position.push(Math.cos(a) * r, Math.sin(q) * w, Math.sin(a) * r); trail.push(f, 0);
     }
     for (let i = 0; i < rows; i++) for (let j = 0; j < ring; j++) { const a = i * ring + j, b = i * ring + (j + 1) % ring, c = a + ring, d = b + ring; index.push(a, c, b, b, c, d); }
@@ -238,60 +246,43 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     return new THREE.Mesh(own(g), contrailMaterial);
   };
   const planes = flightRoutes(MAX_PLANES, random, viewSide.toArray()).map((route, k) => {
-    const body = inked(new THREE.Mesh(pick(planeShapes, k * 4), painted)), radius = PLANET_RADIUS + 10 + random() * 6;
-    body.scale.setScalar(1.25);
+    const body = inked(new THREE.Mesh(pick(planeShapes, k * 4), painted)), radius = PLANET_RADIUS + 13 + random() * 4;
+    body.scale.setScalar(SIZES.plane);
     const r = rig(scene, route, radius, body, random() * Math.PI * 2);
     r.turn.add(contrail(radius - 0.2, r.sign));
     return r;
   });
   const satellites = flightRoutes(MAX_SATELLITES, random, viewSide.toArray()).map((route, k) => {
     const body = inked(new THREE.Mesh(pick(satelliteShapes, k), painted));
-    body.scale.setScalar(1.3);
+    body.scale.setScalar(SIZES.satellite);
     return rig(scene, { ...route, speed: route.speed * 0.5 }, PLANET_RADIUS * (1.28 + random() * 0.2), body, random() * Math.PI * 2);
   });
   const balloonShapes = [[0xff3d6e, 0xffd640], [0x36a2ff, 0xf8f8fc], [0x2fbf5b, 0xff9d3c], [0xa55eea, 0xffd640]].map(([c, b]) => own(makeBalloon(THREE, c, b)));
   const balloons = flightRoutes(7, random, viewSide.toArray()).map((route, k) => {
     const body = inked(new THREE.Mesh(pick(balloonShapes, k), painted));
-    return rig(spinner, { ...route, speed: route.speed * 0.12 }, PLANET_RADIUS + 6 + random() * 3, body, random() * Math.PI * 2);
+    body.scale.setScalar(SIZES.balloon);
+    return rig(spinner, { ...route, speed: route.speed * 0.12 }, PLANET_RADIUS + 5 + random() * 2, body, random() * Math.PI * 2);
   });
 
-  // ---- Clouds circle the globe, all as solid volumes. One shader for them all: small piles among the cloud layer, and a high deck of
-  // medium cumulus, flat banks, towers and thin half-clear clouds in the air between the camera and the ground. A few are storms.
-  const cloudMaterial = ({ haze = 0, opacity = 1, tint = [1, 1, 1] } = {}) => own(new THREE.ShaderMaterial({ vertexShader: CLOUD_VERTEX, fragmentShader: CLOUD_FRAGMENT, transparent: opacity < 1, depthWrite: opacity >= 1, depthFunc: opacity < 1 ? THREE.LessEqualDepth : THREE.LessEqualDepth, uniforms: { sun: shared.sun, dotCell: shared.dotCell, haze: { value: haze }, opacity: { value: opacity }, tint: { value: new THREE.Vector3(...tint) }, flash: { value: 0 } } }));
-  /** Cloud ink sits a little behind the cloud in depth (no shift on screen), so it draws the silhouette and not every lobe. */
-  const cloudInk = Object.assign(own(createInkMaterial(THREE, library.inkUniforms, { color: CLOUD_INK })), { polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 600 });
-  const bigClouds = Array.from({ length: 6 }, (_, k) => own(makeCumulus(THREE, random, { puffs: 12 + k * 2, detail: 3, stretch: 1.7 + k * 0.28 })));
-  const smallClouds = Array.from({ length: 3 }, () => own(makeCumulus(THREE, random, { puffs: 9, detail: 2 })));
-  const globeMaterial = cloudMaterial({ haze: 0.08 }), deckMaterial = cloudMaterial(), thinMaterials = [0.42, 0.58, 0.72].map(opacity => cloudMaterial({ opacity }));
-  const stormMaterial = cloudMaterial({ tint: [0.62, 0.66, 0.84] });
+  // ---- Clouds circle the globe: many small soft bodies, all see-through to some degree, with no outline. Each is drawn after a depth
+  // pass, so only its nearest surface shows: a rounded volume rather than a jumble of lobes. Most sit low; a few thin ones ride high.
+  const cloudMaterial = opacity => own(new THREE.ShaderMaterial({ vertexShader: CLOUD_VERTEX, fragmentShader: CLOUD_FRAGMENT, transparent: true, depthWrite: false, uniforms: { sun: shared.sun, haze: { value: 0.06 }, opacity: { value: opacity } } }));
+  const cloudShapes = Array.from({ length: 5 }, (_, k) => own(makeCumulus(THREE, random, { puffs: 9 + k, detail: 2, stretch: 1.6 + k * 0.3 })));
+  const cloudSkins = [0.42, 0.6, 0.76, 0.88].map(cloudMaterial);
   const depthOnly = own(new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true }));
-  const denseSpots = [];
-  for (let tries = 0; tries < 4000 && denseSpots.length < GLOBE_CLOUDS; tries++) {
-    const x = Math.floor(random() * TEX_W), y = Math.floor((0.08 + random() * 0.84) * TEX_H);
-    if (planet.cloud[y * TEX_W + x] > 130) denseSpots.push(surfaceDir(x / TEX_W, (0.5 - (y + 0.5) / TEX_H) * 180));
-  }
-  const globeClouds = denseSpots.map((dir, k) => {
-    const mesh = inked(new THREE.Mesh(pick(smallClouds, k), globeMaterial), cloudInk);
-    mesh.position.set(...dir).multiplyScalar(PLANET_RADIUS + 2.4);
-    standUp(mesh, dir).rotateY(random() * Math.PI * 2);
-    mesh.scale.set(3 + random() * 2.6, 2 + random() * 1.8, 2.8 + random() * 2.2);
-    cloudSpinner.add(mesh);
-    return mesh;
-  });
-  const deckClouds = Array.from({ length: DECK_CLOUDS }, (_, k) => {
-    const u = (k + random() * 0.7) / DECK_CLOUDS, lat = -56 + random() * 92, altitude = 7 + random() * (lat < -12 ? 30 : 16), dir = surfaceDir(u, lat); // spread through the air the camera looks through
-    const form = k % 7 === 3 ? 'storm' : k % 3 === 1 ? 'thin' : k % 4 === 2 ? 'bank' : k % 5 === 4 ? 'tower' : 'puff';
-    const size = 3.2 + random() * 2.6, shape = pick(bigClouds, k * 5 + 1);
-    const mesh = form === 'thin' ? new THREE.Mesh(shape, depthOnly) : inked(new THREE.Mesh(shape, form === 'storm' ? stormMaterial : deckMaterial), cloudInk);
-    if (form === 'thin') { // drawn after a depth pass, so only its nearest surface shows: a see-through volume, not a jumble of lobes
-      const skin = new THREE.Mesh(shape, pick(thinMaterials, k));
-      mesh.renderOrder = 5; skin.renderOrder = 6;
-      mesh.add(skin);
+  const deckClouds = Array.from({ length: CLOUDS }, (_, k) => {
+    let u = 0, lat = 0;
+    for (let tries = 0; tries < 40; tries++) { // clouds gather where the cloud map is dense, so they come in loose groups
+      u = random(); lat = -60 + random() * 124;
+      if (planet.cloud[Math.floor((0.5 - lat / 180) * TEX_H) * TEX_W + Math.floor(u * TEX_W)] > 120) break;
     }
+    const thin = k % 4 === 0, altitude = thin ? 13 + random() * 13 : 3 + random() * 9, dir = surfaceDir(u, lat), size = thin ? 3.6 + random() * 2.6 : 2.4 + random() * 2.6, shape = pick(cloudShapes, k);
+    const mesh = new THREE.Mesh(shape, depthOnly), skin = new THREE.Mesh(shape, cloudSkins[thin ? 0 : 1 + k % 3]);
+    mesh.renderOrder = 5; skin.renderOrder = 6;
+    mesh.add(skin);
     mesh.position.set(...dir).multiplyScalar(PLANET_RADIUS + altitude);
     standUp(mesh, dir).rotateY(Math.PI / 2 + (random() - 0.5) * 0.9);
-    const tall = { puff: 0.85, thin: 0.7, bank: 0.42, tower: 1.7, storm: 1.5 }[form], wide = { bank: 1.7, tower: 0.72, storm: 1.2 }[form] ?? 1.1;
-    mesh.scale.set(size * wide, size * tall, size * (form === 'bank' ? 1.2 : 0.95));
+    mesh.scale.set(size * 1.2, size * (thin ? 0.42 : 0.62 + random() * 0.28), size);
     deck.add(mesh);
     return mesh;
   });
@@ -357,8 +348,8 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   baseOn(ares, [-0.3, 0.3, 0.9], 0.012, 0xa8ffcc); // far tinier still
 
   // ---- Per-frame state
-  let stormFlash = 0, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, sizeKey = '', framing = { y: 0, z: 0 };
-  const stats = { limb: 0, deckClouds: 0, globeClouds: 0, tallestCity: 0, ink: 0, lunaPixels: 0 };
+  let frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, sizeKey = '', framing = { y: 0, z: 0 };
+  const stats = { limb: 0, deckClouds: 0, tallestCity: 0, ink: 0, lunaPixels: 0 };
   const scratch = new THREE.Vector3(), scratch2 = new THREE.Vector3();
 
   const viewport = () => { const rect = canvas.getBoundingClientRect?.(); return { w: rect?.width || win?.innerWidth || 1280, h: rect?.height || win?.innerHeight || 720 }; };
@@ -392,7 +383,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     cloudSpinner.rotation.y = cloudSpin * Math.PI / 180;
     deck.rotation.y = cloudSpin * 0.8 * Math.PI / 180;
     shared.cloudShift.value = -(cloudSpin - spin) / 360;
-    shared.cloudGate.value = 1.08 - s.cloudCover * 0.58;
+    shared.cloudGate.value = 1.02 - s.cloudCover * 0.58;
     shared.atmosphere.value = s.atmosphere;
     shared.time.value = clock;
     air.material.uniforms.shell.value = stats.airTop = PLANET_RADIUS * (1 + s.atmosphereHeight);
@@ -401,15 +392,12 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     shared.inkPx.value = Math.max(0.8, s.outlineWidth * 0.8);
     for (const hull of outlined) hull.visible = s.outlineWidth > 0;
     stats.tallestCity = 0;
-    const k = s.citySize * CITY_UNIT;
-    for (const c of places) c.mesh.scale.setScalar(k);
-    for (const c of turbines) c.mesh.scale.setScalar(k);
-    for (const c of cities) stats.tallestCity = Math.max(stats.tallestCity, c.top * k);
+    for (const c of [...places, ...turbines]) c.mesh.scale.setScalar(c.unit * s.citySize);
+    for (const c of cities) stats.tallestCity = Math.max(stats.tallestCity, c.top * c.unit * s.citySize);
+    for (const c of volcanoes) c.mesh.scale.setScalar(c.unit);
     const show = (list, n) => list.forEach((item, i) => { (item.pivot ?? item).visible = i < n; });
     show(planes, count(s.planes, MAX_PLANES)); show(ships, count(s.boats, MAX_BOATS)); show(satellites, count(s.satellites, MAX_SATELLITES));
-    stats.globeClouds = count(s.cloudCover * GLOBE_CLOUDS, GLOBE_CLOUDS);
-    stats.deckClouds = count(s.cloudCover * 1.6 * DECK_CLOUDS, DECK_CLOUDS);
-    show(globeClouds, stats.globeClouds);
+    stats.deckClouds = count(s.cloudCover * 1.6 * CLOUDS, CLOUDS);
     show(deckClouds, focus ? 0 : stats.deckClouds);
     shell.visible = s.cloudCover > 0;
   }
@@ -474,9 +462,6 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       for (const m of [...planes, ...satellites, ...ships, ...balloons]) m.turn.rotation.y += m.speed * dt;
       for (const t of turbines) t.blades.rotation.x += t.speed * dt;
       for (const l of lighthouses) l.beam.rotation.y += dt * 0.7;
-      stormFlash = Math.max(0, stormFlash - dt * 5);
-      if (random() < dt * 0.1) stormFlash = 0.9; // lightning, now and then
-      stormMaterial.uniforms.flash.value = stormFlash;
       luna.mesh.rotation.y += dt * 0.01;
       stepStreak(dt);
     }
@@ -503,7 +488,13 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     /** How many planes, ships and satellites the current settings show. */
     get traffic() { const s = settings(); return { planes: count(s.planes, MAX_PLANES), boats: Math.min(count(s.boats, MAX_BOATS), ships.length), satellites: count(s.satellites, MAX_SATELLITES) }; },
     /** What the last frame used, for checks. */
-    get stats() { return { ...stats, cameraHeight: framing.y, shootingStars: streakCount, places: { cities: cities.length, towns: towns.length, villages: villages.length, ports: ports.length, plants: planet.plants.length, peaks: planet.peaks.length, volcanoes: volcanoes.length, lighthouses: lighthouses.length, turbines: turbines.length, balloons: balloons.length } }; },
+    get stats() { return { ...stats, cameraHeight: framing.y, shootingStars: streakCount, places: { cities: cities.length, towns: towns.length, villages: villages.length, ports: ports.length, plants: planet.plants.length, peaks: planet.peaks.length, volcanoes: volcanoes.length, flags: flags.length, lighthouses: lighthouses.length, turbines: turbines.length, balloons: balloons.length } }; },
+    /** Measured size of one of each kind, in planet units: its tallest extent (or longest, for ships and planes), for the size audit. */
+    get sizes() {
+      scene.updateMatrixWorld(true);
+      const measure = (mesh, axis = 'y') => { mesh.geometry.computeBoundingBox(); const b = mesh.geometry.boundingBox; return (b.max[axis] - Math.max(b.min[axis], axis === 'y' ? 0 : -1e9)) * mesh.getWorldScale(new THREE.Vector3()).x; };
+      return { house: measure(villages[0].mesh), city: Math.max(...cities.map(c => measure(c.mesh))), town: measure(towns[0].mesh), mill: measure(turbines[0].mesh), lighthouse: measure(lighthouses[0].mesh), flag: measure(flags[0].mesh), volcano: measure(volcanoes[0].mesh), ship: measure(ships[0].body, 'x'), plane: measure(planes[0].body, 'x'), balloon: measure(balloons[0].body), tree: 2 * SIZES.plant, peak: 2 * (SIZES.peakBase + SIZES.peakRise) };
+    },
     /** Camera position: it never moves during a load. */
     get cameraPosition() { return camera.position.toArray(); },
     /** World positions of the clouds in the high deck. */

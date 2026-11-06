@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { createDisplay } from '../shared/display.js';
-import { buildPlanet, mulberry32 } from '../render/planet-data.js';
+import { gaiaPlanet, mulberry32 } from '../render/planet-data.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 
 const STYLE = `
@@ -32,7 +32,7 @@ export function mountPlanetGallery(doc) {
   const scenes = [];
   const stop = () => { for (const s of scenes) s.dispose(); root.remove(); };
   setTimeout(() => {
-    const planet = buildPlanet(mulberry32(0x9a1a));
+    const planet = gaiaPlanet();
     status.textContent = 'Live, with the shipped settings. Same planet in every view.';
     for (const [label, focus] of CELLS) {
       const canvas = el('canvas'), box = el('div', { className: 'pp-gal-cell' }, canvas, el('span', { textContent: label }));

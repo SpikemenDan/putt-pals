@@ -3,7 +3,7 @@ import { TIPS, TIP_MS, tipAt } from './tips.js';
 import { useUiContext } from './context.js';
 import styles from './Loading.module.css';
 
-/** Successive loads start on different tips, and paint different planets and flights, without wall-clock randomness. */
+/** Successive loads start on different tips and different traffic, without wall-clock randomness. Gaia itself is always the same place. */
 let loads = 0;
 
 /** Small seeded generator for the scene, so a load's planet is reproducible. */
@@ -37,7 +37,7 @@ export function Loading({ done = false, onDone }) {
     const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let scene = null;
     const build = setTimeout(() => { // after the first paint, so the title and balls show at once
-      try { scene = createLoadingScene({ canvas, display, random: seeded(0x9a1a + load * 7919), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
+      try { scene = createLoadingScene({ canvas, display, random: seeded(load * 7919 + 1), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
     }, 0);
     return () => { clearTimeout(build); scene?.dispose(); };
   }, [display, load, createLoadingScene]);

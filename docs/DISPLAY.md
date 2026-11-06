@@ -24,7 +24,7 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.finishTime` | 0.8 | 0.1 to 3 | Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes. |
 | `loading.atmosphere` | 0.75 | 0 to 1 | Loading screen: strength of the blue air around the planet. |
 | `loading.atmosphereHeight` | 0.62 | 0.1 to 0.8 | Loading screen: how high the blue air reaches above the ground, fraction of the planet radius. |
-| `loading.citySize` | 1.6 | 0.5 to 3 | Loading screen: size of cities, towns, villages and ports (the globe stays the same size). |
+| `loading.citySize` | 1 | 0.5 to 3 | Loading screen: size of cities, towns, villages, ports and mills, as a multiplier of their audited sizes (docs/GAIA_MAP.md). |
 | `loading.lunaSize` | 2.6 | 1 to 8 | Loading screen: Luna's size in the sky; 1 is its true apparent size at the real Earth-Moon distance. |
 | `loading.outlineWidth` | 1.6 | 0 to 4 | Loading screen: ink outline width on cities, ships, planes and clouds, px at 1280 wide; 0 is off. |
 | `loading.planes` | 5 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |

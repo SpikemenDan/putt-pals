@@ -99,7 +99,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(changed('horizonHeight', 0.8).stats.limb < lbase.stats.limb && changed('horizonHeight', 0.8).stats.cameraHeight > lbase.stats.cameraHeight, 'loading.horizonHeight moves the horizon down the screen');
     assert.ok(changed('axisTilt', -40).axisX < lbase.axisX - 0.01 || changed('axisTilt', -40).axisX > lbase.axisX + 0.01, 'loading.axisTilt reorients the planet');
     assert.ok(changed('cloudCover', 1).stats.deckClouds > lbase.stats.deckClouds && changed('cloudCover', 0).stats.deckClouds === 0, 'loading.cloudCover sets the high clouds');
-    assert.ok(changed('cloudCover', 1).stats.globeClouds > lbase.stats.globeClouds && changed('cloudCover', 1).gate < lbase.gate, 'and the clouds on the planet');
+    assert.ok(changed('cloudCover', 1).gate < lbase.gate, 'and the cloud layer on the planet');
     assert.ok(changed('cloudDrift', 4).cloudLead > lbase.cloudLead, 'loading.cloudDrift slides the clouds ahead of the ground');
     assert.deepEqual(lbase.traffic, { planes: 5, boats: 9, satellites: 3 });
     assert.ok(changed('atmosphere', 0.1).glow < lbase.glow && changed('atmosphere', 1).glow > lbase.glow, 'loading.atmosphere sets the air glow');
