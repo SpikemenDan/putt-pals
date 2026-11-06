@@ -7,25 +7,10 @@
  * where landmasses meet; hot deserts sit near 25 degrees on the dry western side of continents; rainforest sits on the equator; wet
  * forests face the westerlies; volcanoes follow island arcs in the open sea; wetlands lie where great rivers meet the coast.
  *
- * `u` is a fraction of a full turn east, `lat` degrees north. Map names are proposals, not playable courses yet. Plain data.
+ * The coastlines themselves are the closed paths in gaia-coast.js. `u` is a fraction of a full turn east, `lat` degrees north. Each map has a
+ * stable `id`; `marker` optionally moves its pin on the flat map only, where four sites sit too close to read. Map names are proposals,
+ * not playable courses yet. Plain data.
  */
-
-/** Land as overlapping blobs: [centre u, centre latitude, half width in u, half height in degrees]. */
-export const CONTINENTS = Object.freeze([
-  // Norvane, the north-western continent, tapering south to a land bridge
-  [0.14, 60, 0.085, 13], [0.125, 46, 0.075, 14], [0.15, 33, 0.052, 11], [0.185, 19, 0.024, 9], [0.205, 11, 0.012, 6],
-  // Sudara, the southern continent, wide at the equator
-  [0.25, 1, 0.058, 13], [0.26, -14, 0.05, 13], [0.245, -32, 0.026, 13], [0.235, -46, 0.012, 9],
-  // Aurelia, the great eastern landmass
-  [0.56, 47, 0.075, 11], [0.64, 57, 0.15, 13], [0.72, 42, 0.135, 15], [0.85, 58, 0.09, 11], [0.86, 40, 0.035, 12],
-  [0.665, 21, 0.032, 11], [0.77, 20, 0.032, 11], [0.615, 28, 0.03, 8],
-  // Kesh, straddling the equator below Aurelia
-  [0.5, 21, 0.08, 13], [0.535, 3, 0.058, 13], [0.54, -18, 0.04, 13], [0.585, -19, 0.01, 7],
-  // Ostrel, the dry southern island continent
-  [0.865, -25, 0.052, 11],
-  // Ice: the far north island and the southern cap
-  [0.36, 75, 0.05, 9], [0.5, -90, 0.7, 7],
-]);
 
 /** Mountain chains: { line: [[u, lat], ...], width (degrees), height (0..1) }. */
 export const RANGES = Object.freeze([
@@ -40,7 +25,7 @@ export const RANGES = Object.freeze([
 export const GAIA_REGIONS = Object.freeze([
   {
     id: 'polar', name: 'Frostreach', biome: 'Polar and alpine', u: 0.72, lat: 38, reach: [26, 9], blurb: 'The roof of the world, high ice and snow above the great range.',
-    maps: [['Frostbite Falls', 0.685, 36.5], ['Glacier Glide', 0.71, 37], ['Aurora Ridge', 0.735, 37.5], ['Summit Drift', 0.76, 35.5]],
+    label: [0.72, 29], maps: [['Frostbite Falls', 0.685, 36.5, [0.664, 39]], ['Glacier Glide', 0.71, 37, [0.7, 44]], ['Aurora Ridge', 0.735, 37.5, [0.742, 44]], ['Summit Drift', 0.76, 35.5, [0.782, 39]]],
   },
   {
     id: 'temperate', name: 'Evergreen Vale', biome: 'Temperate forest', u: 0.55, lat: 51, reach: [22, 11], blurb: 'Rainy western woods, mills and farm country.',
@@ -62,7 +47,7 @@ export const GAIA_REGIONS = Object.freeze([
     id: 'volcanic', name: 'Emberfall Isles', biome: 'Volcanic', u: 0.94, lat: 14, reach: [18, 18], blurb: 'An island arc of fire mountains in the open eastern sea.',
     maps: [['Cinder Steps', 0.925, 26], ['Magma Run', 0.945, 17], ['Ashen Caldera', 0.955, 7], ['Obsidian Edge', 0.935, 0]],
   },
-].map(({ maps, ...region }) => Object.freeze({ ...region, maps: Object.freeze(maps.map(([name, u, lat]) => Object.freeze({ name, u, lat }))) })));
+].map(({ maps, ...region }) => Object.freeze({ ...region, maps: Object.freeze(maps.map(([name, u, lat, marker]) => Object.freeze({ id: name.toLowerCase().replace(/\W+/g, '-'), name, u, lat, ...(marker ? { marker } : {}) }))) })));
 
 /** How far inside region `r` a place is: 1 in the heart, falling to 0 at its edge. */
 export function regionWeight(r, u, lat) {

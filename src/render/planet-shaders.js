@@ -25,12 +25,12 @@ void main(){
   vec2 uv=vec2(vUv.x,1.-vUv.y);
   vec4 f=texture2D(field,uv);
   float fine=fbm(vObj*42.),broad=fbm(vObj*11.);
-  float land=(f.r-.5)*.5+(broad-.47)*.028+(fine-.47)*.008;
+  float land=(f.r-.5)*.5;
   float aa=max(fwidth(land),1e-4),isLand=smoothstep(-aa,aa,land);
   float lat=(vUv.y-.5)*3.14159,warm=pow(max(cos(lat),0.),1.15);
   // Sea: shallow to deep, with ice near the poles.
   float depth=clamp(-land,0.,.5);
-  vec3 sea=mix(vec3(.27,.77,.84),vec3(.11,.44,.82),smoothstep(0.,.07,depth));
+  vec3 sea=mix(vec3(.27,.77,.84),vec3(.11,.44,.82),smoothstep(0.,.03,depth));
   sea=mix(sea,vec3(.06,.24,.6),smoothstep(.06,.24,depth));
   sea=mix(sea,vec3(.08,.55,.8),(broad-.4)*.5*step(.1,depth)); // currents: broad teal and blue swirls
   float reef=(1.-smoothstep(.02,.05,depth))*smoothstep(.5,.62,fine)*smoothstep(.5,.75,warm);

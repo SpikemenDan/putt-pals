@@ -165,6 +165,23 @@ function fakeClock() {
     await t.teardown();
   });
 
+  await scenario('atlas: every map is a real button, with selection shared between pin and list', async () => {
+    const { mountPlanetMap } = await import('../src/devtools/planet-map.js');
+    const picks = [], unmount = mountPlanetMap(doc, { onSelect: p => picks.push(p.map.id) });
+    const pins = [...doc.querySelectorAll('.pp-pin')];
+    assert.equal(pins.length, 24, 'a pin per map');
+    assert.ok(pins.every(p => p.tagName === 'BUTTON' && p.getAttribute('aria-label') && p.getAttribute('aria-pressed') === 'false'), 'keyboard reachable, named, unselected');
+    pins[5].click();
+    assert.equal(picks.length, 1);
+    assert.equal(pins[5].getAttribute('aria-pressed'), 'true');
+    const twin = [...doc.querySelectorAll('.pp-map-card button')].find(b => b.dataset.map === pins[5].dataset.map);
+    assert.equal(twin.getAttribute('aria-pressed'), 'true', 'the list follows the pin');
+    twin.click();
+    pins[6].click();
+    assert.equal(pins[5].getAttribute('aria-pressed'), 'false', 'one selection at a time');
+    unmount();
+  });
+
   await scenario('planet scene: climate colours, cities and traffic, reduced motion, live settings, disposal', async () => {
     const scene = await import('../src/render/planet-data.js');
     const { createPlanetScene, frameCamera, PLANET_RADIUS } = await import('../src/render/planet-scene.js');
@@ -228,6 +245,15 @@ function fakeClock() {
     assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 24, 'every map has its own name');
     const gaia = scene.gaiaPlanet();
     assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
+    // Coasts are closed paths, and the globe's land is those paths: the shoreline of the field runs along them.
+    const { COAST_RINGS } = await import('../src/shared/gaia-coast.js');
+    assert.ok(COAST_RINGS.length >= 8 && COAST_RINGS.every(r => r.length >= 6 && r.every(([u]) => u > 0 && u < 1)), 'closed rings that stay off the seam');
+    const texelOf = ([u, lat]) => Math.min(scene.TEX_H - 1, Math.floor((0.5 - lat / 180) * scene.TEX_H)) * scene.TEX_W + Math.floor(u * scene.TEX_W);
+    const off = COAST_RINGS.flat().map(p => Math.abs(gaia.land[texelOf(p)] - scene.SEA));
+    assert.ok(off.filter(v => v < 0.03).length / off.length > 0.98, 'map and globe share one coast');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 24, 'every map has its own id');
+    const smallest = (() => { const seen = new Uint8Array(gaia.biome.length), W2 = scene.TEX_W; let least = Infinity; for (let s = 0; s < seen.length; s++) { if (seen[s] || gaia.land[s] < scene.SEA) continue; const stack = [s]; seen[s] = 1; let size = 0; while (stack.length) { const i = stack.pop(); size++; for (const j of [i - 1, i + 1, i - W2, i + W2]) if (j >= 0 && j < seen.length && !seen[j] && gaia.land[j] >= scene.SEA && gaia.biome[j] === gaia.biome[s]) { seen[j] = 1; stack.push(j); } } least = Math.min(least, size); } return least; })();
+    assert.ok(smallest >= 4, `no specks of stray biome (smallest patch ${smallest} texels)`);
     const fits = { polar: ['polar', 'alpine', 'tundra'], temperate: ['temperate'], desert: ['desert'], tropical: ['tropical'], wetland: ['wetland'], volcanic: ['volcanic'] };
     const biomeOf = (p, m) => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - m.lat / 180) * scene.TEX_H)), col = Math.floor((((m.u % 1) + 1) % 1) * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[p.biome[row * scene.TEX_W + col]]; };
     for (const r of GAIA_REGIONS) for (const m of r.maps) {
@@ -239,8 +265,8 @@ function fakeClock() {
     for (let i = 0; i < planet.biome.length; i++) if (planet.land[i] >= scene.SEA) { const b = scene.BIOMES[planet.biome[i]]; shares[b] = (shares[b] || 0) + 1; }
     const landTexels = Object.values(shares).reduce((q, v) => q + v, 0);
     for (const b of ['polar', 'alpine', 'desert', 'tropical', 'temperate', 'wetland', 'volcanic']) assert.ok(shares[b] > 0, `Gaia has ${b} land`);
-    const green = ['temperate', 'tropical', 'grassland', 'boreal', 'savanna', 'wetland'].reduce((q, b) => q + (shares[b] || 0), 0);
-    assert.ok(green / landTexels > 0.55 && (shares.desert || 0) / landTexels < 0.15, `mostly green (${Math.round(green / landTexels * 100)}% green land)`);
+    const green = ['temperate', 'tropical', 'grassland', 'boreal', 'savanna', 'wetland', 'mediterranean'].reduce((q, b) => q + (shares[b] || 0), 0), iceFree = landTexels - (shares.polar || 0);
+    assert.ok(green / iceFree > 0.55 && (shares.desert || 0) / landTexels < 0.15, `ice-free land is mostly green (${Math.round(green / iceFree * 100)}%)`);
     assert.equal(scene.biomeAt(85, 0.1, 0.5), 'polar');
     assert.equal(scene.biomeAt(2, 0.1, 0.8), 'tropical');
     assert.equal(scene.biomeAt(25, 0.1, 0.1), 'desert');

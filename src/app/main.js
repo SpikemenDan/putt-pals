@@ -12,7 +12,7 @@ const app = createApp({ root: document.getElementById('root'), THREE,
 });
 if (tuner) {
   window.__ppTuner = tuner;
-  if (new URLSearchParams(window.location.search).has('map')) import('../devtools/planet-map.js').then(({ mountPlanetMap }) => mountPlanetMap(document)); // ?map: the flat map of Gaia
+  if (new URLSearchParams(window.location.search).has('map')) import('../devtools/planet-map.js').then(({ mountPlanetMap }) => mountPlanetMap(document)); // ?map: the atlas of Gaia
   if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: live close-ups of the loading-screen city, ship and plane
   Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/deployables-preview.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountDeployablesPreview }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountDeployablesPreview(document, app); mountLoadingPreview(document, app); });
 }

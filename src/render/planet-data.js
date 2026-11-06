@@ -12,7 +12,8 @@
  * of a full turn. `surfaceDir` matches THREE.SphereGeometry's uv layout, so a site found here lands on the same texel in the shader.
  */
 
-import { CONTINENTS, GAIA_REGIONS, RANGES, cultureAt, regionWeight } from '../shared/gaia-map.js';
+import { COAST_RINGS, CITY_SITES, SOUTH_ICE } from '../shared/gaia-coast.js';
+import { GAIA_REGIONS, RANGES, cultureAt, regionWeight } from '../shared/gaia-map.js';
 import { clamp, makeFbm, makeNoise, mix, mulberry32, smooth } from './noise.js';
 
 export { mulberry32 };
@@ -77,19 +78,33 @@ export function surfaceColour(lat, land, h, moist) {
 
 const MAP_SITES = GAIA_REGIONS.flatMap(r => r.maps), REGION = Object.fromEntries(GAIA_REGIONS.map(r => [r.id, r]));
 
-/** Land value for a place: the strongest continent falloff plus `coast` roughness (0..1). */
-function landAt(u, lat, coast) {
-  let best = -1;
-  for (const [cu, clat, ru, rlat] of CONTINENTS) {
-    const du = Math.min(Math.abs(u - cu), 1 - Math.abs(u - cu)) / ru, dl = (lat - clat) / rlat;
-    best = Math.max(best, 1 - Math.hypot(du, dl));
+/**
+ * The land field, filled from the coast paths: a signed distance from the shore, in land units, so SEA is exactly the drawn coast. Bilinear
+ * sampling of a distance field keeps the coast a clean curve at any zoom, and sea depth follows the shore in even bands.
+ */
+function landFromCoast() {
+  const n = TEX_W * TEX_H, inside = new Uint8Array(n);
+  for (let y = 0; y < TEX_H; y++) {
+    const lat = (0.5 - (y + 0.5) / TEX_H) * 180, cuts = [];
+    if (lat < SOUTH_ICE) { inside.fill(1, y * TEX_W, (y + 1) * TEX_W); continue; }
+    for (const ring of COAST_RINGS) for (let i = 0; i < ring.length; i++) {
+      const [au, al] = ring[i], [bu, bl] = ring[(i + 1) % ring.length];
+      if ((al > lat) !== (bl > lat)) cuts.push((au + (lat - al) / (bl - al) * (bu - au)) * TEX_W - 0.5);
+    }
+    cuts.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < cuts.length; k += 2) inside.fill(1, y * TEX_W + Math.ceil(cuts[k]), y * TEX_W + Math.floor(cuts[k + 1]) + 1);
   }
-  for (const m of MAP_SITES) { // every map stands on firm ground
-    if (Math.abs(lat - m.lat) > 6) continue;
-    const du = Math.min(Math.abs(u - m.u), 1 - Math.abs(u - m.u)) * 360 * Math.cos(lat * Math.PI / 180);
-    best = Math.max(best, 0.64 * (1 - Math.hypot(du, lat - m.lat) / 6));
-  }
-  return 0.45 + best * 0.5 + (coast - 0.5) * 0.3;
+  const reach = wanted => { // chamfer distance, in texels, to the nearest texel unlike `wanted`
+    const d = new Float32Array(n).fill(1e6);
+    for (let i = 0; i < n; i++) if (inside[i] !== wanted) d[i] = 0;
+    const pass = (from, to, step, offsets) => { for (let i = from; i !== to; i += step) { const x = i % TEX_W; for (const [dx, dy, w] of offsets) { const xx = x + dx, j = i + dy * TEX_W + dx; if (xx >= 0 && xx < TEX_W && j >= 0 && j < n && d[j] + w < d[i]) d[i] = d[j] + w; } } };
+    pass(0, n, 1, [[-1, 0, 1], [0, -1, 1], [-1, -1, 1.41], [1, -1, 1.41]]);
+    pass(n - 1, -1, -1, [[1, 0, 1], [0, 1, 1], [1, 1, 1.41], [-1, 1, 1.41]]);
+    return d;
+  };
+  const toSea = reach(1), toLand = reach(0), land = new Float32Array(n);
+  for (let i = 0; i < n; i++) land[i] = SEA + (inside[i] ? toSea[i] - 0.5 : 0.5 - toLand[i]) * 0.012;
+  return { land, inside };
 }
 
 /** Wrapping box blur of a TEX_W by TEX_H field (two separable passes), used to measure how inland each place is. */
@@ -198,22 +213,18 @@ function distanceToLine(u, lat, line) {
  */
 export function buildPlanet(random) {
   const n = TEX_W * TEX_H;
-  const coast = makeFbm(random, 6, 3, 4), warpU = makeNoise(random, 6, 3), warpV = makeNoise(random, 7, 4);
   const range = makeFbm(random, 10, 5, 4), wetNoise = makeFbm(random, 5, 3, 4), marsh = makeFbm(random, 9, 5, 3);
-  const land = new Float32Array(n), h = new Float32Array(n), mask = new Float32Array(n);
+  const { land, inside } = landFromCoast(), h = new Float32Array(n), mask = Float32Array.from(inside);
   const latOf = y => (0.5 - (y + 0.5) / TEX_H) * 180;
   for (let y = 0; y < TEX_H; y++) {
     const v = (y + 0.5) / TEX_H, lat = latOf(y);
     for (let x = 0; x < TEX_W; x++) {
       const u = x / TEX_W, i = y * TEX_W + x;
-      const wu = (u + (warpU(u, v) - 0.5) * 0.04 + 1) % 1, wl = lat + (warpV(u, v) - 0.5) * 9; // gentle warp: shapes stay readable
-      land[i] = landAt(wu, wl, coast(u, v));
-      mask[i] = land[i] >= SEA ? 1 : 0;
-      if (!mask[i]) continue;
+      if (!inside[i]) continue;
       const ridge = 1 - Math.abs(range(u, v) * 2 - 1);
       let mountains = 0;
       for (const r of RANGES) { const d = distanceToLine(u, lat, r.line); if (d < r.width * 3) mountains = Math.max(mountains, r.height * Math.exp(-((d / r.width) ** 2))); }
-      h[i] = clamp(clamp((land[i] - SEA) / 0.5) * 0.16 + mountains * (0.72 + 0.34 * ridge));
+      h[i] = clamp(clamp((land[i] - SEA) / 0.24) * 0.16 + mountains * (0.72 + 0.34 * ridge));
     }
   }
   const inland = blur(mask, 20), rain = windRain(land, h);
@@ -228,22 +239,45 @@ export function buildPlanet(random) {
       if (d < 1 && yy >= 0 && yy < TEX_H && land[yy * TEX_W + xx] >= SEA) hot[yy * TEX_W + xx] = Math.max(hot[yy * TEX_W + xx], smooth(1, 0.55, d));
     }
   }
-  const rgb = new Uint8Array(n * 3), landRgb = new Uint8Array(n * 4), field = new Uint8Array(n * 4), biome = new Uint8Array(n), moisture = new Float32Array(n);
+  const rgb = new Uint8Array(n * 3), landRgb = new Uint8Array(n * 4), field = new Uint8Array(n * 4), biome = new Uint8Array(n);
+  let moisture = new Float32Array(n);
+  const wetland = new Float32Array(n), wetness = new Float32Array(n);
   for (let y = 0; y < TEX_H; y++) {
     const v = (y + 0.5) / TEX_H, lat = latOf(y);
     for (let x = 0; x < TEX_W; x++) {
       const u = x / TEX_W, i = y * TEX_W + x;
       const weight = id => regionWeight(REGION[id], u, lat);
-      let moist = clamp(rainBelt(Math.abs(lat)) * (0.42 + 0.95 * rain[i]) + (wetNoise(u, v) - 0.5) * 0.2);
-      moist = mix(mix(mix(moist, 0.62, weight('temperate')), 0.86, weight('tropical')), 0.1, weight('desert'));
-      const wetland = weight('wetland'), wet = Math.max(smooth(0.58, 0.66, marsh(u, v)) * smooth(0.5, 0.3, inland[i]) * smooth(0.2, 0.08, h[i]) * smooth(0.45, 0.6, moist), wetland > 0.3 ? 1 : 0);
-      const here = biomeAt(lat, h[i], moist, wet, hot[i]), lush = Math.max(moist, GREENNESS[here] ?? 0); // forests read deep green even where rain is modest
+      const moist = clamp(rainBelt(Math.abs(lat)) * (0.42 + 0.95 * rain[i]) + (wetNoise(u, v) - 0.5) * 0.08);
+      moisture[i] = mix(mix(mix(moist, 0.62, weight('temperate')), 0.86, weight('tropical')), 0.1, weight('desert'));
+      wetland[i] = weight('wetland');
+      wetness[i] = Math.max(smooth(0.58, 0.66, marsh(u, v)) * smooth(0.5, 0.3, inland[i]) * smooth(0.2, 0.08, h[i]) * smooth(0.45, 0.6, moisture[i]), wetland[i] > 0.3 ? 1 : 0);
+    }
+  }
+  moisture = blur(moisture, 3); // soft climate fields give long clean biome edges
+  // Each biome is smoothed as a shape, then the strongest wins at every texel: drawn edges, no speckle, and no gaps between neighbours.
+  const shapes = BIOMES.map(() => new Float32Array(n));
+  for (let y = 0; y < TEX_H; y++) for (let x = 0; x < TEX_W; x++) { const i = y * TEX_W + x; if (inside[i]) shapes[BIOMES.indexOf(biomeAt(latOf(y), h[i], moisture[i], wetness[i], hot[i]))][i] = 1; }
+  const soft = shapes.map(f => blur(f, 3));
+  for (let i = 0; i < n; i++) { let best = -1; for (let k = 0; k < soft.length; k++) if (soft[k][i] > best) { best = soft[k][i]; biome[i] = k; } }
+  const visited = new Uint8Array(n); // tiny leftover patches join the neighbour around them
+  for (let s = 0; s < n; s++) {
+    if (visited[s] || !inside[s]) continue;
+    const patch = [s], kind = biome[s]; let edgeKind = -1;
+    visited[s] = 1;
+    for (let q = 0; q < patch.length; q++) for (const j of [patch[q] - 1, patch[q] + 1, patch[q] - TEX_W, patch[q] + TEX_W]) {
+      if (j < 0 || j >= n || !inside[j]) continue;
+      if (biome[j] !== kind) edgeKind = biome[j]; else if (!visited[j]) { visited[j] = 1; patch.push(j); }
+    }
+    if (patch.length < 40 && edgeKind >= 0 && !hot[s]) for (const i of patch) biome[i] = edgeKind;
+  }
+  for (let y = 0; y < TEX_H; y++) {
+    const lat = latOf(y);
+    for (let x = 0; x < TEX_W; x++) {
+      const i = y * TEX_W + x, moist = moisture[i], here = BIOMES[biome[i]], lush = Math.max(moist, GREENNESS[here] ?? 0); // forests read deep green even where rain is modest
       const c = surfaceColour(lat, land[i], h[i], lush);
       let g = landColour(lat, h[i], lush);
-      g = lerp3(g, [66, 136, 104], Math.max(wetland, wet * 0.8) * 0.8); // marsh: dark, blue-green
+      g = lerp3(g, [66, 136, 104], here === 'wetland' ? 0.8 : 0); // marsh: dark, blue-green
       g = lerp3(g, [58, 48, 56], hot[i] * 0.92); // basalt
-      moisture[i] = moist;
-      biome[i] = BIOMES.indexOf(here);
       for (let k = 0; k < 3; k++) { rgb[i * 3 + k] = clamp(land[i] >= SEA ? mix(c[k], g[k], 0.8) : c[k], 0, 255); landRgb[i * 4 + k] = clamp(g[k], 0, 255); }
       field[i * 4] = clamp(0.5 + (land[i] - SEA) * 2, 0, 1) * 255; field[i * 4 + 1] = clamp(h[i]) * 255; field[i * 4 + 3] = hot[i] * 255;
     }
@@ -333,8 +367,14 @@ export function buildPlanet(random) {
   const onShore = ([x, y]) => { const [sx, sy] = seaBeside(x, y); return { ...siteAt(x, y), sea: surfaceDir(sx / TEX_W, latOf(sy)) }; };
   const clearOfMaps = (x, y) => MAP_SITES.every(m => gapTo({ x: m.u * TEX_W, y: (0.5 - m.lat / 180) * TEX_H }, x, y) > 9);
   const noCity = i => ['polar', 'alpine', 'desert', 'volcanic', 'wetland', 'tundra'].includes(nameAt(i));
-  const sites = place(22, 40, (i, x, y) => !noCity(i) && h[i] < 0.3 && clearOfMaps(x, y));
-  sites.forEach((c, k) => { c.tier = k < 3 ? 1.3 : k < 9 ? 1 : 0.74; }); // a few giants, more middling cities, many small ones
+  const sites = CITY_SITES.map(([u, lat, tier]) => { // cities are fixed in place; a coast edit only nudges one back onto land
+    const cx = Math.floor(u * TEX_W), cy = Math.floor((0.5 - lat / 180) * TEX_H);
+    for (let r = 0; r < 24; r++) for (let k = 0; k < Math.max(1, r * 6); k++) {
+      const x = (cx + Math.round(Math.cos(k / Math.max(1, r * 6) * Math.PI * 2) * r) + TEX_W) % TEX_W, y = cy + Math.round(Math.sin(k / Math.max(1, r * 6) * Math.PI * 2) * r);
+      if (land[y * TEX_W + x] >= SEA + 0.02) { const site = { ...siteAt(x, y), tier }; taken.push(site); return site; }
+    }
+    throw new Error('city site at sea: ' + u + ', ' + lat);
+  });
   const ports = [];
   for (const city of sites) { // every coastal city has a harbour
     const spot = ports.length < 16 && shoreNear(city.x, city.y, 40);
