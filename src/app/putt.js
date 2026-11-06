@@ -50,7 +50,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
   const appliedLightning = new Set();
 
-  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null, deployHits: [] });
+  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null, deployHits: [], cupEliminations: [] });
   const finish = (out, event, now) => {
     waitUntil = now + SINK_WAIT_MS;
     completion = { strokes: player.strokes, timedOut: !!event.timedOut };
@@ -102,6 +102,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
           while (accumulator >= FIXED_TIMESTEP && player.moving) {
             for (const event of engine.step(FIXED_TIMESTEP).events) {
               if (event.type === SimulationEventTypes.SINK) finish(out, event, now);
+              else if (event.type === SimulationEventTypes.CUP_ELIMINATION) out.cupEliminations.push(event.cupId);
               else if (event.type === SimulationEventTypes.OUT_OF_BOUNDS) { out.toasts.push('Splash! Back to your last spot. That stroke still counts.'); out.aim = aimAtHole(course, player); }
               else if (event.type === DEPLOYABLE_HIT) out.deployHits.push(event.id);
               else if (event.type === SimulationEventTypes.REST) out.aim = aimAtHole(course, player);

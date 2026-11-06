@@ -156,6 +156,62 @@ function mapTotal(player, local, puttIndex) {
   return prior + (live || 0);
 }
 
+/** View model for Putt Pong rack tracker and turn status (GM2c, issue #187). */
+export function pongHudView(room, local) {
+  if (!room || (room.mode !== GameModes.PONG && !room.pong)) return null;
+  const p = room.pong;
+  if (p) {
+    const isMyTurn = p.activePlayerId === local?.id;
+    const activeShooterName = p.activePlayerId === p.homePlayer?.id
+      ? p.homePlayer?.name
+      : p.activePlayerId === p.awayPlayer?.id
+      ? p.awayPlayer?.name
+      : 'Shooter';
+
+    return {
+      phase: p.phase || 'turn',
+      homePlayer: p.homePlayer,
+      awayPlayer: p.awayPlayer,
+      activePlayerId: p.activePlayerId,
+      activeShooterName,
+      isMyTurn,
+      shotsRemaining: p.shotsRemaining ?? 0,
+      remainingHomeCups: p.remainingHomeCups ?? p.homeCups?.filter(c => c.active !== false).length ?? 0,
+      remainingAwayCups: p.remainingAwayCups ?? p.awayCups?.filter(c => c.active !== false).length ?? 0,
+      homeCups: p.homeCups || [],
+      awayCups: p.awayCups || [],
+      turnSinks: p.turnSinks ?? 0,
+      bonusAwarded: !!p.bonusAwarded,
+      winner: p.winner || null,
+      isGameOver: !!p.isGameOver,
+    };
+  }
+
+  // Fallback when room.mode === GameModes.PONG
+  const roster = room?.roster || [];
+  const homeId = roster[0] || local?.id || 'player-1';
+  const awayId = roster[1] || 'player-2';
+  const homeName = room?.players?.[homeId]?.name || 'Home';
+  const awayName = room?.players?.[awayId]?.name || 'Away';
+  return {
+    phase: 'turn',
+    homePlayer: { id: homeId, name: homeName, team: 'home' },
+    awayPlayer: { id: awayId, name: awayName, team: 'away' },
+    activePlayerId: homeId,
+    activeShooterName: homeName,
+    isMyTurn: homeId === local?.id,
+    shotsRemaining: 2,
+    remainingHomeCups: 10,
+    remainingAwayCups: 10,
+    homeCups: Array.from({ length: 10 }, (_, i) => ({ id: `home-${i}`, rackIndex: i, active: true, team: 'home' })),
+    awayCups: Array.from({ length: 10 }, (_, i) => ({ id: `away-${i}`, rackIndex: i, active: true, team: 'away' })),
+    turnSinks: 0,
+    bonusAwarded: false,
+    winner: null,
+    isGameOver: false,
+  };
+}
+
 /** In-game HUD: info line, scoreboard, inventory and bar labels. */
 export function hudView(room, local, now, courses) {
   const hazardTime = typeof room.now === 'function' ? room.now() : now;
@@ -184,6 +240,7 @@ export function hudView(room, local, now, courses) {
   });
   return {
     info,
+    pong: pongHudView(room, local),
     warn: local.mode === 'play' && left <= 10,
     practiceBar: !!local.isHost && practice && room.phase === SessionPhases.PLAY,
     scoreboard,
