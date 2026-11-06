@@ -84,6 +84,31 @@ resetting the ball with the stroke counted. The Three.js renderer automatically 
 floating island understructures and ink hulls, and the par solver (SV1) proves robust
 routes within par (2 to 6 strokes). Existing 2D courses omit islands and remain bit-identical.
 
+## K1b curved ramps and multi-tier drops
+
+Course geometry and per-putt definitions may include optional `curvedRamps` and `drops` arrays.
+Validated curved ramp records (`validCurvedRamp`) define curved ramp arcs with analytical height, curve profiles (`smooth` cubic Hermite, `launch`, `linear`), and radial banking (`bankAngleDeg`):
+- `center`: `[cx, cy]`
+- `innerRadius`: number > 0
+- `outerRadius`: number > innerRadius
+- `startAngleDeg`: number (degrees)
+- `endAngleDeg`: number (degrees)
+- `zStart`: elevation at start angle
+- `zEnd`: elevation at end angle
+- `curve`: optional `'smooth'` | `'launch'` | `'linear'`
+- `bankAngleDeg`: optional radial tilt angle across the track (-85..85 degrees)
+- `surface`: optional surface type (`'turf'`, `'ice'`, `'sand'`, `'slime'`)
+
+Multi-tier drop records (`validTierDrop`) declare vertical transitions between descending elevations:
+- `id`: unique string identifier
+- `dropEdge`: `[x1, y1, x2, y2]` drop edge segment
+- `landingFloor`: `[x, y, w, h, z]` rectangular landing area and elevation
+- `zFrom`: starting elevation
+- `zTo`: landing elevation (`zTo < zFrom`)
+- `restitution`: optional landing bounce restitution factor
+
+Simulation evaluates curved ramp heights and surface gradients analytically, allowing balls to naturally accelerate and bank along the curve under gravity. When falling from upper tiers onto lower landing floors, airborne balls land with restitution dampening downward speed and emitting domain bounce events. The Three.js renderer generates sector mesh geometry and cel ink outlines for curved ramps and landing tiers. The par solver (SV1) proves robust multi-stroke routes within par (2 to 6). Existing 2D courses omit curved ramps and drops and remain 100% bit-identical.
+
 
 `node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
 with development chambers appended. Use `--courses` with the existing CLI
