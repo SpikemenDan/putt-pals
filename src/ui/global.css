@@ -1,6 +1,6 @@
 /* Element defaults and the comic theme (V1d #61): flat saturated colour, thick ink outlines and hard
    offset shadows, matching the toon renderer's ink look. One fixed theme; component styles live in
-   CSS Modules next to each component. Fonts: Jersey 10 for display text and Pixelify Sans for body text (src/ui/fonts/fonts.css, self-hosted),
+   CSS Modules next to each component. Fonts: Jersey 10 for display text and Nunito for body text (src/ui/fonts/fonts.css, self-hosted),
    with the old heavy system stacks as fallbacks. The dev panel can swap them live through --pp-display / --pp-body. */
 :root{
   --ink:#14102a;--paper:#fff8e4;--sky:#2f7cf0;--yellow:#ffd23f;--pink:#ff3d8b;--pink-d:#b5124f;--cyan:#27c8ff;--green:#2fbf5b;--red:#d7261e;
@@ -8,7 +8,7 @@
   --bg:var(--sky);--fg:var(--ink);--card:var(--paper);--ac:var(--pink);--mut:#4b4466;--bd:var(--ink);
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
-body{margin:0;color:#fff;font-family:var(--pp-body,"Pixelify Sans","Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif);font-synthesis:none;
+body{margin:0;color:#fff;font-family:var(--pp-body,"Nunito","Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif);font-synthesis:none;
   background-color:var(--sky);background-image:radial-gradient(rgba(255,255,255,.3) 2px,transparent 2.6px),linear-gradient(#6fb4ff,var(--sky) 45%);background-size:18px 18px,100% 100%}
 h1{margin:0 0 8px;font:900 36px/1.1 var(--font);letter-spacing:1px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
 p{line-height:1.45}

@@ -1,14 +1,12 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TIPS, TIP_MS, tipAt } from './tips.js';
 import { useUiContext } from './context.js';
 import { createPlanetScene, mulberry32 } from './planet-scene.js';
 import { createPuttProgress } from './putt-progress.js';
 import styles from './Loading.module.css';
 
-/** The ball's flight path along the progress track: a quadratic arc from the tee to the cup (track units, 600 by 64). */
-const ARC_X0 = 12, ARC_X1 = 588, ARC_Y = 56;
-const TRAIL = 8; // fading copies of the ball that form its tail
-const ARC = `M${ARC_X0} ${ARC_Y} Q300 -40 ${ARC_X1} ${ARC_Y}`;
+/** Number of putt balls in the progress indicator; each one drops into its cup as progress passes its share. */
+const BALLS = 3;
 
 /** Successive loads start on different tips, and paint different planets and flights, without wall-clock randomness. */
 let loads = 0;
@@ -26,12 +24,9 @@ export function Loading({ done = false, onDone }) {
   const [step, setStep] = useState(0);
   const canvasRef = useRef(null);
   const spritesRef = useRef(null);
-  const ghostRefs = useRef([]);
   const aresRef = useRef(null);
   const lunaRef = useRef(null);
   const puttRef = useRef(null);
-  const clipRef = useRef(null);
-  const clipId = useId();
   const progress = useRef(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
@@ -59,20 +54,11 @@ export function Loading({ done = false, onDone }) {
       last = now;
       const p = progress.current;
       const v = p.step(dt);
-      track.style.setProperty('--p', v.toFixed(4));
-      track.style.setProperty('--bx', ((ARC_X0 + (ARC_X1 - ARC_X0) * v) / 6).toFixed(3)); // percent of the 600-unit track
-      track.style.setProperty('--by', ((ARC_Y - 192 * v * (1 - v)) / 0.64).toFixed(3));
-      ghostRefs.current.forEach((g, k) => { // a comet tail of fading copies of the ball, further back along the arc
-        if (!g) return;
-        const q = Math.max(0, v - (k + 1) * 0.011);
-        g.style.left = ((ARC_X0 + (ARC_X1 - ARC_X0) * q) / 6).toFixed(3) + '%';
-        g.style.top = ((ARC_Y - 192 * q * (1 - q)) / 0.64).toFixed(3) + '%';
-      });
-      clipRef.current?.setAttribute('width', (ARC_X0 + (ARC_X1 - ARC_X0) * v).toFixed(1));
+      track.dataset.sunk = String(Math.min(BALLS, Math.floor(v * BALLS + 1e-6))); // balls already in their cups
       if (p.done && !closed) {
         closed = true;
-        track.dataset.state = 'sunk'; // the ball drops into the cup
-        timer = setTimeout(() => doneRef.current?.(), 350);
+        track.dataset.state = 'sunk'; // the last ball drops in
+        timer = setTimeout(() => doneRef.current?.(), 650);
       }
       if (!closed) frame = win.requestAnimationFrame(tick);
     };
@@ -91,17 +77,8 @@ export function Loading({ done = false, onDone }) {
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>
         <p className={styles.status}>Setting up your game…</p>
-        <div ref={puttRef} className={styles.track} aria-hidden="true" data-ui="loading-putt">
-          <svg viewBox="0 0 600 64" className={styles.arc} focusable="false">
-            <defs><clipPath id={clipId}><rect ref={clipRef} x="0" y="0" width="0" height="64" /></clipPath></defs>
-            <path d={ARC} className={styles.dots} />
-            <path d={ARC} className={styles.lit} clipPath={`url(#${clipId})`} />
-            <ellipse cx="588" cy="58" rx="8" ry="2.4" className={styles.hole} />
-            <line x1="588" y1="58" x2="588" y2="22" className={styles.pole} />
-            <polygon points="588,22 608,29 588,36" className={styles.pennant} />
-          </svg>
-          {Array.from({ length: TRAIL }, (_, k) => <u key={k} ref={el => { ghostRefs.current[k] = el; }} className={styles.ghost} />)}
-          <u className={styles.rollball} />
+        <div ref={puttRef} className={styles.putts} aria-hidden="true" data-ui="loading-putt" data-sunk="0">
+          {Array.from({ length: BALLS }, (_, k) => <span key={k} className={styles.slot}><u className={styles.ball} /><i className={styles.cup} /></span>)}
         </div>
       </div>
       <p className={styles.tip} data-ui="loading-tip"><b>TIP</b> {TIPS[tipAt(load * 5, step)]}</p>
@@ -111,7 +88,7 @@ export function Loading({ done = false, onDone }) {
 
 /**
  * Owns when the loading screen is on screen: shown while `connecting`, and kept for the finishing roll after a successful load so
- * the ball visibly reaches the cup before the game appears. A failed connection (`failed`) closes it at once.
+ * the last ball visibly drops in before the game appears. A failed connection (`failed`) closes it at once.
  */
 export function LoadingGate({ connecting, failed = false }) {
   const [state, setState] = useState(connecting ? 'running' : 'idle');

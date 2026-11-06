@@ -6,8 +6,7 @@
  * elevation; temperature falls with latitude and altitude; moisture follows Earth's wind belts (wet equator, dry subtropics, wetter
  * mid-latitudes), drops inland and rises near coasts. Colours blend smoothly across that temperature/moisture plane (tundra, taiga,
  * forest, grassland, savanna, desert, jungle), with snow, rock and ice. Coasts are the opposite of soft: a hard, ink-black shoreline,
- * a flat shallow-water band and a stepped, slightly jagged edge give the comic-book look. Cities are baked onto the land as small
- * built-up patches. The finished texture is sampled into a small canvas every frame while the planet turns, with cel-shaded light and
+ * a flat shallow-water band and a stepped, slightly jagged edge give the comic-book look. Cities are 3D skylines standing on the sphere (see sky-models.js). The finished texture is sampled into a small canvas every frame while the planet turns, with cel-shaded light and
  * a separate cloud layer; planes (flying great circles between cities, with contrails), boats on the sea and satellites in orbit are
  * drawn as small outlined sprites on a second canvas.
  *
@@ -18,6 +17,7 @@
 
 import { clamp, makeFbm, makeNoise, mix, mulberry32, smooth } from './noise.js';
 import { createWorld } from './worlds.js';
+import { BOAT, CITY_STYLES, PLANE, makeCloudSprite, makeSkyline, paintFaces, placeModel, skylineFaces } from './sky-models.js';
 
 export { mulberry32 };
 
@@ -112,22 +112,6 @@ function blur(field, radius) {
   return out;
 }
 
-/** Paints a small built-up patch (a city) centred on texel (cx, cy): pale ground, dark outline and a few dark windows. */
-function stampCity(rgb, cx, cy, half) {
-  const stretch = 1 / Math.max(0.3, Math.cos((cy / TEX_H - 0.5) * Math.PI)); // wider near the poles so it stays square on the sphere
-  const hw = Math.ceil(half * stretch);
-  for (let dy = -half; dy <= half; dy++) {
-    const y = cy + dy;
-    if (y < 0 || y >= TEX_H) continue;
-    for (let dx = -hw; dx <= hw; dx++) {
-      const x = (cx + dx + TEX_W) % TEX_W, i = (y * TEX_W + x) * 3, edge = Math.abs(dy) === half || Math.abs(dx) === hw;
-      const window = !edge && (Math.abs(dx) + Math.abs(dy)) % 3 === 0;
-      const c = edge ? INK : window ? [120, 112, 130] : CITY;
-      rgb[i] = c[0]; rgb[i + 1] = c[1]; rgb[i + 2] = c[2];
-    }
-  }
-}
-
 /**
  * Builds Gaia once. Returns { rgb, land, cloud, cities, seaSites }: an RGB texture (3 bytes per texel, row 0 at the north pole), the
  * land value per texel (below 0.4 is sea), a 0..255 cloud density texture, city sites [{u, lat}] (u 0..1 of a turn, lat degrees)
@@ -176,7 +160,6 @@ export function buildPlanet(random) {
     if (cities.some(c => Math.hypot((c.x - x) * Math.cos(lat * Math.PI / 180), c.y - y) < 34)) continue;
     cities.push({ x, y, u: x / TEX_W, lat });
   }
-  for (const c of cities) stampCity(rgb, c.x, c.y, random() < 0.3 ? 5 : 3);
   for (let tries = 0; tries < 4000 && seaSites.length < MAX_BOATS; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = (0.5 - (y + 0.5) / TEX_H) * 180;
     if (land[i] > SEA - 0.1 || temperatureAt(lat, 0) < 0.4) continue;
@@ -223,25 +206,14 @@ export function greatCircle(a, b, f) {
 
 const TAU = Math.PI * 2;
 const pingPong = x => 1 - Math.abs(1 - (((x % 2) + 2) % 2));
+const norm3 = v => { const l = Math.hypot(v.x, v.y, v.z) || 1; return { x: v.x / l, y: v.y / l, z: v.z / l }; };
+const sub3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+const dot3 = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+const cross3 = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+const arr3 = v => [v.x, v.y, v.z];
 
-/** Outlined sprite helpers (CSS px). */
+/** Outlined sprite helper (CSS px). */
 function outline(ctx, fill) { ctx.fillStyle = fill; ctx.strokeStyle = '#14102a'; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.fill(); ctx.stroke(); }
-
-function drawPlane(ctx, x, y, angle, s) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(s, s);
-  ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(3, -2); ctx.lineTo(-1, -9); ctx.lineTo(-4, -9); ctx.lineTo(-2, -2); ctx.lineTo(-7, -2); ctx.lineTo(-9, -5); ctx.lineTo(-10, -5); ctx.lineTo(-9, 0);
-  ctx.lineTo(-10, 5); ctx.lineTo(-9, 5); ctx.lineTo(-7, 2); ctx.lineTo(-2, 2); ctx.lineTo(-4, 9); ctx.lineTo(-1, 9); ctx.lineTo(3, 2); ctx.closePath();
-  outline(ctx, '#ffffff');
-  ctx.restore();
-}
-
-function drawBoat(ctx, x, y, s, bob) {
-  ctx.save(); ctx.translate(x, y + bob); ctx.scale(s, s);
-  ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.lineTo(5, 4); ctx.lineTo(-5, 4); ctx.closePath(); outline(ctx, '#ff3d8b');
-  ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(0, -10); ctx.lineTo(6, -2); ctx.closePath(); outline(ctx, '#ffffff');
-  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-10, 6); ctx.lineTo(-4, 5); ctx.moveTo(10, 6); ctx.lineTo(4, 5); ctx.stroke(); // wake
-  ctx.restore();
-}
 
 function drawSatellite(ctx, x, y, angle, s) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(s, s);
@@ -253,51 +225,69 @@ function drawSatellite(ctx, x, y, angle, s) {
 }
 
 /**
- * Creates the scene. `canvas` is the full-screen planet layer; `sprites` an optional canvas above it for planes, boats and satellites.
+ * Creates the scene. `canvas` is the full-screen planet layer; `sprites` an optional canvas above it for cities, boats, planes,
+ * satellites and clouds.
  * @param {object} options
  * @param {HTMLCanvasElement} options.canvas
  * @param {HTMLCanvasElement} [options.sprites]
  * @param {{loading: object}} options.display live settings (see display.loading in src/shared/display.js)
  * @param {() => number} options.random seeded generator (same seed, same planet and the same traffic)
+ * @param {ReturnType<typeof buildPlanet>} [options.planet] a planet already built with `buildPlanet`, to share between scenes (the preview gallery)
  * @param {{ares?: HTMLCanvasElement, luna?: HTMLCanvasElement}} [options.worlds] canvases for the distant worlds
  * @param {boolean} [options.reducedMotion] draw one still frame: nothing turns, flies or sails
+ * @param {boolean} [options.focusCity] start with a city turned to the planet's near limb, so its skyline stands against the sky
  * @param {Window} [options.win] provides requestAnimationFrame and the viewport size
  */
-export function createPlanetScene({ canvas, sprites = null, display, random, worlds = {}, reducedMotion = false, win = canvas.ownerDocument.defaultView }) {
-  const planet = buildPlanet(random);
+export function createPlanetScene({ canvas, sprites = null, display, random, planet: prebuilt = null, worlds = {}, reducedMotion = false, focusCity = false, win = canvas.ownerDocument.defaultView }) {
+  const doc = canvas.ownerDocument;
+  const planet = prebuilt ?? buildPlanet(random);
   const texture = planet.rgb, clouds = planet.cloud;
   const moons = Object.entries(worlds).filter(([, el]) => el).map(([kind, el]) => ({ kind, world: createWorld({ canvas: el, kind, random }) }));
   const ctx = canvas.getContext?.('2d') ?? null, sctx = sprites?.getContext?.('2d') ?? null;
-  const SCALE = 3; // CSS px per buffer pixel; the canvas is stretched up with smoothing
-  let layout = null, image = null, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, geometryKey = '';
+  let layout = null, image = null, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, geometryKey = '', pixelSize = 4, levels = 64;
+  const stats = { citiesDrawn: 0, tallestCity: 0, citySignature: '' };
 
-  // Traffic: planes fly great circles between cities, boats sit on the sea, satellites orbit above everything.
-  const cityPoints = planet.cities.map(c => ({ lat: c.lat * Math.PI / 180, lon: c.u * TAU }));
+  const cities = planet.cities.map(c => ({ lat: c.lat * Math.PI / 180, lon: c.u * TAU, u: c.u, buildings: makeSkyline(random, 7 + Math.floor(random() * 5)) }));
+  if (focusCity && cities.length) { // turn the city nearest 18 degrees latitude to the near limb (longitude -75 degrees from the view centre)
+    const best = cities.reduce((a, b) => (Math.abs(b.lat - 0.31) < Math.abs(a.lat - 0.31) ? b : a));
+    spin = (best.u * 360 + 75) % 360;
+  }
+  const oceanAt = (lat, lon) => planet.land[Math.min(TEX_H - 1, Math.max(0, Math.floor((0.5 - lat / Math.PI) * TEX_H))) * TEX_W + (((Math.floor(lon / TAU * TEX_W) % TEX_W) + TEX_W) % TEX_W)] < SEA - 0.04;
   const planes = [];
-  for (let k = 0; k < MAX_PLANES && cityPoints.length > 1; k++) {
+  for (let k = 0; k < MAX_PLANES && cities.length > 1; k++) {
     let a, b, path;
     for (let tries = 0; tries < 30; tries++) {
-      a = cityPoints[Math.floor(random() * cityPoints.length)]; b = cityPoints[Math.floor(random() * cityPoints.length)];
+      a = cities[Math.floor(random() * cities.length)]; b = cities[Math.floor(random() * cities.length)];
       path = greatCircle(a, b, 0.5);
       if (path.angle > 0.35 && path.angle < 1.6) break;
     }
     planes.push({ a, b, angle: path.angle || 1, phase: random() * 2, speed: 0.05 + random() * 0.04 });
   }
-  const boats = planet.seaSites.slice(0, MAX_BOATS).map(s => ({ lat: s.lat * Math.PI / 180, lon: s.u * TAU, bob: random() * TAU }));
+  const boats = planet.seaSites.slice(0, MAX_BOATS).map(s => { // boats sail east and west along their latitude, only over open sea
+    const lat = s.lat * Math.PI / 180, lon = s.u * TAU;
+    let span = 0.16;
+    while (span > 0 && ![-1, -0.5, 0, 0.5, 1].every(q => oceanAt(lat, lon + q * span))) span -= 0.04;
+    return { lat, lon, span: Math.max(0, span), phase: random() * 2, speed: 0.02 + random() * 0.02 };
+  });
   const satellites = Array.from({ length: MAX_SATELLITES }, () => {
     const n = [random() - 0.5, 0.6 + random() * 0.4, (random() - 0.5) * 0.8], len = Math.hypot(...n), nn = n.map(q => q / len);
     const e1r = [nn[1], -nn[0], 0], l1 = Math.hypot(...e1r) || 1, e1 = e1r.map(q => q / l1);
     const e2 = [nn[1] * e1[2] - nn[2] * e1[1], nn[2] * e1[0] - nn[0] * e1[2], nn[0] * e1[1] - nn[1] * e1[0]];
     return { e1, e2, alt: 0.2 + random() * 0.25, phase: random() * TAU, speed: (0.12 + random() * 0.12) * (random() < 0.5 ? -1 : 1) };
   });
+  // Fluffy foreground clouds (drawn on the sprite canvas): banks that frame the bottom and sides, and some that drift past.
+  let cloudsBuilt = false;
+  const cloudActors = [];
 
   const settings = () => display.loading;
   const count = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
 
-  /** Precomputes, per buffer pixel, the latitude row, base longitude and lighting. Rebuilt when the size, tilt or height changes. */
+  /** Precomputes, per buffer pixel, the latitude row, base longitude and lighting. Rebuilt when the size, tilt, height or pixel size changes. */
   function buildGeometry(cssW, cssH) {
-    const { axisTilt, horizonHeight } = settings();
-    const bw = Math.max(16, Math.ceil(cssW / SCALE)), bh = Math.max(16, Math.ceil(cssH / SCALE));
+    const { axisTilt, horizonHeight, landSmoothness } = settings();
+    pixelSize = Math.round(mix(8, 2, clamp(landSmoothness)));
+    levels = Math.round(mix(6, 64, clamp(landSmoothness)));
+    const bw = Math.max(16, Math.ceil(cssW / pixelSize)), bh = Math.max(16, Math.ceil(cssH / pixelSize));
     const radius = Math.max(0.5 * bw, 0.6 * bh), cx = bw / 2, cy = horizonHeight * bh + radius;
     const t = axisTilt * Math.PI / 180, ax = Math.cos(t), ay = Math.sin(t);
     const sun = [-0.45, 0.62, 0.64], sunLen = Math.hypot(...sun);
@@ -322,8 +312,9 @@ export function createPlanetScene({ canvas, sprites = null, display, random, wor
       }
     }
     layout = { bw, bh, rows, lon, shade, rim, glow, kind, cx: cx * cssW / bw, cy: cy * cssH / bh, rx: radius * cssW / bw, ry: radius * cssH / bh };
-    geometryKey = `${cssW}x${cssH}:${axisTilt}:${horizonHeight}`;
+    geometryKey = `${cssW}x${cssH}:${axisTilt}:${horizonHeight}:${landSmoothness}`;
     canvas.width = bw; canvas.height = bh;
+    canvas.style.imageRendering = landSmoothness < 0.4 ? 'pixelated' : 'auto';
     image = ctx?.createImageData?.(bw, bh) ?? null;
   }
 
@@ -332,40 +323,124 @@ export function createPlanetScene({ canvas, sprites = null, display, random, wor
     return { w: rect?.width || win?.innerWidth || 1280, h: rect?.height || win?.innerHeight || 720 };
   }
 
-  /** Screen position (CSS px) of a view-frame point, or null when it is hidden behind the planet. */
-  function toScreen(p) {
-    if (p.z < 0 && p.x * p.x + p.y * p.y < 1) return null; // occluded by the planet's disc
-    return { x: layout.cx + p.x * layout.rx, y: layout.cy - p.y * layout.ry, z: p.z };
+  /** Runs `paint` clipped to everything outside the planet's disc, so objects behind the limb are hidden but their parts above it show. */
+  function outsideDisc(w, h, paint) {
+    sctx.save();
+    sctx.beginPath(); sctx.rect(0, 0, w, h); sctx.ellipse(layout.cx, layout.cy, layout.rx, layout.ry, 0, 0, TAU, true);
+    sctx.clip('evenodd');
+    paint();
+    sctx.restore();
   }
 
-  /** Draws planes, boats and satellites on the sprite canvas. */
+  /** The foreground cloud sprites and where each starts; built once when the sprite canvas first has a size. */
+  function ensureClouds(w, h) {
+    if (cloudsBuilt) return;
+    cloudsBuilt = true;
+    const k = clamp(w / 1280, 0.3, 1.2); // clouds scale with the screen
+    const make = (cw, ch) => makeCloudSprite(doc, Math.round(cw * k), Math.round(ch * k), random);
+    const bank = [make(640, 230), make(560, 210), make(700, 240)], side = [make(420, 190), make(380, 170)], drift = Array.from({ length: 3 }, (_, k) => make(240 + k * 40, 110 + k * 12));
+    if (bank.some(b => !b)) return; // no 2D canvas (tests)
+    bank.forEach((s, k) => cloudActors.push({ s, x: -120 + k * (w / 2.2), y: h - s.height * 0.4 + (k % 2) * 12, speed: 3 + k, front: true, wrap: false }));
+    side.forEach((s, k) => cloudActors.push({ s, x: k ? w - s.width * 0.4 : -s.width * 0.6, y: h * (k ? 0.8 : 0.66), speed: 2, front: true, wrap: false }));
+    drift.forEach((s, k) => cloudActors.push({ s, x: random() * w, y: h * (0.62 + random() * 0.22), speed: 7 + random() * 16, front: k % 2 === 0, wrap: true, alpha: 0.88, drift: true }));
+  }
+
+  function drawClouds(w, h, front, time, cover) {
+    const dc = count(cover * 3, 3);
+    let drifted = 0;
+    for (const c of cloudActors) {
+      if (c.front !== front) continue;
+      if (c.drift) { drifted++; if (drifted > dc) continue; } else if (cover <= 0) continue;
+      const span = w + c.s.width * 1.4;
+      const x = c.wrap ? ((((c.x + time * c.speed) % span) + span) % span) - c.s.width * 0.7 : c.x + Math.sin(time * 0.2 + c.s.width) * c.speed * 2;
+      sctx.globalAlpha = c.alpha ?? 1;
+      sctx.drawImage(c.s, x, c.y + Math.sin(time * 0.3 + c.s.width) * 3);
+    }
+    sctx.globalAlpha = 1;
+  }
+
+  /** Draws cities, boats, planes, satellites and clouds on the sprite canvas. */
   function drawSprites(w, h, s) {
     if (!sctx || !sprites) return;
     if (sprites.width !== Math.round(w) || sprites.height !== Math.round(h)) { sprites.width = Math.round(w); sprites.height = Math.round(h); }
     sctx.clearRect(0, 0, sprites.width, sprites.height);
-    const turn = spin / 360 * TAU, tilt = s.axisTilt, time = reducedMotion ? 0 : clock;
-    const ground = (lat, lon, alt) => toScreen(projectPoint(lat, lon - turn, alt, tilt));
-    // Satellites orbit independently of the ground.
-    for (const sat of satellites.slice(0, count(s.satellites, MAX_SATELLITES))) {
+    ensureClouds(w, h);
+    const turn = spin / 360 * TAU, tilt = s.axisTilt, time = reducedMotion ? 0 : clock, { cx, cy, rx, ry } = layout;
+    const P = (lat, lon, alt = 0) => projectPoint(lat, lon - turn, alt, tilt); // a point on the ground in view space
+    const screen = p => ({ x: cx + p.x * rx, y: cy - p.y * ry });
+    drawClouds(w, h, false, time, s.cloudCover);
+    const sats = satellites.slice(0, count(s.satellites, MAX_SATELLITES)).map(sat => {
       const r = 1 + sat.alt, at = th => ({ x: r * (Math.cos(th) * sat.e1[0] + Math.sin(th) * sat.e2[0]), y: r * (Math.cos(th) * sat.e1[1] + Math.sin(th) * sat.e2[1]), z: r * (Math.cos(th) * sat.e1[2] + Math.sin(th) * sat.e2[2]) });
-      const th = sat.phase + time * sat.speed, p = at(th), pt = toScreen(p), ahead = toScreen(at(th + 0.05 * Math.sign(sat.speed)));
-      if (pt) drawSatellite(sctx, pt.x, pt.y, ahead ? Math.atan2(ahead.y - pt.y, ahead.x - pt.x) : 0, 0.8 + 0.25 * clamp(p.z / r, 0, 1));
+      const th = sat.phase + time * sat.speed;
+      return { p: at(th), ahead: at(th + 0.05 * Math.sign(sat.speed)), r };
+    });
+    const paintSat = ({ p, ahead, r }) => {
+      if (p.z < 0 && p.x * p.x + p.y * p.y < 1) return;
+      const a = screen(p), b = screen(ahead);
+      drawSatellite(sctx, a.x, a.y, Math.atan2(b.y - a.y, b.x - a.x), 0.8 + 0.25 * clamp(p.z / r, 0, 1));
+    };
+    sats.filter(q => q.p.z < 0).forEach(paintSat);
+
+    // Cities: a flat plaza and a skyline of 3D buildings standing on the sphere, so skylines rise out of the horizon.
+    const style = CITY_STYLES[count(s.cityStyle, CITY_STYLES.length - 1)], unit = rx * 0.03 * s.citySize;
+    stats.citiesDrawn = 0; stats.tallestCity = 0; stats.citySignature = style.name;
+    const visible = [];
+    for (const c of cities) {
+      const base = P(c.lat, c.lon);
+      if (base.z < -0.16) continue;
+      visible.push({ c, base });
     }
+    visible.sort((q, r) => q.base.z - r.base.z);
+    for (const { c, base } of visible) {
+      const d = 0.002, e = norm3(sub3(P(c.lat, c.lon + d), base)), no = norm3(sub3(P(c.lat + d, c.lon), base)), up = norm3(base);
+      const frame = { f: arr3(e), b: arr3(no), n: arr3(up) }, at = screen(base);
+      const paint = () => {
+        if (base.z > 0) { // plaza: a flat disc on the ground, foreshortened by the viewing angle
+          sctx.save(); sctx.translate(at.x, at.y); sctx.rotate(Math.atan2(-up.y, up.x) + Math.PI / 2); sctx.scale(1, Math.max(0.18, Math.abs(up.z)));
+          sctx.beginPath(); sctx.arc(0, 0, unit * 1.5, 0, TAU); sctx.fillStyle = 'rgba(60,70,100,.55)'; sctx.fill(); sctx.restore();
+        }
+        paintFaces(sctx, placeModel(skylineFaces(c.buildings, style), at, frame, unit), { windows: style.windows });
+      };
+      if (base.z < 0.1) outsideDisc(w, h, paint); else paint();
+      stats.citiesDrawn++;
+      stats.tallestCity = Math.max(stats.tallestCity, Math.max(...c.buildings.map(b => b.h)) * style.tall * unit * Math.hypot(up.x, up.y));
+    }
+
+    // Boats sail over the sea, planes fly great circles between cities: both are oriented on the sphere and follow it over the horizon.
+    const mover = (posAt, aheadAt, model, px, trail) => {
+      const p = posAt(), a = aheadAt();
+      if (p.z < -0.4) return;
+      const up = norm3(p), t0 = sub3(a, p), fwd = norm3({ x: t0.x - up.x * dot3(t0, up), y: t0.y - up.y * dot3(t0, up), z: t0.z - up.z * dot3(t0, up) });
+      const side = cross3(up, fwd), at = screen(p), frame = { f: arr3(fwd), b: arr3(side), n: arr3(up) };
+      const paint = () => {
+        if (trail) trail(sctx);
+        paintFaces(sctx, placeModel(model.faces, at, frame, px), { outline: 1.3 });
+      };
+      if (p.z < 0.1) outsideDisc(w, h, paint); else paint();
+    };
     for (const boat of boats.slice(0, count(s.boats, MAX_BOATS))) {
-      const pt = ground(boat.lat, boat.lon, 0.004);
-      if (pt && pt.z > 0.12) drawBoat(sctx, pt.x, pt.y, 0.6 + 0.5 * pt.z, Math.sin(time * 1.6 + boat.bob) * 1.2);
+      const x = boat.phase + time * boat.speed / Math.max(boat.span, 0.01), lonAt = f => boat.lon + (pingPong(f) * 2 - 1) * boat.span, forward = (((x % 2) + 2) % 2) < 1;
+      const bob = Math.sin(time * 1.6 + boat.phase * 5) * 0.004, dir = forward ? 1 : -1;
+      mover(() => P(boat.lat, lonAt(x), 0.006 + bob), () => P(boat.lat, lonAt(x + dir * 0.02), 0.006 + bob), BOAT, rx * 0.026, c => {
+        c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); let started = false; // foamy wake
+        for (let k = 0; k <= 6; k++) { const q = P(boat.lat, lonAt(x - dir * k * 0.012), 0.004); if (q.z < -0.05) break; const sp = screen(q); if (!started) { c.moveTo(sp.x, sp.y); started = true; } else c.lineTo(sp.x, sp.y); }
+        c.stroke();
+      });
     }
     for (const plane of planes.slice(0, count(s.planes, MAX_PLANES))) {
-      const x = plane.phase + time * plane.speed / plane.angle;
-      const at = f => { const g = greatCircle(plane.a, plane.b, pingPong(f)); return ground(g.lat, g.lon, 0.03 + 0.02 * Math.sin(Math.PI * pingPong(f))); };
-      const pt = at(x), forward = (((x % 2) + 2) % 2) < 1, ahead = at(x + (forward ? 0.01 : -0.01));
-      if (!pt || pt.z < 0.12) continue;
-      sctx.strokeStyle = 'rgba(255,255,255,.75)'; sctx.lineWidth = 2.4; sctx.lineCap = 'round'; // contrail along the route behind the plane
-      sctx.beginPath(); let started = false;
-      for (let k = 1; k <= 9; k++) { const q = at(x - (forward ? 1 : -1) * k * 0.012); if (!q || q.z < 0.1) break; if (!started) { sctx.moveTo(pt.x, pt.y); started = true; } sctx.lineTo(q.x, q.y); }
-      sctx.stroke();
-      drawPlane(sctx, pt.x, pt.y, ahead ? Math.atan2(ahead.y - pt.y, ahead.x - pt.x) : 0, 0.7 + 0.5 * pt.z);
+      const x = plane.phase + time * plane.speed / plane.angle, forward = (((x % 2) + 2) % 2) < 1, dir = forward ? 1 : -1;
+      const at = f => { const g = greatCircle(plane.a, plane.b, pingPong(f)); return P(g.lat, g.lon, 0.035 + 0.025 * Math.sin(Math.PI * pingPong(f))); };
+      mover(() => at(x), () => at(x + dir * 0.01), PLANE, rx * 0.034, c => {
+        c.lineCap = 'round'; // contrail along the route behind the plane
+        for (let k = 0; k < 9; k++) {
+          const a = screen(at(x - dir * k * 0.012)), b = screen(at(x - dir * (k + 1) * 0.012));
+          c.strokeStyle = `rgba(255,255,255,${0.8 - k * 0.08})`; c.lineWidth = 3.2 - k * 0.25;
+          c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+        }
+      });
     }
+    sats.filter(q => q.p.z >= 0).forEach(paintSat);
+    drawClouds(w, h, true, time, s.cloudCover);
   }
 
   /** Draws the planet, the distant worlds and the sprites at the current spin. */
@@ -373,18 +448,19 @@ export function createPlanetScene({ canvas, sprites = null, display, random, wor
     const { w, h } = viewport();
     const s = settings();
     for (const m of moons) m.world.draw(spin / 360 * (m.kind === 'ares' ? 2.4 : 1.5));
-    if (!layout || geometryKey !== `${w}x${h}:${s.axisTilt}:${s.horizonHeight}`) buildGeometry(w, h);
-    if (!ctx || !image) return;
+    if (!layout || geometryKey !== `${w}x${h}:${s.axisTilt}:${s.horizonHeight}:${s.landSmoothness}`) buildGeometry(w, h);
+    if (!ctx || !image) { drawSprites(w, h, s); return; }
     const { bw, bh, rows, lon, shade, rim, glow, kind } = layout, px = image.data, turn = spin / 360, cloudTurn = cloudSpin / 360;
-    const thr = 0.85 - s.cloudCover * 0.5, cover = s.cloudCover > 0;
+    const thr = 0.85 - s.cloudCover * 0.5, cover = s.cloudCover > 0, step255 = 255 / (levels - 1), posterize = levels < 60;
     for (let i = 0, n = bw * bh; i < n; i++) {
       const o = i * 4;
       if (kind[i]) {
         const col = ((((lon[i] + turn) % 1) + 1) % 1 * TEX_W) | 0, t = (rows[i] * TEX_W + col) * 3, k = shade[i], a = rim[i];
         let r = texture[t] * k, g = texture[t + 1] * k, bl = texture[t + 2] * k;
+        if (posterize) { r = Math.round(r / step255) * step255; g = Math.round(g / step255) * step255; bl = Math.round(bl / step255) * step255; } // chunkier palette toward the pixelated end
         if (cover) {
-          const cc = ((((lon[i] + cloudTurn) % 1) + 1) % 1 * TEX_W) | 0, d = clouds[rows[i] * TEX_W + cc] / 255, m = Math.max(0, Math.min(1, (d - thr) / 0.2));
-          if (m > 0) { const w = 0.9 * m * (0.6 + 0.4 * Math.min(1, k)), lit = 232 * Math.min(1.08, 0.45 + k * 0.62); r = r * (1 - w) + lit * w; g = g * (1 - w) + (lit + 6) * w; bl = bl * (1 - w) + (lit + 14) * w; }
+          const cc = ((((lon[i] + cloudTurn) % 1) + 1) % 1 * TEX_W) | 0, d = clouds[rows[i] * TEX_W + cc] / 255, m = Math.max(0, Math.min(1, (d - thr) / 0.14));
+          if (m > 0) { const w = 0.92 * m * (0.6 + 0.4 * Math.min(1, k)), lit = 236 * Math.min(1.08, 0.45 + k * 0.62); r = r * (1 - w) + lit * w; g = g * (1 - w) + (lit + 6) * w; bl = bl * (1 - w) + (lit + 14) * w; }
         }
         px[o] = Math.min(255, r + 150 * a); px[o + 1] = Math.min(255, g + 205 * a); px[o + 2] = Math.min(255, bl + 255 * a); px[o + 3] = 255;
       } else if (glow[i] > 0.004) {
@@ -426,6 +502,8 @@ export function createPlanetScene({ canvas, sprites = null, display, random, wor
     step,
     /** How many planes, boats and satellites the current settings show. */
     get traffic() { const s = settings(); return { planes: Math.min(count(s.planes, MAX_PLANES), planes.length), boats: Math.min(count(s.boats, MAX_BOATS), boats.length), satellites: count(s.satellites, MAX_SATELLITES) }; },
+    /** What the last frame drew: pixel size and palette levels of the land, and the cities (count, tallest skyline in px, style name). */
+    get stats() { return { pixelSize, levels, ...stats }; },
     get cities() { return planet.cities; },
     get spin() { return spin; },
     get land() { return planet.land; },

@@ -77,13 +77,14 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       let pixels = null;
       canvas.getBoundingClientRect = () => ({ width: 800, height: 600 });
       canvas.getContext = () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData: image => { pixels = image; } });
+      sprites.getContext = () => new Proxy({}, { get: (_, k) => (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}), set: () => true });
       const scene = planet.createPlanetScene({ canvas, sprites, display, random: planet.mulberry32(9), win: dom.window });
       scene.start();
       scene.step(0.5);
       const w = canvas.width, h = canvas.height, d = pixels.data;
       let top = h, hash = 0, white = 0;
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = (y * w + x) * 4; if (d[o + 3] === 255) { top = Math.min(top, y); if (y > h - 12) hash = (hash * 31 + d[o] + d[o + 1] * 3 + d[o + 2] * 7) % 1000003; if (d[o] > 235 && d[o + 1] > 235 && d[o + 2] > 235) white++; } }
-      const out = { spin: scene.spin, top, hash, white, traffic: scene.traffic };
+      const out = { spin: scene.spin, top, hash, white, traffic: scene.traffic, stats: scene.stats };
       scene.dispose(); dom.window.close();
       return out;
     };
@@ -94,6 +95,10 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.notEqual(changed('axisTilt', -40).hash, lbase.hash, 'loading.axisTilt reorients the surface');
     assert.ok(changed('cloudCover', 1).white > lbase.white && changed('cloudCover', 0).white < lbase.white, 'loading.cloudCover thickens and clears the clouds');
     assert.deepEqual(lbase.traffic, { planes: 5, boats: 9, satellites: 3 });
+    assert.ok(changed('landSmoothness', 0).stats.pixelSize > lbase.stats.pixelSize && changed('landSmoothness', 1).stats.pixelSize < lbase.stats.pixelSize, 'loading.landSmoothness sets the pixel size of the surface');
+    assert.ok(changed('landSmoothness', 0).stats.levels < lbase.stats.levels, 'and the palette levels');
+    assert.ok(lbase.stats.citiesDrawn > 3 && changed('citySize', 3).stats.tallestCity > lbase.stats.tallestCity * 1.5, 'loading.citySize makes the skylines taller');
+    assert.notEqual(changed('cityStyle', 2).stats.citySignature, lbase.stats.citySignature, 'loading.cityStyle picks another skyline style');
     assert.equal(changed('planes', 2).traffic.planes, 2, 'loading.planes sets the number of planes');
     assert.equal(changed('boats', 14).traffic.boats, 14, 'loading.boats sets the number of boats');
     assert.equal(changed('satellites', 6).traffic.satellites, 6, 'loading.satellites sets the number of satellites');
@@ -101,7 +106,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const finishSteps = display => { const pr = createPuttProgress(display); pr.step(1); pr.finish(); let n = 0; while (!pr.done && n < 1000) { pr.step(0.05); n++; } return n * 0.05; };
     assert.ok(Math.abs(finishSteps(DEFAULT_DISPLAY) - 0.8) < 0.06 && Math.abs(finishSteps(createDisplay({ loading: { finishTime: 2 } })) - 2) < 0.06, 'loading.finishTime sets how long the ball takes to roll home');
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'finishTime', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cloudCover', 'cloudDrift', 'finishTime', 'landSmoothness', 'citySize', 'cityStyle', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

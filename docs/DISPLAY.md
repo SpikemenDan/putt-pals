@@ -22,6 +22,9 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.cloudCover` | 0.6 | 0 to 1 | Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast). |
 | `loading.cloudDrift` | 1.4 | 0 to 4 | Loading screen: cloud speed relative to the planet spin (1 = with the ground; higher slides ahead of it). |
 | `loading.finishTime` | 0.8 | 0.1 to 3 | Loading screen: once the game is ready, seconds the ball takes to finish rolling to the cup before the screen closes. |
+| `loading.landSmoothness` | 0.5 | 0 to 1 | Loading screen: surface look, from chunky pixels with a flat palette (0) to smooth detail (1). |
+| `loading.citySize` | 1.6 | 0.5 to 3 | Loading screen: size of the 3D city skylines (the globe stays the same size). |
+| `loading.cityStyle` | 0 | 0 to 3 | Loading screen: skyline style (whole number): 0 candy blocks, 1 skyscrapers, 2 cosy town, 3 neon night. |
 | `loading.planes` | 5 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
 | `loading.boats` | 9 | 0 to 20 | Loading screen: boats on the sea (whole boats; 0 hides them). |
 | `loading.satellites` | 3 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |

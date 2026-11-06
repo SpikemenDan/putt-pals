@@ -12,6 +12,7 @@ const app = createApp({ root: document.getElementById('root'), THREE,
 });
 if (tuner) {
   window.__ppTuner = tuner;
+  if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: side-by-side land and city previews
   Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/deployables-preview.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountDeployablesPreview }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountDeployablesPreview(document, app); mountLoadingPreview(document, app); });
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.

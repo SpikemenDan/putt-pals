@@ -202,6 +202,15 @@ function fakeClock() {
     assert.ok(pr.done && pr.value === 1, 'in after finishTime');
     // Cities are baked into the planet on gentle land, and traffic is placed on the sphere correctly.
     assert.ok(planet.cities.length >= 15 && planet.cities.every(c => c.u >= 0 && c.u < 1 && Math.abs(c.lat) < 70), 'many cities, none at the poles');
+    const sky = await import('../src/ui/sky-models.js');
+    assert.equal(sky.CITY_STYLES.length, 4, 'four skyline styles to choose from');
+    const skyline = sky.makeSkyline(scene.mulberry32(4), 9);
+    assert.deepEqual(skyline, sky.makeSkyline(scene.mulberry32(4), 9), 'a city is laid out the same way for the same seed');
+    const placed = sky.placeModel(sky.PLANE.faces, { x: 100, y: 100 }, { f: [1, 0, 0], b: [0, 1, 0], n: [0, 0, 1] }, 10);
+    assert.ok(placed.length === sky.PLANE.faces.length && placed.every((f, i, all) => i === 0 || all[i - 1].depth <= f.depth), 'model faces are sorted far to near');
+    const edgeOn = sky.placeModel(sky.PLANE.faces, { x: 0, y: 0 }, { f: [1, 0, 0], b: [0, 0, 1], n: [0, -1, 0] }, 10); // the same plane seen from its side as it passes the limb
+    const span = f => { const xs = f.flatMap(q => q.xy.map(p => p[1])); return Math.max(...xs) - Math.min(...xs); };
+    assert.ok(span(edgeOn) !== span(placed), 'a plane turned over the limb is foreshortened differently');
     assert.ok(planet.seaSites.length >= 8, 'boats have open sea to sail');
     const centre = scene.projectPoint(0, 0, 0, 0);
     assert.ok(Math.abs(centre.x) < 1e-9 && Math.abs(centre.y) < 1e-9 && Math.abs(centre.z - 1) < 1e-9, 'lat 0 lon 0 faces the viewer');
@@ -226,6 +235,7 @@ function fakeClock() {
     for (let i = 0; i < 10; i++) a.scene.step(0.1); // 1 s
     assert.ok(Math.abs(a.scene.spin - 10) < 1e-6, 'spins at spinSpeed degrees per second');
     assert.deepEqual(a.scene.traffic, { planes: 3, boats: 4, satellites: 2 }, 'traffic follows the settings');
+    assert.ok(a.scene.stats.pixelSize === 5 && a.scene.stats.levels > 6, 'the surface draws at the default pixel size');
     a.scene.dispose();
     const none = make(createDisplay({ loading: { spinSpeed: 0, planes: 0, boats: 0, satellites: 0 } }));
     none.scene.start();

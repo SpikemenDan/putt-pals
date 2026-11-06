@@ -7,7 +7,7 @@
  */
 
 const SHIPPED = 'Shipped';
-/** The first choice is the shipped pair: Jersey 10 (display) and Pixelify Sans (body). */
+/** The first choice is the shipped pair: Jersey 10 (display) and Nunito (body). */
 const DISPLAY_FONTS = {
   [SHIPPED]: async () => {},
   Bangers: () => import('@fontsource/bangers/latin-400.css'),
@@ -28,7 +28,7 @@ const DISPLAY_FONTS = {
 };
 const BODY_FONTS = {
   [SHIPPED]: async () => {},
-  Nunito: () => import('@fontsource/nunito/latin-800.css'),
+  'Pixelify Sans': () => import('@fontsource/pixelify-sans/latin-700.css'),
   Fredoka: () => import('@fontsource/fredoka/latin-600.css'),
   'Baloo 2': () => import('@fontsource/baloo-2/latin-700.css'),
   Orbitron: () => import('@fontsource/orbitron/latin-800.css'),
