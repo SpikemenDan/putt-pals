@@ -19,7 +19,7 @@
 .ctl{background:var(--paper);border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);color:var(--ink)}
 .ctl{left:12px;right:12px;bottom:12px;padding:8px 14px}
 .inv{left:14px;bottom:76px;display:flex;gap:8px}.toast{left:50%;bottom:78px;transform:translateX(-50%);text-align:center}
-.sb{top:64px;right:12px;width:216px;max-height:50%;overflow:auto;margin-top:0;border-width:2px;box-shadow:3px 3px 0 var(--ink)}
+.sb{top:64px;right:12px;width:224px;max-height:50%;overflow:auto;margin-top:0;border-width:2px;box-shadow:3px 3px 0 var(--ink)}
 .hazardIndicators{position:absolute;z-index:5;left:14px;top:64px;display:flex;flex-wrap:wrap;gap:5px;max-width:50%;pointer-events:none}
 .hazardIndicators span,.hazardPrompt{border:2px solid var(--ink);border-radius:8px;background:var(--paper);color:var(--ink);padding:5px 8px;box-shadow:3px 3px 0 var(--ink);font:900 12px var(--font)}
 .hazardPrompt{position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;max-width:min(90%,600px)}
@@ -61,7 +61,7 @@
 .slotTip b{display:block;margin-bottom:2px;font:900 13px var(--font)}
 .slot:hover .slotTip,.slot:focus-visible .slotTip{opacity:1}
 .sb>*{padding:5px 9px;font-size:12px}
-.sb>:first-child{font-size:11px}
+.sb>:first-child{font-size:10px}
 
 /* Start-screen panorama (M1b): the always-mounted game canvas fills the page behind the menu; the HUD is hidden. */
 .backdrop{position:fixed;inset:0;z-index:0;pointer-events:none}

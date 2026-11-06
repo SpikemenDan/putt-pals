@@ -8,5 +8,6 @@
 .row.hd span{color:var(--yellow)}
 .row.inRoster{padding:14px 0}
 .row.inSb{gap:6px}
-.row.inSb span{min-width:36px}
+.row.inSb span{min-width:32px}
+.row.hd.inSb{letter-spacing:.2px}
 .row.inSb b{min-width:0}
