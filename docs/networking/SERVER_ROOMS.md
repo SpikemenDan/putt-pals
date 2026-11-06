@@ -78,9 +78,9 @@ Statuses are `connecting`, `connected`, `reconnecting`, `disconnected`, `closed`
 
 The list lives in the room snapshot, so every checkpoint contains it and a reconstructed room keeps it. It is cleared when the putt, map or phase changes or the owner leaves. A refused command is acknowledged and changes nothing.
 
-## Global hazards (G1f, wire version 5)
+## Global hazards (G1f, wire version 6)
 
-`ACTIVATE_HAZARD` accepts a catalog kind and, for Wind, a finite direction, or, for Lightning, a target id. The room assigns activation id, owner, synchronized start/expiry, scope and seed. It rejects activations outside play, when power-ups are disabled, from non-roster players, or toward an invalid Lightning target. Global records are optional in the snapshot and durable checkpoint, are validated at the boundary and are cleared when the room leaves play, power-ups are disabled, or the round/map/putt scope changes. Inventory remains client-held; the room cannot verify possession. Peers derive Tornado and Hurricane paths from the shared seed and server time instead of receiving frame positions.
+`SERVER_ROOM_VERSION` is 6. `ACTIVATE_HAZARD` accepts a catalog kind and, for Wind, a finite direction, for Lightning, a target id, or, for Tornado and Hurricane, the placed `x` and `y`. The room assigns activation id, owner, synchronized start/expiry, scope and seed. It rejects activations outside play, when power-ups are disabled, from non-roster players, or toward an invalid Lightning target. Global records are optional in the snapshot and durable checkpoint, are validated at the boundary and are cleared when the room leaves play, power-ups are disabled, or the round/map/putt scope changes. Inventory remains client-held; the room cannot verify possession. Peers derive Tornado and Hurricane paths from the shared seed and server time instead of receiving frame positions.
 
 ## Identity and connection handling
 

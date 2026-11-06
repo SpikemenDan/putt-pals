@@ -157,5 +157,8 @@ single-shot gaps. Both are now resolved under the product's par rule by full
 searches proving robust two-stroke routes (derived par 2, within shipped par 4). Evidence is stored in
 `tests/fixtures/cup-capture/par-route-gaps.json`; `tests/par-route-gaps.test.cjs`
 independently replays the routes and perturbations and runs in `test:cli`.
+A 2026-11-06 re-measurement records 33 robust single-shot results: 5/5 lost its single-shot
+robust result to physics merged after the refresh (untouched main measures the same), but the par solver
+still finds a robust route within par, so it passes the acceptance rule.
 The generated source fingerprint is current. No active hazards are included in
 these baseline shots. Course geometry and physics did not change for this fix.
