@@ -3,7 +3,7 @@ import { courseRules } from '../courses/definitions.js';
 import { spawnPool } from '../gameplay/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
-import { HUD_ICONS, powerupIcon, TITLE_FLAG } from './icons.js';
+import { HUD_ICONS, powerupIcon } from './icons.js';
 import { PowerMeter } from './PowerMeter.jsx';
 import { PongHud } from './PongHud.jsx';
 import { Row } from './Row.jsx';
@@ -45,7 +45,6 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         <div className={hud.bar}>
           <span className={`${hud.sr}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>
           <div className={`${hud.title}${view?.warn ? ' ' + hud.titleWarn : ''}`} aria-hidden="true">
-            <Svg markup={TITLE_FLAG} className={hud.titleFlag} />
             <div className={hud.titleMain}>
               <b>{view?.title?.map}</b>
               {view?.title?.putt && <i>Putt {view.title.putt}</i>}
@@ -87,7 +86,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
         <div className={hud.inv}>
           {(view?.inventory || []).map(slot => (
-            <button type="button" key={slot.index} data-tone={slot.tone || undefined} className={`${hud.slot}${slot.kind === 'empty' ? ' ' + hud.slotEmpty : ''}`}
+            <button type="button" key={slot.index} className={`${hud.slot}${slot.kind === 'empty' ? ' ' + hud.slotEmpty : ''}`}
               onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>
               <span className={hud.sr}>{slot.label}</span>
               <span className={hud.slotKey} aria-hidden="true">{slot.index + 1}</span>
