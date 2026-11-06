@@ -324,8 +324,8 @@ export function surfaceHeight(course, x, y, ballZ = undefined) {
  * @param {object} course
  * @returns {number}
  */
-export function cupOf(course) {
-  const c = Number(course.cup);
+export function cupOf(course, targetCup = null) {
+  const c = Number(targetCup?.radius ?? course.cup);
   return c > 0 ? Math.max(MIN_CUP_RADIUS, Math.min(DEFAULT_CUP_RADIUS, c)) : DEFAULT_CUP_RADIUS;
 }
 
@@ -377,14 +377,34 @@ export function activeStructureSurface(course, x, y, ballZ) {
  * @returns {number}
  */
 export function contactHeight(course, x, y, ballRadius = BALL_RADIUS, ballZ = undefined) {
-  const C = cupOf(course);
   const base = surfaceHeight(course, x, y, ballZ);
   if (base === -999) return -999;
-  const top = surfaceHeight(course, course.hole[0], course.hole[1], ballZ);
-  const d = Math.hypot(x - course.hole[0], y - course.hole[1]);
-  if (Math.abs(base - top) > 1) return base;
-  if (d >= C) return base - filletDrop(d - C);
-  const inset = C - d;
+
+  let targetRadius = cupOf(course);
+  let top = base;
+  let d = Infinity;
+
+  if (course.cups?.length) {
+    let minD = Infinity;
+    for (const cup of course.cups) {
+      if (cup.active === false) continue;
+      const cRad = cupOf(course, cup);
+      const dist = Math.hypot(x - cup.x, y - cup.y);
+      if (dist < cRad + CUPT.filletWidth && dist < minD) {
+        minD = dist;
+        targetRadius = cRad;
+        d = dist;
+        top = surfaceHeight(course, cup.x, cup.y, ballZ);
+      }
+    }
+  } else if (course.hole) {
+    top = surfaceHeight(course, course.hole[0], course.hole[1], ballZ);
+    d = Math.hypot(x - course.hole[0], y - course.hole[1]);
+  }
+
+  if (d === Infinity || Math.abs(base - top) > 1) return base;
+  if (d >= targetRadius) return base - filletDrop(d - targetRadius);
+  const inset = targetRadius - d;
   // The fillet's drop at the rim tapers to nothing where the ball is fully inside.
   return inset < ballRadius
     ? top + Math.sqrt(Math.max(0, ballRadius * ballRadius - inset * inset)) - ballRadius - CUPT.filletDepth * (1 - inset / ballRadius)
@@ -459,22 +479,25 @@ export function bounce(player, r, ballRadius = BALL_RADIUS) {
 }
 
 /**
- * Handles cup lip collisions, magnet powerup gravity pull, and sink trigger.
+ * Tests collision, lip bounce, and capture for a single cup.
  *
- * @param {object} player Player simulation state
- * @param {object} course Course definition
- * @param {number} [dt=FIXED_TIMESTEP]
- * @param {Array<object>} [events=[]] Output domain events collector
- * @returns {boolean} Whether ball sank into cup
+ * @param {object} player
+ * @param {object} course
+ * @param {number} cupX
+ * @param {number} cupY
+ * @param {number} cupRadius
+ * @param {number} dt
+ * @param {Array<object>} events
+ * @param {object|null} [cupObj=null]
+ * @returns {boolean} Whether ball sank
  */
-export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
-  if (player.mode !== 'play') return false;
-  const C = cupOf(course);
+function checkSingleCupCollision(player, course, cupX, cupY, cupRadius, dt, events, cupObj = null) {
+  const C = cupRadius;
   const lip = (DEFAULT_CUP_RADIUS - C) / (DEFAULT_CUP_RADIUS - MIN_CUP_RADIUS);
   const sc = C / DEFAULT_CUP_RADIUS;
-  const top = surfaceHeight(course, course.hole[0], course.hole[1]);
-  const dx = player.x - course.hole[0];
-  const dy = player.y - course.hole[1];
+  const top = surfaceHeight(course, cupX, cupY);
+  const dx = player.x - cupX;
+  const dy = player.y - cupY;
   const d = Math.hypot(dx, dy);
   const R = ballRadiusOf(player);
   const center = player.z + R;
@@ -490,8 +513,8 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
     if (d > limit) {
       const nx = dx / d;
       const ny = dy / d;
-      player.x = course.hole[0] + nx * limit;
-      player.y = course.hole[1] + ny * limit;
+      player.x = cupX + nx * limit;
+      player.y = cupY + ny * limit;
       const vn = player.vx * nx + player.vy * ny;
       if (vn > 0) {
         const e = CUPT.lipRestitutionBase + CUPT.lipRestitutionGain * lip;
@@ -506,7 +529,7 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
     }
     // Score only after the whole ball physically drops below the putting surface.
     if (player.z + 2 * R < top - CUPT.sinkMargin) {
-      sinkBall(player, course, false, events);
+      sinkBall(player, course, false, events, cupObj);
       return true;
     }
   }
@@ -514,21 +537,51 @@ export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
 }
 
 /**
+ * Handles cup lip collisions, magnet powerup gravity pull, and sink trigger.
+ * Supports courses with multi-cup definitions or single hole.
+ *
+ * @param {object} player Player simulation state
+ * @param {object} course Course definition
+ * @param {number} [dt=FIXED_TIMESTEP]
+ * @param {Array<object>} [events=[]] Output domain events collector
+ * @returns {boolean} Whether ball sank into cup
+ */
+export function cupCollision(player, course, dt = FIXED_TIMESTEP, events = []) {
+  if (player.mode !== 'play') return false;
+  if (course.cups?.length) {
+    for (const cup of course.cups) {
+      if (cup.active === false) continue;
+      const C = cupOf(course, cup);
+      if (checkSingleCupCollision(player, course, cup.x, cup.y, C, dt, events, cup)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (!course.hole) return false;
+  return checkSingleCupCollision(player, course, course.hole[0], course.hole[1], cupOf(course), dt, events, null);
+}
+
+/**
  * Marks ball as sunk.
+ * Emits CUP_ELIMINATION if sunk into a multi-cup target.
  *
  * @param {object} player
  * @param {object} course
- * @param {boolean} over
+ * @param {boolean} [over=false]
  * @param {Array<object>} [events=[]]
+ * @param {object|null} [sunkCup=null]
  */
-export function sinkBall(player, course, over = false, events = []) {
+export function sinkBall(player, course, over = false, events = [], sunkCup = null) {
   player.moving = false;
   player.vx = 0;
   player.vy = 0;
   player.vz = 0;
+  const cupX = sunkCup ? sunkCup.x : (course.hole ? course.hole[0] : player.x);
+  const cupY = sunkCup ? sunkCup.y : (course.hole ? course.hole[1] : player.y);
   if (!over) {
-    player.x = course.hole[0];
-    player.y = course.hole[1];
+    player.x = cupX;
+    player.y = cupY;
     player.z = surfaceHeight(course, player.x, player.y) - CUP_DEPTH + BALL_RADIUS;
   }
   const score = over
@@ -546,7 +599,19 @@ export function sinkBall(player, course, over = false, events = []) {
     timedOut: !!over,
     score,
     position: [player.x, player.y, player.z],
+    ...(sunkCup ? { cupId: sunkCup.id } : {}),
   });
+
+  if (sunkCup && !over) {
+    sunkCup.active = false;
+    events.push({
+      type: SimulationEventTypes.CUP_ELIMINATION,
+      cupId: sunkCup.id,
+      team: sunkCup.team,
+      rackIndex: sunkCup.rackIndex,
+      position: [sunkCup.x, sunkCup.y, player.z],
+    });
+  }
 }
 
 /**
@@ -620,10 +685,24 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, gl
   const dx = player.vx * dt;
   const dy = player.vy * dt;
   const distance2 = dx * dx + dy * dy;
-  const t = distance2 > 0 ? Math.max(0, Math.min(1,
-    ((course.hole[0] - player.x) * dx + (course.hole[1] - player.y) * dy) / distance2)) : 0;
-  const crossesCup = Math.hypot(player.x + t * dx - course.hole[0],
-    player.y + t * dy - course.hole[1]) < cupOf(course) + R;
+  let crossesCup = false;
+  if (course.cups?.length) {
+    for (const cup of course.cups) {
+      if (cup.active === false) continue;
+      const cRad = cupOf(course, cup);
+      const t = distance2 > 0 ? Math.max(0, Math.min(1,
+        ((cup.x - player.x) * dx + (cup.y - player.y) * dy) / distance2)) : 0;
+      if (Math.hypot(player.x + t * dx - cup.x, player.y + t * dy - cup.y) < cRad + R) {
+        crossesCup = true;
+        break;
+      }
+    }
+  } else if (course.hole) {
+    const t = distance2 > 0 ? Math.max(0, Math.min(1,
+      ((course.hole[0] - player.x) * dx + (course.hole[1] - player.y) * dy) / distance2)) : 0;
+    crossesCup = Math.hypot(player.x + t * dx - course.hole[0],
+      player.y + t * dy - course.hole[1]) < cupOf(course) + R;
+  }
   const steps = crossesCup ? Math.min(128, Math.max(1,
     Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
   if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning);
@@ -695,7 +774,18 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   let f = contactHeight(course, player.x, player.y, R, player.z);
   // Cup support is a curved rim, not a ramp that may pull the ball downward.
   // Detach as soon as support falls away; gravity determines time to drop.
-  const overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
+  let overCup = false;
+  if (course.cups?.length) {
+    for (const cup of course.cups) {
+      if (cup.active === false) continue;
+      if (Math.hypot(player.x - cup.x, player.y - cup.y) < cupOf(course, cup)) {
+        overCup = true;
+        break;
+      }
+    }
+  } else if (course.hole) {
+    overCup = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) < cupOf(course);
+  }
   let air = player.z > f + (overCup ? 1e-6 : REST.airTolerance) || (player.vz > 5 && player.padCooldown > 0) || (player.z > f && player.vz < -1);
   if (!air && ((globalHazards?.az || 0)+(mechanicForce?.z || 0)) > 0) { player.vz = Math.max(0, player.vz); air = true; }
 
@@ -784,16 +874,41 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
     }
 
     // Cup fillet: gentle pull down the rim slope toward the hole.
-    const fx = player.x - course.hole[0];
-    const fy = player.y - course.hole[1];
-    const fd = Math.hypot(fx, fy);
-    const outside = fd - cupOf(course);
-    if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y, player.z) - surfaceHeight(course, course.hole[0], course.hole[1], player.z)) <= 1) {
-      const s = 1 - outside / CUPT.filletWidth;
-      const slope = (2 * CUPT.filletDepth * s) / CUPT.filletWidth;
-      const pull = (slope * GRAVITY * dt) / (1 + 0.6 * slope * slope);
-      player.vx -= (fx / fd) * pull;
-      player.vy -= (fy / fd) * pull;
+    let targetCupPos = null;
+    let targetCupRadius = cupOf(course);
+    if (course.cups?.length) {
+      let minD = Infinity;
+      for (const cup of course.cups) {
+        if (cup.active === false) continue;
+        const cRad = cupOf(course, cup);
+        const fd = Math.hypot(player.x - cup.x, player.y - cup.y);
+        const outside = fd - cRad;
+        if (outside > 0 && outside < CUPT.filletWidth && fd < minD) {
+          minD = fd;
+          targetCupPos = [cup.x, cup.y];
+          targetCupRadius = cRad;
+        }
+      }
+    } else if (course.hole) {
+      const fd = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]);
+      const outside = fd - cupOf(course);
+      if (outside > 0 && outside < CUPT.filletWidth) {
+        targetCupPos = course.hole;
+        targetCupRadius = cupOf(course);
+      }
+    }
+    if (targetCupPos) {
+      const fx = player.x - targetCupPos[0];
+      const fy = player.y - targetCupPos[1];
+      const fd = Math.hypot(fx, fy);
+      const outside = fd - targetCupRadius;
+      if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y, player.z) - surfaceHeight(course, targetCupPos[0], targetCupPos[1], player.z)) <= 1) {
+        const s = 1 - outside / CUPT.filletWidth;
+        const slope = (2 * CUPT.filletDepth * s) / CUPT.filletWidth;
+        const pull = (slope * GRAVITY * dt) / (1 + 0.6 * slope * slope);
+        player.vx -= (fx / fd) * pull;
+        player.vy -= (fy / fd) * pull;
+      }
     }
 
     const s0 = Math.hypot(player.vx, player.vy);
@@ -1151,12 +1266,25 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
     Math.abs(surfaceHeight(course, player.x + 0.2, player.y, player.z) - surfaceHeight(course, player.x - 0.2, player.y, player.z)) +
     Math.abs(surfaceHeight(course, player.x, player.y + 0.2, player.z) - surfaceHeight(course, player.x, player.y - 0.2, player.z));
 
+  let onCupFillet = false;
+  if (course.cups?.length) {
+    for (const cup of course.cups) {
+      if (cup.active === false) continue;
+      if (Math.hypot(player.x - cup.x, player.y - cup.y) <= cupOf(course, cup) + CUPT.filletWidth) {
+        onCupFillet = true;
+        break;
+      }
+    }
+  } else if (course.hole) {
+    onCupFillet = Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) <= cupOf(course) + CUPT.filletWidth;
+  }
+
   if (
     gnd &&
     !(mechanicForce && Math.hypot(mechanicForce.x,mechanicForce.y,mechanicForce.z)>0) &&
     !(globalHazards && Math.hypot(globalHazards.ax, globalHazards.ay, globalHazards.az) > 0) &&
     slope < REST.maxSlope &&
-    Math.hypot(player.x - course.hole[0], player.y - course.hole[1]) > cupOf(course) + CUPT.filletWidth &&
+    !onCupFillet &&
     Math.hypot(player.vx, player.vy) < REST.maxSpeed &&
     Math.abs(player.vz) < REST.maxVertical &&
     !orbitalHolds(player.deployables, player.x, player.y, R, undefined, player.z) // an orbital ring keeps pulling a ball that is not touching its body (G1e)

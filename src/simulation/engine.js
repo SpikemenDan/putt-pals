@@ -46,6 +46,9 @@ export function resolvePuttCourse(baseCourse, puttIndex = 0) {
   if (putt.cupRadius != null) resolved.cup = putt.cupRadius;
   if (putt.limit != null) resolved.limit = putt.limit;
   if (putt.limitSeconds != null) resolved.limit = putt.limitSeconds;
+  if (resolved.cups) {
+    resolved.cups = resolved.cups.map(c => ({ ...c }));
+  }
   resolved.puttIndex = puttIndex;
 
   return resolved;
