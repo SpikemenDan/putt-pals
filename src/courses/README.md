@@ -70,6 +70,20 @@ The browser Three.js renderer, simulation physics, geometry integrity validator,
 and par-solver consume the same structure records. Existing 2D courses omit structures
 and remain bit-identical.
 
+## K1a floating islands and walls
+
+Course geometry and per-putt definitions may include an optional `islands` array.
+Validated records provide floating island rectangles with per-edge guard walls and
+declared open edges (`id`, `rect`, optional `elevation`, `surface`, `openEdges`, `guardWalls`).
+The CL1 geometry integrity validator verifies that:
+- Open drop-off edges into designed gaps are not blocked by walls (`blocked-open-edge`).
+- Every edge exposed to void/abyss without a guard wall or adjacent connected tile is explicitly declared in `openEdges` (`undeclared-open-edge`).
+- Island footprints do not overlap (`islands-interpenetrate`).
+Shots that drop off declared open edges into designed gaps (`z < -70`) trigger out-of-bounds,
+resetting the ball with the stroke counted. The Three.js renderer automatically builds
+floating island understructures and ink hulls, and the par solver (SV1) proves robust
+routes within par (2 to 6 strokes). Existing 2D courses omit islands and remain bit-identical.
+
 
 `node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
 with development chambers appended. Use `--courses` with the existing CLI

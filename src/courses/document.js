@@ -17,7 +17,9 @@ export function createCourseDocument() {
     description: data.definitions[index].desc ?? '',
     geometry: { ...Object.fromEntries(geometryKeys.map(key => [key, structuredClone(data.definitions[index][key])])),
       ...(data.definitions[index].mechanics ? {mechanics:structuredClone(data.definitions[index].mechanics)} : {}),
-      ...(data.definitions[index].structures ? {structures:structuredClone(data.definitions[index].structures)} : {}) },
+      ...(data.definitions[index].structures ? {structures:structuredClone(data.definitions[index].structures)} : {}),
+      ...(data.definitions[index].islands ? {islands:structuredClone(data.definitions[index].islands)} : {}),
+      ...(data.definitions[index].openEdges ? {openEdges:structuredClone(data.definitions[index].openEdges)} : {}) },
     putts: course.putts.map((putt, pi) => ({ ...putt, id: `${course.id}-putt-${pi + 1}`, index: pi })),
   })) };
   const checked = validateCourseDocument(document);
@@ -47,7 +49,16 @@ export function validateCourseDocument(document) {
     const shape = validateCourseGeometry(course.geometry).errors;
     errors.push(...shape.map(error => `Course ${index}: ${error}`));
     if (!shape.length && Array.isArray(course.putts)) {
-      const putts = Array.from(course.putts).filter(record).map(p => ({ tee: p.tee, hole: p.hole, cupRadius: p.cupRadius }));
+      const putts = Array.from(course.putts).filter(record).map(p => ({
+        tee: p.tee,
+        hole: p.hole,
+        cupRadius: p.cupRadius,
+        islands: p.islands,
+        openEdges: p.openEdges,
+        w: p.w,
+        tiles: p.tiles,
+        structures: p.structures
+      }));
       const integrity = checkGeometryIntegrity({ id: validId(course.id) ? course.id : undefined, name: course.name, index, geometry: course.geometry, putts });
       errors.push(...integrity.violations.map(v => `Course ${index}: ${formatIntegrityViolation(v)}`));
     }

@@ -1,5 +1,6 @@
 import { validateCourseMechanics } from './mechanics.js';
 import { validateCourseStructures } from './structures.js';
+import { validateCourseIslands } from './islands.js';
 import { courseDefinitions, courseRules, courseSourceHashes } from './definitions.js';
 import { buildCourseCatalog } from './legacy.js';
 
@@ -26,7 +27,8 @@ export function validateCourseGeometry(course) {
   }
   errors.push(...validateCourseMechanics(course.mechanics));
   errors.push(...validateCourseStructures(course.structures));
-  if (!course.tiles?.length) errors.push('Course must have playable tiles');
+  errors.push(...validateCourseIslands(course.islands));
+  if (!course.tiles?.length && !course.islands?.length) errors.push('Course must have playable tiles');
   return { valid: errors.length === 0, errors };
 }
 

@@ -8,3 +8,5 @@ export * from './palettes.js';
 export * from './geometry.js';
 export * from './integrity.js';
 export * from './structures.js';
+export * from './islands.js';
+export * from './island-chambers.js';
