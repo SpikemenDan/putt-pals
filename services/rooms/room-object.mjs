@@ -16,7 +16,7 @@ const courseDefinitions = createCourseData().definitions;
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
   'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
-  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last',
+  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last', 'pong',
 ];
 const commandRate = { burst: SERVER_ROOM_LIMITS.commandBurst, perSecond: SERVER_ROOM_LIMITS.commandsPerSecond };
 const presenceRate = { burst: SERVER_ROOM_LIMITS.presenceBurst, perSecond: SERVER_ROOM_LIMITS.presencePerSecond };
