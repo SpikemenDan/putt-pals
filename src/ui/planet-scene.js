@@ -22,6 +22,7 @@ export { mulberry32 };
 export const TEX_W = 768;
 export const TEX_H = 384;
 const SEA = 0.4; // land value at the shoreline
+const GHOSTS = 7; // fading copies that form a flying ball's tail
 
 /** Palette (r, g, b), storybook-bright. Rows run cold to hot, columns dry to wet. */
 const CLIMATE = Object.freeze([
@@ -283,22 +284,33 @@ export function createPlanetScene({ canvas, ballLayer, display, random, worlds =
     el.dataset.ui = 'loading-ball';
     el.style.width = el.style.height = size + 'px';
     el.style.marginLeft = el.style.marginTop = -size / 2 + 'px';
-    const trail = doc.createElement('b'), core = doc.createElement('u');
-    trail.className = 'trail'; core.className = 'core';
-    el.append(trail, core);
+    const core = doc.createElement('u');
+    core.className = 'core';
+    el.append(core);
     ballLayer.append(el);
-    balls.push({ el, flight: planFlight(random, w, h, size, horizonY), age: 0, duration: s.ballFlightTime });
+    const ghosts = Array.from({ length: GHOSTS }, (_, k) => { // a comet tail: fading copies of the ball along its recent path
+      const g = doc.createElement('i');
+      g.className = 'ghost';
+      g.style.width = g.style.height = size + 'px';
+      g.style.marginLeft = g.style.marginTop = -size / 2 + 'px';
+      g.style.opacity = (0.5 * (1 - (k + 1) / (GHOSTS + 1))).toFixed(2);
+      ballLayer.append(g);
+      return g;
+    });
+    balls.push({ el, ghosts, flight: planFlight(random, w, h, size, horizonY), age: 0, duration: s.ballFlightTime });
   }
 
   function moveBalls() {
     for (let i = balls.length - 1; i >= 0; i--) {
       const b = balls[i], t = b.age / b.duration;
-      if (t >= 1) { b.el.remove(); balls.splice(i, 1); continue; }
-      const p = ballPose(b.flight, t), q = ballPose(b.flight, Math.min(1, t + 0.02));
-      const heading = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI + 180; // the trail points back along the path
+      if (t >= 1) { b.el.remove(); for (const g of b.ghosts) g.remove(); balls.splice(i, 1); continue; }
+      const p = ballPose(b.flight, t);
       b.el.style.transform = `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px) scale(${p.scale.toFixed(3)})`;
-      b.el.firstChild.style.setProperty('--heading', heading.toFixed(1) + 'deg');
-      b.el.lastChild.style.transform = `rotate(${p.spin.toFixed(0)}deg)`;
+      b.el.firstChild.style.transform = `rotate(${p.spin.toFixed(0)}deg)`;
+      b.ghosts.forEach((g, k) => {
+        const gp = ballPose(b.flight, Math.max(0, t - (k + 1) * 0.014));
+        g.style.transform = `translate(${gp.x.toFixed(1)}px,${gp.y.toFixed(1)}px) scale(${(gp.scale * (1 - (k + 1) / (GHOSTS + 2))).toFixed(3)})`;
+      });
     }
   }
 
@@ -347,7 +359,7 @@ export function createPlanetScene({ canvas, ballLayer, display, random, worlds =
       win?.removeEventListener?.('resize', draw);
       if (frameId !== null) win?.cancelAnimationFrame?.(frameId);
       frameId = null;
-      for (const b of balls) b.el.remove();
+      for (const b of balls) { b.el.remove(); for (const g of b.ghosts) g.remove(); }
       balls.length = 0;
     },
   };

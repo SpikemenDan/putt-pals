@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { TIPS, TIP_MS, tipAt } from './tips.js';
 import { useUiContext } from './context.js';
 import { createPlanetScene, mulberry32 } from './planet-scene.js';
 import { createPuttProgress } from './putt-progress.js';
 import styles from './Loading.module.css';
+
+/** The ball's flight path along the progress track: a quadratic arc from the tee to the cup (track units, 600 by 64). */
+const ARC_X0 = 12, ARC_X1 = 588, ARC_Y = 56;
+const ARC = `M${ARC_X0} ${ARC_Y} Q300 -40 ${ARC_X1} ${ARC_Y}`;
 
 /** Successive loads start on different tips, and paint different planets and flights, without wall-clock randomness. */
 let loads = 0;
@@ -24,6 +28,8 @@ export function Loading({ done = false, onDone }) {
   const aresRef = useRef(null);
   const lunaRef = useRef(null);
   const puttRef = useRef(null);
+  const clipRef = useRef(null);
+  const clipId = useId();
   const progress = useRef(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
@@ -50,7 +56,11 @@ export function Loading({ done = false, onDone }) {
       const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
       last = now;
       const p = progress.current;
-      track.style.setProperty('--p', p.step(dt).toFixed(4));
+      const v = p.step(dt);
+      track.style.setProperty('--p', v.toFixed(4));
+      track.style.setProperty('--bx', ((ARC_X0 + (ARC_X1 - ARC_X0) * v) / 6).toFixed(3)); // percent of the 600-unit track
+      track.style.setProperty('--by', ((ARC_Y - 192 * v * (1 - v)) / 0.64).toFixed(3));
+      clipRef.current?.setAttribute('width', (ARC_X0 + (ARC_X1 - ARC_X0) * v).toFixed(1));
       if (p.done && !closed) {
         closed = true;
         track.dataset.state = 'sunk'; // the ball drops into the cup
@@ -73,8 +83,18 @@ export function Loading({ done = false, onDone }) {
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Pals</h2>
         <p className={styles.status}>Setting up your game…</p>
-        <div ref={puttRef} className={styles.putt} aria-hidden="true" data-ui="loading-putt">
-          <i className={styles.turf} /><b className={styles.cup} /><s className={styles.flag} /><em className={styles.putter} /><u className={styles.rollball} />
+        <div ref={puttRef} className={styles.track} aria-hidden="true" data-ui="loading-putt">
+          <svg viewBox="0 0 600 64" className={styles.arc} focusable="false">
+            <defs><clipPath id={clipId}><rect ref={clipRef} x="0" y="0" width="0" height="64" /></clipPath></defs>
+            <path d={ARC} className={styles.dots} />
+            <path d={ARC} className={styles.lit} clipPath={`url(#${clipId})`} />
+            <ellipse cx="588" cy="58" rx="22" ry="5" className={styles.green} />
+            <ellipse cx="588" cy="58" rx="8" ry="2.4" className={styles.hole} />
+            <line x1="588" y1="58" x2="588" y2="22" className={styles.pole} />
+            <polygon points="588,22 608,29 588,36" className={styles.pennant} />
+            <path d="M6 60 L18 60 M12 60 L12 56" className={styles.tee} />
+          </svg>
+          <u className={styles.rollball} />
         </div>
       </div>
       <p className={styles.tip} data-ui="loading-tip"><b>TIP</b> {TIPS[tipAt(load * 5, step)]}</p>
