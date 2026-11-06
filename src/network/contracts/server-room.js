@@ -8,7 +8,8 @@ import { validDeployable, validDeployCommand } from '../../gameplay/deployables.
 import { GLOBAL_HAZARD_LIMIT, validGlobalHazard, validGlobalHazardCommand } from '../../gameplay/global-hazards.js';
 
 // 5: the room snapshot may carry synchronized G1f hazard records.
-export const SERVER_ROOM_VERSION = 5;
+// 6: Tornado and Hurricane are placed: ACTIVATE_HAZARD and their records carry x and y.
+export const SERVER_ROOM_VERSION = 6;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -53,7 +54,7 @@ export function validServerCommand(c) {
   if (!object(c)) return false;
   if (c.type === 'ACTIVATE_HAZARD') {
     const { type, ...command } = c;
-    return allowed(c, ['type', 'kind', 'direction', 'targetId']) && validGlobalHazardCommand(command);
+    return allowed(c, ['type', 'kind', 'direction', 'targetId', 'x', 'y']) && validGlobalHazardCommand(command);
   }
   const fields = { LEAVE_ROOM: [], SET_COLOR: ['color'], SET_MODE: ['mode'], SET_POWERUPS: ['enabled'], START_VOTING: [], CAST_VOTE: ['mapIndex'], START_ROUND: ['puttIndex'],
     RETURN_TO_LOBBY: [], PRACTICE_STEP: ['step'], PRACTICE_MAPS: [], UPDATE_STROKES: ['strokes'], REPORT_SCORE: ['strokes', 'timedOut'],

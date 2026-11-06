@@ -28,11 +28,11 @@ accepted. Technical checks and owner acceptance remain separate gates.
 | Hazard | Gameplay | Selection and lifetime |
 | --- | --- | --- |
 | Rain | Reduce rolling friction and constant drag on supported surfaces; preserve zero ice drag. | Whole room, timed. |
-| Snow | Increase rolling friction and constant drag. | Whole room, timed. |
-| Wind | Apply a horizontal gust acceleration in the chosen direction. | Direction selector with confirm/cancel, timed. |
+| Snow | Ice-like: friction close to the ice surface and no constant drag (owner, 2026-11-05, replacing the earlier higher-friction Snow). | Whole room, timed. |
+| Wind | A gust that rises and falls along the chosen direction, 24 seconds. Walls never block the push; only the drawn wind flows over them. | Click the course (a wind arrow shows the direction). |
 | Lightning | Apply one seeded horizontal impulse to the chosen player's ball. | Connected opponent selector, one accepted strike. |
-| Tornado | Roam on a seeded path and fling nearby balls outward with lift. | Whole room, timed. |
-| Hurricane | Roam on a seeded path and pull nearby balls inward. | Whole room, timed. |
+| Tornado | Placed by the player, then wanders on a seeded path, kept inside the putt; flings nearby balls outward with lift. | Click the course. |
+| Hurricane | Placed by the player, then wanders on a seeded path, kept inside the putt; pulls nearby balls inward. | Click the course. |
 
 The owner accepted the preview behavior and current values on 2026-11-04. Rain replaces
 Snow and vice versa; a new activation replaces the prior instance of the same

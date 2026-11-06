@@ -1,11 +1,12 @@
 const assert = require('node:assert/strict');
 (async () => {
   const H = await import('../src/gameplay/global-hazards.js');
+  const { TUNING } = await import('../src/shared/tuning.js');
   const { stepBall } = await import('../src/simulation/physics.js');
   const { createPlayerState, applyShot } = await import('../src/shared/simulation.js');
   const context = { owner: 'p1', roundNumber: 1, map: 0, putt: 0, now: 0, sequence: 1, seed: 123 };
-  const make = kind => H.createGlobalHazard([], { kind, ...(kind === 'wind' ? { direction: Math.PI / 2 } : {}), ...(kind === 'lightning' ? { targetId: 'p2' } : {}) }, context)[0];
-  for (const command of [{kind:'wind',direction:NaN},{kind:'wind',direction:4},{kind:'lightning',targetId:''},{kind:'rain',extra:1},{kind:'unknown'}]) assert.equal(H.validGlobalHazardCommand(command), false);
+  const make = kind => H.createGlobalHazard([], { kind, ...(kind === 'wind' ? { direction: Math.PI / 2 } : {}), ...(kind === 'lightning' ? { targetId: 'p2' } : {}), ...(['tornado', 'hurricane'].includes(kind) ? { x: 40, y: -30 } : {}) }, context)[0];
+  for (const command of [{kind:'wind',direction:NaN},{kind:'wind',direction:4},{kind:'lightning',targetId:''},{kind:'rain',extra:1},{kind:'unknown'},{kind:'tornado'},{kind:'tornado',x:1},{kind:'hurricane',x:NaN,y:1},{kind:'hurricane',x:1,y:2e6}]) assert.equal(H.validGlobalHazardCommand(command), false);
   const rain = make('rain'), snow = make('snow');
   assert.deepEqual(H.createGlobalHazard([rain], {kind:'snow'}, {...context,sequence:2}).map(h=>h.kind), ['snow']);
   for (const now of [-1, rain.endTime]) assert.deepEqual(H.activeGlobalHazards([rain], {...context,now}), []);
@@ -19,6 +20,26 @@ const assert = require('node:assert/strict');
     assert.ok(kind === 'tornado' ? force.ax > 0 && force.az > 0 : force.ax < 0 && force.az === 0);
     assert.ok(Object.values(H.evaluateGlobalHazards([record], 1, center, bounds)).every(Number.isFinite));
   }
+  // placed: starts at the chosen spot, wanders at most the roam radius, stays in the putt even when placed outside it
+  const placed = make('hurricane');
+  assert.deepEqual(H.globalHazardCenter(placed, 0, bounds), {x:40,y:-30});
+  const inset = TUNING.globalHazards.roamInset * 1000;
+  for (let t = 0; t < placed.endTime; t += 0.7) { const c = H.globalHazardCenter(placed, t, bounds); assert.ok(Math.hypot(c.x - 40, c.y + 30) <= TUNING.globalHazards.roamRadius * 3, 'stays near where it was placed'); }
+  const outside = H.globalHazardCenter({...placed,x:-9000,y:9000}, 3, bounds);
+  assert.ok(outside.x >= -500 + inset - 1e-9 && outside.y <= 500 - inset + 1e-9, 'a spot outside the putt is pulled inside its bounds');
+  // the gust rises and falls over its own, longer lifetime
+  const gust = make('wind');
+  assert.equal(gust.endTime, TUNING.globalHazards.windDurationSeconds);
+  assert.equal(H.gustStrength(gust, -1), 0); assert.equal(H.gustStrength(gust, gust.endTime), 0);
+  assert.ok(Math.abs(H.gustStrength(gust, gust.endTime / 2) - 1) < 1e-12 && H.gustStrength(gust, 1) < H.gustStrength(gust, 5));
+  // walls never block the wind's push, but a ball held against one can rest and be played
+  const walled = {w:[[100,-200,12,400]]}, peak = gust.endTime / 2, east = {...gust,direction:0};
+  assert.equal(H.rayToWall(walled,0,0,1,0,500),100); assert.equal(H.rayToWall(walled,0,0,1,0,50),Infinity);
+  assert.equal(H.rayToWall(walled,0,300,1,0,500),Infinity); assert.equal(H.rayToWall(walled,105,0,1,0,500),0);
+  assert.equal(H.hazardHoldsBall([east],peak,{x:117,y:0},bounds,walled),true,'right behind a wall the ball is still blown');
+  assert.equal(H.hazardHoldsBall([east],peak,{x:96,y:0},bounds,walled),false,'a ball pinned against a wall can rest');
+  assert.equal(H.hazardHoldsBall([east],0.2,{x:200,y:0},bounds,walled),false,'too weak to move a ball yet');
+  assert.equal(H.hazardHoldsBall([make('rain')],1,{x:200,y:0},bounds,walled),false,'rain does not move a ball');
   const strike = make('lightning');
   assert.equal(H.lightningImpulse(strike,'p1'), null);
   assert.deepEqual(H.lightningImpulse(strike,'p2'), H.lightningImpulse(structuredClone(strike),'p2'));
@@ -52,7 +73,7 @@ const assert = require('node:assert/strict');
   const baseline = roll();
   assert.deepEqual(roll([]), baseline, 'inactive hazards preserve exact trajectories');
   assert.ok(roll([rain])[0] > baseline[0], 'Rain extends the roll');
-  assert.ok(roll([snow])[0] < baseline[0], 'Snow shortens the roll');
+  assert.ok(roll([snow])[0] > roll([rain])[0], 'Snow is ice-like, slipperier than Rain');
   assert.ok(roll([make('wind')])[1] > baseline[1], 'selected Wind direction moves the ball south');
   const { bindRoomSession } = await import('../src/network/session.js');
   let receive;

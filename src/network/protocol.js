@@ -34,7 +34,7 @@ export function validCommand(e, isHost) {
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
     REPORT_SCORE: ['strokes', 'roundNumber', 'puttIndex', 'timedOut'],
     DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'],
-    ACTIVATE_HAZARD: ['kind', 'direction', 'targetId'],
+    ACTIVATE_HAZARD: ['kind', 'direction', 'targetId', 'x', 'y'],
   }[e.type];
   if (!Array.isArray(fields) || !keys(e, ['type', ...fields])) return false;
   switch (e.type) {

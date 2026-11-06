@@ -13,7 +13,7 @@ import { outOfBounds, sinkBall, surfaceHeight } from '../simulation/physics.js';
 import { SimulationEngine } from '../simulation/index.js';
 import { activatePowerup, addToInventory, armedState, auraOf, ballRadiusOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
 import { DEPLOYABLE_HIT } from '../gameplay/deployables.js';
-import { courseBounds, evaluateGlobalHazards, lightningImpulse } from '../gameplay/global-hazards.js';
+import { courseBounds, hazardHoldsBall, lightningImpulse } from '../gameplay/global-hazards.js';
 import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
@@ -95,10 +95,10 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const out = result();
       if (disposed) return out;
       if (player.mode === 'play') {
-        const global = evaluateGlobalHazards(player.globalHazards, hazardTime(), player, player.globalHazardBounds);
-        if (!player.moving && (environmentAwake(course, player, hazardTime()) || Math.hypot(global.ax, global.ay, global.az) > 0)) { out.cancelInput = true; player.moving = true; stall = 0; }
+        const held = hazardHoldsBall(player.globalHazards, hazardTime(), player, player.globalHazardBounds, course);
+        if (!player.moving && (environmentAwake(course, player, hazardTime()) || held)) { out.cancelInput = true; player.moving = true; stall = 0; }
         if (player.moving) {
-          stall += dt; accumulator += dt;
+          stall = held ? 0 : stall + dt; accumulator += dt; // weather moving the ball is not a stuck ball
           while (accumulator >= FIXED_TIMESTEP && player.moving) {
             for (const event of engine.step(FIXED_TIMESTEP).events) {
               if (event.type === SimulationEventTypes.SINK) finish(out, event, now);

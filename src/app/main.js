@@ -8,7 +8,7 @@ import { createDisplayTuner } from '../devtools/display-tuner.js';
 const tuner = import.meta.env.DEV ? createDisplayTuner({ storage: (() => { try { return window.sessionStorage; } catch { return null; } })() }) : null;
 const app = createApp({ root: document.getElementById('root'), THREE,
   serverEndpoint: window.__PP_ROOM_ENDPOINT,
-  ...(tuner ? { display: tuner.display } : {}),
+  ...(tuner ? { display: tuner.display, soloHazards: true } : {}), // development only: lets the preview try weather without a second player
 });
 if (tuner) {
   window.__ppTuner = tuner;
