@@ -7,9 +7,10 @@
  * planet-data.js, so what you can click is exactly what lights up. Presentation only: no simulation, no React. `THREE` is injected.
  */
 
+import { MAP_LOOKS, paintWorld } from './atlas-art.js';
 import { createMaterialLibrary } from './materials.js';
 import { sizeInk, smoothHullGeometry } from './outline.js';
-import { BIOMES, TEX_H, TEX_W, gaiaPlanet, gaiaRegions, surfaceDir } from './planet-data.js';
+import { TEX_H, TEX_W, gaiaPlanet, gaiaRegions } from './planet-data.js';
 import { makeCity, makeLighthouse, makeMill, makePeak, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
 import { RANGES } from '../shared/gaia-map.js';
 import { COAST_RINGS } from '../shared/gaia-coast.js';
@@ -21,7 +22,6 @@ const SCALE = Object.freeze({ city: 0.36, town: 0.36, village: 0.32, port: 0.34,
 export const atlasX = u => (u - 0.5) * 360;
 export const atlasZ = lat => -lat;
 const defaultRenderer = (THREE, canvas) => new THREE.WebGLRenderer({ canvas, antialias: true });
-void surfaceDir;
 
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
@@ -37,36 +37,6 @@ function coastShapes(THREE) {
     shapes.push(shape);
   });
   return shapes;
-}
-
-/** Biome colours as flat fills on a canvas, each the average of the globe's land colour there, with thin lines where biomes meet, and rivers. */
-function biomeTexture(doc, planet) {
-  const w = 2048, h = 1024, canvas = doc.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const g = canvas.getContext('2d');
-  if (!g) return canvas;
-  const sums = BIOMES.map(() => [0, 0, 0, 0]);
-  for (let i = 0; i < planet.biome.length; i++) if (planet.land[i] >= 0.4) { const s = sums[planet.biome[i]]; s[0] += planet.landRgb[i * 4]; s[1] += planet.landRgb[i * 4 + 1]; s[2] += planet.landRgb[i * 4 + 2]; s[3]++; }
-  const colours = sums.map(([r, gr, b, n]) => (n ? [r / n, gr / n, b / n] : [200, 200, 200]));
-  const image = g.createImageData(w, h), px = image.data, kinds = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    const fy = Math.max(0, Math.min(TEX_H - 1.001, (y + 0.5) / h * TEX_H - 0.5)), y0 = Math.floor(fy), ty = fy - y0;
-    for (let x = 0; x < w; x++) {
-      const fx = (x + 0.5) / w * TEX_W - 0.5, x0 = Math.floor(fx), tx = fx - x0, xa = (x0 + TEX_W) % TEX_W, xb = (x0 + 1) % TEX_W;
-      const a = planet.biome[y0 * TEX_W + xa], b = planet.biome[y0 * TEX_W + xb], c = planet.biome[(y0 + 1) * TEX_W + xa], e = planet.biome[(y0 + 1) * TEX_W + xb];
-      let k = a;
-      if (a !== b || a !== c || a !== e) { const score = q => (q === a ? (1 - tx) * (1 - ty) : 0) + (q === b ? tx * (1 - ty) : 0) + (q === c ? (1 - tx) * ty : 0) + (q === e ? tx * ty : 0); k = [a, b, c, e].reduce((p, q) => (score(q) > score(p) ? q : p)); }
-      kinds[y * w + x] = k;
-    }
-  }
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x, k = kinds[i], c = colours[k], o = i * 4, edge = (x + 1 < w && kinds[i + 1] !== k) || (y + 1 < h && kinds[i + w] !== k), m = edge ? 0.72 : 1;
-    px[o] = c[0] * m; px[o + 1] = c[1] * m; px[o + 2] = c[2] * m; px[o + 3] = 255;
-  }
-  g.putImageData(image, 0, 0);
-  g.strokeStyle = '#2f8fd8'; g.lineWidth = 2; g.lineCap = g.lineJoin = 'round';
-  for (const river of planet.rivers) { g.beginPath(); river.forEach(([u, lat], i) => (i ? g.lineTo(u * w, (0.5 - lat / 180) * h) : g.moveTo(u * w, (0.5 - lat / 180) * h))); g.stroke(); }
-  return canvas;
 }
 
 /** A dark band along every shore at the top of the land: the crisp contour of the comic. */
@@ -107,7 +77,8 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const library = createMaterialLibrary({ THREE, createCanvas: () => doc.createElement('canvas'), random, maxAnisotropy: renderer.capabilities?.getMaxAnisotropy?.() ?? 1 });
   const owned = new Set(), own = r => { owned.add(r); return r; };
   if (renderer.shadowMap) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
-  renderer.setClearColor?.(0x3b9fe2, 1);
+  const lookName = new URLSearchParams(win?.location?.search ?? '').get('look') ?? 'comic', mapLook = MAP_LOOKS[lookName] ?? MAP_LOOKS.comic; // ?look= while the art direction is being chosen
+  renderer.setClearColor?.(mapLook.sea, 1);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 4, 2600);
   scene.add(new THREE.AmbientLight(0xffffff, 3.7));
   const sun = new THREE.DirectionalLight(0xffffff, 4.7);
@@ -118,20 +89,23 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   sun.shadow.bias = -0.0006;
   scene.add(sun);
 
-  // Sea and land.
-  const seaMaterial = own(library.toon(0x3b9fe2));
-  const sea = new THREE.Mesh(own(new THREE.PlaneGeometry(1400, 900).rotateX(-Math.PI / 2)), seaMaterial);
+  // Sea and land share one painting, so nothing can drift apart.
+  const art = own(new THREE.CanvasTexture(paintWorld(doc, planet, lookName)));
+  art.colorSpace = THREE.SRGBColorSpace;
+  art.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
+  const seaMaterial = own(library.toon(0xffffff));
+  seaMaterial.map = art;
+  const sea = new THREE.Mesh(own(new THREE.PlaneGeometry(360, 180).rotateX(-Math.PI / 2)), seaMaterial);
   sea.receiveShadow = true;
   scene.add(sea);
-  const biomeMap = own(new THREE.CanvasTexture(biomeTexture(doc, planet)));
-  biomeMap.colorSpace = THREE.SRGBColorSpace;
-  biomeMap.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
+  const beyond = new THREE.Mesh(own(new THREE.PlaneGeometry(1800, 1000).rotateX(-Math.PI / 2).translate(0, -0.2, 0)), own(new THREE.MeshBasicMaterial({ color: mapLook.sea })));
+  scene.add(beyond);
   const blank = new Uint8Array(TEX_W * TEX_H * 4);
   const maskTexture = own(new THREE.DataTexture(blank, TEX_W, TEX_H, THREE.RGBAFormat));
   Object.assign(maskTexture, { magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter, needsUpdate: true });
   const glow = { regionMask: { value: maskTexture }, regionOn: { value: 0 } };
   const landMaterial = own(library.toon(0xffffff));
-  landMaterial.map = biomeMap;
+  landMaterial.map = art;
   const toonCompile = landMaterial.onBeforeCompile;
   landMaterial.onBeforeCompile = (shader, r) => {
     toonCompile(shader, r);
@@ -151,7 +125,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const land = new THREE.Mesh(landGeometry, landMaterial);
   land.receiveShadow = land.castShadow = true;
   scene.add(land);
-  scene.add(new THREE.Mesh(own(coastInk(THREE, 0.3)), own(new THREE.MeshBasicMaterial({ color: 0x14102a, side: THREE.DoubleSide }))));
+  scene.add(new THREE.Mesh(own(coastInk(THREE, 0.26)), own(new THREE.MeshBasicMaterial({ color: 0x14102a, side: THREE.DoubleSide }))));
 
   // The menu planet's own models, stood on the flat world.
   const painted = own(library.toon(0xffffff));
@@ -161,17 +135,20 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const inked = mesh => { if (!hulls.has(mesh.geometry)) hulls.set(mesh.geometry, own(smoothHullGeometry(THREE, mesh.geometry))); const hull = new THREE.Mesh(hulls.get(mesh.geometry), library.ink.solid); hull.visible = false; closeInk.push(hull); mesh.add(hull); return mesh; };
   const shapes = new Map();
   const shaped = (key, designs, make) => { if (!shapes.has(key)) shapes.set(key, Array.from({ length: designs }, () => own(make()))); return shapes.get(key)[Math.floor(random() * designs)]; };
-  const stand = (geometry, u, lat, scale, ink = false) => { // ink only on the big landmarks: on small models it would swallow the shape
+  const closeUp = new THREE.Group(); // towns, villages and small things only appear near the ground: from the whole world they are speckle
+  closeUp.visible = false;
+  scene.add(closeUp);
+  const stand = (geometry, u, lat, scale, ink = false, parent = closeUp) => { // ink only on the big landmarks: on small models it would swallow the shape
     const mesh = new THREE.Mesh(geometry, painted);
     if (ink) inked(mesh);
     mesh.position.set(atlasX(u), PLINTH, atlasZ(lat));
     mesh.rotation.y = random() * Math.PI * 2;
     mesh.scale.setScalar(scale);
     mesh.castShadow = true;
-    scene.add(mesh);
+    parent.add(mesh);
     return mesh;
   };
-  for (const c of planet.cities) stand(shaped('city:' + c.culture, 2, () => makeCity(THREE, random, c.tint, c.culture)), c.u, c.lat, SCALE.city * (c.tier ?? 1), true);
+  for (const c of planet.cities) stand(shaped('city:' + c.culture, 2, () => makeCity(THREE, random, c.tint, c.culture)), c.u, c.lat, SCALE.city * (c.tier ?? 1) * 1.25, true, scene);
   for (const c of planet.towns) stand(shaped('town:' + c.culture, 2, () => makeTown(THREE, random, c.culture)), c.u, c.lat, SCALE.town);
   for (const c of planet.villages) stand(shaped('village:' + c.culture, 2, () => makeVillage(THREE, random, c.culture)), c.u, c.lat, SCALE.village);
   const portShape = own(makePort(THREE));
@@ -181,10 +158,10 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const mill = makeMill(THREE, 'windmill');
   own(mill.mast); own(mill.blades);
   for (const c of planet.mills) { const m = stand(mill.mast, c.u, c.lat, SCALE.mill), b = new THREE.Mesh(mill.blades, painted); b.position.y = mill.hub; m.add(b); }
-  planet.volcanoes.forEach((v, k) => stand(own(makeVolcano(THREE, random)), v.u, v.lat, SCALE.volcano * (k % 2 ? 0.8 : 1), true));
+  planet.volcanoes.forEach((v, k) => stand(own(makeVolcano(THREE, random)), v.u, v.lat, SCALE.volcano * (k % 2 ? 0.8 : 1), true, scene));
 
   const instanced = [];
-  const scatter = (geometry, list, sizeOf) => {
+  const scatter = (geometry, list, sizeOf, parent = scene) => {
     if (!list.length) return;
     const mesh = new THREE.InstancedMesh(geometry, painted, list.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color(), y = new THREE.Vector3(0, 1, 0);
     list.forEach((item, i) => {
@@ -193,10 +170,12 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
       mesh.setColorAt(i, c.setRGB(shade, shade, shade));
     });
     mesh.castShadow = true;
-    scene.add(mesh);
+    parent.add(mesh);
     instanced.push(mesh);
   };
-  for (const kind of PLANT_KINDS) scatter(own(makePlant(THREE, kind)), planet.plants.filter((plant, i) => plant.kind === kind && i % 3 === 0), () => SCALE.plant * (0.8 + random() * 0.5));
+  // Plants stand in groves: a seed tree and its neighbours, shown close up, over the painted forests.
+  const grove = (plant, i) => Math.sin(plant.u * 460) * Math.sin(plant.lat * 2.3) > 0.1 && i % 2 === 0;
+  for (const kind of PLANT_KINDS) scatter(own(makePlant(THREE, kind)), planet.plants.filter((plant, i) => plant.kind === kind && grove(plant, i)), () => SCALE.plant * (0.9 + random() * 0.5), closeUp);
   // A few long ridgelines: massifs chained along each range, tallest in the middle, tapering to foothills.
   const ridge = [[], [], []];
   for (const range of RANGES) {
@@ -307,8 +286,8 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
       if (id) { maskTexture.image.data = regions.byId[id].texture; maskTexture.needsUpdate = true; }
       dirty = true; wake();
     },
-    openRegion(id) { view = id; for (const h of closeInk) h.visible = true; return moveTo(regionStop(id)); },
-    openWorld() { view = 'world'; for (const h of closeInk) h.visible = false; return moveTo(worldStop()); },
+    openRegion(id) { view = id; closeUp.visible = true; for (const h of closeInk) h.visible = true; return moveTo(regionStop(id)); },
+    openWorld() { view = 'world'; closeUp.visible = false; for (const h of closeInk) h.visible = false; return moveTo(worldStop()); },
     dispose() {
       disposed = true;
       win?.removeEventListener?.('resize', onResize);
