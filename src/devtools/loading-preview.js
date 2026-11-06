@@ -14,6 +14,7 @@ const DISPLAY_FONTS = {
   'Paytone One': () => import('@fontsource/paytone-one/latin-400.css'),
   'Lilita One': () => import('@fontsource/lilita-one/latin-400.css'),
   Orbitron: () => import('@fontsource/orbitron/latin-800.css'),
+  'Three-D (AidenFont, CC BY)': async () => { await import('../ui/fonts/three-d/three-d.css'); await document.fonts.load("48px 'Three-D'"); },
 };
 const BODY_FONTS = {
   Nunito: () => import('@fontsource/nunito/latin-800.css'),
@@ -42,7 +43,7 @@ export function mountLoadingPreview(doc, app) {
     for (const name of Object.keys(fonts)) select.append(new Option(name, name));
     select.addEventListener('change', async () => {
       await fonts[select.value]();
-      doc.documentElement.style.setProperty(variable, `'${select.value}', 'Arial Black', sans-serif`);
+      doc.documentElement.style.setProperty(variable, `'${select.value.replace(/ \(.*$/, '')}', 'Arial Black', sans-serif`);
     });
     wrap.append(select);
     box.append(wrap);
