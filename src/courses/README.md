@@ -124,6 +124,16 @@ Validated transport tube records (`validCourseTube`) define 3D enclosed paths co
 
 Simulation checks ball proximity to tube entrances during active play ticks. When captured, the ball traverses along the 3D path at constant speed without friction or gravity, emitting hazard enter events. Upon reaching the end of the tube path, the ball exits at the designated exit coordinate with the assigned 3D `exitVelocity`, flinging through the air into its next trajectory arc, with re-entry cooldown to prevent immediate recapture. The Three.js renderer builds 3D `THREE.TubeGeometry` using Catmull-Rom spline curves with toon materials and entry/exit collar indicators. The par solver (SV1) proves robust routes within par using transport tubes. Existing courses omit tubes and remain 100% bit-identical.
 
+## K1d difficulty bands and starter maps
+
+Course difficulty is classified into standardized difficulty bands (`DIFFICULTY_BANDS` in `src/courses/difficulty.js`), evaluated using SV1 par-route solver measurements:
+- **Tier 1: Beginner** (Rating $\le 10.0$ on 6-putt scale): Forgiving fairways, generous margins, predominantly single-stroke routes within par (Switchback Garden, Slime Springs, Frost Hollow, Dune Serpent).
+- **Tier 2: Intermediate** ($10.0 < \text{Rating} \le 14.0$): Balanced challenge, moderate hazards, tactical multi-stroke routes or tighter margins (Cyclone Ring, Grand Finale).
+- **Tier 3: Advanced** ($14.0 < \text{Rating} \le 18.0$): Elevated 3D tiers, curved banking ramps, and floating island gaps requiring precise multi-stroke play.
+- **Tier 4: Expert** ($\text{Rating} > 18.0$): Intricate multi-tier drops, transport tube flings, and high-precision speed control across void gaps.
+
+`getDifficultyBand(rating, puttCount)` normalizes non-6-putt maps to the standard 6-putt scale and returns the frozen band metadata. `tools/cli/main.mjs rank --routes <file>` reports the difficulty rating, stroke count, and difficulty band for each starter course. All 36 starter putts have independently verified robust routes within par. Optional hole-in-one shortcuts exist on single-shot lines, while multi-stroke routes satisfy par requirements without requiring a hole-in-one.
+
 
 `node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
 with development chambers appended. Use `--courses` with the existing CLI
