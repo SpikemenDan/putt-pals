@@ -104,7 +104,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.deepEqual(lbase.traffic, { planes: 3, boats: 9, satellites: 2 });
     assert.ok(changed('atmosphere', 0.1).glow < lbase.glow && changed('atmosphere', 1).glow > lbase.glow, 'loading.atmosphere sets the air glow');
     assert.ok(changed('atmosphereHeight', 0.8).stats.airTop > lbase.stats.airTop && Math.abs(lbase.stats.airTop - 162) < 1e-9, 'loading.atmosphereHeight lifts the top of the air');
-    assert.ok(changed('citySize', 3).stats.tallestCity > lbase.stats.tallestCity * 1.5 && lbase.stats.tallestCity > 8, 'loading.citySize makes the skylines taller');
+    assert.ok(changed('citySize', 3).stats.tallestCity > lbase.stats.tallestCity * 1.5 && lbase.stats.tallestCity > 5 && lbase.stats.tallestCity < 10, 'loading.citySize makes the skylines taller; by default the tallest stands clear of the ground but below the big mountains');
     assert.ok(Math.abs(changed('outlineWidth', 3).stats.ink - 3) < 1e-9 && Math.abs(lbase.stats.ink - 1.6) < 1e-9, 'loading.outlineWidth sets the ink width in pixels at 1280 wide');
     assert.ok(Math.abs(changed('lunaSize', 1).stats.lunaPixels * 2.6 - lbase.stats.lunaPixels) < 1e-6 && changed('lunaSize', 1).stats.lunaPixels > 5 && changed('lunaSize', 1).stats.lunaPixels < 16, 'loading.lunaSize scales Luna, and 1 is its true size at the real distance');
     assert.equal(changed('planes', 2).traffic.planes, 2, 'loading.planes sets the number of planes');

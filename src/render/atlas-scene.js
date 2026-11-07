@@ -18,7 +18,7 @@ import { REFERENCE_COAST, REFERENCE_LAKES } from '../shared/gaia-reference-regio
 const PLINTH = 1.1, FOV = 26, TILT_WORLD = 22, TILT_REGION = 38, MOVE_SECONDS = 1.15;
 const WORLD_TOP = 80, WORLD_BOTTOM = -72;
 const COAST_RINGS = [...REFERENCE_COAST, ...REFERENCE_LAKES]; // a lake is a ring inside a land ring, so it becomes a hole
-const SCALE = Object.freeze({ city: 0.36, town: 0.36, village: 0.32, port: 0.34, lighthouse: 0.34, mill: 0.36, plant: 0.5, volcano: 4.4 });
+const SCALE = Object.freeze({ cityHeight: 2.7, town: 0.24, village: 0.32, port: 0.34, lighthouse: 0.34, mill: 0.36, plant: 0.5, volcano: 4.4 });
 
 export const atlasX = u => (u - 0.5) * 360;
 export const atlasZ = lat => -lat;
@@ -149,7 +149,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
     parent.add(mesh);
     return mesh;
   };
-  for (const c of planet.cities) stand(shaped('city:' + c.culture, 2, () => makeCity(THREE, random, c.tint, c.culture)), c.u, c.lat, SCALE.city * (c.tier ?? 1) * 1.25, true, scene);
+  for (const c of planet.cities) { const shape = shaped('city:' + c.culture, 2, () => makeCity(THREE, random, c.tint, c.culture)); stand(shape, c.u, c.lat, SCALE.cityHeight * (c.tier ?? 1) / (shape.userData.top || 1), true, scene); } // every skyline below the volcanoes
   for (const c of planet.towns) stand(shaped('town:' + c.culture, 2, () => makeTown(THREE, random, c.culture)), c.u, c.lat, SCALE.town);
   for (const c of planet.villages) stand(shaped('village:' + c.culture, 2, () => makeVillage(THREE, random, c.culture)), c.u, c.lat, SCALE.village);
   const portShape = own(makePort(THREE));

@@ -23,19 +23,19 @@ Cultures follow the land (`cultureAt` in `src/shared/gaia-map.js`): canal towns 
 
 ## Sizes on the globe
 
-The planet's radius is 100 units. On a 1280-wide screen one unit is about 6 pixels at the horizon. Everything is exaggerated so it can be seen, but keeps a sensible order. `loading.citySize` scales the buildings together. The numbers are in `SIZES` in `src/render/planet-scene.js`, and `tests/ui.test.cjs` checks the order from the real models.
+The planet's radius is 100 units. On a 1280-wide screen one unit is about 6 pixels at the horizon. Everything is exaggerated so it can be seen, but keeps a sensible order: buildings below the mountains, but not dwarfed by them. In the level select the same order holds, with cities about 2 to 3.4 tall beside volcanoes up to 4.4. `loading.citySize` scales the buildings together. The numbers are in `SIZES` in `src/render/planet-scene.js`, and `tests/ui.test.cjs` checks the order from the real models.
 
 | Object | Rough height or length | Height above ground |
 | --- | --- | --- |
 | Tree | 1 tall | ground |
 | House, hut | 1 to 2 tall | ground |
 | Windmill, turbine | 3 to 5 tall | ground |
-| Lighthouse | 6 tall | ground |
+| Lighthouse | 5 tall | ground |
 | Ship | 3 to 5 long | sea level |
 | Map flag | 3 tall | ground |
-| City | 7 to 13 tall by rank, 7 to 12 across | ground |
-| Mountain | 4 to 13 tall | ground |
-| Volcano | 7 to 9 tall, 13 to 18 across | ground |
+| City | 3.4 to 5.7 tall by rank, the same whatever the building style, so every skyline stays below the mountains | ground |
+| Mountain | 5 to 13 tall (median 7), never wider at the foot than its land | ground |
+| Volcano | up to 9 tall, sized to stay on its island | ground |
 | Balloon | 3 tall | 11 |
 | Cloud | 8 to 20 wide | 15 to 21, thin ones 31 to 36 |
 | Plane | 5 long | 24 to 27 |

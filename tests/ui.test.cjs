@@ -426,6 +426,7 @@ function fakeClock() {
     // The size audit, measured from the real models: a sensible order from trees up.
     const sz = a.scene.sizes;
     assert.ok(sz.tree < sz.house * 1.3 && sz.house < sz.mill && sz.mill < sz.lighthouse + 1 && sz.lighthouse < sz.city && sz.city <= sz.peak, `trees < houses < mills < lighthouses < cities <= mountains (${JSON.stringify(sz)})`);
+    assert.ok(sz.city < sz.peakMedian && sz.city > sz.peakMedian * 0.6, `the tallest city stands below a typical mountain, but not far below (${sz.city.toFixed(1)} against ${sz.peakMedian.toFixed(1)})`);
     assert.ok(sz.ship < sz.city && sz.plane < 7 && sz.balloon < 5 && sz.city < 16, 'nothing dwarfs the planet');
     a.scene.dispose();
     const fresh = make(createDisplay({ loading: { spinSpeed: 10 } }));

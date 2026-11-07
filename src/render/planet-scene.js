@@ -25,9 +25,10 @@ const FOV = 32, SUN = [-0.55, 0.62, 0.56], AXIS_LEAN = 30 * Math.PI / 180;
 const CLOUDS = 210;
 /**
  * The size audit: one scale per kind of object, so the world keeps a sensible order from trees up to mountains (docs/GAIA_MAP.md has the
- * resulting sizes, tests/ui.test.cjs checks the order). Buildings also follow `loading.citySize`.
+ * resulting sizes, tests/ui.test.cjs checks the order). Buildings also follow `loading.citySize`. `cityHeight` is the height of a
+ * middle-ranked city in units whatever its building style, so every skyline stays below the mountains (`peakBase` to `peakBase + peakRise`).
  */
-export const SIZES = Object.freeze({ city: 0.52, town: 0.44, village: 0.56, port: 0.5, lighthouse: 0.5, mill: 0.55, flag: 0.5, volcano: [9, 7, 8, 6.5], plant: 0.5, peakBase: 3.5, peakRise: 9.5, plane: 0.72, balloon: 0.62, satellite: 0.62, ship: { cargo: 0.6, ferry: 0.58, tanker: 0.64, trawler: 0.5, yacht: 0.46 } });
+export const SIZES = Object.freeze({ cityHeight: 4.6, town: 0.4, village: 0.56, port: 0.5, lighthouse: 0.4, mill: 0.55, flag: 0.5, volcano: [9, 7, 8, 6.5], plant: 0.5, peakBase: 5.5, peakRise: 10, plane: 0.72, balloon: 0.62, satellite: 0.62, ship: { cargo: 0.6, ferry: 0.58, tanker: 0.64, trawler: 0.5, yacht: 0.46 } });
 const SHOOTING_GAP = [35, 110]; // seconds between shooting stars
 
 const count = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
@@ -132,7 +133,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     if (!shapeCache.has(key)) shapeCache.set(key, Array.from({ length: designs }, () => own(make())));
     return pick(shapeCache.get(key), Math.floor(random() * designs));
   };
-  const cities = planet.cities.map(c => settle(c, variant('city:' + c.culture, 3, () => makeCity(THREE, random, c.tint, c.culture)), SIZES.city * (c.tier ?? 1)));
+  const cities = planet.cities.map(c => { const shape = variant('city:' + c.culture, 3, () => makeCity(THREE, random, c.tint, c.culture)); return settle(c, shape, SIZES.cityHeight * (c.tier ?? 1) / (shape.userData.top || 1)); });
   const towns = planet.towns.map(c => settle(c, variant('town:' + c.culture, 3, () => makeTown(THREE, random, c.culture)), SIZES.town));
   const villages = planet.villages.map(c => settle(c, variant('village:' + c.culture, 2, () => makeVillage(THREE, random, c.culture)), SIZES.village));
   const portShapes = [0, 1].map(k => own(makePort(THREE, k)));
@@ -174,7 +175,9 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     const list = planet.plants.filter(plant => plant.kind === kind);
     if (list.length) scatter(own(makePlant(THREE, kind)), list, () => SIZES.plant * (0.8 + random() * 0.5));
   }
-  [0, 1, 2].forEach(k => scatter(own(makePeak(THREE, random, k)), planet.peaks.filter((_, i) => i % 3 === k), peak => Math.min(SIZES.peakBase + peak.height * SIZES.peakRise * (0.85 + random() * 0.15), fits(peak, MODEL_REACH.peak))));
+  const peakHeights = []; // as placed, for the size audit
+  [0, 1, 2].forEach(k => scatter(own(makePeak(THREE, random, k)), planet.peaks.filter((_, i) => i % 3 === k), peak => { const size = Math.min(SIZES.peakBase + peak.height * SIZES.peakRise * (0.85 + random() * 0.15), fits(peak, MODEL_REACH.peak)); peakHeights.push(size); return size; }));
+  peakHeights.sort((a, b) => a - b);
 
   // ---- Mills on open ground: classic windmills in farm and marsh country, wind turbines elsewhere. Both turn by themselves.
   const millKinds = { windmill: makeMill(THREE, 'windmill'), turbine: makeMill(THREE, 'turbine') };
@@ -523,7 +526,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     get sizes() {
       scene.updateMatrixWorld(true);
       const measure = (mesh, axis = 'y') => { mesh.geometry.computeBoundingBox(); const b = mesh.geometry.boundingBox; return (b.max[axis] - Math.max(b.min[axis], axis === 'y' ? 0 : -1e9)) * mesh.getWorldScale(new THREE.Vector3()).x; };
-      return { house: measure(villages[0].mesh), city: Math.max(...cities.map(c => measure(c.mesh))), town: measure(towns[0].mesh), mill: measure(turbines[0].mesh), lighthouse: measure(lighthouses[0].mesh), flag: measure(flags[0].mesh), volcano: measure(volcanoes[0].mesh), ship: measure(ships[0].body, 'x'), plane: measure(planes[0].body, 'x'), balloon: measure(balloons[0].body), tree: 2 * SIZES.plant, peak: SIZES.peakBase + SIZES.peakRise };
+      return { house: measure(villages[0].mesh), city: Math.max(...cities.map(c => measure(c.mesh))), town: measure(towns[0].mesh), mill: measure(turbines[0].mesh), lighthouse: measure(lighthouses[0].mesh), flag: measure(flags[0].mesh), volcano: measure(volcanoes[0].mesh), ship: measure(ships[0].body, 'x'), plane: measure(planes[0].body, 'x'), balloon: measure(balloons[0].body), tree: 2 * SIZES.plant, peak: SIZES.peakBase + SIZES.peakRise, peakMedian: peakHeights[Math.floor(peakHeights.length / 2)] ?? 0 };
     },
     /** Camera position: it never moves during a load. */
     get cameraPosition() { return camera.position.toArray(); },
