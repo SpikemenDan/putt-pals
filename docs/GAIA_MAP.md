@@ -1,30 +1,25 @@
 # Map of Gaia
 
-Gaia is an invented planet built on the logic of real Earth. Regions and ranges live in `src/shared/gaia-map.js`; coastlines live in `src/shared/gaia-coast.js` as closed paths you can edit by hand. The globe fills those paths and the atlas strokes them, so one edit moves both. Each map has a small flag on the globe. The level select is this world laid flat in 3D (`src/render/atlas-scene.js`, `src/ui/WorldSelect.jsx`): `?map` on the dev server goes straight to it. `REGION_COURSES` places the 22 real courses in the regions, and picking one casts the normal vote. Without WebGL the plain course list shows.
+Gaia is the owner's own world, made in Azgaar's Fantasy Map Generator and imported with `node tools/gaia/import-azgaar.mjs "<file.map>"` into `src/shared/gaia-reference.js` (generated; edit the map in Azgaar and import again). The map must cover the whole globe, so its x is longitude and its y latitude. Everything reads that one file:
 
-## How it follows Earth
+- **Flat map:** `src/render/reference-map.js` paints it in the comic look: smoothed biome areas with clean edges, an inked coast and lakes, rivers that widen toward the sea, high ground as grey rock and snow with a darker-grey edge, and basalt round the Emberfall volcanoes. `?art` on the dev server shows it on its own, with the regions and course pins (Pins toggle). Name tags are laid out so none collide (`src/render/map-labels.js`).
+- **Globe:** `src/render/planet-data.js` builds the main-menu planet from the same coast, lakes, heights, biomes and rivers, in the flat map's colours. Cities are the map's capitals (three great, six large, the rest smaller); towns and villages are its other towns, largest first, kept off ice, peaks, lava, desert and marsh. Plants follow the biomes.
+- **Level select:** `src/render/atlas-scene.js` lays the flat map on the reference coast in 3D, with the globe's towns, plants and volcanoes on it (`src/ui/WorldSelect.jsx`); `?map` goes straight to it. Without WebGL the plain course list shows.
 
-- **Land:** about a third of the surface, with most of it north of the equator. Norvane and Sudara lie west, Aurelia and Kesh east, Ostrel to the south-east, ice at both poles.
-- **Mountains:** long chains down western coasts, and the highest range where two blocks of land meet.
-- **Rain:** worked out from the winds, not painted. Trade winds blow west in the tropics and westerlies blow east in the mid-latitudes, losing water over land and over mountains. That gives wet windward coasts, dry interiors and rain shadows.
-- **Biomes:** rainforest on the equator, then savanna, then hot deserts near 25 degrees, Mediterranean coasts near 35, temperate forest and grassland in the mid-latitudes, boreal forest, tundra and ice.
-- **Volcanoes:** an island arc in the open sea.
-- **Wetlands:** where the big river of Norvane reaches the gulf.
-- **People:** mild lowlands near coasts and rivers, far more in the north, and very few in desert, tundra, ice and peaks. In dry lands people follow the rivers. A few giant cities, more mid-sized ones and many small ones. Coastal cities have harbours, and towns gather around cities.
-- **Cultures:** each area builds in its own style, loosely inspired by real traditions: old-world spires, Mediterranean white and terracotta, northern onion domes, North American towers, Latin American colour, desert domes and minarets, pink-stone palaces, Central Asian turquoise domes, East Asian pagodas and canal towns.
+## Regions and courses
 
-## Regions and maps
+Each region's caption point and course sites are hand-placed on the map in `src/shared/gaia-reference-regions.js` (map pixels); `src/shared/gaia-map.js` turns them into globe positions. `REGION_COURSES` places the 22 real courses, one site each, and picking one casts the normal vote. Site names are proposals.
 
-These are proposed names and places. None of them is a playable course yet.
-
-| Region | Biome | Where | Maps |
+| Region | Biome | Where | Sites |
 | --- | --- | --- | --- |
-| Frostreach | Polar and alpine | The great range of Aurelia | Frostbite Falls, Glacier Glide, Aurora Ridge, Summit Drift |
-| Evergreen Vale | Temperate forest | Western Aurelia, facing the westerlies | Maple Hollow, Mossy Mill, Fernwood Bend, Bramble Bridge |
-| Sunspire Sands | Desert | Northern Kesh, under the dry belt | Dune Crossing, Mirage Mesa, Oasis Run, Canyon Echo |
-| Palm Reef | Tropical | Equatorial Sudara | Coral Cove, Lagoon Loop, Jungle Vines, Mango Falls |
-| Mirewater | Wetlands | The gulf delta of Norvane | Lily Pad Lane, Mangrove Maze, Foggy Bayou, Reed Rapids |
-| Emberfall Isles | Volcanic | Island arc east of Aurelia | Cinder Steps, Magma Run, Ashen Caldera, Obsidian Edge |
+| Frostreach | Polar and alpine | Snow and rock of the great eastern range | Frostbite Falls, Glacier Glide, Aurora Ridge, Summit Drift |
+| Evergreen Vale | Temperate forest | The forest belt across the north of the western continent | Maple Hollow, Mossy Mill, Fernwood Bend, Bramble Bridge |
+| Sunspire Sands | Desert | The dry savanna heart of the western continent | Dune Crossing, Mirage Mesa, Oasis Run |
+| Palm Reef | Tropical | The forested island in the central sea | Coral Cove, Lagoon Loop, Jungle Vines, Mango Falls |
+| Mirewater | Wetlands | The marsh peninsula at the far east | Lily Pad Lane, Mangrove Maze, Foggy Bayou, Reed Rapids |
+| Emberfall Isles | Volcanic | The southern island chain, three volcanoes | Cinder Steps, Magma Run, Ashen Caldera |
+
+Cultures follow the land (`cultureAt` in `src/shared/gaia-map.js`): canal towns in the marshes, northern towns in the cold, desert and savanna styles in the dry lands, the old world and the Mediterranean in the west, carnival colour on the middle islands, and palaces, the silk road and eastern towns in the east.
 
 ## Sizes on the globe
 

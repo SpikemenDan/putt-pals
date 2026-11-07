@@ -1,22 +1,23 @@
 /**
  * Gaia unfolded (VIS-M1): the level-select world as a real 3D scene, the planet from the main menu laid flat and viewed from above with a
- * slight tilt. Land is the same closed coast paths as the globe, extruded into a low plinth with an ink contour; biome colours are averaged
- * from the globe's own land colours; cities, towns, villages, plants, peaks and volcanoes are the same models, scaled for a flat view.
+ * slight tilt. Land is the reference world's coast (src/shared/gaia-reference-regions.js), extruded into a low plinth with an ink contour,
+ * lakes cut out; its top is the flat master map (src/render/reference-map.js), so the level select looks like the approved map. Cities,
+ * towns, villages, plants and volcanoes are the globe's own models, scaled for a flat view; mountains are the painted rock and snow.
  *
  * The camera has two stops, world and region, and moves between them smoothly. `hit` and the highlight both read the region footprints in
  * planet-data.js, so what you can click is exactly what lights up. Presentation only: no simulation, no React. `THREE` is injected.
  */
 
-import { MAP_LOOKS, paintWorld } from './atlas-art.js';
 import { createMaterialLibrary } from './materials.js';
 import { sizeInk, smoothHullGeometry } from './outline.js';
 import { TEX_H, TEX_W, gaiaPlanet, gaiaRegions } from './planet-data.js';
-import { makeCity, makeLighthouse, makeMill, makePeak, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
-import { RANGES } from '../shared/gaia-map.js';
-import { COAST_RINGS } from '../shared/gaia-coast.js';
+import { REFERENCE_LOOKS, paintReferenceMap } from './reference-map.js';
+import { makeCity, makeLighthouse, makeMill, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
+import { REFERENCE_COAST, REFERENCE_LAKES } from '../shared/gaia-reference-regions.js';
 
 const PLINTH = 1.1, FOV = 26, TILT_WORLD = 22, TILT_REGION = 38, MOVE_SECONDS = 1.15;
-const WORLD_TOP = 82, WORLD_BOTTOM = -62;
+const WORLD_TOP = 80, WORLD_BOTTOM = -72;
+const COAST_RINGS = [...REFERENCE_COAST, ...REFERENCE_LAKES]; // a lake is a ring inside a land ring, so it becomes a hole
 const SCALE = Object.freeze({ city: 0.36, town: 0.36, village: 0.32, port: 0.34, lighthouse: 0.34, mill: 0.36, plant: 0.5, volcano: 4.4 });
 
 export const atlasX = u => (u - 0.5) * 360;
@@ -77,7 +78,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const library = createMaterialLibrary({ THREE, createCanvas: () => doc.createElement('canvas'), random, maxAnisotropy: renderer.capabilities?.getMaxAnisotropy?.() ?? 1 });
   const owned = new Set(), own = r => { owned.add(r); return r; };
   if (renderer.shadowMap) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
-  const lookName = new URLSearchParams(win?.location?.search ?? '').get('look') ?? 'comic', mapLook = MAP_LOOKS[lookName] ?? MAP_LOOKS.comic; // ?look= while the art direction is being chosen
+  const mapLook = REFERENCE_LOOKS.comic;
   renderer.setClearColor?.(mapLook.sea, 1);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 4, 2600);
   scene.add(new THREE.AmbientLight(0xffffff, 3.7));
@@ -90,7 +91,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   scene.add(sun);
 
   // Sea and land share one painting, so nothing can drift apart.
-  const art = own(new THREE.CanvasTexture(paintWorld(doc, planet, lookName)));
+  const art = own(new THREE.CanvasTexture(paintReferenceMap(doc, 'comic').canvas));
   art.colorSpace = THREE.SRGBColorSpace;
   art.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
   const seaMaterial = own(library.toon(0xffffff));
@@ -176,14 +177,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   // Plants stand in groves: a seed tree and its neighbours, shown close up, over the painted forests.
   const grove = (plant, i) => Math.sin(plant.u * 460) * Math.sin(plant.lat * 2.3) > 0.1 && i % 2 === 0;
   for (const kind of PLANT_KINDS) scatter(own(makePlant(THREE, kind)), planet.plants.filter((plant, i) => plant.kind === kind && grove(plant, i)), () => SCALE.plant * (0.9 + random() * 0.5), closeUp);
-  // A few long ridgelines: massifs chained along each range, tallest in the middle, tapering to foothills.
-  const ridge = [[], [], []];
-  for (const range of RANGES) {
-    const pts = [];
-    for (let i = 0; i + 1 < range.line.length; i++) { const [au, al] = range.line[i], [bu, bl] = range.line[i + 1], n = Math.max(2, Math.round(Math.hypot((bu - au) * 360, bl - al) / 2.9)); for (let k = 0; k < n; k++) pts.push([au + (bu - au) * k / n, al + (bl - al) * k / n]); }
-    pts.forEach(([u, lat], k) => { const swell = Math.sin((k + 0.5) / pts.length * Math.PI); ridge[k % 3].push({ u: u + (random() - 0.5) * 0.004, lat: lat + (random() - 0.5) * 1.2, height: range.height * (0.45 + 0.55 * swell) * (0.8 + random() * 0.4), wide: 0.95 }); });
-  }
-  ridge.forEach((list, k) => scatter(own(makePeak(THREE, random, k)), list, peak => 2.2 + peak.height * 6.4));
+  // No summit models: the map paints high ground as grey rock and snow, as the owner chose for the flat map.
 
   // Camera: the two stops and the move between them.
   const eye = new THREE.Vector3(), look = new THREE.Vector3(), fromEye = new THREE.Vector3(), fromLook = new THREE.Vector3(), toEye = new THREE.Vector3(), toLook = new THREE.Vector3();

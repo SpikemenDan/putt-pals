@@ -10,8 +10,19 @@
  * - wetland: the long marsh peninsula at the eastern tip;
  * - volcanic: the southern island chain.
  *
- * Flat-map only for now: the globe and the 3D level select still use gaia-map.js until the owner approves the move. Plain data.
+ * GAIA_REGIONS (src/shared/gaia-map.js) takes its positions from here, so the flat map, the globe and the 3D level select agree. The
+ * reference map spans the whole globe, so `toGlobe` turns its pixels into the `u` (fraction of a turn east) and `lat` (degrees north) that
+ * the globe and atlas use. Plain data.
  */
+
+import { LAKES, LAND, MAP_HEIGHT, MAP_WIDTH } from './gaia-reference.js';
+
+/** Reference map pixels to [u, lat]. */
+export const toGlobe = ([x, y]) => [x / MAP_WIDTH, 90 - y / MAP_HEIGHT * 180];
+
+const ringsOnGlobe = rings => Object.freeze(rings.map(r => Object.freeze(Array.from({ length: r.length / 2 }, (_, k) => Object.freeze(toGlobe([r[k * 2] / 10, r[k * 2 + 1] / 10]))))));
+/** The reference coast and lake shores as closed rings of [u, lat]: a lake is a ring inside a land ring. */
+export const REFERENCE_COAST = ringsOnGlobe(LAND), REFERENCE_LAKES = ringsOnGlobe(LAKES);
 
 export const REFERENCE_REGIONS = Object.freeze({
   polar: { label: [1150, 168], sites: [[1100, 305], [1095, 210], [1200, 250], [1190, 296]] },
@@ -21,3 +32,6 @@ export const REFERENCE_REGIONS = Object.freeze({
   wetland: { label: [1410, 268], sites: [[1360, 306], [1405, 300], [1440, 336], [1450, 366]] },
   volcanic: { label: [810, 660], sites: [[735, 590], [830, 598], [890, 611]] },
 });
+
+/** Volcanoes of the Emberfall Isles, in map pixels: one beside each volcanic site, on solid land. Each stands in a field of basalt. */
+export const VOLCANO_SITES = Object.freeze([[749, 580], [816, 606], [904, 601]]);

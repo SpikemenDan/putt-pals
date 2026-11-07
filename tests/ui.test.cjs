@@ -183,9 +183,9 @@ function fakeClock() {
   await scenario('flat map name tags never collide, with the real courses and a crowded cluster', async () => {
     const { layoutMapLabels, boxesOverlap } = await import('../src/render/map-labels.js'), { REFERENCE_REGIONS } = await import('../src/shared/gaia-reference-regions.js');
     const { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js'), { createCourseData } = await import('../src/courses/index.js');
-    const names = createCourseData().definitions.map(c => c.name), k = 4096 / 1536, size = (text, px) => ({ w: text.length * px * 0.72 + px, h: px * 1.5 }); // wider than Titan One, so the test is the harder case
-    const regions = GAIA_REGIONS.map(r => ({ x: REFERENCE_REGIONS[r.id].label[0] * k, y: REFERENCE_REGIONS[r.id].label[1] * k, ...size(r.name, 54) }));
-    const pins = GAIA_REGIONS.flatMap(r => REGION_COURSES[r.id].map((index, n) => ({ x: REFERENCE_REGIONS[r.id].sites[n][0] * k, y: REFERENCE_REGIONS[r.id].sites[n][1] * k, r: 35, ...size(names[index], 26) })));
+    const names = createCourseData().definitions.map(c => c.name), k = 4096 / 1536, ky = 2048 / 730, size = (text, px) => ({ w: text.length * px * 0.72 + px, h: px * 1.5 }); // wider than Titan One, so the test is the harder case
+    const regions = GAIA_REGIONS.map(r => ({ x: REFERENCE_REGIONS[r.id].label[0] * k, y: REFERENCE_REGIONS[r.id].label[1] * ky, ...size(r.name, 54) }));
+    const pins = GAIA_REGIONS.flatMap(r => REGION_COURSES[r.id].map((index, n) => ({ x: REFERENCE_REGIONS[r.id].sites[n][0] * k, y: REFERENCE_REGIONS[r.id].sites[n][1] * ky, r: 35, ...size(names[index], 26) })));
     const real = layoutMapLabels({ regions, pins, width: 4096, height: 2048, gap: 12 });
     assert.equal(real.overlaps, 0, 'no caption, pin or tag touches another on the real map');
     real.regions.forEach((r, i) => assert.ok(Math.hypot(r.x - regions[i].x, r.y - regions[i].y) < 220, 'region captions stay close to where they were placed'));
@@ -208,7 +208,7 @@ function fakeClock() {
       assert.ok(foot.byId[r.id].area > 40, `${r.name} has terrain`);
       for (const m of r.maps) assert.equal(foot.at(m.u, m.lat), r.id, `${m.name} lies inside the ${r.name} footprint`);
     }
-    assert.equal(foot.at(0.4, -30), null, 'open sea belongs to no region');
+    assert.equal(foot.at(0.02, 0), null, 'open sea belongs to no region');
     const spots = ui.spreadPins([{ x: 400, y: 300 }, { x: 410, y: 305 }, { x: 405, y: 310 }, { x: 395, y: 300 }], 1280, 720);
     spots.forEach((a, i) => spots.slice(i + 1).forEach(b => assert.ok(Math.abs(a.x - b.x) >= 170 || Math.abs(a.y - b.y) >= 60, 'pins and labels never overlap')));
     let builds = 0;
@@ -248,29 +248,17 @@ function fakeClock() {
     const models = await import('../src/render/sky-models.js');
     const THREE = await import('three');
     const { DEFAULT_DISPLAY, createDisplay } = await import('../src/shared/display.js');
-    // Gaia is built from climate: snowy poles, wet green equator, dry sandy subtropics, blue seas, with colours that blend smoothly.
-    const sc = scene.surfaceColour, wet = scene.moistureAt;
-    const white = c => c.every(q => q > 225), blue = c => c[2] > c[0] + 60 && c[2] > c[1];
-    assert.ok(white(sc(88, 0.7, 0.1, 0.5)), 'snow at the north pole');
-    assert.ok(white(sc(-80, 0.2, 0, 0.5)), 'sea ice at the south pole');
-    assert.ok(blue(sc(10, 0.3, 0, 0.5)), 'open water is blue');
-    const lush = sc(2, 0.7, 0.1, wet(2, 0.3, 0.5));
-    assert.ok(lush[1] > lush[0] + 30 && lush[1] > lush[2] + 40, 'the wet equator is green');
-    const dry = sc(25, 0.7, 0.1, wet(25, 0.8, 0.5));
-    assert.ok(dry[0] > 200 && dry[2] < 150 && dry[0] >= dry[1] - 5, 'the dry subtropics are sandy');
-    assert.ok(wet(2, 0.5, 0.5) > wet(25, 0.5, 0.5) + 0.3, 'the equator is wetter than the subtropics');
-    assert.ok(wet(10, 0.0, 0.5) > wet(10, 1.0, 0.5), 'coasts are wetter than continental interiors');
-    for (const [lat, m] of [[5, 0.5], [30, 0.4], [50, 0.6], [70, 0.5]]) { // no hard edges: a tiny change in the inputs moves the colour only a little
-      const a = sc(lat, 0.7, 0.1, m), b = sc(lat + 0.3, 0.7, 0.1, m + 0.01);
-      assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 14, `colours blend smoothly near latitude ${lat}`);
-    }
+    // Gaia is the owner's reference world: blue seas freezing toward the poles, the flat map's comic colours on land.
+    const sea = scene.seaColour, white = c => c.every(q => q > 225), blue = c => c[2] > c[0] + 60 && c[2] > c[1];
+    assert.ok(blue(sea(10, 0.3)) && blue(sea(-30, 0.1)), 'open water is blue');
+    assert.ok(white(sea(88, 0.3)) && white(sea(-86, 0.3)), 'the polar seas are ice');
     const planet = scene.buildPlanet(scene.mulberry32(5));
     assert.deepEqual(planet.rgb, scene.buildPlanet(scene.mulberry32(5)).rgb, 'same seed, same planet');
     const px = i => [planet.rgb[i * 3], planet.rgb[i * 3 + 1], planet.rgb[i * 3 + 2]];
     let polar = 0, seas = 0, greens = 0, sands = 0;
     for (let x = 0; x < scene.TEX_W; x++) { if (white(px(x))) polar++; }
     for (let i = 0; i < scene.TEX_W * scene.TEX_H; i++) { const c = px(i); if (blue(c)) seas++; else if (c[1] > c[0] + 30 && c[1] > c[2] + 40) greens++; else if (c[0] > 200 && c[2] < 150 && c[0] >= c[1] - 5) sands++; }
-    assert.ok(polar > scene.TEX_W * 0.9, 'the pole row is snow');
+    assert.ok(polar > scene.TEX_W * 0.9, 'the pole row is ice');
     const total = scene.TEX_W * scene.TEX_H;
     assert.ok(seas / total > 0.35 && seas / total < 0.8, 'mostly sea, like Earth');
     assert.ok(greens / total > 0.04 && sands / total > 0.01, 'forests and deserts both exist');
@@ -298,58 +286,55 @@ function fakeClock() {
     for (const route of routes) for (let k = 0; k < 90; k++) assert.ok(scene.landUnder(planet, scene.circlePoint(route.centre, route.rho, k / 90 * Math.PI * 2)) < scene.SEA, 'a ship never sails onto land');
     assert.ok(planet.towns.length >= 20 && planet.villages.length >= 30 && planet.ports.length >= 6 && planet.plants.length >= 5000, 'a lived-in world: towns, villages, ports and dense foliage');
     assert.ok(planet.lighthouses.length >= 1 && planet.lighthouses.length <= 2, 'one or two lighthouses');
-    // The world map: six regions of four maps; the fixed planet has each map on land in its own biome, so globe and map agree.
-    const { GAIA_REGIONS } = await import('../src/shared/gaia-map.js');
+    // The world map: six regions, one named site per course; the fixed planet has each site on land in its region's biome, so globe and map agree.
+    const { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
     assert.equal(GAIA_REGIONS.length, 6);
-    assert.ok(GAIA_REGIONS.every(r => r.maps.length === 4), 'four maps per region');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 24, 'every map has its own name');
+    assert.ok(GAIA_REGIONS.every(r => r.maps.length === REGION_COURSES[r.id].length), 'one site per course in every region');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 22, 'every site has its own name');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 22, 'every site has its own id');
     const gaia = scene.gaiaPlanet();
     assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
-    // Coasts are closed paths, and the globe's land is those paths: the shoreline of the field runs along them.
-    const { COAST_RINGS } = await import('../src/shared/gaia-coast.js');
-    assert.ok(COAST_RINGS.length >= 7 && COAST_RINGS.every(r => r.length >= 6 && r.every(([u]) => u > 0 && u < 1)), 'closed rings that stay off the seam');
+    // The globe's land is the reference coast: the shoreline of the field runs along it, lakes included.
+    const { REFERENCE_COAST, REFERENCE_LAKES } = await import('../src/shared/gaia-reference-regions.js');
+    assert.ok(REFERENCE_COAST.length >= 7 && [...REFERENCE_COAST, ...REFERENCE_LAKES].every(r => r.length >= 3 && r.every(([u]) => u > 0 && u < 1)), 'closed rings that stay off the seam');
     const texelOf = ([u, lat]) => Math.min(scene.TEX_H - 1, Math.floor((0.5 - lat / 180) * scene.TEX_H)) * scene.TEX_W + Math.floor(u * scene.TEX_W);
-    const off = COAST_RINGS.flat().map(p => Math.abs(gaia.land[texelOf(p)] - scene.SEA));
+    const off = REFERENCE_COAST.flat().map(p => Math.abs(gaia.land[texelOf(p)] - scene.SEA));
     assert.ok(off.filter(v => v < 0.03).length / off.length > 0.98, 'map and globe share one coast');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 24, 'every map has its own id');
     const smallest = (() => { const seen = new Uint8Array(gaia.biome.length), W2 = scene.TEX_W; let least = Infinity; for (let s = 0; s < seen.length; s++) { if (seen[s] || gaia.land[s] < scene.SEA) continue; const stack = [s]; seen[s] = 1; let size = 0, touches = false; while (stack.length) { const i = stack.pop(); size++; for (const j of [i - 1, i + 1, i - W2, i + W2]) { if (j < 0 || j >= seen.length || gaia.land[j] < scene.SEA) continue; if (gaia.biome[j] !== gaia.biome[s]) touches = true; else if (!seen[j]) { seen[j] = 1; stack.push(j); } } } if (touches && scene.BIOMES[gaia.biome[s]] !== 'volcanic') least = Math.min(least, size); } return least; })();
     assert.ok(smallest >= 4, `no specks of stray biome (smallest patch ${smallest} texels)`);
-    const fits = { polar: ['polar', 'alpine', 'tundra'], temperate: ['temperate'], desert: ['desert'], tropical: ['tropical'], wetland: ['wetland'], volcanic: ['volcanic'] };
+    const fits = { polar: ['polar', 'alpine', 'tundra'], temperate: ['temperate'], desert: ['desert', 'savanna'], tropical: ['tropical'], wetland: ['wetland'], volcanic: null };
     const biomeOf = (p, m) => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - m.lat / 180) * scene.TEX_H)), col = Math.floor((((m.u % 1) + 1) % 1) * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[p.biome[row * scene.TEX_W + col]]; };
     for (const r of GAIA_REGIONS) for (const m of r.maps) {
       assert.ok(scene.landUnder(gaia, scene.surfaceDir(m.u, m.lat)) >= scene.SEA, `${m.name} is on land`);
-      assert.ok(fits[r.id].includes(biomeOf(gaia, m)), `${m.name} lies in ${r.biome}, found ${biomeOf(gaia, m)}`);
+      if (fits[r.id]) assert.ok(fits[r.id].includes(biomeOf(gaia, m)), `${m.name} lies in ${r.biome}, found ${biomeOf(gaia, m)}`);
     }
-    // Biomes: every one in the vision exists; the land is mostly green; people and plants live where they should.
+    // Biomes: every one in the vision exists, and the globe's biomes are the reference's, area for area.
     const shares = {};
     for (let i = 0; i < planet.biome.length; i++) if (planet.land[i] >= scene.SEA) { const b = scene.BIOMES[planet.biome[i]]; shares[b] = (shares[b] || 0) + 1; }
     const landTexels = Object.values(shares).reduce((q, v) => q + v, 0);
     for (const b of ['polar', 'alpine', 'desert', 'tropical', 'temperate', 'wetland', 'volcanic']) assert.ok(shares[b] > 0, `Gaia has ${b} land`);
     const green = ['temperate', 'tropical', 'grassland', 'boreal', 'savanna', 'wetland', 'mediterranean'].reduce((q, b) => q + (shares[b] || 0), 0), iceFree = landTexels - (shares.polar || 0);
     assert.ok(green / iceFree > 0.55 && (shares.desert || 0) / landTexels < 0.15, `ice-free land is mostly green (${Math.round(green / iceFree * 100)}%)`);
-    assert.equal(scene.biomeAt(85, 0.1, 0.5), 'polar');
-    assert.equal(scene.biomeAt(2, 0.1, 0.8), 'tropical');
-    assert.equal(scene.biomeAt(25, 0.1, 0.1), 'desert');
-    assert.equal(scene.biomeAt(30, 0.1, 0.5, 1), 'wetland');
-    assert.equal(scene.biomeAt(30, 0.1, 0.5, 0, 1), 'volcanic');
+    const reference = await import('../src/shared/gaia-reference.js'), named = [null, 'desert', 'tundra', 'savanna', 'grassland', 'tropical', 'temperate', 'tropical', 'temperate', 'boreal', 'tundra', 'polar', 'wetland'];
+    const within = (r, x, y) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i] / 10, yi = r[i + 1] / 10, xj = r[j] / 10, yj = r[j + 1] / 10; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+    let sampled = 0, agree = 0;
+    for (let i = 0; i < gaia.land.length; i += 37) {
+      const b = scene.BIOMES[gaia.biome[i]];
+      if (gaia.land[i] < scene.SEA + 0.02 || b === 'alpine' || b === 'volcanic') continue;
+      const x = ((i % scene.TEX_W) + 0.5) / scene.TEX_W * reference.MAP_WIDTH, y = (Math.floor(i / scene.TEX_W) + 0.5) / scene.TEX_H * reference.MAP_HEIGHT;
+      const source = reference.BIOMES.find(s => s.rings.some(r => within(r, x, y)));
+      if (!source) continue;
+      sampled++; if (named[source.id] === b) agree++;
+    }
+    assert.ok(sampled > 500 && agree / sampled > 0.95, `the globe's biomes are the reference's (${Math.round(agree / sampled * 100)}% of ${sampled} samples)`);
     assert.ok(planet.cities.every(c => !['polar', 'alpine', 'desert', 'volcanic', 'wetland', 'tundra'].includes(c.biome)), 'no cities on ice, peaks, lava or in the desert');
-    // Earth's patterns on the real Gaia: rain and deserts fall where they do on Earth, and people settle as they do on Earth.
-    const earth = scene.gaiaPlanet(), at = (u, lat) => scene.BIOMES[earth.biome[Math.min(scene.TEX_H - 1, Math.floor((0.5 - lat / 180) * scene.TEX_H)) * scene.TEX_W + Math.floor(u * scene.TEX_W)]];
-    const northLand = Array.from(earth.land).reduce((q, v, i) => q + (v >= scene.SEA && i < earth.land.length / 2 ? 1 : 0), 0), allLand = Array.from(earth.land).reduce((q, v) => q + (v >= scene.SEA ? 1 : 0), 0);
-    assert.ok(northLand / allLand > 0.58, 'most land lies north of the equator');
-    assert.ok(allLand / earth.land.length > 0.24 && allLand / earth.land.length < 0.38, 'about a third of the planet is land');
-    const count = (b, lo, hi) => { let n = 0; for (let y = 0; y < scene.TEX_H; y++) { const lat = Math.abs(90 - (y + 0.5) / scene.TEX_H * 180); if (lat >= lo && lat < hi) for (let x = 0; x < scene.TEX_W; x++) if (earth.land[y * scene.TEX_W + x] >= scene.SEA && scene.BIOMES[earth.biome[y * scene.TEX_W + x]] === b) n++; } return n; };
-    assert.ok(count('desert', 15, 40) > count('desert', 0, 12) * 4, 'hot deserts sit in the subtropics, not on the equator');
-    assert.ok(count('tropical', 0, 15) > count('tropical', 25, 90) * 4, 'rainforest sits on the equator');
-    assert.ok(count('boreal', 45, 75) > count('boreal', 0, 40) * 4, 'boreal forest sits in the high north');
-    const shoreward = c => { const row = Math.floor((0.5 - c.lat / 180) * scene.TEX_H), col = Math.floor(c.u * scene.TEX_W); for (let r = 0; r < 56; r += 4) for (let k = 0; k < 12; k++) { const y = row + Math.round(Math.sin(k / 6 * Math.PI) * r), x = (col + Math.round(Math.cos(k / 6 * Math.PI) * r) + scene.TEX_W) % scene.TEX_W; if (y >= 0 && y < scene.TEX_H && earth.land[y * scene.TEX_W + x] < scene.SEA) return true; } return false; };
-    assert.ok(earth.cities.filter(shoreward).length / earth.cities.length > 0.6, 'most cities lie near a coast');
-    assert.ok(earth.cities.filter(c => c.lat > 0).length / earth.cities.length > 0.7, 'most cities lie in the north, where most land is');
+    // People: the reference's capitals are the cities, biggest first, and hardly anyone lives in desert, tundra, peaks or ice.
+    const earth = gaia;
     assert.ok([...earth.towns, ...earth.villages].filter(c => ['desert', 'tundra', 'alpine', 'polar'].includes(c.biome)).length < 8, 'hardly anyone lives in desert, tundra, peaks or ice');
     assert.ok(earth.cities[0].tier > earth.cities[earth.cities.length - 1].tier, 'a few giant cities, many small ones');
     assert.ok(new Set(earth.cities.map(c => c.culture)).size >= 6, 'cities of many cultures');
     const texel = p => { const row = Math.min(scene.TEX_H - 1, Math.floor((0.5 - p.lat / 180) * scene.TEX_H)), col = Math.floor(p.u * scene.TEX_W) % scene.TEX_W; return scene.BIOMES[planet.biome[row * scene.TEX_W + col]]; };
-    const homes = { palm: ['tropical'], jungle: ['tropical'], cactus: ['desert'], mangrove: ['wetland'], pine: ['boreal', 'temperate'], snowpine: ['boreal'], olive: ['mediterranean'], cypress: ['mediterranean'], baobab: ['savanna'] };
+    const homes = { palm: ['tropical'], jungle: ['tropical'], cactus: ['desert'], mangrove: ['wetland'], pine: ['boreal', 'temperate'], snowpine: ['boreal'], baobab: ['savanna'] };
     const strays = planet.plants.filter(p => homes[p.kind] && !homes[p.kind].includes(texel(p))).length;
     assert.ok(strays / planet.plants.length < 0.02, 'plants grow in their own biomes');
     assert.ok(new Set(planet.plants.map(p => p.kind)).size >= 9, 'many kinds of plant');
@@ -423,7 +408,7 @@ function fakeClock() {
     assert.ok(Math.min(...alt('planes')) > PLANET_RADIUS + 23 && Math.min(...alt('satellites')) > PLANET_RADIUS + 40, 'each has its own layer, above the clouds');
     full.scene.dispose();
     assert.ok(a.frames() > 400, 'each step draws');
-    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 24, 'the living world is in the scene');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 22, 'the living world is in the scene');
     // The size audit, measured from the real models: a sensible order from trees up.
     const sz = a.scene.sizes;
     assert.ok(sz.tree < sz.house * 1.3 && sz.house < sz.mill && sz.mill < sz.lighthouse + 1 && sz.lighthouse < sz.city && sz.city <= sz.peak, `trees < houses < mills < lighthouses < cities <= mountains (${JSON.stringify(sz)})`);

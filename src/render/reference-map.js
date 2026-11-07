@@ -6,6 +6,7 @@
  * painted as grey rock in three cel-shaded bands, rising to snow, lit from the north-west; each biome gets a few hand-feeling marks. `REFERENCE_LOOKS` holds the styles.
  */
 
+import { VOLCANO_SITES } from '../shared/gaia-reference-regions.js';
 import { BIOMES, BIOME_COLOURS, GRID_COLUMNS, GRID_ROWS, GRID_SPACING, HEIGHTS, LAKES, LAND, MAP_HEIGHT, MAP_WIDTH, RIVERS } from '../shared/gaia-reference.js';
 
 export const MAP_ART_W = 4096, MAP_ART_H = 2048;
@@ -16,9 +17,9 @@ export const ROCK = 54, HIGH_ROCK = 63, SNOW = 72;
 
 /** Styles. Biome colours are by the reference's biome index (1 hot desert ... 12 wetland), then rock, high rock and snow. */
 export const REFERENCE_LOOKS = Object.freeze({
-  faithful: { sea: '#c7ecff', shelf: '#a9dcf4', wave: '#b3e1f7', ink: '#2b5f86', inner: 0.16, lakeFill: '#d2ebf7', river: '#3a9ad6', mark: 0.45, biome: [...BIOME_COLOURS, '#aaa49c', '#c9c3bb', '#f6f8fa'] },
+  faithful: { sea: '#c7ecff', shelf: '#a9dcf4', wave: '#b3e1f7', ink: '#2b5f86', inner: 0.16, lakeFill: '#d2ebf7', river: '#3a9ad6', mark: 0.45, basalt: '#6a6070', basaltEdge: '#4a414f', lava: '#ff8a3d', biome: [...BIOME_COLOURS, '#aaa49c', '#c9c3bb', '#f6f8fa'] },
   comic: {
-    sea: '#2f9be8', shelf: '#68c4f0', wave: '#86d2f5', ink: '#14102a', inner: 0.32, lakeFill: '#5cbcf0', river: '#2f8fe0', mark: 0.85,
+    sea: '#2f9be8', shelf: '#68c4f0', wave: '#86d2f5', ink: '#14102a', inner: 0.32, lakeFill: '#5cbcf0', river: '#2f8fe0', mark: 0.85, basalt: '#40364a', basaltEdge: '#2a2232', lava: '#ff7a2f',
     biome: ['#2f9be8', '#ffdf8a', '#cdc78c', '#e6cf55', '#b2d968', '#9fd34a', '#3fb557', '#2ea443', '#2f8a4a', '#3d6b3a', '#a98a5e', '#f3f9fc', '#3fb8a0', '#9e9aa8', '#c2bec9', '#f6f9fc'],
   },
 });
@@ -113,6 +114,25 @@ function biomeImage(doc, kinds, look, shade) {
   return smooth;
 }
 
+/**
+ * The Emberfall volcanoes: a field of dark basalt round each, the same size and place as on the globe (planet-data.js: six texels of a
+ * 1024-wide map, wider toward the poles as the projection stretches it), edged in a darker basalt, with a glowing crater.
+ */
+function paintVolcanoes(g, look, random) {
+  const kx = MAP_ART_W / MAP_WIDTH, ky = MAP_ART_H / MAP_HEIGHT, r = 6 / 1024 * MAP_ART_W;
+  for (const [mx, my] of VOLCANO_SITES) {
+    const x = mx * kx, y = my * ky, lat = 90 - my / MAP_HEIGHT * 180, stretch = 1 / Math.max(0.3, Math.cos(lat * Math.PI / 180));
+    g.beginPath();
+    for (let a = 0; a < 24; a++) { const t = a / 24 * Math.PI * 2, wob = 0.86 + random() * 0.2; g.lineTo(x + Math.cos(t) * r * stretch * wob, y + Math.sin(t) * r * wob); }
+    g.closePath();
+    g.fillStyle = look.basalt; g.fill();
+    g.strokeStyle = look.basaltEdge; g.lineWidth = 5; g.stroke();
+    g.beginPath(); g.ellipse(x, y, r * 0.42, r * 0.3, 0, 0, Math.PI * 2);
+    g.fillStyle = look.lava; g.fill();
+    g.strokeStyle = look.ink; g.lineWidth = 3; g.stroke();
+  }
+}
+
 function mulberry(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /** A few marks per biome that say what it is at map scale. */
@@ -163,6 +183,7 @@ export function paintReferenceMap(doc, name = 'comic') {
   }
   g.fillStyle = look.lakeFill; g.fill(lakes);
   g.strokeStyle = look.ink; g.lineWidth = 3; g.stroke(lakes);
+  paintVolcanoes(g, look, random);
   g.restore();
   g.strokeStyle = look.ink; g.lineWidth = 6; g.lineJoin = 'round'; g.stroke(coast);
   return { canvas, kinds };

@@ -6,8 +6,8 @@
  * copy, never into the master painting. Plain DOM, text only.
  */
 
-import { REFERENCE_LOOKS, MAP_ART_W, paintReferenceMap } from '../render/reference-map.js';
-import { MAP_WIDTH } from '../shared/gaia-reference.js';
+import { REFERENCE_LOOKS, MAP_ART_H, MAP_ART_W, paintReferenceMap } from '../render/reference-map.js';
+import { MAP_HEIGHT, MAP_WIDTH } from '../shared/gaia-reference.js';
 import { REFERENCE_REGIONS } from '../shared/gaia-reference-regions.js';
 import { GAIA_REGIONS, REGION_COURSES } from '../shared/gaia-map.js';
 import { createCourseData } from '../courses/index.js';
@@ -29,16 +29,16 @@ function caption(g, text, x, y, size) {
 
 /** Region captions and numbered course pins over a copy of the art, tags laid out so none collide. Returns how many still overlap. */
 function drawPins(g, names) {
-  const k = MAP_ART_W / MAP_WIDTH, r = 30;
+  const kx = MAP_ART_W / MAP_WIDTH, ky = MAP_ART_H / MAP_HEIGHT, r = 30;
   const regions = GAIA_REGIONS.filter(region => REFERENCE_REGIONS[region.id]).map(region => {
     const [w, h] = boxSize(g, region.name, 54), [x, y] = REFERENCE_REGIONS[region.id].label;
-    return { text: region.name, x: x * k, y: y * k, w: w + 6, h: h + 6 };
+    return { text: region.name, x: x * kx, y: y * ky, w: w + 6, h: h + 6 };
   });
   const pins = GAIA_REGIONS.flatMap(region => (REGION_COURSES[region.id] ?? []).map((index, n) => {
     const site = REFERENCE_REGIONS[region.id]?.sites[n];
     if (!site) return null;
     const text = names[index] ?? '', [w, h] = boxSize(g, text, 26);
-    return { index, text, x: site[0] * k, y: site[1] * k, r: r + 2, w: w + 2, h: h + 2 };
+    return { index, text, x: site[0] * kx, y: site[1] * ky, r: r + 2, w: w + 2, h: h + 2 };
   })).filter(Boolean);
   const { regions: spots, tags, overlaps } = layoutMapLabels({ regions, pins, width: g.canvas.width, height: g.canvas.height, gap: 7 });
   g.lineWidth = 5; g.strokeStyle = INK;
