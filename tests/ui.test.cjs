@@ -165,6 +165,21 @@ function fakeClock() {
     await t.teardown();
   });
 
+  await scenario('reference world: every course has a site on land, in its region', async () => {
+    const { REFERENCE_REGIONS } = await import('../src/shared/gaia-reference-regions.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
+    const { LAND, LAKES, MAP_WIDTH, MAP_HEIGHT } = await import('../src/shared/gaia-reference.js');
+    const inside = (r, x, y) => { let c = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i] / 10, yi = r[i + 1] / 10, xj = r[j] / 10, yj = r[j + 1] / 10; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+    assert.deepEqual(Object.keys(REFERENCE_REGIONS).sort(), GAIA_REGIONS.map(r => r.id).sort(), 'one placement per region');
+    for (const [id, place] of Object.entries(REFERENCE_REGIONS)) {
+      assert.equal(place.sites.length, REGION_COURSES[id].length, id + ': one site per course');
+      for (const [x, y] of [...place.sites, place.label]) assert.ok(x > 0 && x < MAP_WIDTH && y > 0 && y < MAP_HEIGHT, id + ' inside the map');
+      for (const [x, y] of place.sites) assert.ok(LAND.some(r => inside(r, x, y)) && !LAKES.some(r => inside(r, x, y)), `${id} site ${x},${y} is on land`);
+      for (const [x, y] of place.sites) assert.ok(Math.hypot(x - place.label[0], y - place.label[1]) < 160, `${id} site ${x},${y} sits near its region label`);
+    }
+    const all = Object.values(REFERENCE_REGIONS).flatMap(p => p.sites);
+    all.forEach((a, i) => all.slice(i + 1).forEach(b => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= 20, 'sites are apart enough to read')));
+  });
+
   await scenario('level select: world, region, course and back, with the real vote', async () => {
     const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
     assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i), 'all 22 course ids appear once');
