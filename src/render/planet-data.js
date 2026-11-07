@@ -326,11 +326,14 @@ export function buildPlanet(random) {
   return { rgb, landRgb, field, land, biome, cloud: buildCloudMap(random), cities: plain(sites), towns: plain(towns), villages: plain(villages), ports: plain(ports), lighthouses: plain(lighthouses), mills, volcanoes, flags, peaks, plants, rivers, seaSites };
 }
 
-/** Biomes that belong to each region's footprint; the Emberfall Isles take all their land. */
-const REGION_LAND = Object.freeze({ polar: ['alpine', 'polar', 'tundra', 'boreal'], temperate: ['temperate'], desert: ['desert', 'savanna'], tropical: ['tropical'], wetland: ['wetland'], volcanic: null });
+/**
+ * Biomes that belong to each region's footprint: all of that ground connected to the region's sites, however far it runs, so the whole
+ * mountain range, desert or marsh lights up (more maps will fill it). Null takes every bit of land on the sites' islands.
+ */
+const REGION_LAND = Object.freeze({ polar: ['alpine', 'polar'], temperate: ['temperate'], desert: ['desert', 'savanna'], tropical: null, wetland: ['wetland'], volcanic: null });
 
 /**
- * Each region's actual terrain: the land of its biomes connected to its maps, inside its bounds, with smoothed edges. Returns { byId, at }:
+ * Each region's actual terrain: all the land of its biomes connected to its maps (REGION_LAND), with smoothed edges. Returns { byId, at }:
  * `byId[id]` has { u, lat, spanU, spanLat, texture } (`texture` RGBA bytes, 128 at the footprint edge, for a clean outline), and
  * `at(u, lat)` names the region at a place, or null. Highlight and click both use these, so they cannot disagree.
  */
@@ -338,7 +341,7 @@ export function regionFootprints(planet) {
   const n = TEX_W * TEX_H, owner = new Uint8Array(n), byId = {}, names = GAIA_REGIONS.map(r => r.id);
   GAIA_REGIONS.forEach((r, k) => {
     const allowed = REGION_LAND[r.id]?.map(b => BIOMES.indexOf(b)), mask = new Float32Array(n), stack = [];
-    const open = i => { const y = Math.floor(i / TEX_W), u = (i % TEX_W) / TEX_W, lat = (0.5 - (y + 0.5) / TEX_H) * 180, du = Math.min(Math.abs(u - r.u), 1 - Math.abs(u - r.u)) * 360 * Math.cos(lat * Math.PI / 180); return planet.land[i] >= SEA && (!allowed || allowed.includes(planet.biome[i])) && Math.hypot(du / (r.reach[0] * 1.5), (lat - r.lat) / (r.reach[1] * 1.5)) < 1; };
+    const open = i => planet.land[i] >= SEA && (!allowed || allowed.includes(planet.biome[i]));
     for (const m of r.maps) {
       const c = Math.floor((0.5 - m.lat / 180) * TEX_H) * TEX_W + Math.floor(((m.u % 1) + 1) % 1 * TEX_W);
       for (let d = -3; d <= 3; d++) for (let e = -3; e <= 3; e++) { const i = c + d * TEX_W + e; if (planet.land[i] >= SEA && !mask[i]) { mask[i] = 1; stack.push(i); } }

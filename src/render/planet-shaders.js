@@ -18,7 +18,7 @@ varying vec2 vUv;varying vec3 vObj;varying vec3 vN;varying vec3 vView;varying ve
 void main(){vUv=uv;vObj=normalize(position);vec4 w=modelMatrix*vec4(position,1.);vN=normalize(mat3(modelMatrix)*position);vEast=mat3(modelMatrix)*vec3(position.z,0.,-position.x);vView=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}`;
 
 export const PLANET_FRAGMENT = `
-uniform sampler2D field,landMap,cloudMap;uniform vec3 sun;uniform float time,cloudShift,dotCell,cloudGate,inkPx,atmosphere;uniform vec2 texel;
+uniform sampler2D field,landMap,cloudMap,paintMap;uniform float paintOn;uniform vec3 sun;uniform float time,cloudShift,dotCell,cloudGate,inkPx,atmosphere;uniform vec2 texel;
 varying vec2 vUv;varying vec3 vObj;varying vec3 vN;varying vec3 vView;varying vec3 vEast;
 ${NOISE}
 void main(){
@@ -37,7 +37,7 @@ void main(){
   sea=mix(sea,vec3(1.,.62,.66),reef*.55); // coral on warm shallows
   sea=mix(sea,vec3(.94,.97,1.),smoothstep(.3,.17,warm+(broad-.5)*.16));
   // Land: climate colours with fine terrain mottling, beaches on warm coasts, suburbs round the cities.
-  vec3 ground=texture2D(landMap,uv).rgb*(.93+.14*broad);
+  vec3 ground=(paintOn>.5?texture2D(paintMap,uv).rgb:texture2D(landMap,uv).rgb)*(.93+.14*broad); // the flat map's painting once it is ready: sharp, and the same as the level select
   ground=mix(ground,ground*vec3(1.1,1.04,.72),smoothstep(.5,.66,broad)*.45); // sunlit meadows
   ground=mix(ground,vec3(.98,.55,.75),smoothstep(.66,.7,fine)*smoothstep(.5,.6,broad)*smoothstep(.45,.7,warm)*.3); // flowering plains
   ground=mix(ground,vec3(.94,.87,.67),(1.-smoothstep(.006,.02,land))*smoothstep(.25,.42,warm)*.9);

@@ -11,11 +11,17 @@
 import { createMaterialLibrary } from './materials.js';
 import { sizeInk, smoothHullGeometry } from './outline.js';
 import { TEX_H, TEX_W, gaiaPlanet, gaiaRegions } from './planet-data.js';
+import { worldMap, paintMapAsync } from './map-paint.js';
 import { REFERENCE_LOOKS, paintReferenceMap } from './reference-map.js';
+import { MAP_HEIGHT, MAP_WIDTH } from '../shared/gaia-reference.js';
 import { MODEL_REACH, makeCity, makeLighthouse, makeMill, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
 import { REFERENCE_COAST, REFERENCE_LAKES } from '../shared/gaia-reference-regions.js';
 
-const PLINTH = 1.1, FOV = 26, TILT_WORLD = 22, TILT_REGION = 38, MOVE_SECONDS = 1.15;
+const PLINTH = 1.1, FOV = 26, TILT_WORLD = 46, TILT_REGION = 56, MOVE_SECONDS = 1.15;
+/** Haze of the air the camera flies through: far land fades into it, so the view sits in the atmosphere, not in space. */
+const HAZE = 0xbfe3ff;
+/** Size of a region close-up painting, in pixels along its longer side. */
+const DETAIL_PX = 3072;
 const WORLD_TOP = 80, WORLD_BOTTOM = -72;
 const COAST_RINGS = [...REFERENCE_COAST, ...REFERENCE_LAKES]; // a lake is a ring inside a land ring, so it becomes a hole
 const SCALE = Object.freeze({ cityHeight: 2.7, town: 0.24, village: 0.32, port: 0.34, lighthouse: 0.34, mill: 0.36, plant: 0.5, volcano: 4.4 });
@@ -79,8 +85,9 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const owned = new Set(), own = r => { owned.add(r); return r; };
   if (renderer.shadowMap) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
   const mapLook = REFERENCE_LOOKS.comic;
-  renderer.setClearColor?.(mapLook.sea, 1);
+  renderer.setClearColor?.(HAZE, 1);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 4, 2600);
+  scene.fog = new THREE.Fog(HAZE, 300, 900);
   scene.add(new THREE.AmbientLight(0xffffff, 3.7));
   const sun = new THREE.DirectionalLight(0xffffff, 4.7);
   sun.position.set(-150, 240, 90);
@@ -90,10 +97,19 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   sun.shadow.bias = -0.0006;
   scene.add(sun);
 
-  // Sea and land share one painting, so nothing can drift apart.
-  const art = own(new THREE.CanvasTexture(paintReferenceMap(doc, 'comic').canvas));
-  art.colorSpace = THREE.SRGBColorSpace;
-  art.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
+  // Sea and land share one painting, so nothing can drift apart. It is painted in a worker (map-paint.js); until it arrives the globe's own
+  // colours stand in. Without workers it is painted here.
+  const anisotropy = renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
+  const fromBitmap = bitmap => { const c = doc.createElement('canvas'); c.width = bitmap.width; c.height = bitmap.height; c.getContext('2d')?.drawImage(bitmap, 0, 0); return c; };
+  const canvasTexture = canvas => { const t = own(new THREE.CanvasTexture(canvas)); Object.assign(t, { colorSpace: THREE.SRGBColorSpace, anisotropy }); return t; };
+  const standIn = () => { // the globe's surface colours, rows flipped so the north is up as in a canvas texture
+    const rgba = new Uint8Array(TEX_W * TEX_H * 4);
+    for (let y = 0; y < TEX_H; y++) for (let x = 0; x < TEX_W; x++) { const from = ((TEX_H - 1 - y) * TEX_W + x) * 3, to = (y * TEX_W + x) * 4; rgba[to] = planet.rgb[from]; rgba[to + 1] = planet.rgb[from + 1]; rgba[to + 2] = planet.rgb[from + 2]; rgba[to + 3] = 255; }
+    const t = own(new THREE.DataTexture(rgba, TEX_W, TEX_H, THREE.RGBAFormat));
+    Object.assign(t, { colorSpace: THREE.SRGBColorSpace, magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter, needsUpdate: true });
+    return t;
+  };
+  const art = typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' ? canvasTexture(paintReferenceMap(doc, 'comic').canvas) : standIn();
   const seaMaterial = own(library.toon(0xffffff));
   seaMaterial.map = art;
   const sea = new THREE.Mesh(own(new THREE.PlaneGeometry(360, 180).rotateX(-Math.PI / 2)), seaMaterial);
@@ -105,19 +121,42 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const maskTexture = own(new THREE.DataTexture(blank, TEX_W, TEX_H, THREE.RGBAFormat));
   Object.assign(maskTexture, { magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter, needsUpdate: true });
   const glow = { regionMask: { value: maskTexture }, regionOn: { value: 0 } };
+  // A sharp close-up of the open region, painted on demand, drawn over the world painting inside its window (cropMin and cropSize, in uv).
+  const detail = { detailMap: { value: maskTexture }, detailOn: { value: 0 }, cropMin: { value: new THREE.Vector2() }, cropSize: { value: new THREE.Vector2(1, 1) } };
+  const DETAIL_GLSL = 'uniform sampler2D detailMap;uniform float detailOn;uniform vec2 cropMin,cropSize;\n';
+  const MAP_WITH_DETAIL = `#ifdef USE_MAP
+      vec4 sampledDiffuseColor=texture2D(map,vMapUv);
+      if(detailOn>.5){vec2 d=(vMapUv-cropMin)/cropSize;
+        if(d.x>0.&&d.y>0.&&d.x<1.&&d.y<1.){float edge=smoothstep(0.,.03,min(min(d.x,d.y),min(1.-d.x,1.-d.y)));sampledDiffuseColor=mix(sampledDiffuseColor,texture2D(detailMap,d),edge);}}
+      diffuseColor*=sampledDiffuseColor;
+      #endif`;
+  const withDetail = (material, key, more = s => s) => {
+    const compile = material.onBeforeCompile;
+    material.onBeforeCompile = (shader, r) => {
+      compile(shader, r);
+      Object.assign(shader.uniforms, detail);
+      shader.fragmentShader = more(DETAIL_GLSL + shader.fragmentShader.replace('#include <map_fragment>', MAP_WITH_DETAIL + '\n#include <map_fragment_done>'), shader).replace('#include <map_fragment_done>', '');
+    };
+    material.customProgramCacheKey = () => key;
+  };
+  withDetail(seaMaterial, 'atlas-sea-v2');
   const landMaterial = own(library.toon(0xffffff));
   landMaterial.map = art;
-  const toonCompile = landMaterial.onBeforeCompile;
-  landMaterial.onBeforeCompile = (shader, r) => {
-    toonCompile(shader, r);
+  withDetail(landMaterial, 'atlas-land-v2', (text, shader) => {
     Object.assign(shader.uniforms, glow);
-    shader.fragmentShader = 'uniform sampler2D regionMask;uniform float regionOn;\n' + shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    return 'uniform sampler2D regionMask;uniform float regionOn;\n' + text.replace('#include <map_fragment_done>', `#include <map_fragment_done>
       if(regionOn>.5){float m=texture2D(regionMask,vec2(vMapUv.x,1.-vMapUv.y)).r,w=max(fwidth(m)*1.5,.004);
         float inside=smoothstep(.5-w,.5+w,m),line=1.-smoothstep(w*.4,w*1.8,abs(m-.5));
         diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*.8+vec3(.2,.16,.03),inside*.75);
         diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.,.84,.2),line);}`);
-  };
-  landMaterial.customProgramCacheKey = () => 'atlas-land-v1';
+  });
+  if (art.isDataTexture) worldMap().then(bitmap => { // the finished painting replaces the stand-in
+    if (!bitmap || disposed) return;
+    const painted = canvasTexture(fromBitmap(bitmap));
+    seaMaterial.map = landMaterial.map = painted;
+    art.dispose(); owned.delete(art);
+    dirty = true; wake();
+  });
   const landGeometry = own(new THREE.ExtrudeGeometry(coastShapes(THREE), { depth: PLINTH, bevelEnabled: false }).rotateX(-Math.PI / 2));
   { // every vertex takes its map position, so the fills land where the globe has them
     const p = landGeometry.attributes.position, uv = landGeometry.attributes.uv;
@@ -189,9 +228,34 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
     return { look: target, eye: target.clone().add(new THREE.Vector3(0, Math.cos(a) * need, Math.sin(a) * need)) };
   };
   const worldStop = () => stop(0.5, (WORLD_TOP + WORLD_BOTTOM) / 2, 372, TILT_WORLD, WORLD_TOP - WORLD_BOTTOM);
-  const regionStop = id => { const r = regions.byId[id]; return stop(r.u, r.lat - r.spanLat * 0.04, Math.max(r.spanU * 360 * 1.5, 54), TILT_REGION, Math.max(r.spanLat * 1.6, 30)); };
+  const regionStop = id => { const r = regions.byId[id]; return stop(r.u, r.lat - r.spanLat * 0.06, Math.max(r.spanU * 360 * 1.22, 44), TILT_REGION, Math.max(r.spanLat * 1.3, 26)); };
+  // The close-up painting covers the region with room round it for the tilted view: its window in map pixels, and its size.
+  const detailFrame = id => {
+    const r = regions.byId[id], wide = Math.min(360, Math.max(r.spanU * 360 * 1.22, 44) * 1.5), tall = Math.min(180, Math.max(r.spanLat * 1.3, 26) * 2.1);
+    const x0 = Math.max(0, (r.u * 360 - wide / 2) / 360 * MAP_WIDTH), y0 = Math.max(0, (90 - (r.lat + tall * 0.6)) / 180 * MAP_HEIGHT);
+    const view = { x: x0, y: y0, w: Math.min(MAP_WIDTH - x0, wide / 360 * MAP_WIDTH), h: Math.min(MAP_HEIGHT - y0, tall / 180 * MAP_HEIGHT) };
+    const k = DETAIL_PX / Math.max(view.w, view.h);
+    return { view, width: Math.round(view.w * k), height: Math.round(view.h * k) };
+  };
+  const details = new Map(); // region id -> promise of { texture, view }, newest last; two are kept
+  const showDetail = id => {
+    if (!details.has(id)) {
+      const frame = detailFrame(id);
+      details.set(id, paintMapAsync(frame).then(bitmap => (bitmap && !disposed ? { texture: canvasTexture(fromBitmap(bitmap)), view: frame.view } : null)));
+      while (details.size > 2) { const [old, job] = details.entries().next().value; details.delete(old); job.then(d => { if (d) { d.texture.dispose(); owned.delete(d.texture); } }); }
+    }
+    details.get(id).then(d => {
+      if (!d || view !== id || disposed) return;
+      detail.detailMap.value = d.texture; detail.detailOn.value = 1;
+      detail.cropMin.value.set(d.view.x / MAP_WIDTH, 1 - (d.view.y + d.view.h) / MAP_HEIGHT); detail.cropSize.value.set(d.view.w / MAP_WIDTH, d.view.h / MAP_HEIGHT);
+      dirty = true; wake();
+    });
+  };
   let view = 'world';
-  const aim = () => { camera.position.copy(eye); camera.lookAt(look); camera.updateMatrixWorld(); };
+  const aim = () => { // the haze starts just past what the camera looks at, so only the far land fades
+    camera.position.copy(eye); camera.lookAt(look); camera.updateMatrixWorld();
+    const reach = eye.distanceTo(look); scene.fog.near = reach * 0.8; scene.fog.far = reach * 2.1;
+  };
   const place = target => { eye.copy(target.eye); look.copy(target.look); aim(); dirty = true; };
 
   function fit() {
@@ -281,8 +345,8 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
       if (id) { maskTexture.image.data = regions.byId[id].texture; maskTexture.needsUpdate = true; }
       dirty = true; wake();
     },
-    openRegion(id) { view = id; closeUp.visible = true; for (const h of closeInk) h.visible = true; return moveTo(regionStop(id)); },
-    openWorld() { view = 'world'; closeUp.visible = false; for (const h of closeInk) h.visible = false; return moveTo(worldStop()); },
+    openRegion(id) { view = id; closeUp.visible = true; for (const h of closeInk) h.visible = true; showDetail(id); return moveTo(regionStop(id)); },
+    openWorld() { view = 'world'; closeUp.visible = false; detail.detailOn.value = 0; for (const h of closeInk) h.visible = false; return moveTo(worldStop()); },
     dispose() {
       disposed = true;
       win?.removeEventListener?.('resize', onResize);

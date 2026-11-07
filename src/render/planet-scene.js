@@ -13,6 +13,7 @@
 import { createMaterialLibrary } from './materials.js';
 import { createInkMaterial, sizeInk, smoothHullGeometry } from './outline.js';
 import { ATMOSPHERE_FRAGMENT, ATMOSPHERE_VERTEX, CLOUD_FRAGMENT, CLOUD_SHELL_FRAGMENT, CLOUD_VERTEX, CONTRAIL_FRAGMENT, GALAXY_FRAGMENT, GALAXY_VERTEX, PLANET_FRAGMENT, SPHERE_VERTEX, STAR_FRAGMENT, STAR_VERTEX, STREAK_FRAGMENT, STREAK_VERTEX, TRAIL_VERTEX, WAKE_FRAGMENT } from './planet-shaders.js';
+import { worldMap } from './map-paint.js';
 import { MAX_BOATS, MAX_PLANES, MAX_SATELLITES, TEX_W, TEX_H, gaiaPlanet, laneRoutes, shipRoutes, surfaceDir } from './planet-data.js';
 import { MODEL_REACH, PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
 import { buildAresTexture, buildLunaTexture, WORLD_TEX_H, WORLD_TEX_W } from './worlds.js';
@@ -38,9 +39,9 @@ const defaultRenderer = (THREE, canvas) => new THREE.WebGLRenderer({ canvas, ant
  * Where the camera sits so the planet's limb crosses the screen at `horizonHeight` (fraction of the height from the top) and the disc
  * is as wide as the screen. Returns the camera's height and distance from the planet, in the planet's units.
  */
-export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS) {
-  const t = Math.tan(FOV * Math.PI / 360), tanA = Math.max(width / height, 1.2) * t, alpha = Math.atan(tanA), dist = radius / Math.sin(alpha);
-  const theta = alpha - Math.atan((1 - 2 * horizonHeight) * t);
+export function frameCamera(width, height, horizonHeight, radius = PLANET_RADIUS, altitude = null) {
+  const t = Math.tan(FOV * Math.PI / 360), tanA = Math.max(width / height, 1.2) * t, dist = altitude === null ? radius / Math.sin(Math.atan(tanA)) : radius * (1 + altitude);
+  const theta = Math.asin(radius / dist) - Math.atan((1 - 2 * horizonHeight) * t);
   return { y: dist * Math.sin(theta), z: dist * Math.cos(theta) };
 }
 
@@ -91,8 +92,16 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   scene.add(tilt);
   const shared = { sun: { value: sun }, time: { value: 0 }, dotCell: library.inkUniforms.dot, atmosphere: { value: 0.75 }, cloudGate: { value: 0.5 }, cloudShift: { value: 0 }, inkPx: { value: 1.2 } };
   const sphere = (radius, a, b) => own(new THREE.SphereGeometry(radius, a, b));
-  const surface = own(new THREE.ShaderMaterial({ vertexShader: SPHERE_VERTEX, fragmentShader: PLANET_FRAGMENT, uniforms: { ...shared, field: { value: fieldTexture }, landMap: { value: landTexture }, cloudMap: { value: cloudTexture }, texel: { value: new THREE.Vector2(1.5 / TEX_W, 1.5 / TEX_H) } } }));
+  const surface = own(new THREE.ShaderMaterial({ vertexShader: SPHERE_VERTEX, fragmentShader: PLANET_FRAGMENT, uniforms: { ...shared, field: { value: fieldTexture }, landMap: { value: landTexture }, paintMap: { value: null }, paintOn: { value: 0 }, cloudMap: { value: cloudTexture }, texel: { value: new THREE.Vector2(1.5 / TEX_W, 1.5 / TEX_H) } } }));
   spinner.add(new THREE.Mesh(sphere(PLANET_RADIUS, 192, 128), surface));
+  // The land takes the flat map's painting (4096 wide, painted in a worker) as soon as it arrives; until then the 1024-wide colours show.
+  if (!prebuilt) worldMap().then(bitmap => {
+    if (!bitmap || disposed) return;
+    const paint = own(new THREE.Texture(bitmap));
+    Object.assign(paint, { flipY: false, anisotropy: renderer.capabilities?.getMaxAnisotropy?.() ?? 1, needsUpdate: true });
+    surface.uniforms.paintMap.value = paint; surface.uniforms.paintOn.value = 1;
+    stats.painted = true;
+  });
   const shellMaterial = own(new THREE.ShaderMaterial({ vertexShader: SPHERE_VERTEX, fragmentShader: CLOUD_SHELL_FRAGMENT, transparent: true, depthWrite: false, uniforms: { ...shared, cloudMap: { value: cloudTexture } } }));
   const shell = new THREE.Mesh(sphere(PLANET_RADIUS + 1.1, 128, 96), shellMaterial);
   cloudSpinner.add(shell);
@@ -387,8 +396,13 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     starMaterial.uniforms.pixel.value = ratio * Math.max(1, h / 720);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    framing = frameCamera(w, h, s.horizonHeight);
+    framing = frameCamera(w, h, s.horizonHeight, PLANET_RADIUS, s.cameraAltitude);
     camera.position.set(0, framing.y, framing.z);
+    // With the camera in the air, a cloud's orbit can pass right by the lens: those clouds sit out. Each orbits the axis on a circle, so its
+    // closest approach is exact: the distance from the camera to that circle.
+    tilt.updateMatrixWorld(true);
+    const lens = tilt.worldToLocal(camera.position.clone()), lensR = Math.hypot(lens.x, lens.z);
+    for (const mesh of deckClouds) mesh.userData.clear = Math.hypot(lensR - Math.hypot(mesh.position.x, mesh.position.z), lens.y - mesh.position.y) > 60 + mesh.scale.x * 2;
     camera.rotation.set(0, 0, 0);
     const t = Math.tan(FOV * Math.PI / 360);
     const place = ({ mesh, distance }, nx, ny, radius) => { mesh.position.set(nx * distance * t * camera.aspect, framing.y + ny * distance * t, framing.z - distance); mesh.scale.setScalar(radius); };
@@ -421,6 +435,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     show(planes, count(s.planes, MAX_PLANES)); show(ships, count(s.boats, MAX_BOATS)); show(satellites, count(s.satellites, MAX_SATELLITES));
     stats.deckClouds = count(s.cloudCover * 1.6 * deckClouds.length, deckClouds.length);
     show(deckClouds, focus ? 0 : stats.deckClouds);
+    for (const mesh of deckClouds) if (mesh.userData.clear === false) mesh.visible = false;
     placeSmoke();
     if (clock - lastCloudSort > 0.5 || lastCloudSort < 0) { // far to near, so a near cloud never blanks one behind it; clouds move slowly, so twice a second is plenty
       lastCloudSort = clock;
@@ -530,8 +545,8 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     },
     /** Camera position: it never moves during a load. */
     get cameraPosition() { return camera.position.toArray(); },
-    /** World positions of the clouds in the high deck. */
-    get deck() { scene.updateMatrixWorld(true); return deckClouds.map(m => m.getWorldPosition(new THREE.Vector3()).toArray()); },
+    /** World positions of the clouds in the high deck that are showing. */
+    get deck() { scene.updateMatrixWorld(true); return deckClouds.filter(m => m.visible).map(m => m.getWorldPosition(new THREE.Vector3()).toArray()); },
     /** Moving bodies, for checks: world position, forward (nose) and up of each. */
     bodies(kind) {
       scene.updateMatrixWorld(true);

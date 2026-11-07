@@ -53,6 +53,7 @@ export const DISPLAY_UNITS = Object.freeze({
   'loading.spinSpeed': 'degrees/s',
   'loading.axisTilt': 'degrees',
   'loading.horizonHeight': 'fraction of screen height',
+  'loading.cameraAltitude': 'fraction of the planet radius',
   'loading.cloudCover': 'fraction, 0 to 1',
   'loading.cloudDrift': 'multiplier of spin speed',
   'loading.finishTime': 'seconds',

@@ -209,6 +209,17 @@ function fakeClock() {
       for (const m of r.maps) assert.equal(foot.at(m.u, m.lat), r.id, `${m.name} lies inside the ${r.name} footprint`);
     }
     assert.equal(foot.at(0.02, 0), null, 'open sea belongs to no region');
+    { // a region lights up all of its ground, however far it runs: every texel of it connected to the region's sites
+      const gaia = data.gaiaPlanet(), W = data.TEX_W, n = gaia.land.length, kinds = { polar: ['alpine', 'polar'], desert: ['desert', 'savanna'], volcanic: null };
+      for (const [id, allowed] of Object.entries(kinds)) {
+        const ok = i => gaia.land[i] >= data.SEA && (!allowed || allowed.includes(data.BIOMES[gaia.biome[i]])), seen = new Uint8Array(n), stack = [];
+        for (const m of GAIA_REGIONS.find(r => r.id === id).maps) { const i = Math.floor((0.5 - m.lat / 180) * data.TEX_H) * W + Math.floor(m.u * W); if (ok(i)) { seen[i] = 1; stack.push(i); } }
+        while (stack.length) { const i = stack.pop(); for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < n && !seen[j] && ok(j)) { seen[j] = 1; stack.push(j); } }
+        let inside = 0, total = 0;
+        for (let i = 0; i < n; i++) if (seen[i]) { total++; if (foot.at((i % W + 0.5) / W, 90 - (Math.floor(i / W) + 0.5) / data.TEX_H * 180) === id) inside++; }
+        assert.ok(total > 200 && inside / total > 0.97, `${id} lights up all its connected ground (${inside} of ${total})`);
+      }
+    }
     const spots = ui.spreadPins([{ x: 400, y: 300 }, { x: 410, y: 305 }, { x: 405, y: 310 }, { x: 395, y: 300 }], 1280, 720);
     spots.forEach((a, i) => spots.slice(i + 1).forEach(b => assert.ok(Math.abs(a.x - b.x) >= 170 || Math.abs(a.y - b.y) >= 60, 'pins and labels never overlap')));
     let builds = 0;

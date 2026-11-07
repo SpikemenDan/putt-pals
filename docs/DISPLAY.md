@@ -19,6 +19,7 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.spinSpeed` | 4 | 0 to 60 | Loading screen: planet rotation speed in degrees/s (0 holds it still). Ignored under reduced motion. |
 | `loading.axisTilt` | 12 | -60 to 60 | Loading screen: tilt of the planet axis in degrees, so the poles lean up or down. |
 | `loading.horizonHeight` | 0.48 | 0.3 to 0.9 | Loading screen: top of the planet as a fraction of the screen height from the top (higher = lower planet). |
+| `loading.cameraAltitude` | 0.4 | 0.15 to 1.5 | Loading screen: camera height above the ground as a fraction of the planet radius. Below about 0.6 (the top of the air) it flies in the atmosphere, above the clouds and planes; about 1.2 is out in space. |
 | `loading.cloudCover` | 0.6 | 0 to 1 | Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast). |
 | `loading.cloudDrift` | 1.4 | 0 to 4 | Loading screen: cloud speed relative to the planet spin (1 = with the ground; higher slides ahead of it). |
 | `loading.finishTime` | 0.8 | 0.1 to 3 | Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes. |
