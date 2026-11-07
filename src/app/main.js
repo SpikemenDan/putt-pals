@@ -17,6 +17,7 @@ if (tuner) {
     press('Play solo');
     const poll = setInterval(() => { if (document.querySelector('[data-ui=map-select]')?.offsetParent !== undefined && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start Game')) { press('Start Game'); clearInterval(poll); } }, 200);
   }, 300);
+  if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)); // ?art: the flat master map on its own
   if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: live close-ups of the loading-screen city, ship and plane
   Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/deployables-preview.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountDeployablesPreview }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountDeployablesPreview(document, app); mountLoadingPreview(document, app); });
 }
