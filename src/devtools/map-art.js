@@ -1,11 +1,10 @@
 /**
- * Development-only view of the flat master map (VIS-M1): just the painting from src/render/atlas-art.js, with no 3D, so it can be reviewed and
- * polished on its own before it goes anywhere else. Open it with `?art` on the dev server; `?art=storybook` or `?art=atlas` picks a look.
- * Plain DOM, text only.
+ * Development-only view of the flat master map (VIS-M1): the painting of the reference world (src/render/reference-map.js), with no 3D, so
+ * it can be reviewed and polished on its own before it goes anywhere else. Open it with `?art` on the dev server; `?art=faithful` picks the
+ * reference's own colours. Plain DOM, text only.
  */
 
-import { MAP_LOOKS, paintWorld } from '../render/atlas-art.js';
-import { gaiaPlanet } from '../render/planet-data.js';
+import { REFERENCE_LOOKS, paintReferenceMap } from '../render/reference-map.js';
 
 export function mountMapArt(doc) {
   const win = doc.defaultView, start = new URLSearchParams(win.location.search).get('art');
@@ -15,12 +14,12 @@ export function mountMapArt(doc) {
   bar.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
   const show = name => {
     holder.replaceChildren();
-    const art = paintWorld(doc, gaiaPlanet(), name);
-    art.style.cssText = 'display:block;width:100%;height:auto;border:2px solid #14102a';
-    holder.append(art);
+    const { canvas } = paintReferenceMap(doc, name);
+    canvas.style.cssText = 'display:block;width:100%;height:auto;border:2px solid #14102a';
+    holder.append(canvas);
     for (const b of bar.children) b.setAttribute('aria-pressed', String(b.dataset.look === name));
   };
-  for (const name of Object.keys(MAP_LOOKS)) {
+  for (const name of Object.keys(REFERENCE_LOOKS)) {
     const b = doc.createElement('button');
     b.type = 'button'; b.textContent = name; b.dataset.look = name;
     b.addEventListener('click', () => show(name));
@@ -28,5 +27,5 @@ export function mountMapArt(doc) {
   }
   root.append(bar, holder);
   doc.body.append(root);
-  setTimeout(() => show(MAP_LOOKS[start] ? start : 'comic'), 30);
+  setTimeout(() => show(REFERENCE_LOOKS[start] ? start : 'comic'), 30);
 }
