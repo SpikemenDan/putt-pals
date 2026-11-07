@@ -180,6 +180,26 @@ function fakeClock() {
     all.forEach((a, i) => all.slice(i + 1).forEach(b => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= 20, 'sites are apart enough to read')));
   });
 
+  await scenario('flat map name tags never collide, with the real courses and a crowded cluster', async () => {
+    const { layoutMapLabels, boxesOverlap } = await import('../src/render/map-labels.js'), { REFERENCE_REGIONS } = await import('../src/shared/gaia-reference-regions.js');
+    const { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js'), { createCourseData } = await import('../src/courses/index.js');
+    const names = createCourseData().definitions.map(c => c.name), k = 4096 / 1536, size = (text, px) => ({ w: text.length * px * 0.72 + px, h: px * 1.5 }); // wider than Titan One, so the test is the harder case
+    const regions = GAIA_REGIONS.map(r => ({ x: REFERENCE_REGIONS[r.id].label[0] * k, y: REFERENCE_REGIONS[r.id].label[1] * k, ...size(r.name, 54) }));
+    const pins = GAIA_REGIONS.flatMap(r => REGION_COURSES[r.id].map((index, n) => ({ x: REFERENCE_REGIONS[r.id].sites[n][0] * k, y: REFERENCE_REGIONS[r.id].sites[n][1] * k, r: 35, ...size(names[index], 26) })));
+    const real = layoutMapLabels({ regions, pins, width: 4096, height: 2048, gap: 12 });
+    assert.equal(real.overlaps, 0, 'no caption, pin or tag touches another on the real map');
+    real.regions.forEach((r, i) => assert.ok(Math.hypot(r.x - regions[i].x, r.y - regions[i].y) < 220, 'region captions stay close to where they were placed'));
+    real.tags.forEach((t, i) => assert.ok(t.x - pins[i].w / 2 >= 0 && t.x + pins[i].w / 2 <= 4096, 'every tag stays on the map'));
+    let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const crowd = Array.from({ length: 14 }, (_, i) => ({ x: 2000 + rand() * 260, y: 1000 + rand() * 200, r: 35, ...size('Course name ' + i, 26) }));
+    const busy = layoutMapLabels({ regions: [{ x: 2100, y: 900, w: 400, h: 80 }], pins: crowd, width: 4096, height: 2048, gap: 12 });
+    const pinOverlaps = crowd.some((a, i) => crowd.slice(i + 1).some(b => Math.hypot(a.x - b.x, a.y - b.y) < 70));
+    const tagBoxes = busy.tags.map((t, i) => [t.x - crowd[i].w / 2, t.y - crowd[i].h / 2, crowd[i].w, crowd[i].h]);
+    assert.ok(tagBoxes.every((a, i) => tagBoxes.slice(i + 1).every(b => !boxesOverlap(a, b))), 'tags in a crowded cluster still never overlap each other');
+    assert.ok(busy.tags.some(t => t.leader), 'crowded tags move out and are marked for a leader line');
+    assert.ok(pinOverlaps || busy.overlaps === 0, 'with separate pins, nothing overlaps at all');
+  });
+
   await scenario('level select: world, region, course and back, with the real vote', async () => {
     const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
     assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i), 'all 22 course ids appear once');

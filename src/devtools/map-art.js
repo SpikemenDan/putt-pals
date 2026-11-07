@@ -2,7 +2,8 @@
  * Development-only view of the flat master map (VIS-M1): the painting of the reference world (src/render/reference-map.js), with no 3D, so
  * it can be reviewed and polished on its own before it goes anywhere else. Open it with `?art` on the dev server; `?art=faithful` picks the
  * reference's own colours. The Pins toggle lays the six regions and their course sites (src/shared/gaia-reference-regions.js) over the
- * art, in the level select's caption-box style; they are drawn on a copy, never into the master painting. Plain DOM, text only.
+ * art, in the level select's caption-box style, with name tags laid out so none collide (src/render/map-labels.js); they are drawn on a
+ * copy, never into the master painting. Plain DOM, text only.
  */
 
 import { REFERENCE_LOOKS, MAP_ART_W, paintReferenceMap } from '../render/reference-map.js';
@@ -10,11 +11,11 @@ import { MAP_WIDTH } from '../shared/gaia-reference.js';
 import { REFERENCE_REGIONS } from '../shared/gaia-reference-regions.js';
 import { GAIA_REGIONS, REGION_COURSES } from '../shared/gaia-map.js';
 import { createCourseData } from '../courses/index.js';
+import { layoutMapLabels } from '../render/map-labels.js';
 
 const INK = '#14102a', PAPER = '#fff8e4', PIN = '#ffd23f', FONT = "'Titan One', 'Arial Black', sans-serif";
 
 const boxSize = (g, text, size) => { g.font = `${size}px ${FONT}`; return [g.measureText(text).width + size * 0.9, size * 1.45]; };
-const hits = (a, b) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
 
 /** A caption box centred on (x, y). */
 function caption(g, text, x, y, size) {
@@ -26,40 +27,32 @@ function caption(g, text, x, y, size) {
   g.fillText(text, left + w / 2, y + size * 0.06);
 }
 
-/** Region captions and numbered course pins over a copy of the art. */
+/** Region captions and numbered course pins over a copy of the art, tags laid out so none collide. Returns how many still overlap. */
 function drawPins(g, names) {
-  const k = MAP_ART_W / MAP_WIDTH, pin = 30, gap = 12, taken = [], tags = [];
-  const pins = GAIA_REGIONS.flatMap(region => (REGION_COURSES[region.id] ?? []).map((index, n) => [index, ...(REFERENCE_REGIONS[region.id]?.sites[n] ?? []).map(v => v * k)])).filter(p => Number.isFinite(p[1]));
-  for (const region of GAIA_REGIONS) { // region captions and pins claim their space first
-    const place = REFERENCE_REGIONS[region.id];
-    if (!place) continue;
-    const [w, h] = boxSize(g, region.name, 54);
-    taken.push([place.label[0] * k - w / 2, place.label[1] * k - h / 2, w + 9, h + 9]);
+  const k = MAP_ART_W / MAP_WIDTH, r = 30;
+  const regions = GAIA_REGIONS.filter(region => REFERENCE_REGIONS[region.id]).map(region => {
+    const [w, h] = boxSize(g, region.name, 54), [x, y] = REFERENCE_REGIONS[region.id].label;
+    return { text: region.name, x: x * k, y: y * k, w: w + 6, h: h + 6 };
+  });
+  const pins = GAIA_REGIONS.flatMap(region => (REGION_COURSES[region.id] ?? []).map((index, n) => {
+    const site = REFERENCE_REGIONS[region.id]?.sites[n];
+    if (!site) return null;
+    const text = names[index] ?? '', [w, h] = boxSize(g, text, 26);
+    return { index, text, x: site[0] * k, y: site[1] * k, r: r + 2, w: w + 2, h: h + 2 };
+  })).filter(Boolean);
+  const { regions: spots, tags, overlaps } = layoutMapLabels({ regions, pins, width: g.canvas.width, height: g.canvas.height, gap: 7 });
+  g.lineWidth = 5; g.strokeStyle = INK;
+  tags.forEach((t, i) => { if (t.leader) { g.beginPath(); g.moveTo(pins[i].x, pins[i].y); g.lineTo(t.x, t.y); g.stroke(); } });
+  tags.forEach((t, i) => caption(g, pins[i].text, t.x, t.y, 26));
+  for (const p of pins) {
+    g.beginPath(); g.arc(p.x + 5, p.y + 5, r, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
+    g.beginPath(); g.arc(p.x, p.y, r, 0, Math.PI * 2); g.fillStyle = PIN; g.fill();
+    g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    g.font = `30px ${FONT}`; g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(String(p.index + 1), p.x, p.y + 2);
   }
-  for (const [, x, y] of pins) taken.push([x - pin - 4, y - pin - 4, pin * 2 + 13, pin * 2 + 13]);
-  for (const [index, x, y] of pins) { // each name tag takes the first free side of its pin: right, left, below, above
-    const [w, h] = boxSize(g, names[index] ?? '', 26), d = pin + gap;
-    const sides = [[x + d + w / 2, y], [x - d - w / 2, y], [x, y + d + h / 2], [x, y - d - h / 2], [x + d + w / 2, y + h], [x - d - w / 2, y - h]];
-    const box = ([cx, cy]) => [cx - w / 2, cy - h / 2, w + 5, h + 5];
-    const fits = c => { const b = box(c); return b[0] > 8 && b[0] + b[2] < g.canvas.width - 8 && !taken.some(t => hits(b, t)); };
-    const spot = sides.find(fits) ?? sides.find(c => box(c)[0] > 8 && box(c)[0] + box(c)[2] < g.canvas.width - 8) ?? sides[0];
-    taken.push(box(spot)); tags.push([names[index] ?? '', ...spot]);
-  }
-  for (const [text, cx, cy] of tags) caption(g, text, cx, cy, 26);
-  for (const region of GAIA_REGIONS) {
-    const place = REFERENCE_REGIONS[region.id];
-    if (!place) continue;
-    (REGION_COURSES[region.id] ?? []).forEach((index, n) => {
-      const [sx, sy] = place.sites[n] ?? [], x = sx * k, y = sy * k;
-      if (!Number.isFinite(x)) return;
-      g.beginPath(); g.arc(x + 5, y + 5, pin, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
-      g.beginPath(); g.arc(x, y, pin, 0, Math.PI * 2); g.fillStyle = PIN; g.fill();
-      g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
-      g.font = `30px ${FONT}`; g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(String(index + 1), x, y + 2);
-    });
-    caption(g, region.name, place.label[0] * k, place.label[1] * k, 54);
-  }
+  regions.forEach((region, i) => caption(g, region.text, spots[i].x, spots[i].y, 54));
+  return overlaps;
 }
 
 export function mountMapArt(doc) {
@@ -79,7 +72,7 @@ export function mountMapArt(doc) {
     canvas.width = art.width; canvas.height = art.height;
     const g = canvas.getContext('2d');
     g.drawImage(art, 0, 0);
-    if (pinBox.checked) { await doc.fonts?.load?.(`30px ${FONT}`).catch(() => {}); drawPins(g, names); }
+    if (pinBox.checked) { await doc.fonts?.load?.(`30px ${FONT}`).catch(() => {}); root.dataset.labelOverlaps = String(drawPins(g, names)); }
     if (current !== name) return;
     canvas.style.cssText = 'display:block;width:100%;height:auto;border:2px solid #14102a';
     holder.replaceChildren(canvas);
