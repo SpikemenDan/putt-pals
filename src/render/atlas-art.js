@@ -8,6 +8,7 @@
  */
 
 import { COAST_RINGS } from '../shared/gaia-coast.js';
+import { RANGES } from '../shared/gaia-map.js';
 import { BIOMES, SEA, TEX_H, TEX_W, blur, mulberry32 } from './planet-data.js';
 
 export const ART_W = 4096, ART_H = 2048;
@@ -15,15 +16,15 @@ export const ART_W = 4096, ART_H = 2048;
 /** Art directions: palettes per biome, sea tones, and how strong the drawn marks and inner lines are. */
 export const MAP_LOOKS = Object.freeze({
   comic: {
-    sea: '#2f9be8', shelf: '#6cc6f0', wave: '#8fd6f6', river: '#2f8fe0', line: 'rgba(20,16,42,.5)', mark: 0.9, side: 0xd9b36a,
+    sea: '#2f9be8', shelf: '#6cc6f0', wave: '#8fd6f6', river: '#2f8fe0', line: 'rgba(20,16,42,.5)', ink: '#14102a', mark: 0.9, side: 0xd9b36a,
     biome: { polar: '#f4fafe', alpine: '#d9d3d6', tundra: '#c2d6a6', boreal: '#2f8a6a', temperate: '#4cbb55', mediterranean: '#b7d05e', grassland: '#8fd65e', savanna: '#e6cf55', desert: '#ffdf8a', tropical: '#14a050', wetland: '#3fb8a0', volcanic: '#4e4350' },
   },
   storybook: {
-    sea: '#5fb4d6', shelf: '#93d2e0', wave: '#b4e2ea', river: '#4f9fcf', line: 'rgba(60,70,60,.22)', mark: 0.6, side: 0xcdb48c,
+    sea: '#5fb4d6', shelf: '#93d2e0', wave: '#b4e2ea', river: '#4f9fcf', line: 'rgba(60,70,60,.22)', ink: '#3f4a48', mark: 0.6, side: 0xcdb48c,
     biome: { polar: '#f2f4f2', alpine: '#d6d0c8', tundra: '#c9d2ae', boreal: '#5e9a7c', temperate: '#7fbf72', mediterranean: '#c2cd86', grassland: '#aed184', savanna: '#e0cd8a', desert: '#f2dca8', tropical: '#4fa86c', wetland: '#7fbfa8', volcanic: '#6a5c64' },
   },
   atlas: {
-    sea: '#e9dcb8', shelf: '#f4ecd2', wave: '#d3c49a', river: '#6f9fb8', line: 'rgba(70,50,30,.42)', mark: 0.8, side: 0xb89a6a,
+    sea: '#e9dcb8', shelf: '#f4ecd2', wave: '#d3c49a', river: '#6f9fb8', line: 'rgba(70,50,30,.42)', ink: '#4a3524', mark: 0.8, side: 0xb89a6a,
     biome: { polar: '#fbf8ee', alpine: '#c9bda6', tundra: '#c8c79c', boreal: '#6d9068', temperate: '#92ad6a', mediterranean: '#c4bd78', grassland: '#b5bd76', savanna: '#d9bd6e', desert: '#e8c98a', tropical: '#6d9a5c', wetland: '#8cae94', volcanic: '#6a5450' },
   },
 });
@@ -101,6 +102,25 @@ function paintMarks(g, planet, look, random) {
   g.globalAlpha = 1;
 }
 
+/** Each range as a line of drawn summits: lit and shaded faces, a ragged snow cap, tallest in the middle, tapering at the ends. */
+function paintRanges(g, look, random) {
+  const peaks = [];
+  for (const range of RANGES) {
+    const pts = [];
+    for (let i = 0; i + 1 < range.line.length; i++) { const [au, al] = range.line[i], [bu, bl] = range.line[i + 1], n = Math.max(2, Math.round(Math.hypot(X(bu) - X(au), Y(bl) - Y(al)) / 38)); for (let k = 0; k < n; k++) pts.push([X(au + (bu - au) * k / n), Y(al + (bl - al) * k / n)]); }
+    pts.forEach(([x, y], k) => peaks.push({ x: x + (random() - 0.5) * 26, y: y + (random() - 0.5) * 16, s: (20 + 46 * range.height) * (0.5 + 0.5 * Math.sin((k + 0.5) / pts.length * Math.PI)) * (0.8 + random() * 0.4) }));
+  }
+  g.lineJoin = 'round';
+  for (const { x, y, s } of peaks.sort((a, b) => a.y - b.y)) {
+    const foot = y + s * 0.55, top = y - s, left = x - s * 0.9, right = x + s * 0.9, mid = x + s * 0.06;
+    g.beginPath(); g.moveTo(left, foot); g.lineTo(x, top); g.lineTo(right, foot); g.closePath(); g.fillStyle = '#b3a79c'; g.fill();
+    g.beginPath(); g.moveTo(x, top); g.lineTo(right, foot); g.lineTo(mid, foot); g.closePath(); g.fillStyle = '#857a7c'; g.fill();
+    if (s > 24) { g.beginPath(); g.moveTo(x, top); g.lineTo(x + s * 0.34, top + s * 0.54); g.lineTo(x + s * 0.1, top + s * 0.4); g.lineTo(x - s * 0.06, top + s * 0.6); g.lineTo(x - s * 0.2, top + s * 0.42); g.lineTo(x - s * 0.36, top + s * 0.56); g.closePath(); g.fillStyle = '#fff'; g.fill(); }
+    g.strokeStyle = look.ink; g.lineWidth = 3.4;
+    g.beginPath(); g.moveTo(left, foot); g.lineTo(x, top); g.lineTo(right, foot); g.stroke();
+  }
+}
+
 /**
  * Paints Gaia into a new canvas in the look named `name`.
  * @param {Document} doc
@@ -115,7 +135,7 @@ export function paintWorld(doc, planet, name = 'comic') {
   const random = mulberry32(21), coast = coastPath();
   g.fillStyle = look.sea; g.fillRect(0, 0, ART_W, ART_H);
   g.lineJoin = 'round';
-  g.strokeStyle = look.shelf; g.lineWidth = 34; g.stroke(coast); // one narrow, even shelf
+  g.strokeStyle = look.shelf; g.lineWidth = 15; g.stroke(coast); // a thin waterline, not a halo
   g.strokeStyle = look.wave; g.lineWidth = 3; g.lineCap = 'round'; // drawn wave marks, well away from shore
   for (let k = 0; k < 3400; k++) {
     const u = random(), lat = 88 - random() * 170, i = Math.min(TEX_H - 1, Math.floor((0.5 - lat / 180) * TEX_H)) * TEX_W + Math.floor(u * TEX_W);
@@ -128,7 +148,14 @@ export function paintWorld(doc, planet, name = 'comic') {
   g.drawImage(biomeLayer(doc, planet, look), 0, 0);
   paintMarks(g, planet, look, random);
   g.strokeStyle = look.river; g.lineWidth = 5; g.lineCap = g.lineJoin = 'round';
-  for (const river of planet.rivers) { g.beginPath(); river.forEach(([u, lat], i) => (i ? g.lineTo(X(u), Y(lat)) : g.moveTo(X(u), Y(lat)))); g.stroke(); }
+  for (const river of planet.rivers) { // every few points, joined by curves: a river, not a scribble
+    const pts = river.filter((_, i) => i % 4 === 0 || i === river.length - 1).map(([u, lat]) => [X(u), Y(lat)]);
+    g.beginPath(); g.moveTo(...pts[0]);
+    for (let i = 1; i + 1 < pts.length; i++) g.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+    g.lineTo(...pts.at(-1)); g.stroke();
+  }
   g.restore();
+  paintRanges(g, look, random);
+  g.strokeStyle = look.ink; g.lineWidth = 7; g.lineJoin = 'round'; g.stroke(coast);
   return canvas;
 }
