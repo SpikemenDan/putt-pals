@@ -33,5 +33,13 @@ export const REFERENCE_REGIONS = Object.freeze({
   volcanic: { label: [810, 660], sites: [[735, 590], [830, 598], [890, 611]] },
 });
 
-/** Volcanoes of the Emberfall Isles, in map pixels: one beside each volcanic site, on solid land. Each stands in a field of basalt. */
-export const VOLCANO_SITES = Object.freeze([[749, 580], [816, 606], [904, 601]]);
+/** Volcanoes of the Emberfall Isles, in map pixels: one near each volcanic site, as far inland as the island allows. Each stands in a field of basalt. */
+export const VOLCANO_SITES = Object.freeze([[741, 573], [847, 604], [907, 605]]); // the roomiest spots near each site, at least 45 px apart
+
+/**
+ * Basalt round volcano `k` reaches BASALT_TEXELS[k] texels of a 1024-wide map (wider toward the poles), times `basaltShape(k, angle)`.
+ * Each is sized so its widest lobe stays inside its island (tests/ui.test.cjs checks this against the globe's land).
+ */
+export const BASALT_TEXELS = Object.freeze([9, 4.9, 3.6]);
+/** The uneven edge of volcano `k`'s basalt field, 0.7 to 1.25 by direction: lobes like spilled lava, the same on the flat map and the globe. */
+export const basaltShape = (k, angle) => 1 + 0.16 * Math.sin(2 * angle + k * 1.7) + 0.1 * Math.sin(3 * angle + k * 2.9) + 0.06 * Math.sin(5 * angle + k * 0.6) - 0.05;

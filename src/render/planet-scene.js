@@ -14,7 +14,7 @@ import { createMaterialLibrary } from './materials.js';
 import { createInkMaterial, sizeInk, smoothHullGeometry } from './outline.js';
 import { ATMOSPHERE_FRAGMENT, ATMOSPHERE_VERTEX, CLOUD_FRAGMENT, CLOUD_SHELL_FRAGMENT, CLOUD_VERTEX, CONTRAIL_FRAGMENT, GALAXY_FRAGMENT, GALAXY_VERTEX, PLANET_FRAGMENT, SPHERE_VERTEX, STAR_FRAGMENT, STAR_VERTEX, STREAK_FRAGMENT, STREAK_VERTEX, TRAIL_VERTEX, WAKE_FRAGMENT } from './planet-shaders.js';
 import { MAX_BOATS, MAX_PLANES, MAX_SATELLITES, TEX_W, TEX_H, gaiaPlanet, laneRoutes, shipRoutes, surfaceDir } from './planet-data.js';
-import { PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
+import { MODEL_REACH, PLANE_KINDS, PLANT_KINDS, SHIP_KINDS, makeBalloon, makeBase, makeCity, makeCumulus, makeFlag, makeLighthouse, makeMill, makePeak, makePlane, makePlant, makePort, makeSatellite, makeShip, makeTown, makeVillage, makeVolcano } from './sky-models.js';
 import { buildAresTexture, buildLunaTexture, WORLD_TEX_H, WORLD_TEX_W } from './worlds.js';
 
 export const PLANET_RADIUS = 100;
@@ -146,7 +146,9 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   const lighthouseShape = own(makeLighthouse(THREE));
   const lighthouses = planet.lighthouses.map(site => settle(site, lighthouseShape, SIZES.lighthouse));
   // Volcanoes on their basalt fields, each with a small plume.
-  const volcanoes = planet.volcanoes.map((site, k) => settle(site, own(makeVolcano(THREE, random)), pick(SIZES.volcano, k)));
+  // A model's foot must fit its land: the size whose reach equals the distance to the sea, on the globe's surface (degrees to units).
+  const fits = (site, reach) => site.room === undefined ? Infinity : site.room * 180 / TEX_H * Math.max(0.3, Math.cos(site.lat * Math.PI / 180)) * Math.PI / 180 * PLANET_RADIUS / reach;
+  const volcanoes = planet.volcanoes.map((site, k) => settle(site, own(makeVolcano(THREE, random)), Math.min(pick(SIZES.volcano, k), fits(site, MODEL_REACH.volcano))));
   // A small flag on every map of the world map (src/shared/gaia-map.js).
   const flagShapes = [0xff2e88, 0xffd640].map(colour => own(makeFlag(THREE, colour)));
   const flags = planet.flags.map((site, k) => settle(site, pick(flagShapes, k), SIZES.flag));
@@ -172,7 +174,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     const list = planet.plants.filter(plant => plant.kind === kind);
     if (list.length) scatter(own(makePlant(THREE, kind)), list, () => SIZES.plant * (0.8 + random() * 0.5));
   }
-  [0, 1, 2].forEach(k => scatter(own(makePeak(THREE, random, k)), planet.peaks.filter((_, i) => i % 3 === k), peak => SIZES.peakBase + peak.height * SIZES.peakRise * (0.85 + random() * 0.15)));
+  [0, 1, 2].forEach(k => scatter(own(makePeak(THREE, random, k)), planet.peaks.filter((_, i) => i % 3 === k), peak => Math.min(SIZES.peakBase + peak.height * SIZES.peakRise * (0.85 + random() * 0.15), fits(peak, MODEL_REACH.peak))));
 
   // ---- Mills on open ground: classic windmills in farm and marsh country, wind turbines elsewhere. Both turn by themselves.
   const millKinds = { windmill: makeMill(THREE, 'windmill'), turbine: makeMill(THREE, 'turbine') };

@@ -12,7 +12,7 @@
  */
 
 import { BIOMES as REFERENCE_BIOMES, BURGS, GRID_COLUMNS, GRID_ROWS, GRID_SPACING, HEIGHTS, MAP_HEIGHT, MAP_WIDTH, RIVERS } from '../shared/gaia-reference.js';
-import { REFERENCE_COAST, REFERENCE_LAKES, VOLCANO_SITES, toGlobe } from '../shared/gaia-reference-regions.js';
+import { BASALT_TEXELS, REFERENCE_COAST, REFERENCE_LAKES, VOLCANO_SITES, basaltShape, toGlobe } from '../shared/gaia-reference-regions.js';
 import { GAIA_REGIONS, cultureAt } from '../shared/gaia-map.js';
 import { REFERENCE_LOOKS, ROCK, HIGH_ROCK, SNOW as SNOW_LINE } from './reference-map.js';
 import { clamp, makeNoise, mix, mulberry32, smooth } from './noise.js';
@@ -148,7 +148,7 @@ const NO_CITY = Object.freeze(['polar', 'alpine', 'desert', 'volcanic', 'wetland
  * - `land`: the land value per texel (below SEA is sea). `biome`: index into BIOMES per texel. `cloud`: 0..255 cloud density.
  * - `cities`, `towns`, `villages`: [{u, lat, tint, biome, culture, tier?}], `tint` the local ground colour, `tier` a city's size. `ports`,
  *   `lighthouses`: the same on the shore, plus `sea`, a unit vector toward the water. `mills`: [{u, lat, biome}] on windy open ground.
- *   `volcanoes`, `peaks`: [{u, lat}]. `rivers`: lists of [u, lat] from source to mouth. `plants`: [{u, lat, kind, shade}]. `seaSites`: [{u, lat}] on open sea.
+ *   `volcanoes`, `peaks`: [{u, lat, room}], `room` the distance to the sea in texels (one texel is 180 / TEX_H degrees). `rivers`: lists of [u, lat] from source to mouth. `plants`: [{u, lat, kind, shade}]. `seaSites`: [{u, lat}] on open sea.
  */
 export function buildPlanet(random) {
   const n = TEX_W * TEX_H;
@@ -161,12 +161,14 @@ export function buildPlanet(random) {
     open = false;
     for (let i = 0; i < n; i++) if (inside[i] && !kind[i]) { const j = [i - 1, i + 1, i - TEX_W, i + TEX_W].find(q => q >= 0 && q < n && kind[q]); if (j !== undefined) kind[i] = kind[j]; else open = true; }
   }
-  // Volcanic ground: a field of basalt round each Emberfall volcano.
-  const hot = new Float32Array(n), volcanoes = VOLCANO_SITES.map(([x, y]) => { const [u, lat] = toGlobe([x, y]); return { u, lat }; });
-  for (const v of volcanoes) {
-    const c = texelOf(v.u, v.lat), cx = c % TEX_W, cy = Math.floor(c / TEX_W), r = 6, stretch = 1 / Math.max(0.3, Math.cos(v.lat * Math.PI / 180));
-    for (let dy = -r; dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
-      const yy = cy + dy, xx = (cx + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / r, i = yy * TEX_W + xx;
+  // How far a land texel is from the sea, in texels: models are kept small enough to stand on their own land.
+  const room = i => (inside[i] ? Math.max(0, (land[i] - SEA) / 0.012 + 0.5) : 0);
+  // Volcanic ground: an uneven field of basalt round each Emberfall volcano.
+  const hot = new Float32Array(n), volcanoes = VOLCANO_SITES.map(([x, y]) => { const [u, lat] = toGlobe([x, y]); return { u, lat, room: room(texelOf(u, lat)) }; });
+  for (const [k, v] of volcanoes.entries()) {
+    const c = texelOf(v.u, v.lat), cx = c % TEX_W, cy = Math.floor(c / TEX_W), r = BASALT_TEXELS[k] * 1.3, stretch = 1 / Math.max(0.3, Math.cos(v.lat * Math.PI / 180));
+    for (let dy = -Math.ceil(r); dy <= r; dy++) for (let dx = -Math.ceil(r * stretch); dx <= r * stretch; dx++) {
+      const yy = cy + dy, xx = (cx + dx + TEX_W) % TEX_W, d = Math.hypot(dx / stretch, dy) / (BASALT_TEXELS[k] * basaltShape(k, Math.atan2(dy, dx / stretch))), i = yy * TEX_W + xx;
       if (d < 1 && yy >= 0 && yy < TEX_H && inside[i]) hot[i] = Math.max(hot[i], smooth(1, 0.55, d));
     }
   }
@@ -183,7 +185,7 @@ export function buildPlanet(random) {
       if (j < 0 || j >= n || !inside[j]) continue;
       if (biome[j] !== k) edgeKind = biome[j]; else if (!visited[j]) { visited[j] = 1; patch.push(j); }
     }
-    if (patch.length < 6 && edgeKind >= 0 && !hot[s]) for (const i of patch) biome[i] = edgeKind;
+    if (patch.length < 6 && edgeKind >= 0) for (const i of patch) biome[i] = edgeKind;
   }
   // Colours: the flat map's palette; rock, high rock and snow on the same height bands; basalt on volcanic ground.
   for (let y = 0; y < TEX_H; y++) {
@@ -312,7 +314,7 @@ export function buildPlanet(random) {
   for (let tries = 0; tries < 60000 && peaks.length < 240; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.06 + random() * 0.88) * TEX_H), i = y * TEX_W + x;
     if (land[i] < SEA + 0.03 || h[i] < 0.42 || peaks.some(p => gapTo(p, x, y) < 7)) continue;
-    peaks.push({ x, y, u: x / TEX_W, lat: latOf(y), height: clamp((h[i] - 0.42) / 0.5) });
+    peaks.push({ x, y, u: x / TEX_W, lat: latOf(y), height: clamp((h[i] - 0.42) / 0.5), room: room(i) });
   }
   for (let tries = 0; tries < 6000 && seaSites.length < MAX_BOATS * 2; tries++) {
     const x = Math.floor(random() * TEX_W), y = Math.floor((0.12 + random() * 0.76) * TEX_H), i = y * TEX_W + x, lat = latOf(y);

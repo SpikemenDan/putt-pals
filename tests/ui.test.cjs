@@ -353,6 +353,20 @@ function fakeClock() {
     const peak = box(models.makePeak(THREE, scene.mulberry32(2), 0)), cone = box(models.makeVolcano(THREE, scene.mulberry32(2)));
     assert.ok(Math.abs(peak.max.y - 1) < 0.05 && peak.max.x - peak.min.x > 1.2, 'a massif is one unit tall and wider than a spike');
     assert.ok(Math.abs(cone.max.y - 1) < 0.05 && cone.max.x > 0.9, 'a volcano is a broad cone');
+    const footRadii = g => { const p = g.attributes.position, r = []; for (let i = 0; i < p.count; i++) if (p.getY(i) < 0.02) r.push(Math.hypot(p.getX(i), p.getZ(i))); return r; };
+    for (const [name, g] of [['volcano', models.makeVolcano(THREE, scene.mulberry32(3))], ['mountain', models.makePeak(THREE, scene.mulberry32(3), 0)]]) {
+      const r = footRadii(g).filter(v => v > 0.3); // the main cone's foot, not the shoulders' centres
+      assert.ok(Math.max(...r) / Math.min(...r) > 1.3, `a ${name}'s foot is rugged, not a circle`);
+      assert.ok(Math.max(...footRadii(g)) <= models.MODEL_REACH[name === 'volcano' ? 'volcano' : 'peak'] + 0.05, `a ${name} reaches no further than MODEL_REACH says`);
+    }
+    // Every volcano and mountain has room on its own land: a circle of its room stays ashore all the way round.
+    for (const site of [...gaia.volcanoes, ...gaia.peaks]) {
+      const deg = site.room * 180 / scene.TEX_H * 0.9;
+      for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, lat = site.lat + Math.sin(a) * deg, u = site.u + Math.cos(a) * deg / 360; assert.ok(scene.landUnder(gaia, scene.surfaceDir(u, lat)) >= scene.SEA, 'a model sized to its room stays on its island'); }
+    }
+    assert.ok(gaia.volcanoes.every(v => v.room * 180 / scene.TEX_H > 3), 'each volcano stands well inland');
+    const { BASALT_TEXELS, basaltShape } = await import('../src/shared/gaia-reference-regions.js');
+    gaia.volcanoes.forEach((v, k) => { const widest = Math.max(...Array.from({ length: 72 }, (_, a) => basaltShape(k, a / 72 * Math.PI * 2))); assert.ok(BASALT_TEXELS[k] * widest / Math.max(0.3, Math.cos(v.lat * Math.PI / 180)) <= v.room, `volcano ${k}'s basalt stays inside its island`); });
     assert.equal(new Set(models.PLANE_KINDS.map(k => size(models.makePlane(THREE, k)))).size, models.PLANE_KINDS.length, 'each plane is its own design');
     assert.equal(new Set(models.PLANT_KINDS.map(k => { const g = models.makePlant(THREE, k), c = g.attributes.color; return [size(g), c.getX(c.count - 1).toFixed(3), c.getY(c.count - 1).toFixed(3)].join(); })).size, models.PLANT_KINDS.length, 'each plant is its own design');
     assert.notEqual(size(models.makeTown(THREE, scene.mulberry32(1), 'desert')), size(models.makeTown(THREE, scene.mulberry32(1), 'oldworld')), 'towns differ by culture');

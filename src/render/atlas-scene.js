@@ -12,7 +12,7 @@ import { createMaterialLibrary } from './materials.js';
 import { sizeInk, smoothHullGeometry } from './outline.js';
 import { TEX_H, TEX_W, gaiaPlanet, gaiaRegions } from './planet-data.js';
 import { REFERENCE_LOOKS, paintReferenceMap } from './reference-map.js';
-import { makeCity, makeLighthouse, makeMill, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
+import { MODEL_REACH, makeCity, makeLighthouse, makeMill, makePlant, makePort, makeTown, makeVillage, makeVolcano, PLANT_KINDS } from './sky-models.js';
 import { REFERENCE_COAST, REFERENCE_LAKES } from '../shared/gaia-reference-regions.js';
 
 const PLINTH = 1.1, FOV = 26, TILT_WORLD = 22, TILT_REGION = 38, MOVE_SECONDS = 1.15;
@@ -159,7 +159,8 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   const mill = makeMill(THREE, 'windmill');
   own(mill.mast); own(mill.blades);
   for (const c of planet.mills) { const m = stand(mill.mast, c.u, c.lat, SCALE.mill), b = new THREE.Mesh(mill.blades, painted); b.position.y = mill.hub; m.add(b); }
-  planet.volcanoes.forEach((v, k) => stand(own(makeVolcano(THREE, random)), v.u, v.lat, SCALE.volcano * (k % 2 ? 0.8 : 1), true, scene));
+  // Each volcano stays on its island: never wider at the foot than its distance to the sea (atlas units are degrees, as are TEX_H rows).
+  planet.volcanoes.forEach((v, k) => stand(own(makeVolcano(THREE, random)), v.u, v.lat, Math.min(SCALE.volcano * (k % 2 ? 0.8 : 1), (v.room * 180 / TEX_H) / MODEL_REACH.volcano), true, scene));
 
   const instanced = [];
   const scatter = (geometry, list, sizeOf, parent = scene) => {

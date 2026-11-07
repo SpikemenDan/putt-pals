@@ -13,13 +13,13 @@ const centredBox = (x, y, w, h, pad) => [x - w / 2 - pad, y - h / 2 - pad, w + p
 
 /**
  * `regions`: [{ x, y, w, h }] captions centred on (x, y). `pins`: [{ x, y, r, w, h }], a disc of radius r and its tag's size.
- * `width`, `height`: the map's bounds. `gap`: clear space between a pin and its tag, and kept around every box.
+ * `avoid`: [[left, top, width, height]] map features no caption or tag may cover. `width`, `height`: the map's bounds. `gap`: clear space between a pin and its tag, and kept around every box.
  * Returns { regions: [{ x, y }] and tags: [{ x, y, leader }], centred positions in input order, overlaps: how many pairs of boxes still touch (0 when all fit) }.
  */
-export function layoutMapLabels({ regions = [], pins = [], width, height, gap = 10 }) {
+export function layoutMapLabels({ regions = [], pins = [], avoid = [], width, height, gap = 10 }) {
   const pad = gap / 2, margin = gap;
   const inside = b => b[0] >= margin && b[1] >= margin && b[0] + b[2] <= width - margin && b[1] + b[3] <= height - margin;
-  const discs = pins.map(p => centredBox(p.x, p.y, p.r * 2, p.r * 2, pad)), captions = [];
+  const discs = [...pins.map(p => centredBox(p.x, p.y, p.r * 2, p.r * 2, pad)), ...avoid], captions = [];
   const placedRegions = regions.map(r => {
     const ys = [0, ...Array.from({ length: 12 }, (_, i) => (i % 2 ? 1 : -1) * Math.ceil((i + 1) / 2) * (r.h / 3))]; // up first, then down
     const xs = [0, -r.w / 4, r.w / 4, -r.w / 2, r.w / 2];

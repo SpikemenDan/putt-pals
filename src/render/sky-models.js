@@ -326,14 +326,15 @@ export function makeMill(THREE, kind = 'turbine') {
 
 /**
  * A rough cone, one unit tall, painted face by face. `profile(t)` is its radius at height t (0 to 1), `paint(t, angle)` the colour of a face.
- * Normals sit halfway between each face and the smooth surface, so the rock shows soft facets instead of hard shards.
+ * Normals sit halfway between each face and the smooth surface, so the rock shows soft facets instead of hard shards. `foot(angle)`, if
+ * given, spreads the base unevenly (a multiplier of the radius, strongest at the ground and gone by the top), so it is not a circle.
  */
-function roughCone(THREE, random, { sides, rings, profile, paint, wobble = 0.1 }) {
+function roughCone(THREE, random, { sides, rings, profile, paint, wobble = 0.1, foot = null }) {
   const rim = [];
   for (let r = 0; r <= rings; r++) {
     const t = r / rings, row = [];
     for (let k = 0; k < sides; k++) {
-      const a = (k + (r % 2) * 0.5) / sides * Math.PI * 2, radius = profile(t) * (1 + (random() - 0.5) * 2 * wobble * (t > 0 && t < 1 ? 1 : 0.3));
+      const a = (k + (r % 2) * 0.5) / sides * Math.PI * 2, spread = foot ? 1 + (foot(a) - 1) * (1 - t) ** 2 : 1, radius = profile(t) * spread * (1 + (random() - 0.5) * 2 * wobble * (t > 0 && t < 1 ? 1 : 0.3));
       row.push([Math.cos(a) * radius, t + (t > 0 && t < 1 ? (random() - 0.5) * 0.5 / rings : 0), Math.sin(a) * radius]);
     }
     rim.push(row);
@@ -364,6 +365,18 @@ function roughCone(THREE, random, { sides, rings, profile, paint, wobble = 0.1 }
   return g;
 }
 
+/** The widest an uneven foot reaches, as a multiple of the cone's round base. */
+export const FOOT_REACH = 1.36;
+
+/** An uneven foot: spurs and bays of different sizes round the base, from 0.72 to FOOT_REACH times the round radius. */
+function ruggedFoot(random) {
+  const waves = [[2, 0.12], [3, 0.1], [5, 0.07], [7, 0.05]].map(([n, amp]) => [n, amp * (0.7 + random() * 0.6), random() * Math.PI * 2]);
+  return a => Math.min(FOOT_REACH, Math.max(0.72, 1.04 + waves.reduce((sum, [n, amp, phase]) => sum + amp * Math.sin(n * a + phase), 0)));
+}
+
+/** How far each model reaches from its centre at the ground, in its own units, with its uneven foot: for keeping it on its island. */
+export const MODEL_REACH = Object.freeze({ volcano: FOOT_REACH, peak: 0.94 * FOOT_REACH });
+
 /**
  * A volcano one unit tall and two wide: a sweeping concave cone of dark basalt with winding rivers of lava, ash near the top and a
  * glowing crater lake. `random` varies the streams.
@@ -379,7 +392,7 @@ export function makeVolcano(THREE, random = Math.random) {
     }
     return t < 0.12 ? 0x5a4a50 : t < 0.5 ? 0x463c48 : t < 0.82 ? 0x3a3340 : 0x6a5c62;
   };
-  const cone = roughCone(THREE, random, { sides: 34, rings: 18, wobble: 0.035, profile: t => 0.17 + 0.83 * (1 - t) ** 2.3, paint });
+  const cone = roughCone(THREE, random, { sides: 34, rings: 18, wobble: 0.035, profile: t => 0.17 + 0.83 * (1 - t) ** 2.3, paint, foot: ruggedFoot(random) }); // lava-flow spurs, not a round base
   return mergeParts(THREE, [
     { geometry: cone },
     { geometry: new THREE.CylinderGeometry(0.19, 0.19, 0.03, 18), color: 0x2e2833, at: moved(THREE, 0, 0.99, 0) },
@@ -395,7 +408,7 @@ export function makeVolcano(THREE, random = Math.random) {
 export function makePeak(THREE, random = Math.random, variant = 0) {
   const rock = [[0x8f7f73, 0xa39385, 0x7a6e6a], [0x7f8391, 0x949aa8, 0x6b6f7e], [0x9c7f68, 0xb09580, 0x846a5a]][variant % 3];
   const peak = (height, snow) => roughCone(THREE, random, {
-    sides: 11, rings: 7, wobble: 0.12, profile: t => 0.62 * (1 - t) ** 0.92,
+    sides: 11, rings: 7, wobble: 0.12, profile: t => 0.62 * (1 - t) ** 0.92, foot: ruggedFoot(random),
     paint: (t, angle) => {
       const edge = snow + Math.sin(angle * 5 + height * 9) * 0.07;
       if (t > edge) return t > edge + 0.12 || Math.sin(angle * 3) > 0 ? 0xf8fbff : 0xdce8f8;

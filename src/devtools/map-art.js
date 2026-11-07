@@ -8,7 +8,7 @@
 
 import { REFERENCE_LOOKS, MAP_ART_H, MAP_ART_W, paintReferenceMap } from '../render/reference-map.js';
 import { MAP_HEIGHT, MAP_WIDTH } from '../shared/gaia-reference.js';
-import { REFERENCE_REGIONS } from '../shared/gaia-reference-regions.js';
+import { BASALT_TEXELS, REFERENCE_REGIONS, VOLCANO_SITES } from '../shared/gaia-reference-regions.js';
 import { GAIA_REGIONS, REGION_COURSES } from '../shared/gaia-map.js';
 import { createCourseData } from '../courses/index.js';
 import { layoutMapLabels } from '../render/map-labels.js';
@@ -40,7 +40,8 @@ function drawPins(g, names) {
     const text = names[index] ?? '', [w, h] = boxSize(g, text, 26);
     return { index, text, x: site[0] * kx, y: site[1] * ky, r: r + 2, w: w + 2, h: h + 2 };
   })).filter(Boolean);
-  const { regions: spots, tags, overlaps } = layoutMapLabels({ regions, pins, width: g.canvas.width, height: g.canvas.height, gap: 7 });
+  const avoid = VOLCANO_SITES.map(([x, y], k) => { const r = BASALT_TEXELS[k] / 1024 * MAP_ART_W; return [x * kx - r * 1.6, y * ky - r, r * 3.2, r * 2]; }); // tags never cover a volcano
+  const { regions: spots, tags, overlaps } = layoutMapLabels({ regions, pins, avoid, width: g.canvas.width, height: g.canvas.height, gap: 7 });
   g.lineWidth = 5; g.strokeStyle = INK;
   tags.forEach((t, i) => { if (t.leader) { g.beginPath(); g.moveTo(pins[i].x, pins[i].y); g.lineTo(t.x, t.y); g.stroke(); } });
   tags.forEach((t, i) => caption(g, pins[i].text, t.x, t.y, 26));
