@@ -3,7 +3,7 @@
  *
  * The reference's land, lakes, biomes, rivers and heights are kept as they are; this only draws them cleanly: each biome area is smoothed as
  * a coverage field and cut per pixel, so neighbouring biomes share one clean edge with no gaps; the coast and lakes are inked; high ground is
- * painted as grey rock in three cel-shaded bands, rising to snow, lit from the north-west; each biome gets a few hand-feeling marks. `REFERENCE_LOOKS` holds the styles.
+ * blended into grey rock by height, rising to snow and lit from the north-west, with no hard border; each biome gets a few hand-feeling marks. `REFERENCE_LOOKS` holds the styles.
  */
 
 import { BIOMES, BIOME_COLOURS, GRID_COLUMNS, GRID_ROWS, GRID_SPACING, HEIGHTS, LAKES, LAND, MAP_HEIGHT, MAP_WIDTH, RIVERS } from '../shared/gaia-reference.js';
@@ -84,7 +84,12 @@ function reliefShade(heights) {
   return shade;
 }
 
-function biomeImage(doc, kinds, look, shade) {
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const smoothstep = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/** Biome colours with high ground blended in by height: the grass or forest fades into rock, rock into high rock, high rock into snow, so
+ * mountains have no hard border with what surrounds them. Ink lines follow only the biome edges below the rock. */
+function biomeImage(doc, kinds, look, shade, heights) {
   const layer = doc.createElement('canvas'), g = layer.getContext('2d');
   layer.width = MAP_ART_W; layer.height = MAP_ART_H;
   const image = g.createImageData(MAP_ART_W, MAP_ART_H), px = image.data, out = new Uint8Array(MAP_ART_W * MAP_ART_H);
@@ -95,10 +100,18 @@ function biomeImage(doc, kinds, look, shade) {
   }
   const ink = look.ink.match(/\w\w/g).map(q => parseInt(q, 16));
   for (let y = 0; y < MAP_ART_H; y++) for (let x = 0; x < MAP_ART_W; x++) {
-    const i = y * MAP_ART_W + x, k = out[i], c = colours[k] ?? colours[0], o = i * 4;
-    const edge = (x + 2 < MAP_ART_W && out[i + 2] !== k) || (y + 2 < MAP_ART_H && out[i + 2 * MAP_ART_W] !== k), m = edge ? look.inner : 0;
-    const lit = k >= 13 ? Math.min(1.12, shade[Math.min(FIELD_H - 1, Math.floor(y * fy)) * FIELD_W + Math.min(FIELD_W - 1, Math.floor(x * fx))] * (k === 15 ? 0.5 : 1) + (k === 15 ? 0.5 : 0)) : 1;
-    px[o] = Math.min(255, c[0] * lit) * (1 - m) + ink[0] * m; px[o + 1] = Math.min(255, c[1] * lit) * (1 - m) + ink[1] * m; px[o + 2] = Math.min(255, c[2] * lit * (lit < 1 ? 1.04 : 1)) * (1 - m) + ink[2] * m; px[o + 3] = 255;
+    const i = y * MAP_ART_W + x, k = out[i], o = i * 4, f = Math.min(FIELD_H - 1, Math.floor(y * fy)) * FIELD_W + Math.min(FIELD_W - 1, Math.floor(x * fx));
+    let c = colours[k] ?? colours[0], rock = 0;
+    if (k && k !== 11) {
+      const h = heights[f], snow = smoothstep(SNOW - 2, SNOW + 2, h), high = smoothstep(HIGH_ROCK - 4, HIGH_ROCK + 3, h);
+      rock = smoothstep(ROCK - 3, ROCK + 3, h);
+      if (rock > 0) {
+        const r = mix(mix(colours[13], colours[14], high), colours[15], snow), lit = 1 + (shade[f] - 1) * (1 - 0.5 * snow);
+        c = mix(c, [Math.min(255, r[0] * lit), Math.min(255, r[1] * lit), Math.min(255, r[2] * lit * (lit < 1 ? 1.04 : 1))], rock);
+      }
+    }
+    const edge = (x + 2 < MAP_ART_W && out[i + 2] !== k) || (y + 2 < MAP_ART_H && out[i + 2 * MAP_ART_W] !== k), m = edge ? look.inner * (1 - rock) : 0;
+    px[o] = c[0] * (1 - m) + ink[0] * m; px[o + 1] = c[1] * (1 - m) + ink[1] * m; px[o + 2] = c[2] * (1 - m) + ink[2] * m; px[o + 3] = 255;
   }
   g.putImageData(image, 0, 0);
   // The field is half the art's size: soften its stair steps with one light blur pass, drawn back over itself.
@@ -139,7 +152,6 @@ export function paintReferenceMap(doc, name = 'comic') {
   const g = canvas.getContext('2d');
   if (!g) return { canvas, kinds: null };
   const random = mulberry(31), coast = ringsPath(LAND, MAP_ART_W, MAP_ART_H), lakes = ringsPath(LAKES, MAP_ART_W, MAP_ART_H), kinds = biomeField(doc), heights = heightField();
-  for (let i = 0; i < kinds.length; i++) if (kinds[i] && kinds[i] !== 11) kinds[i] = heights[i] >= SNOW ? 15 : heights[i] >= HIGH_ROCK ? 14 : heights[i] >= ROCK ? 13 : kinds[i]; // high ground is rock, not forest
   g.fillStyle = look.sea; g.fillRect(0, 0, MAP_ART_W, MAP_ART_H);
   g.lineJoin = 'round';
   g.strokeStyle = look.shelf; g.lineWidth = 14; g.stroke(coast);
@@ -150,8 +162,8 @@ export function paintReferenceMap(doc, name = 'comic') {
     g.beginPath(); g.moveTo(x - 15, y); g.quadraticCurveTo(x - 8, y - 6, x, y); g.quadraticCurveTo(x + 8, y + 6, x + 15, y); g.stroke();
   }
   g.save(); g.clip(coast);
-  g.drawImage(biomeImage(doc, kinds, look, reliefShade(heights)), 0, 0);
-  paintMarks(g, kinds, look, random);
+  g.drawImage(biomeImage(doc, kinds, look, reliefShade(heights), heights), 0, 0);
+  paintMarks(g, kinds.map((k, i) => (k && heights[i] >= ROCK - 1 ? 13 : k)), look, random); // no grass or trees on rock
   g.strokeStyle = look.river; g.lineCap = g.lineJoin = 'round';
   for (const r of RIVERS) for (let k = 3; k < r.length; k += 3) { // each river widens toward its mouth, as in the reference
     g.lineWidth = Math.max(1.6, r[k + 2] / 10 / MAP_WIDTH * MAP_ART_W * 0.85);
