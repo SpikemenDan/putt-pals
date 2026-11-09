@@ -7,9 +7,9 @@ const assert = require('node:assert/strict');
   const { GameModes, resolveVote } = await import('../src/shared/session.js');
   const courses = createCourseDocument().courses;
   const sessions = [];
-  const make = (guests = []) => {
+  const make = (guests = [], options = {}) => {
     const clock = new SimulatedClock();
-    const session = createRoomSession({ hostId: 'host', clock, courses });
+    const session = createRoomSession({ hostId: 'host', clock, courses, ...options });
     sessions.push(session);
     for (const id of guests) assert.equal(session.send({ type: 'JOIN_ROOM', playerId: id, name: id }), true);
     return { session, clock, state: () => session.getSnapshot(), send: (type, extra = {}, playerId = 'host') => session.send({ type, playerId, ...extra }) };
@@ -71,6 +71,67 @@ const assert = require('node:assert/strict');
     assert.equal(f.state().phase, 'play');
     assert.equal(f.state().mapIndex, resolveVote({ host: 8, a: 5 }, undefined, { round: 0 }));
     assert.equal(f.state().roundStartTime, 47500);
+  });
+  run('VIS-V: tie picker picks randomly among tied options with injected randomness and broadcasts tie (#163)', () => {
+    // With random returning 0.0, first tied option wins (index 0 among sorted tied [0, 8] -> 0)
+    const f0 = make(['a'], { random: () => 0.0 });
+    f0.send('START_VOTING');
+    f0.send('CAST_VOTE', { mapIndex: 0 }, 'host');
+    f0.send('CAST_VOTE', { mapIndex: 8 }, 'a');
+    assert.equal(f0.state().phase, 'play');
+    assert.equal(f0.state().mapIndex, 0);
+    assert.deepEqual(f0.state().tie, { options: [0, 8], winner: 0 });
+    f0.clock.increment(2500);
+    assert.equal(f0.state().tie, null, 'tie clears when hole active');
+
+    // With random returning 0.99, second tied option wins (index 1 among [0, 8] -> 8)
+    const f1 = make(['a'], { random: () => 0.99 });
+    f1.send('START_VOTING');
+    f1.send('CAST_VOTE', { mapIndex: 0 }, 'host');
+    f1.send('CAST_VOTE', { mapIndex: 8 }, 'a');
+    assert.equal(f1.state().phase, 'play');
+    assert.equal(f1.state().mapIndex, 8);
+    assert.deepEqual(f1.state().tie, { options: [0, 8], winner: 8 });
+
+    // Untied vote has null tie
+    const fNoTie = make(['a']);
+    fNoTie.send('START_VOTING');
+    fNoTie.send('CAST_VOTE', { mapIndex: 8 }, 'host');
+    fNoTie.send('CAST_VOTE', { mapIndex: 8 }, 'a');
+    assert.equal(fNoTie.state().phase, 'play');
+    assert.equal(fNoTie.state().mapIndex, 8);
+    assert.equal(fNoTie.state().tie, null);
+  });
+  run('VIS-V: repeat maps stay selectable and accumulate scores in tournaments (#163)', () => {
+    const f = make(['a']);
+    start(f, GameModes.TOURNAMENT_3, 0);
+    completeMap(f);
+    assert.equal(f.state().completedMaps.length, 1);
+    assert.deepEqual(f.state().completedMaps, [0]);
+    f.send('RETURN_TO_LOBBY');
+    assert.equal(f.state().phase, 'select');
+    // Vote for map 0 AGAIN (repeat map)
+    f.send('CAST_VOTE', { mapIndex: 0 }, 'host');
+    f.send('CAST_VOTE', { mapIndex: 0 }, 'a');
+    f.clock.increment(2500);
+    assert.equal(f.state().phase, 'play');
+    assert.equal(f.state().mapIndex, 0);
+    completeMap(f);
+    assert.equal(f.state().completedMaps.length, 2);
+    assert.deepEqual(f.state().completedMaps, [0, 0], 'same map completed twice');
+    assert.equal(f.state().totals.host.total, 12, 'scores accumulated across repeat maps');
+  });
+  run('VIS-V: disconnect during voting updates votes and resolves early when all remaining voted (#163)', () => {
+    const f = make(['a', 'b']);
+    f.send('START_VOTING');
+    f.send('CAST_VOTE', { mapIndex: 0 }, 'host');
+    f.send('CAST_VOTE', { mapIndex: 8 }, 'a');
+    assert.equal(f.state().phase, 'select');
+    // b disconnects -> all remaining connected players have voted!
+    f.send('LEAVE_ROOM', {}, 'b');
+    assert.equal(f.state().phase, 'play', 'advances immediately when all remaining voted');
+    assert.ok(f.state().tie, 'tie exists between host and a');
+    assert.deepEqual(f.state().tie.options, [0, 8]);
   });
   run('a departed first voter does not reset the original voting deadline', () => {
     const f = make(['a', 'b']); f.send('START_VOTING');

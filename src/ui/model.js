@@ -96,9 +96,19 @@ export function lobbyView(room, local, now, courses) {
   const players = connectedPlayers(room);
   const n = players.length;
   let status;
+  const tie = inCountdown(room, now) && room.tie ? {
+    options: room.tie.options.map(i => ({
+      index: i,
+      name: courses[i]?.name || 'Course ' + (i + 1),
+      par: courses[i]?.par,
+      preview: courses[i]?.preview,
+    })),
+    winner: room.tie.winner,
+    winnerName: courses[room.tie.winner]?.name || 'Course ' + (room.tie.winner + 1),
+  } : null;
   if (inCountdown(room, now)) {
     const course = courses[room.mapIndex];
-    status = course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
+    status = (tie ? 'Vote tied! Random pick: ' : '') + course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
   } else {
     status = local.isHost ? 'Pick a game mode, then start to open map voting.' : (local.serverOwned ? 'The room controller will pick the mode and start map voting.' : 'The host will pick the mode and start map voting.');
     if (room.powerups === false) status += ' Power-ups are off.';
@@ -115,6 +125,7 @@ export function lobbyView(room, local, now, courses) {
     modes: MODE_OPTIONS.map(o => ({ value: o.value, label: o.label, disabled: o.soloOnly && n > 1 })),
     multiplayer: n > 1,
     status,
+    tie,
   };
 }
 
