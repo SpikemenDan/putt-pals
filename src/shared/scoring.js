@@ -4,6 +4,21 @@
  */
 
 import { DEFAULT_PAR, DEFAULT_PENALTY } from './constants.js';
+import { TUNING } from './tuning.js';
+
+/**
+ * Calculates missed hole score for a player who missed a hole (disconnected or late arrival).
+ * Formula: maxHoleScore + missedHolePenalty.
+ *
+ * @param {number} [maxHoleScore=TUNING.scoring.maxHoleScore]
+ * @param {number} [penalty=TUNING.scoring.missedHolePenalty]
+ * @returns {number} Final recorded score for the missed hole
+ */
+export function calculateMissedHoleScore(maxHoleScore = TUNING.scoring.maxHoleScore, penalty = TUNING.scoring.missedHolePenalty) {
+  const safeMax = Math.max(1, Number.isFinite(Number(maxHoleScore)) ? Number(maxHoleScore) : TUNING.scoring.maxHoleScore);
+  const safePenalty = Math.max(0, Number.isFinite(Number(penalty)) ? Number(penalty) : TUNING.scoring.missedHolePenalty);
+  return safeMax + safePenalty;
+}
 
 /**
  * Calculates timeout score for an unfinished putt.
@@ -34,15 +49,19 @@ export function isTimeoutScore(scoreEntry) {
 
 /**
  * Formats a score entry for the scorecard UI.
- * e.g., 1 -> "1", or timeout 5 with par 2 + pen 3 -> "2+3*"
+ * e.g., 1 -> "1", timeout 5 with par 2 + pen 3 -> "2+3*", or missed hole -> "12!"
  *
  * @param {number} score Recorded numerical score
  * @param {boolean} timedOut Whether this was scored via timeout
  * @param {number} par Putt par
  * @param {number} penalty Timeout penalty
+ * @param {boolean} [missed=false] Whether this hole was missed
  * @returns {string} Formatted scorecard string
  */
-export function formatScoreEntry(score, timedOut, par, penalty) {
+export function formatScoreEntry(score, timedOut, par, penalty, missed = false) {
+  if (missed) {
+    return `${score}!`;
+  }
   if (timedOut) {
     return `${par}+${penalty}*`;
   }
@@ -52,7 +71,7 @@ export function formatScoreEntry(score, timedOut, par, penalty) {
 /**
  * Calculates a player's scorecard summary.
  *
- * @param {Array<{ strokes: number, timedOut: boolean, par: number }>} holes
+ * @param {Array<{ strokes: number, timedOut: boolean, par: number, missed?: boolean }>} holes
  * @returns {{
  *   totalStrokes: number,
  *   totalPar: number,
@@ -60,6 +79,7 @@ export function formatScoreEntry(score, timedOut, par, penalty) {
  *   relativeFormatted: string,
  *   holeInOnes: number,
  *   timeouts: number,
+ *   missedHoles: number,
  *   completedHoles: number
  * }}
  */
@@ -68,6 +88,7 @@ export function summarizeScorecard(holes) {
   let totalPar = 0;
   let holeInOnes = 0;
   let timeouts = 0;
+  let missedHoles = 0;
   let completedHoles = 0;
 
   for (const hole of holes) {
@@ -75,7 +96,9 @@ export function summarizeScorecard(holes) {
     completedHoles++;
     totalStrokes += hole.strokes;
     totalPar += hole.par;
-    if (hole.timedOut) {
+    if (hole.missed) {
+      missedHoles++;
+    } else if (hole.timedOut) {
       timeouts++;
     } else if (hole.strokes === 1) {
       holeInOnes++;
@@ -94,6 +117,7 @@ export function summarizeScorecard(holes) {
     relativeFormatted,
     holeInOnes,
     timeouts,
+    missedHoles,
     completedHoles,
   };
 }

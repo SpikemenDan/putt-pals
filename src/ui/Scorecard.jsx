@@ -36,7 +36,7 @@ export function Paper({ card }) {
           </tbody>
         </table>
       </div>
-      <div className={styles.pleg}>* timed out (par + penalty) · circle = under par · italic = in progress</div>
+      <div className={styles.pleg}>! missed hole (max + penalty) · * timed out (par + penalty) · circle = under par · italic = in progress</div>
     </div>
   );
 }

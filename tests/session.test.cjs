@@ -140,12 +140,67 @@ const assert = require('node:assert/strict');
     assert.deepEqual(s.totals.host, { name: 'Host', total: 12, par, wins: 1 });
     assert.equal(s.totals.a.par, par); assert.equal(s.totals.a.wins, 0);
   });
-  run('late joins spectate the whole map; disconnects record blanks and do not block', () => {
+  run('VIS-D: late joins enter open hole; disconnects record missed hole penalties and do not block (#162)', () => {
     const f = make(['a']); start(f); f.send('JOIN_ROOM', { name: 'late' }, 'late');
-    assert.equal(score(f, 'late'), false); f.clock.increment(1500); f.send('LEAVE_ROOM', {}, 'a'); score(f);
-    assert.equal(f.state().puttIndex, 1); assert.equal(f.state().players.a.scores[0], null);
-    assert.equal(f.state().roster.includes('late'), false);
-    f.clock.increment(2500); assert.equal(score(f, 'late'), false);
+    assert.equal(f.state().roster.includes('late'), true, 'late join entered open hole');
+    f.clock.increment(1500); f.send('LEAVE_ROOM', {}, 'a');
+    assert.equal(score(f, 'host', 2), true);
+    assert.equal(score(f, 'late', 3), true);
+    assert.equal(f.state().puttIndex, 1);
+    assert.ok(f.state().players.a.scores[0], 'a has score recorded');
+    assert.equal(f.state().players.a.scores[0].missed, true, 'disconnected player scored missed hole');
+    assert.equal(f.state().players.a.scores[0].score, 12, 'missed hole scores max + penalty (10 + 2)');
+    assert.equal(f.state().players.late.scores[0].score, 3, 'late join completed putt 0');
+  });
+  run('VIS-D: rejoin before hole close resumes strokes; duplicate/forged token rejected; hole close scores penalty (#162)', () => {
+    const clock = new SimulatedClock();
+    const session = createRoomSession({ hostId: 'host', hostName: 'Host', clock, courses });
+    sessions.push(session);
+    const token = 'player-token-12345678';
+    assert.equal(session.send({ type: 'JOIN_ROOM', playerId: 'b', name: 'Bob', token }), true);
+    session.send({ type: 'START_VOTING', playerId: 'host' });
+    session.send({ type: 'CAST_VOTE', playerId: 'host', mapIndex: 0 });
+    session.send({ type: 'CAST_VOTE', playerId: 'b', mapIndex: 0 });
+    clock.increment(2500); // start round
+    clock.increment(1500); // min play
+    assert.equal(session.send({ type: 'UPDATE_STROKES', playerId: 'b', roundNumber: 1, puttIndex: 0, strokes: 2 }), true);
+    assert.equal(session.send({ type: 'LEAVE_ROOM', playerId: 'b' }), true);
+    assert.equal(session.getSnapshot().players.b.connected, false);
+    // Forged token rejected
+    assert.equal(session.send({ type: 'JOIN_ROOM', playerId: 'b', name: 'Bob', token: 'forged-token-99999999' }), false);
+    // Missing token rejected
+    assert.equal(session.send({ type: 'JOIN_ROOM', playerId: 'b', name: 'Bob' }), false);
+    // Bob rejoins with valid token before hole closes
+    assert.equal(session.send({ type: 'JOIN_ROOM', playerId: 'b', name: 'Bob', token }), true);
+    assert.equal(session.getSnapshot().players.b.strokes, 2, 'strokes preserved on rejoin');
+    assert.equal(session.send({ type: 'REPORT_SCORE', playerId: 'b', roundNumber: 1, puttIndex: 0, strokes: 3 }), true);
+    assert.equal(session.send({ type: 'REPORT_SCORE', playerId: 'host', roundNumber: 1, puttIndex: 0, strokes: 2 }), true);
+    assert.equal(session.getSnapshot().puttIndex, 1);
+    assert.equal(session.getSnapshot().players.b.scores[0].score, 3);
+    assert.equal(session.getSnapshot().players.b.scores[0].missed, undefined);
+    // On hole 1, Bob disconnects and hole closes while away
+    clock.increment(2500); clock.increment(1500);
+    assert.equal(session.send({ type: 'LEAVE_ROOM', playerId: 'b' }), true);
+    assert.equal(session.send({ type: 'REPORT_SCORE', playerId: 'host', roundNumber: 2, puttIndex: 1, strokes: 2 }), true);
+    assert.equal(session.getSnapshot().puttIndex, 2);
+    assert.equal(session.getSnapshot().players.b.scores[1].missed, true, 'missed hole when closed while disconnected');
+    assert.equal(session.getSnapshot().players.b.scores[1].score, 12);
+  });
+  run('VIS-D: late arrival enters with penalties for earlier missed holes and never improves score (#162)', () => {
+    const f = make(); start(f);
+    // Finish putt 0 and putt 1 with host
+    f.clock.increment(1500); score(f, 'host', 2);
+    f.clock.increment(2500); f.clock.increment(1500); score(f, 'host', 2);
+    assert.equal(f.state().puttIndex, 2);
+    // Late arrival joins on putt 2 while open
+    assert.equal(f.send('JOIN_ROOM', { name: 'Latecomer', token: 'token-late-12345678' }, 'latecomer'), true);
+    const s = f.state();
+    assert.equal(s.players.latecomer.scores.length, 2, 'received 2 earlier missed-hole scores');
+    assert.equal(s.players.latecomer.scores[0].missed, true);
+    assert.equal(s.players.latecomer.scores[1].missed, true);
+    assert.equal(s.players.latecomer.scores[0].score, 12);
+    assert.equal(s.players.latecomer.scores[1].score, 12);
+    assert.equal(s.roster.includes('latecomer'), true, 'active on current putt 2');
   });
   run('3/5/7-map tournaments preserve cumulative totals and reset after the final map', () => {
     for (const [mode, maps] of [[GameModes.TOURNAMENT_3, 3], [GameModes.TOURNAMENT_5, 5], [GameModes.TOURNAMENT_7, 7]]) {

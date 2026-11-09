@@ -37,7 +37,7 @@ await app.dispose();                     // leaves the room and releases everyth
 - a real canvas drag and keyboard shortcuts;
 - course practice with a timeout scoring par + penalty;
 - putt-practice replay and stepping;
-- a four-player three-map tournament with a Steady Aim activation, a guest leaving and rejoining as a spectator, identical totals everywhere and host loss;
+- a four-player three-map tournament with a Steady Aim activation, a guest leaving and rejoining into an open hole, identical totals everywhere and host loss;
 - ten join/leave cycles with one loop and no leaked listeners/timers/rooms, plus full disposal;
 - a bundle check that the runtime contains no legacy extraction;
 - a check that npm three@0.128.0 builds all 22 courses identically to the embedded copy.

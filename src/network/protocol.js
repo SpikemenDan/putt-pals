@@ -78,11 +78,13 @@ export function validSnapshot(s) {
   // Disconnected historical participants can remain in L1; wire storage stays bounded.
   if (entries.length > 128 || entries.filter(([, p]) => p?.connected).length > MAX_PLAYERS) return false;
   for (const [id, p] of entries) {
-    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'color', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores']) || p.id !== id || !name(p.name) || !isColorIndex(p.color) || typeof p.connected !== 'boolean'
+    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'color', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores', 'missed', 'token']) || p.id !== id || !name(p.name) || !isColorIndex(p.color) || typeof p.connected !== 'boolean'
       || !count(p.strokes) || typeof p.done !== 'boolean' || typeof p.timedOut !== 'boolean'
+      || (p.missed !== undefined && typeof p.missed !== 'boolean')
+      || (p.token !== undefined && typeof p.token !== 'string')
       || !(p.score === null || count(p.score)) || !Array.isArray(p.scores) || p.scores.length > 6
-      || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty']) && count(h.score) && typeof h.timedOut === 'boolean'
-        && index(h.par, 11) && h.par > 0 && index(h.penalty, 11)))) return false;
+      || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty', 'missed']) && count(h.score) && typeof h.timedOut === 'boolean'
+        && index(h.par, 11) && h.par > 0 && index(h.penalty, 11) && (h.missed === undefined || typeof h.missed === 'boolean')))) return false;
   }
   if (!keys(s, ['phase', 'mode', 'powerups', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
     'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards'])
