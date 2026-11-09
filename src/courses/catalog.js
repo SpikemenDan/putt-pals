@@ -1,3 +1,11 @@
+import { validateCourseMechanics } from './mechanics.js';
+import { validateCourseStructures } from './structures.js';
+import { validateCourseIslands } from './islands.js';
+import { validateCurvedRamps, validateTierDrops } from './ramps-drops.js';
+import { validateCourseTubes } from './tubes.js';
+import { validateCourseWater } from './water.js';
+import { validateCourseWind } from './wind.js';
+import { validateCourseCups } from './cups.js';
 import { courseDefinitions, courseRules, courseSourceHashes } from './definitions.js';
 import { buildCourseCatalog } from './legacy.js';
 
@@ -22,7 +30,16 @@ export function validateCourseGeometry(course) {
       if (key === 'tornado' && !(row[2] > 0)) errors.push(`${label} radius must be positive`);
     });
   }
-  if (!course.tiles?.length) errors.push('Course must have playable tiles');
+  errors.push(...validateCourseMechanics(course.mechanics));
+  errors.push(...validateCourseStructures(course.structures));
+  errors.push(...validateCourseIslands(course.islands));
+  errors.push(...validateCurvedRamps(course.curvedRamps));
+  errors.push(...validateTierDrops(course.drops));
+  errors.push(...validateCourseTubes(course.tubes));
+  errors.push(...validateCourseWater(course.water));
+  errors.push(...validateCourseWind(course.wind));
+  errors.push(...validateCourseCups(course.cups));
+  if (!course.tiles?.length && !course.islands?.length && !course.curvedRamps?.length && !course.structures?.length) errors.push('Course must have playable tiles');
   return { valid: errors.length === 0, errors };
 }
 

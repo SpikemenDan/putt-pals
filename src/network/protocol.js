@@ -4,6 +4,7 @@ import { GameModes } from '../shared/session.js';
 import { auraIds } from '../gameplay/catalog.js';
 import { validEffectMessage } from '../gameplay/effects.js';
 import { validDeployable, validDeployCommand } from '../gameplay/deployables.js';
+import { GLOBAL_HAZARD_LIMIT, validGlobalHazard, validGlobalHazardCommand } from '../gameplay/global-hazards.js';
 
 export const MAX_MESSAGE_BYTES = 65536;
 /** Liveness (N2): guests ping and hosts re-send a snapshot this often, so a silent link is noticed. */
@@ -33,6 +34,7 @@ export function validCommand(e, isHost) {
     UPDATE_STROKES: ['strokes', 'roundNumber', 'puttIndex'],
     REPORT_SCORE: ['strokes', 'roundNumber', 'puttIndex', 'timedOut'],
     DEPLOY_OBJECT: ['kind', 'x', 'y'], DEPLOY_HIT: ['id'],
+    ACTIVATE_HAZARD: ['kind', 'direction', 'targetId'],
   }[e.type];
   if (!Array.isArray(fields) || !keys(e, ['type', ...fields])) return false;
   switch (e.type) {
@@ -44,6 +46,10 @@ export function validCommand(e, isHost) {
     case 'START_ROUND': return index(e.puttIndex, 6);
     case 'DEPLOY_OBJECT': return validDeployCommand(e);
     case 'DEPLOY_HIT': return validId(e.id);
+    case 'ACTIVATE_HAZARD': {
+      const { type, ...command } = e;
+      return validGlobalHazardCommand(command);
+    }
     case 'PRACTICE_STEP': return [-1, 0, 1].includes(e.step);
     case 'UPDATE_STROKES': case 'REPORT_SCORE':
       return count(e.strokes) && count(e.roundNumber) && index(e.puttIndex, 6)
@@ -79,7 +85,7 @@ export function validSnapshot(s) {
         && index(h.par, 11) && h.par > 0 && index(h.penalty, 11)))) return false;
   }
   if (!keys(s, ['phase', 'mode', 'powerups', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
-    'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables'])
+    'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards'])
     || !(s.powerups === undefined || typeof s.powerups === 'boolean')
     || !Number.isFinite(s.roundLimitSeconds) || s.roundLimitSeconds < 120 || s.roundLimitSeconds > 600
     || typeof s.isHost !== 'boolean' || !validState(s.state)
@@ -96,6 +102,11 @@ export function validSnapshot(s) {
     || !Object.entries(s.presence).every(([id, p]) => Object.hasOwn(s.players, id) && s.players[id].connected && validPresence(p)))) return false;
   if (s.deployables !== undefined && (!Array.isArray(s.deployables) || s.deployables.length > MAX_DEPLOYABLES || !s.deployables.every(d => validDeployable(d))
     || new Set(s.deployables.map(d => d.id)).size !== s.deployables.length || !s.deployables.every(d => Object.hasOwn(s.players, d.owner)))) return false;
+  if (s.globalHazards !== undefined && (!Array.isArray(s.globalHazards) || s.globalHazards.length > GLOBAL_HAZARD_LIMIT
+    || s.globalHazards.length > 0 && (s.phase !== 'play' || s.powerups === false || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(s.mode) || s.roster.length < 2)
+    || !s.globalHazards.every(h => validGlobalHazard(h) && Object.hasOwn(s.players, h.owner) && Object.hasOwn(s.players, h.kind === 'lightning' ? h.targetId : h.owner))
+    || s.globalHazards.some(h => h.kind === 'lightning' && h.owner === h.targetId)
+    || new Set(s.globalHazards.map(h => h.id)).size !== s.globalHazards.length)) return false;
   return Object.hasOwn(s.players, s.hostId) && s.roster.every(id => validId(id) && Object.hasOwn(s.players, id));
 }
 /** Why a host refused a guest; sent in a 'reject' frame just before the host closes that link. */

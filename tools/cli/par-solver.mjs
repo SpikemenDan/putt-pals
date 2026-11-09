@@ -42,7 +42,7 @@ export const PAR_SOLVER_CONFIG = Object.freeze({
 export class BudgetExhausted extends Error {}
 
 const DEG = Math.PI / 180;
-const key = (x, y) => `${x.toFixed(3)},${y.toFixed(3)}`;
+const key = (x, y, z = 0) => `${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}`;
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const round = (n, d = 1) => +n.toFixed(d);
 
@@ -149,7 +149,7 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
   const finishFailures = new Set();
   const planFailures = new Set();
   const robustFinish = (state, screen) => {
-    const cellId = `${Math.round(state.x / config.waypointCell)},${Math.round(state.y / config.waypointCell)}`;
+    const cellId = `${Math.round(state.x / config.waypointCell)},${Math.round(state.y / config.waypointCell)},${Math.round((state.z ?? 0) / config.waypointCell)}`;
     if (screen && finishFailures.has(cellId)) return null;
     const stepDeg = screen ? config.screenAngleStepDeg : config.finishAngleStepDeg;
     const powerStep = screen ? config.screenPowerStep : config.powerStep;
@@ -157,7 +157,6 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
       for (const power of powers(config, powerStep)) {
         if (!run(state, angle, power).sunk) continue;
         if (robustSink(state, angle, power)) return { angle, power };
-        if (!screen) continue;
         for (const da of [-0.5, 0.5, -0.25, 0.25]) for (const dp of [0, -0.05, 0.05]) {
           const a = angle + da * stepDeg * DEG;
           const p = +(power + dp).toFixed(4);
@@ -179,7 +178,7 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
         const out = run(state, angle, power);
         if (out.sunk || out.invalid) continue;
         if (Math.hypot(out.x - state.x, out.y - state.y) < config.waypointCell) continue;
-        const cell = `${Math.round(out.x / config.waypointCell)},${Math.round(out.y / config.waypointCell)}`;
+        const cell = `${Math.round(out.x / config.waypointCell)},${Math.round(out.y / config.waypointCell)},${Math.round((out.z ?? 0) / config.waypointCell)}`;
         if (!cells.has(cell)) cells.set(cell, { angle, power, to: { x: out.x, y: out.y, z: out.z } });
       }
     }

@@ -49,7 +49,7 @@ export function createGameView({ renderer, rig = createCameraRig(), cameraCollis
      * @param {object} frame See renderer.render(); plus `free` (spectating/waiting) and `keys` (held keys, lower case).
      * @returns {{ events: string[], mode: string, transitioning: boolean }}
      */
-    frame({ now, dt, hazardTime = 0, local, remotes = [], aim = null, deployables = [], placing = null, free = false, keys }) {
+    frame({ now, dt, hazardTime = 0, local, remotes = [], aim = null, deployables = [], globalHazards = [], placing = null, free = false, keys }) {
       const { course, transform, holePosition, solids } = requireCourse();
       const me = local || { x: 0, y: 0, z: 0, mode: 'lobby' };
       const ballVisible = me.mode === 'play' || me.mode === 'sunk';
@@ -65,7 +65,7 @@ export function createGameView({ renderer, rig = createCameraRig(), cameraCollis
         ballVisible,
       });
       if (cameraCollision) pose.position = resolveCameraPosition(pose.position, solids);
-      renderer.render({ now, dt, hazardTime, local, remotes, aim, deployables, placing, camera: pose });
+      renderer.render({ now, dt, hazardTime, local, remotes, aim, deployables, globalHazards, placing, camera: pose });
       return { events: pose.events, mode: pose.mode, transitioning: pose.transitioning };
     },
     dispose() { renderer.dispose(); },

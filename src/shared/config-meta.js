@@ -10,6 +10,19 @@
 
 /** [pattern, units], first match wins. Every TUNING field must match one (tests/config-meta.test.cjs). */
 export const TUNING_UNITS = Object.freeze([
+  [/^courseMechanics\.(?:bodyHeight|fanHeight|vortexHeight|portalRadius|portalHeight|portalClearance)$/, 'world units'],
+  [/^courseMechanics\.(?:wedgeRestitution|bouncerRestitution|vortexPull)$/, 'factor'],
+  [/^courseMechanics\.bouncerKick$/, 'units/s'],
+  [/^courseMechanics\.(?:fanAcceleration|vortexAcceleration|vortexLift)$/, 'units/s²'],
+  [/^courseMechanics\.portalCooldown$/, 'seconds'],
+  [/^globalHazards\.(?:rainFrictionMultiplier|rainDragMultiplier|snowFrictionMultiplier|snowDragMultiplier)$/, 'factor'],
+  [/^globalHazards\.(?:windAcceleration|vortexAcceleration|tornadoLift)$/, 'units/s²'],
+  [/^globalHazards\.lightningImpulse$/, 'units/s'],
+  [/^globalHazards\.(?:vortexRange|roamRadius)$/, 'world units'],
+  [/^globalHazards\.(?:roamPeriod|durationSeconds|lightningWindowSeconds)$/, 'seconds'],
+  [/^water\.(?:shallowDragMultiplier|shallowFrictionMultiplier)$/, 'multiplier'],
+  [/^water\.splashHeight$/, 'world units'],
+  [/^wind\.(?:groundMultiplier|airMultiplier)$/, 'factor'],
   [/^gravity$/, 'units/s²'],
   [/^shotPower$/, 'units/s (launch speed at full charge)'],
   [/^(?:ball\.radius|wallHeight|cup\.(?:defaultRadius|minRadius|depth|sinkMargin|filletWidth|filletDepth)|bounce\.ledgeHeight|rest\.(?:airTolerance|groundTolerance)|powerups\.(?:magnetRange|auraRange)|hazards\.(?:padRadius|teleporterRadius)|aim\.arrowMaxLength)$/, 'world units'],

@@ -6,12 +6,14 @@
  */
 
 import { FIXED_TIMESTEP } from '../shared/constants.js';
+import { TUNING } from '../shared/tuning.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { outOfBounds, sinkBall, surfaceHeight } from '../simulation/physics.js';
 import { SimulationEngine } from '../simulation/index.js';
 import { activatePowerup, addToInventory, armedState, auraOf, ballRadiusOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
 import { DEPLOYABLE_HIT } from '../gameplay/deployables.js';
+import { courseBounds, evaluateGlobalHazards, lightningImpulse } from '../gameplay/global-hazards.js';
 import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
@@ -37,6 +39,8 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   const course = engine.course;
   const player = engine.addPlayer(id, name);
   player.mode = playing ? 'play' : 'spectator';
+  player.globalHazards = [];
+  player.globalHazardBounds = courseBounds(course);
   // No Power-Ups (GM1): every `?` block counts as already collected, so none is drawn or touchable.
   player.collectedPickups = powerups.boxes === false ? Object.fromEntries((course.q || []).map((_, i) => [i, 1])) : {};
   player.inventory = inventory.slice();
@@ -44,8 +48,9 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
   player.pendingPowerups = pendingState();
   player.flashUntil = 0; player.flashType = '';
   let accumulator = 0, stall = 0, waitUntil = 0, completion = null, fxCount = 0, fx = null, disposed = false;
+  const appliedLightning = new Set();
 
-  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null, deployHits: [] });
+  const result = () => ({ toasts: [], banners: [], completed: null, aim: null, cancelInput: false, openCard: false, placement: null, deployHits: [], cupEliminations: [] });
   const finish = (out, event, now) => {
     waitUntil = now + SINK_WAIT_MS;
     completion = { strokes: player.strokes, timedOut: !!event.timedOut };
@@ -90,12 +95,14 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const out = result();
       if (disposed) return out;
       if (player.mode === 'play') {
-        if (!player.moving && environmentAwake(course, player, hazardTime())) { out.cancelInput = true; player.moving = true; stall = 0; }
+        const global = evaluateGlobalHazards(player.globalHazards, hazardTime(), player, player.globalHazardBounds);
+        if (!player.moving && (environmentAwake(course, player, hazardTime()) || Math.hypot(global.ax, global.ay, global.az) > 0)) { out.cancelInput = true; player.moving = true; stall = 0; }
         if (player.moving) {
           stall += dt; accumulator += dt;
           while (accumulator >= FIXED_TIMESTEP && player.moving) {
             for (const event of engine.step(FIXED_TIMESTEP).events) {
               if (event.type === SimulationEventTypes.SINK) finish(out, event, now);
+              else if (event.type === SimulationEventTypes.CUP_ELIMINATION) out.cupEliminations.push(event.cupId);
               else if (event.type === SimulationEventTypes.OUT_OF_BOUNDS) { out.toasts.push('Splash! Back to your last spot. That stroke still counts.'); out.aim = aimAtHole(course, player); }
               else if (event.type === DEPLOYABLE_HIT) out.deployHits.push(event.id);
               else if (event.type === SimulationEventTypes.REST) out.aim = aimAtHole(course, player);
@@ -132,6 +139,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       if (activation.toast && !activation.deploy) out.toasts.push(activation.toast);
       if (!activation.ok) return out;
       if (activation.deploy) { out.placement = { kind: activation.deploy.kind, index }; return out; } // G1e: the slot is spent by consumeItem once the host accepts the placement
+      if (activation.global) { out.globalHazard = { kind: activation.global.kind, index }; return out; }
       out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power', item]);
       if (activation.message) { fx = activation.message; fxCount = fx.id; }
       player.flashType = item; player.flashUntil = now + EFFECT_FLASH_MS;
@@ -141,6 +149,21 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
 
     /** Active Bumper / Orbital Bumper records the physics step applies to this client's ball (G1e). Cleared outside play. */
     setDeployables(list) { player.deployables = disposed || player.mode !== 'play' ? [] : list; },
+
+    /** Room-authoritative timed global hazards (G1f), scoped to this putt. */
+    setGlobalHazards(list) {
+      player.globalHazards = disposed || player.mode !== 'play' || !Array.isArray(list) ? [] : list;
+      const at = hazardTime();
+      const events = [];
+      for (const hazard of player.globalHazards) {
+        if (hazard.kind !== 'lightning' || hazard.targetId !== id || appliedLightning.has(hazard.id)
+            || at < hazard.startTime || at >= hazard.startTime + TUNING.globalHazards.lightningWindowSeconds) continue;
+        appliedLightning.add(hazard.id);
+        const impulse = lightningImpulse(hazard, id);
+        if (impulse) { player.vx += impulse.x; player.vy += impulse.y; player.moving = true; stall = 0; events.push({ type: 'lightning', id: hazard.id }); }
+      }
+      return events;
+    },
 
     /** Spends the slot of a placed deployable (G1e) after the host accepted DEPLOY_OBJECT. Returns false when the slot no longer holds `kind`. */
     consumeItem(kind) {

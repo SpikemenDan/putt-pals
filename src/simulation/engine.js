@@ -36,7 +36,7 @@ export function resolvePuttCourse(baseCourse, puttIndex = 0) {
   if (!putt) return baseCourse;
 
   // Create child object inheriting all map geometry/arrays from baseCourse
-  const resolved = Object.create(baseCourse);
+  const resolved = Object.assign(Object.create(baseCourse), putt);
   resolved.tee = putt.tee;
   resolved.hole = putt.hole;
   if (putt.par != null) resolved.par = putt.par;
@@ -46,6 +46,9 @@ export function resolvePuttCourse(baseCourse, puttIndex = 0) {
   if (putt.cupRadius != null) resolved.cup = putt.cupRadius;
   if (putt.limit != null) resolved.limit = putt.limit;
   if (putt.limitSeconds != null) resolved.limit = putt.limitSeconds;
+  if (resolved.cups) {
+    resolved.cups = resolved.cups.map(c => ({ ...c }));
+  }
   resolved.puttIndex = puttIndex;
 
   return resolved;

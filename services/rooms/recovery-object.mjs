@@ -238,6 +238,7 @@ export class RoomDurableObject extends RoomCoordinator {
     return {
       schemaVersion: CHECKPOINT_VERSION, rulesVersion: ROOM_RULES_VERSION,
       courseHash: room.courseHash, savedAt: snapshot.serverTime, snapshot,
+      hazardSequence: room.hazardSeq,
       identities: [...room.identities.values()].map(i => ({
         playerId: i.playerId, tokenHash: i.tokenHash, connectionId: i.connectionId, lastSequence: i.lastSequence,
       })),
@@ -315,6 +316,8 @@ export class RoomDurableObject extends RoomCoordinator {
       emptyAt: checkpoint.deadlines.emptyAt, controllerAt: checkpoint.deadlines.controllerAt,
       replayAt: checkpoint.deadlines.replayAt,
       deployables: structuredClone(s.deployables ?? []),
+      globalHazards: structuredClone(s.globalHazards ?? []),
+      hazardSeq: checkpoint.hazardSequence ?? 0,
     });
     room.session = this.makeSession(room, {
       controllerId: s.controllerId, hostName: s.session.context.players[first]?.name ?? 'Host',

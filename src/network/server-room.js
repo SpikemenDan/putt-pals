@@ -114,6 +114,7 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     snapshot = { ...structuredClone(s.session.context), controllerId: s.controllerId,
       state: sessionValue(s.session.node), phase: s.session.node.split('.')[0],
       ...(s.deployables ? { deployables: structuredClone(s.deployables) } : {}) }; // placed Bumpers and Orbital Bumpers (G1e)
+    if (s.globalHazards) snapshot.globalHazards = structuredClone(s.globalHazards);
     positions = Object.fromEntries(Object.entries(positions).filter(([id]) => s.session.context.players[id]?.connected && s.session.context.roster.includes(id)));
     emit('snapshot', snapshot);
     emit('presence', positions);
@@ -206,6 +207,7 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     get snapshot() { return snapshot ? structuredClone(snapshot) : null; },
     /** Placed Bumpers and Orbital Bumpers for the putt in play (read-only; the snapshot carries them). */
     get deployables() { return snapshot?.deployables ?? NO_DEPLOYABLES; },
+    get globalHazards() { return snapshot?.globalHazards ?? NO_DEPLOYABLES; },
     get connected() { return connected && !closed; }, now, send,
     sendPresence(payload) {
       if (!connected || !wireSnapshot) return false;

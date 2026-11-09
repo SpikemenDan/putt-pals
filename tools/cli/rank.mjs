@@ -1,4 +1,5 @@
 import { STARTER_COURSE_INDICES } from '../../src/shared/constants.js';
+import { getDifficultyBand } from '../../src/courses/difficulty.js';
 import { assessDifficultyResult, createDifficultyProvenance } from './provenance.mjs';
 
 /**
@@ -28,10 +29,11 @@ export function runRank(courses, parRoutes) {
       difficulty += entry.difficulty;
       strokes += entry.strokes;
     });
-    return { index, name: course.name, difficulty: +difficulty.toFixed(3), strokes };
+    const band = getDifficultyBand(difficulty, course.putts?.length || 6);
+    return { index, name: course.name, difficulty: +difficulty.toFixed(3), strokes, band: band.name };
   }).filter(Boolean);
   [...rows].sort((a, b) => a.difficulty - b.difficulty).forEach((row, rank) => {
-    lines.push(`${rank + 1}. map ${row.index} ${row.name} | difficulty ${row.difficulty} | route strokes ${row.strokes}`);
+    lines.push(`${rank + 1}. map ${row.index} ${row.name} | difficulty ${row.difficulty} (${row.band}) | route strokes ${row.strokes}`);
   });
   const shipped = rows.map(row => row.index);
   const measured = [...rows].sort((a, b) => a.difficulty - b.difficulty).map(row => row.index);

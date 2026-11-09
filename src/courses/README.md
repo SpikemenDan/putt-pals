@@ -48,3 +48,94 @@ Missing/malformed files, unsupported schemas, duplicate/missing options, unsuppo
 ## Geometry integrity
 
 `check` and document validation also run the CL1 geometry integrity rules (interpenetrating solids, wall/spawn/cup clearances, ramp seams) with errors naming map, putt and element ids. See "Course geometry integrity" in ARCHITECTURE.md. This supersedes the earlier note that `check` does not examine wall clearance; it still does not certify connectivity or reachability.
+
+## G1g mechanic records
+
+Course geometry may include an optional `mechanics` array. Validated records
+provide triangular wedges, finite bouncer faces, height-gated stronger fans,
+course vortices and oriented portal pairs. The browser, CLI and solver consume
+the same records and fixed-step simulation. Existing tuple-based mechanics keep
+their behavior. Exact fields, units, conservative integrity rules, proof
+chambers and reproduction commands are in
+[the G1g contract](../../docs/G1G_COURSE_MECHANICS.md).
+
+## K0 volumetric 3D structures
+
+Course geometry may include an optional `structures` array. Validated records
+provide 3D elevated surfaces (`kind: 'surface'`), vertical walls with base elevation
+and finite height (`kind: 'wall'`), and ceilings that bounce upward-moving balls
+(`kind: 'ceiling'`). Multi-level courses (such as overpasses) allow travel above and below
+the same 2D footprint, gravity drops between levels, and vertical wall obstruction.
+The browser Three.js renderer, simulation physics, geometry integrity validator,
+and par-solver consume the same structure records. Existing 2D courses omit structures
+and remain bit-identical.
+
+## K1a floating islands and walls
+
+Course geometry and per-putt definitions may include an optional `islands` array.
+Validated records provide floating island rectangles with per-edge guard walls and
+declared open edges (`id`, `rect`, optional `elevation`, `surface`, `openEdges`, `guardWalls`).
+The CL1 geometry integrity validator verifies that:
+- Open drop-off edges into designed gaps are not blocked by walls (`blocked-open-edge`).
+- Every edge exposed to void/abyss without a guard wall or adjacent connected tile is explicitly declared in `openEdges` (`undeclared-open-edge`).
+- Island footprints do not overlap (`islands-interpenetrate`).
+Shots that drop off declared open edges into designed gaps (`z < -70`) trigger out-of-bounds,
+resetting the ball with the stroke counted. The Three.js renderer automatically builds
+floating island understructures and ink hulls, and the par solver (SV1) proves robust
+routes within par (2 to 6 strokes). Existing 2D courses omit islands and remain bit-identical.
+
+## K1b curved ramps and multi-tier drops
+
+Course geometry and per-putt definitions may include optional `curvedRamps` and `drops` arrays.
+Validated curved ramp records (`validCurvedRamp`) define curved ramp arcs with analytical height, curve profiles (`smooth` cubic Hermite, `launch`, `linear`), and radial banking (`bankAngleDeg`):
+- `center`: `[cx, cy]`
+- `innerRadius`: number > 0
+- `outerRadius`: number > innerRadius
+- `startAngleDeg`: number (degrees)
+- `endAngleDeg`: number (degrees)
+- `zStart`: elevation at start angle
+- `zEnd`: elevation at end angle
+- `curve`: optional `'smooth'` | `'launch'` | `'linear'`
+- `bankAngleDeg`: optional radial tilt angle across the track (-85..85 degrees)
+- `surface`: optional surface type (`'turf'`, `'ice'`, `'sand'`, `'slime'`)
+
+Multi-tier drop records (`validTierDrop`) declare vertical transitions between descending elevations:
+- `id`: unique string identifier
+- `dropEdge`: `[x1, y1, x2, y2]` drop edge segment
+- `landingFloor`: `[x, y, w, h, z]` rectangular landing area and elevation
+- `zFrom`: starting elevation
+- `zTo`: landing elevation (`zTo < zFrom`)
+- `restitution`: optional landing bounce restitution factor
+
+Simulation evaluates curved ramp heights and surface gradients analytically, allowing balls to naturally accelerate and bank along the curve under gravity. When falling from upper tiers onto lower landing floors, airborne balls land with restitution dampening downward speed and emitting domain bounce events. The Three.js renderer generates sector mesh geometry and cel ink outlines for curved ramps and landing tiers. The par solver (SV1) proves robust multi-stroke routes within par (2 to 6). Existing 2D courses omit curved ramps and drops and remain 100% bit-identical.
+
+## K1c transport tubes
+
+Course geometry and per-putt definitions may include an optional `tubes` array.
+Validated transport tube records (`validCourseTube`) define 3D enclosed paths connecting disparate surfaces or islands:
+- `id`: unique string identifier
+- `entry`: `[x, y, z]` tube entrance coordinate
+- `exit`: `[x, y, z]` tube exit coordinate
+- `path`: array of at least 2 3D waypoints `[[x, y, z], ...]` interpolating the tube trajectory
+- `speed`: travel speed (units per second) inside the tube
+- `exitVelocity`: `[vx, vy, vz]` velocity vector imparted to the ball upon exiting
+- `radius`: optional tube radius (default: 14)
+- `color`: optional hex color value for the tube mesh
+
+Simulation checks ball proximity to tube entrances during active play ticks. When captured, the ball traverses along the 3D path at constant speed without friction or gravity, emitting hazard enter events. Upon reaching the end of the tube path, the ball exits at the designated exit coordinate with the assigned 3D `exitVelocity`, flinging through the air into its next trajectory arc, with re-entry cooldown to prevent immediate recapture. The Three.js renderer builds 3D `THREE.TubeGeometry` using Catmull-Rom spline curves with toon materials and entry/exit collar indicators. The par solver (SV1) proves robust routes within par using transport tubes. Existing courses omit tubes and remain 100% bit-identical.
+
+## K1d difficulty bands and starter maps
+
+Course difficulty is classified into standardized difficulty bands (`DIFFICULTY_BANDS` in `src/courses/difficulty.js`), evaluated using SV1 par-route solver measurements:
+- **Tier 1: Beginner** (Rating $\le 10.0$ on 6-putt scale): Forgiving fairways, generous margins, predominantly single-stroke routes within par (Switchback Garden, Slime Springs, Frost Hollow, Dune Serpent).
+- **Tier 2: Intermediate** ($10.0 < \text{Rating} \le 14.0$): Balanced challenge, moderate hazards, tactical multi-stroke routes or tighter margins (Cyclone Ring, Grand Finale).
+- **Tier 3: Advanced** ($14.0 < \text{Rating} \le 18.0$): Elevated 3D tiers, curved banking ramps, and floating island gaps requiring precise multi-stroke play.
+- **Tier 4: Expert** ($\text{Rating} > 18.0$): Intricate multi-tier drops, transport tube flings, and high-precision speed control across void gaps.
+
+`getDifficultyBand(rating, puttCount)` normalizes non-6-putt maps to the standard 6-putt scale and returns the frozen band metadata. `tools/cli/main.mjs rank --routes <file>` reports the difficulty rating, stroke count, and difficulty band for each starter course. All 36 starter putts have independently verified robust routes within par. Optional hole-in-one shortcuts exist on single-shot lines, while multi-stroke routes satisfy par requirements without requiring a hole-in-one.
+
+
+`node tools/cli/export-mechanic-chambers.mjs` exports a normal course document
+with development chambers appended. Use `--courses` with the existing CLI
+commands to inspect, shoot and solve them. The normal catalog and voting pool
+are unchanged.

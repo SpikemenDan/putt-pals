@@ -1,0 +1,126 @@
+.pongHud {
+  position: absolute;
+  z-index: 6;
+  top: 68px;
+  left: 14px;
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  color: var(--ink);
+  font-family: var(--font);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 4px;
+}
+
+.racks {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+}
+
+.rackCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.teamName {
+  font-size: 11px;
+  font-weight: 900;
+  max-width: 95px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamCount {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.cupTriangle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.cupRow {
+  display: flex;
+  gap: 3px;
+}
+
+.cupDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  box-sizing: border-box;
+}
+
+.cupHomeActive {
+  background: #ff4444;
+}
+
+.cupAwayActive {
+  background: #4488ff;
+}
+
+.cupInactive {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.3;
+}
+
+.turnInfo {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.turnInfo.myTurn {
+  background: var(--green);
+  color: #fff;
+}
+
+.turnInfo.redemption {
+  background: var(--red);
+  color: #fff;
+}
+
+.balls {
+  margin-top: 2px;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+@media (max-width: 640px) {
+  .pongHud {
+    position: static;
+    width: auto;
+    margin: 8px 0;
+  }
+}

@@ -41,8 +41,7 @@ test('putt practice: the picker starts a putt, completion replays it, the bar st
 });
 
 test('course practice: a real two-minute timeout scores par + penalty and the map still finishes', async ({ page }) => {
-  // The first putt is left to run out its 2:00 limit in real time.
-  test.setTimeout(600_000);
+  await page.clock.install();
   const ana = await openApp(page, 'Ana');
   await ana.solo();
   await ana.ui('room-lobby').locator('select').selectOption('practice');
@@ -50,9 +49,16 @@ test('course practice: a real two-minute timeout scores par + penalty and the ma
   await expect(ana.ui('map-select').locator('p').first()).toHaveText('Practice · pick any map to start. No voting, no opponents.');
   await ana.ui('map-select').locator('button[data-v]').first().click();
   await until(() => ana.ready(), { label: 'ready' });
-  await until(() => page.evaluate(() => window.__ppApp.store.getSnapshot().hud.warn), { timeout: 130_000, label: 'last ten seconds warning' });
-  await until(async () => (await ana.snapshot()).players.solo.scores.length > 0, { timeout: 30_000, label: 'timeout' });
+
+  // Fast-forward into the final 10 seconds to verify warning state without real-time waiting
+  await page.clock.fastForward(111_000);
+  await until(() => page.evaluate(() => window.__ppApp.store.getSnapshot().hud.warn), { timeout: 5_000, label: 'last ten seconds warning' });
+
+  // Fast-forward past the 2:00 (120s) limit to trigger timeout
+  await page.clock.fastForward(10_000);
+  await until(async () => (await ana.snapshot()).players.solo.scores.length > 0, { timeout: 10_000, label: 'timeout' });
   expect(await page.evaluate(() => window.__ppApp.room.snapshot.players.solo.scores[0]), 'timeout scores par 2 + penalty 3').toEqual({ score: 5, timedOut: true, par: 2, penalty: 3 });
+
   for (let k = 1; k < 6; k++) {
     await until(async () => (await page.evaluate(() => window.__ppApp.putt?.puttIndex)) === k, { label: 'putt ' + (k + 1) });
     await playPutt([ana]);

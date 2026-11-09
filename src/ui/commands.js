@@ -25,11 +25,16 @@ export const UiCommands = Object.freeze({
   TOGGLE_QUALITY: 'toggle-quality',
   /** { type, event } — an L1 SessionEvents command without playerId; the app binds the sender. */
   SESSION: 'session',
+  /** { type, kind, direction?, targetId? } — confirm a timed global hazard activation. */
+  CONFIRM_HAZARD: 'confirm-hazard',
+  /** Close a pending hazard chooser without spending the inventory slot. */
+  CANCEL_HAZARD: 'cancel-hazard',
 });
 
 /** Lobby game-mode choices, in legacy order and wording. */
 export const MODE_OPTIONS = Object.freeze([
   { value: GameModes.STANDARD, label: 'Standard · 1 map', soloOnly: false },
+  { value: GameModes.PONG, label: 'Putt Pong · 1v1', soloOnly: false },
   { value: GameModes.TOURNAMENT_3, label: 'Tournament · 3 maps', soloOnly: false },
   { value: GameModes.TOURNAMENT_5, label: 'Tournament · 5 maps', soloOnly: false },
   { value: GameModes.TOURNAMENT_7, label: 'Tournament · 7 maps', soloOnly: false },

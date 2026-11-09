@@ -5,6 +5,7 @@ import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COU
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { createCourseDocument, validateCourseDocument } from '../courses/document.js';
+import { createPongSession } from './pong.js';
 
 export const SessionEvents = Object.freeze({ ...SessionCommands, UPDATE_STROKES: 'UPDATE_STROKES', REPORT_SCORE: 'REPORT_SCORE', PRACTICE_STEP: 'PRACTICE_STEP', PRACTICE_MAPS: 'PRACTICE_MAPS' });
 const eventTypes = new Set(Object.values(SessionEvents));
@@ -67,13 +68,25 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     return 0;
   };
   const resetPlayers = (c, clearScores) => Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, { ...p, strokes: 0, done: false, timedOut: false, score: null, scores: clearScores ? [] : p.scores }]));
-  const round = (c, mapIndex, puttIndex, newMap) => ({
-    mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
-    roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
-    roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
-    roster: newMap ? newMapRoster(c) : c.roster,
-    players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
-  });
+  const round = (c, mapIndex, puttIndex, newMap) => {
+    const nextRound = {
+      mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
+      roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
+      roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
+      roster: newMap ? newMapRoster(c) : c.roster,
+      players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
+    };
+    if (c.mode === GameModes.PONG) {
+      const roster = newMap ? newMapRoster(c) : c.roster;
+      const homeId = roster[0] || controller(c);
+      const awayId = roster[1] || (roster[0] === controller(c) ? 'opponent' : controller(c));
+      const homePlayer = { id: homeId, name: c.players[homeId]?.name || 'Home', color: c.players[homeId]?.color };
+      const awayPlayer = { id: awayId, name: c.players[awayId]?.name || 'Away', color: c.players[awayId]?.color };
+      const pongSession = createPongSession({ homePlayer, awayPlayer, rackSize: 10 });
+      nextRound.pong = pongSession.getSnapshot();
+    }
+    return nextRound;
+  };
   const recordPutt = c => replay(c) ? {} : { players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, {
     ...p, scores: c.roster.includes(id) ? [...p.scores, (p.connected || (serverOwned && isReserved(id))) ? { score: p.score ?? timeoutScore(c, p), timedOut: p.timedOut || !p.done, par: rule(c).par, penalty: rule(c).penalty } : null] : p.scores,
   }])) };
@@ -82,7 +95,10 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     // Par of the putts a player actually completed, so standings are strokes minus par.
     const pars = Object.fromEntries(active(c).map(id => [id, c.players[id].scores.reduce((sum, p) => sum + (p?.par ?? 0), 0)]));
     const best = Math.min(...Object.keys(scores).map(id => scores[id] - pars[id]));
-    const winners = Object.keys(scores).filter(id => scores[id] - pars[id] === best);
+    let winners = Object.keys(scores).filter(id => scores[id] - pars[id] === best);
+    if (c.mode === GameModes.PONG && c.pong?.winner) {
+      winners = [c.pong.winner];
+    }
     let totals = { ...c.totals };
     for (const [id, score] of Object.entries(scores)) {
       const previous = own(totals, id) ? totals[id] : undefined;
@@ -126,6 +142,11 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       notReplay: ({ context: c }) => !replay(c),
       replayHost: ({ context: c, event: e }) => replay(c) && host(c, e),
       replayStep: ({ context: c, event: e }) => replay(c) && host(c, e) && [-1, 0, 1].includes(e.step),
+      canPongShot: ({ context: c, event: e }) => {
+        if (c.mode !== GameModes.PONG || !c.pong || c.pong.isGameOver) return false;
+        return participant(c, e) && (e.playerId === c.pong.activePlayerId || ids(c).length === 1);
+      },
+      donePong: ({ context: c }) => c.mode === GameModes.PONG && c.pong?.isGameOver === true,
       moreMaps: ({ context: c, event: e }) => host(c, e) && c.completedMaps.length < seriesLength(c.mode),
       practiceHost: ({ context: c, event: e }) => host(c, e) && practice(c),
       canExpirePlayer: ({ context: c, event: e }) => serverOwned && typeof e.playerId === 'string' && own(c.players, e.playerId) && !c.players[e.playerId].connected,
@@ -154,6 +175,22 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       finish: assign(({ context: c }) => finishMap(c)),
       loop: assign(({ context: c }) => round(c, c.mapIndex, c.puttIndex, false)),
       step: assign(({ context: c, event: e }) => round(c, c.mapIndex, (c.puttIndex + e.step + courseData[c.mapIndex].putts.length) % courseData[c.mapIndex].putts.length, false)),
+      pongShot: assign(({ context: c, event: e }) => {
+        if (c.mode !== GameModes.PONG || !c.pong) return {};
+        const pongSession = createPongSession({
+          homePlayer: c.pong.homePlayer,
+          awayPlayer: c.pong.awayPlayer,
+          context: c.pong,
+        });
+        pongSession.send({
+          type: 'PONG_SHOT',
+          playerId: e.playerId,
+          cupId: e.cupId,
+          hit: !!e.hit,
+          timedOut: !!e.timedOut,
+        });
+        return { pong: pongSession.getSnapshot() };
+      }),
       setController: assign(({ event: e }) => ({ controllerId: e.playerId })),
       expirePlayer: assign(({ context: c, event: e }) => ({
         roster: c.roster.filter(id => id !== e.playerId),
@@ -200,6 +237,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
         on: {
           UPDATE_STROKES: { guard: 'strokes', actions: 'strokes' },
           REPORT_SCORE: { guard: 'score', actions: 'score' },
+          PONG_SHOT: { guard: 'canPongShot', actions: 'pongShot' },
           PRACTICE_STEP: { guard: 'replayStep', target: '.starting', actions: 'step' },
           PRACTICE_MAPS: { guard: 'replayHost', target: 'select', actions: 'clearSeries' },
           RETURN_TO_LOBBY: { guard: 'replayHost', target: 'lobby', actions: 'lobby' },
@@ -211,9 +249,12 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
             states: {
               settling: { ...timed('minimumPlay', 'running') },
               running: {
-                always: [{ guard: 'doneReplay', target: 'replaying' },
+                always: [
+                  { guard: 'doneReplay', target: 'replaying' },
+                  { guard: 'donePong', target: '#session.results', actions: ['record', 'finish'] },
                   { guard: 'doneLast', target: '#session.results', actions: ['record', 'finish'] },
-                  { guard: 'done', target: '#session.play.starting', actions: ['record', 'next'] }],
+                  { guard: 'done', target: '#session.play.starting', actions: ['record', 'next'] },
+                ],
                 ...timed('fallbackRemaining', { guard: 'notReplay', actions: 'forceTimeout' }),
               },
               replaying: { ...timed('replay', { target: '#session.play.starting', actions: 'loop' }) },

@@ -17,7 +17,7 @@ async function run() {
 
   // Spec: every field has a description, a sane range and a default inside it; no field duplicates a physics number.
   assert.ok(DISPLAY_FIELDS.every(f => f.length === 4 && f[1] < f[2] && f[3].length > 0));
-  assert.equal(DISPLAY_FIELDS.length, 6);
+  assert.equal(DISPLAY_FIELDS.length, 21);
   assert.equal(TUNING.ball.radius, 5, 'physical radius stays in TUNING');
   assert.equal('radius' in DISPLAY.ball, false);
 

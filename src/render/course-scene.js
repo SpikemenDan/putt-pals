@@ -1,3 +1,5 @@
+import { buildCourseMechanics } from './course-mechanics.js';
+import { createPongCupRack } from './pong-cups.js';
 /**
  * Builds the Three.js scene graph for one course putt.
  *
@@ -11,13 +13,14 @@
  * ink outlines and drops the landscape trees; object layout is unchanged.
  */
 
-import { cupOf, rampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
+import { cupOf, rampHeight, curvedRampHeight, surfaceHeight, CUP_DEPTH, WALL_HEIGHT } from '../simulation/physics.js';
 import { TUNING } from '../shared/tuning.js';
 import { displayColor, TELEPORTER_COLORS } from './materials.js';
 import { createWindStreaks } from './weather.js';
 import { DEFAULT_PALETTE } from '../courses/palettes.js';
 import { addInk, createInkMaterial } from './outline.js';
 import { createWorldTransform, resolveRenderCourse } from './transform.js';
+import { islandsToTiles, islandsToGuardWalls } from '../courses/islands.js';
 
 /** Text sprite used for tee/cup markers and player names (legacy label()). */
 export function createLabel(library, text) {
@@ -85,6 +88,10 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const { THREE, textures: T } = library;
   const random = library.random;
   const hl = resolveRenderCourse(course, puttIndex);
+  if (hl.islands) {
+    if (!hl.tiles || hl.tiles.length === 0) hl.tiles = islandsToTiles(hl.islands);
+    if (!hl.w || hl.w.length === 0) hl.w = islandsToGuardWalls(hl.islands);
+  }
   const transform = createWorldTransform(origin);
   const at = (x, y, h) => transform.local(x, y, h);
   const orphans = [];
@@ -92,7 +99,7 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   const toon = library.style === 'toon';
   // Toon surfaces are one flat palette colour; the legacy style keeps its patterned textures.
   const surface = (role, texture, repeatX, repeatY, overrides) => toon ? library.toon(palette.surfaces[role], overrides) : library.patterned(texture, repeatX, repeatY, overrides);
-  const solid = (role, params) => toon ? library.toon(palette.surfaces[role], params) : new THREE.MeshStandardMaterial(params);
+  const solid = (role, params) => toon ? library.toon(palette.surfaces[role] ?? params?.color, params) : new THREE.MeshStandardMaterial(params);
   // Meshes that get an ink outline once the cup cutouts are known.
   const inked = [];
   const ink = (mesh, options) => { if (toon) inked.push([mesh, options || {}]); return mesh; };
@@ -120,6 +127,28 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     platform.userData.fade = true;
     g.add(ink(platform));
   }
+  if (hl.structures) {
+    for (const s of hl.structures) {
+      if (s.kind === 'surface') {
+        const thickness = s.thickness ?? 4;
+        const color = s.surface === 'ice' ? T.ice : s.surface === 'sand' ? T.sand : s.surface === 'slime' ? T.slime : T.turf;
+        const mat = surface(s.surface ?? 'turf', color, s.rect[2] / 80, s.rect[3] / 80, { roughness: s.surface === 'ice' ? 0.08 : 0.8 });
+        const mesh = box(THREE, s.rect[2], thickness, s.rect[3], mat, at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.z - thickness / 2), true);
+        mesh.userData.fade = true;
+        g.add(ink(mesh));
+      } else if (s.kind === 'wall') {
+        const wall = box(THREE, s.rect[2], s.height, s.rect[3], surface('wall', T.brick, Math.max(s.rect[2], s.rect[3]) / 90, 1, { transparent: true }), at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.base + s.height / 2), true);
+        wall.userData.fade = true;
+        wall.userData.wall = true;
+        g.add(ink(wall));
+      } else if (s.kind === 'ceiling') {
+        const thickness = s.thickness ?? 4;
+        const ceil = box(THREE, s.rect[2], thickness, s.rect[3], surface('platform', T.plat, s.rect[2] / 90, s.rect[3] / 90, { roughness: 0.6 }), at(s.rect[0] + s.rect[2] / 2, s.rect[1] + s.rect[3] / 2, s.z + thickness / 2), true);
+        ceil.userData.fade = true;
+        g.add(ink(ceil));
+      }
+    }
+  }
   for (const r of hl.rp) {
     const geometry = new THREE.BufferGeometry(), verts = [], uv = [], N = 48;
     const alongX = r[4][1] === 'x';
@@ -138,11 +167,185 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     ramp.receiveShadow = ramp.castShadow = true;
     g.add(ink(ramp, { planar: true }));
   }
+  if (hl.curvedRamps) {
+    for (const cr of hl.curvedRamps) {
+      const geometry = new THREE.BufferGeometry(), verts = [], uv = [], N = 48, M = 4;
+      const { center: [cx, cy], innerRadius: rIn, outerRadius: rOut, startAngleDeg: start, endAngleDeg: end } = cr;
+      for (let k = 0; k < N; k++) {
+        const t0 = k / N, t1 = (k + 1) / N;
+        const a0 = (start + (end - start) * t0) * Math.PI / 180;
+        const a1 = (start + (end - start) * t1) * Math.PI / 180;
+        for (let m = 0; m < M; m++) {
+          const u0 = m / M, u1 = (m + 1) / M;
+          const r0 = rIn + (rOut - rIn) * u0;
+          const r1 = rIn + (rOut - rIn) * u1;
+          const p00 = [cx + r0 * Math.cos(a0), cy + r0 * Math.sin(a0)];
+          const p10 = [cx + r1 * Math.cos(a0), cy + r1 * Math.sin(a0)];
+          const p11 = [cx + r1 * Math.cos(a1), cy + r1 * Math.sin(a1)];
+          const p01 = [cx + r0 * Math.cos(a1), cy + r0 * Math.sin(a1)];
+          const z00 = curvedRampHeight(cr, p00[0], p00[1]);
+          const z10 = curvedRampHeight(cr, p10[0], p10[1]);
+          const z11 = curvedRampHeight(cr, p11[0], p11[1]);
+          const z01 = curvedRampHeight(cr, p01[0], p01[1]);
+          const quad = [
+            [...at(p00[0], p00[1], z00), t0, u0],
+            [...at(p10[0], p10[1], z10), t0, u1],
+            [...at(p11[0], p11[1], z11), t1, u1],
+            [...at(p01[0], p01[1], z01), t1, u0]
+          ];
+          for (const n of [0, 1, 2, 0, 2, 3]) {
+            verts.push(...quad[n].slice(0, 3));
+            uv.push(...quad[n].slice(3));
+          }
+        }
+      }
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geometry.computeVertexNormals();
+      const texture = cr.surface === 'ice' ? T.ice : cr.surface === 'sand' ? T.sand : cr.surface === 'slime' ? T.slime : T.ramp;
+      const role = cr.surface || 'ramp';
+      const ramp = new THREE.Mesh(geometry, surface(role, texture, 2, 2, { side: THREE.DoubleSide }));
+      ramp.receiveShadow = ramp.castShadow = true;
+      ramp.userData.fade = true;
+      ramp.userData.surfaceType = 'curved-ramp';
+      g.add(ink(ramp, { planar: true }));
+    }
+  }
+  if (hl.drops) {
+    for (const d of hl.drops) {
+      if (d.renderLanding !== false && !hl.structures?.some(s => s.kind === 'surface' && s.rect[0] === d.landingFloor[0] && s.rect[1] === d.landingFloor[1])) {
+        const [fx, fy, fw, fh, fz] = d.landingFloor;
+        const mesh = box(THREE, fw, 6, fh, surface('turf', T.turf, fw / 80, fh / 80), at(fx + fw / 2, fy + fh / 2, fz - 3), true);
+        mesh.userData.fade = true;
+        g.add(ink(mesh));
+      }
+    }
+  }
+  if (hl.tubes) {
+    for (const tube of hl.tubes) {
+      if (!tube.path || tube.path.length < 2) continue;
+      const points = tube.path.map(p => new THREE.Vector3(...at(p[0], p[1], p[2])));
+      const curve = new THREE.CatmullRomCurve3(points);
+      const radius = tube.radius ?? 14;
+      const geometry = new THREE.TubeGeometry(curve, Math.max(16, tube.path.length * 8), radius, 12, false);
+      const tubeColor = tube.color ?? 0x4aa3ff;
+      const tubeMat = toon
+        ? library.toon(tubeColor, { transparent: true, opacity: 0.75, roughness: 0.2 })
+        : new THREE.MeshStandardMaterial({ color: tubeColor, transparent: true, opacity: 0.75, roughness: 0.2 });
+      const mesh = new THREE.Mesh(geometry, tubeMat);
+      mesh.userData.fade = true;
+      mesh.userData.tube = true;
+      g.add(ink(mesh));
+
+      const entryPos = at(tube.entry[0], tube.entry[1], tube.entry[2]);
+      const entryCollar = new THREE.Mesh(
+        new THREE.TorusGeometry(radius + 2, 3, 8, 24),
+        solid('fanRing', { color: 0xffd23f, metalness: 0.7, roughness: 0.3 })
+      );
+      entryCollar.position.set(...entryPos);
+      g.add(ink(entryCollar));
+
+      const exitPos = at(tube.exit[0], tube.exit[1], tube.exit[2]);
+      const exitCollar = new THREE.Mesh(
+        new THREE.TorusGeometry(radius + 2, 3, 8, 24),
+        solid('fanRing', { color: 0xffa726, metalness: 0.7, roughness: 0.3 })
+      );
+      exitCollar.position.set(...exitPos);
+      g.add(ink(exitCollar));
+    }
+  }
   for (const p of hl.pit) {
     const water = new THREE.Mesh(new THREE.PlaneGeometry(p[2], p[3]), library.water);
     water.rotation.x = -Math.PI / 2;
     water.position.set(...at(p[0] + p[2] / 2, p[1] + p[3] / 2, 1.2));
     g.add(ink(water, { planar: true, centred: true }));
+  }
+  if (hl.water) {
+    for (const wb of hl.water) {
+      const [x, y, w, h] = wb.bounds;
+      const z = (wb.z ?? 0) + 1.2;
+      const geom = new THREE.PlaneGeometry(w, h);
+      const isShallow = !!wb.shallow;
+      const mat = isShallow
+        ? (toon ? library.toon(0x52b6ff, { transparent: true, opacity: 0.8, roughness: 0.2 }) : new THREE.MeshStandardMaterial({ color: 0x52b6ff, transparent: true, opacity: 0.8, roughness: 0.2 }))
+        : library.water;
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(...at(x + w / 2, y + h / 2, z));
+      mesh.userData.water = true;
+      mesh.userData.shallow = isShallow;
+      g.add(ink(mesh, { planar: true, centred: true }));
+
+      const shoreline = new THREE.Mesh(
+        new THREE.BoxGeometry(w + 2, 2, h + 2),
+        toon ? library.toon(0xd8ecf8, { roughness: 0.5 }) : new THREE.MeshStandardMaterial({ color: 0xd8ecf8, roughness: 0.5 })
+      );
+      shoreline.position.set(...at(x + w / 2, y + h / 2, z - 0.5));
+      g.add(shoreline);
+
+      if (wb.current && (wb.current[0] !== 0 || wb.current[1] !== 0)) {
+        const flowAngle = Math.atan2(wb.current[1], wb.current[0]);
+        const arrow = new THREE.Mesh(
+          new THREE.ConeGeometry(3, 8, 8),
+          toon ? library.toon(0xffffff, { opacity: 0.7, transparent: true }) : new THREE.MeshStandardMaterial({ color: 0xffffff, opacity: 0.7, transparent: true })
+        );
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.rotation.z = -flowAngle;
+        arrow.position.set(...at(x + w / 2, y + h / 2, z + 0.3));
+        g.add(arrow);
+      }
+    }
+  }
+  if (hl.wind) {
+    for (const wz of hl.wind) {
+      const [bx, by, bw, bh] = wz.bounds;
+      const minZ = wz.minZ ?? 0;
+      const maxZ = wz.maxZ ?? 60;
+      const midZ = (minZ + maxZ) / 2;
+      const depthZ = Math.max(10, maxZ - minZ);
+      const windColor = palette?.surfaces?.wind ?? 0xffffff;
+
+      const zoneBox = new THREE.Mesh(
+        new THREE.BoxGeometry(bw, depthZ, bh),
+        new THREE.MeshBasicMaterial({
+          color: windColor,
+          transparent: true,
+          opacity: 0.12,
+          wireframe: true,
+          depthWrite: false,
+        })
+      );
+      zoneBox.position.set(...at(bx + bw / 2, by + bh / 2, midZ));
+      zoneBox.userData.windZone = true;
+      zoneBox.userData.zoneId = wz.id;
+      g.add(zoneBox);
+
+      const count = 12;
+      const streaks = createWindStreaks({ THREE, count, color: windColor });
+      streaks.mesh.userData.windStreaks = true;
+      streaks.mesh.userData.zoneId = wz.id;
+
+      const f = wz.force || [100, 0, 0];
+      const dirX = f[0] || 0;
+      const dirY = f[1] || 0;
+      const heads = new Float32Array(count * 3);
+      const lengths = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const u = random ? random() : (i + 0.5) / count;
+        const v = random ? random() : ((i * 3) % count + 0.5) / count;
+        const w = random ? random() : 0.5;
+        const px = bx + u * bw;
+        const py = by + v * bh;
+        const pz = minZ + w * depthZ;
+        const pos = at(px, py, pz);
+        heads[i * 3] = pos[0];
+        heads[i * 3 + 1] = pos[1];
+        heads[i * 3 + 2] = pos[2];
+        lengths[i] = 18;
+      }
+      streaks.write(heads, dirX, dirY, lengths, 2.0);
+      g.add(streaks.mesh);
+    }
   }
   for (const p of hl.pd) {
     const pad = new THREE.Mesh(new THREE.CircleGeometry(18, 32), library.pad);
@@ -266,6 +469,11 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
   for (const r of hl.w) solidBox(r[0], r[1], r[2], r[3], 0, WALL_HEIGHT);
   for (const p of hl.pl) solidBox(p[0], p[1], p[2], p[3], -10, p[4]);
 
+  buildCourseMechanics({THREE,course:hl,group:g,transform,solids});
+
+  // Putt Pong multi-cup rack (GM2c): build visible cup rack meshes when course.cups is present.
+  const pongCups = createPongCupRack(library, course.cups, transform, g);
+
   let disposed = false;
   return {
     group: g,
@@ -274,12 +482,15 @@ export function buildCourseScene({ library, course, puttIndex = 0, environment =
     puttIndex,
     transform,
     flags, fans, vortices, movers, wallFade, powerBlocks,
+    /** Cup rack animation/elimination controller; no-op when course has no cups. */
+    pongCups,
     /** Cup centre in world space (legacy holePos: surface height, no ball offset). */
     holePosition: transform.ground(hl.hole[0], hl.hole[1], holeHeight),
     /** Releases every geometry, material and texture this build created. Idempotent. */
     dispose() {
       if (disposed) return;
       disposed = true;
+      pongCups.dispose();
       g.parent?.remove(g);
       const geometries = new Set(), materials = new Set(orphans), maps = new Set();
       g.traverse(o => {

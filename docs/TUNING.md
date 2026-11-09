@@ -64,6 +64,19 @@ Traceability: every setting's units, how a change takes effect and the source fi
 | `deployables.bodyHeight` | 12 | 1 to 200 | Height of the solid Bumper or Orbital Bumper body above the floor it stands on (world units); a ball whose underside is above it passes over. |
 | `deployables.orbitalReach` | 40 | 1 to 500 | Height of the Orbital Bumper pull volume above its floor (world units); a ball above it is not pulled. |
 | `deployables.placementSlopeTolerance` | 2 | 0 to 50 | Largest floor-height difference allowed across a Bumper footprint when it is placed (world units); rejects ramps, ledges and pit edges. |
+| `globalHazards.rainFrictionMultiplier` | 0.5 | 0 to 2 | Rain multiplier on grounded rolling friction. G1f defaults accepted in the owner preview on 2026-11-04. |
+| `globalHazards.rainDragMultiplier` | 0.5 | 0 to 2 | Rain multiplier on grounded constant drag. |
+| `globalHazards.snowFrictionMultiplier` | 1.6 | 0 to 5 | Snow multiplier on grounded rolling friction. |
+| `globalHazards.snowDragMultiplier` | 1.8 | 0 to 5 | Snow multiplier on grounded constant drag. |
+| `globalHazards.windAcceleration` | 90 | 0 to 5000 | Wind acceleration along the selected direction (world units/s²). |
+| `globalHazards.lightningImpulse` | 600 | 0 to 10000 | Horizontal speed impulse of a targeted Lightning strike (world units/s). |
+| `globalHazards.vortexRange` | 65 | 0 to 1000 | Horizontal force reach for Tornado and Hurricane (world units). |
+| `globalHazards.vortexAcceleration` | 220 | 0 to 10000 | Horizontal Tornado fling or Hurricane pull at the vortex centre (world units/s²). |
+| `globalHazards.tornadoLift` | 1400 | 0 to 10000 | Upward acceleration at a Tornado centre (world units/s²). |
+| `globalHazards.roamRadius` | 120 | 0 to 10000 | Maximum roaming distance from the course-bounds centre (world units). |
+| `globalHazards.roamPeriod` | 24 | 0.1 to 600 | Time for one deterministic vortex roaming cycle (seconds). |
+| `globalHazards.durationSeconds` | 20 | 1 to 600 | Lifetime of each timed global hazard activation (seconds). |
+| `globalHazards.lightningWindowSeconds` | 0.5 | 0.1 to 5 | One-shot delivery window for a targeted Lightning strike; late reconnects do not replay expired strikes. |
 | `powerups.smallBallScale` | 0.6 | 0.1 to 1 | Small Ball radius multiplier. |
 | `powerups.tallBallScale` | 1.5 | 1 to 1.6 | Tall Ball radius multiplier (at most 1.6 so it still fits the smallest cup). |
 | `hazards.padRadius` | 18 | 0 to 100 | Jump pad trigger radius. |
@@ -135,3 +148,24 @@ For proposed appearance or feel changes:
 If browser access is unavailable, provide the exact local URL and steps and mark
 interactive verification/acceptance pending. The panel remains a target until
 implementation and verification are recorded.
+
+## G1g course mechanics
+
+The owner accepted these candidate defaults in the local G1g chamber preview on 2026-11-05. Legacy fan, tornado and teleporter tuples keep their current behavior. These settings apply to optional `mechanics` records. Physics changes reset the preview; temporary overrides never enter ordinary rooms. Per-record `height` and fan/vortex `acceleration` overrides are explicit, validated course data.
+
+| Setting | Default | Range | Units | Effect |
+| --- | --- | --- | --- | --- |
+| `courseMechanics.bodyHeight` | 40 | 1 to 1000 | world units | Solid mechanic height above its local floor (world units). |
+| `courseMechanics.wedgeRestitution` | 0.9 | 0 to 2 | factor | Wedge face restitution (factor). |
+| `courseMechanics.bouncerRestitution` | 1.05 | 0 to 2 | factor | Bouncer face restitution (factor). |
+| `courseMechanics.bouncerKick` | 180 | 0 to 3000 | units/s | Added outgoing normal speed at a bouncer (world units/s). |
+| `courseMechanics.fanAcceleration` | 600 | 0 to 10000 | units/s² | Default mechanic fan acceleration (world units/s^2). |
+| `courseMechanics.fanHeight` | 100 | 1 to 1000 | world units | Fan force reach above the local floor (world units). |
+| `courseMechanics.vortexAcceleration` | 400 | 0 to 10000 | units/s² | Default tangential vortex acceleration (world units/s^2). |
+| `courseMechanics.vortexPull` | 0.5 | 0 to 3 | factor | Inward pull as a factor of tangential force. |
+| `courseMechanics.vortexLift` | 1400 | 0 to 10000 | units/s² | Vortex core lift acceleration (world units/s^2). |
+| `courseMechanics.vortexHeight` | 130 | 1 to 1000 | world units | Vortex force reach above its local floor (world units). |
+| `courseMechanics.portalRadius` | 18 | 1 to 100 | world units | Portal trigger radius (world units). |
+| `courseMechanics.portalHeight` | 25 | 1 to 1000 | world units | Portal entry height above the floor (world units). |
+| `courseMechanics.portalCooldown` | 0.6 | 0.05 to 10 | seconds | Shared paired-portal re-entry cooldown (seconds). |
+| `courseMechanics.portalClearance` | 2 | 0.1 to 100 | world units | Extra exit clearance beyond ball and trigger radius (world units). |
