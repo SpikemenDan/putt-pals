@@ -29,7 +29,7 @@ Run one coordinator per room on the host. This module does not authenticate peer
 
 | Event | Payload and scope |
 | --- | --- |
-| JOIN_ROOM | `playerId`, text-only `name`; validates identity/name and capacity; late joins spectate until the next map |
+| JOIN_ROOM | `playerId`, text-only `name`, optional `token` and `color`; validates identity/name and capacity; late joins enter the open hole with remaining time (or next hole if closed) with penalties for missed holes |
 | LEAVE_ROOM | Sender's `playerId`; removes its vote and active participation; no host migration |
 | SET_MODE | Host, lobby only; C1 GameModes value; practice modes require solo membership |
 | SET_POWERUPS | Host, lobby only; `{ enabled: boolean }` sets the room's `powerups` flag (default true). false is the No Power-Ups mode (GM1): no `?` boxes, no inventory. Works with Standard and Tournament modes; practice always keeps power-ups on |
@@ -52,7 +52,7 @@ Normal starts publish a 2500ms start timestamp. All-done advancement waits until
 
 Timeouts preserve `max(strokes, par + penalty)`, including zero penalties and strokes above 99. N1 reconciles the shared timeout helper and protocol with this uncapped behavior: wire stroke/score counts accept nonnegative safe integers, including 150. L1's existing larger-stroke safeguard remains compatible. No anti-cheat or identity recovery is claimed by trusting a participant's stroke report.
 
-Scorecards retain each putt once; disconnected participants get null entries and do not block advancement. Late joins remain spectators across all putts of the current map and join the next map's roster. Reconnecting the same trusted identity preserves its existing score state; network recovery itself is outside this module. Tournament totals and tied map wins accumulate for 3/5/7 maps, then reset on returning to the lobby. Host departure returns the local coordinator to the lobby and cancels pending room timers; another peer is not promoted automatically.
+Scorecards retain each putt once; disconnected participants do not block advancement and receive missed-hole penalties (max score + missed-hole penalty, never zero) if the hole closes while away. Reconnecting with the same username and saved local reconnect token before the hole's timer expires and before it closes resumes strokes and remaining time. Late arrivals enter an open hole with remaining time and take missed-hole penalties for earlier missed holes (or start at the next hole if the current hole closed). Reconnecting the same trusted identity preserves its existing score state; network recovery itself is outside this module. Tournament totals and tied map wins accumulate for 3/5/7 maps, then reset on returning to the lobby. Host departure returns the local coordinator to the lobby and cancels pending room timers; another peer is not promoted automatically.
 
 ## Verification
 
