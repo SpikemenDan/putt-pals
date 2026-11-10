@@ -1,5 +1,5 @@
 import {
-  SERVER_ROOM_VERSION, SERVER_ROOM_LIMITS, decodeRoomFrame, encodeRoomFrame,
+  SERVER_ROOM_VERSION, SERVER_ROOM_LIMITS, DEFAULT_ROOM_POLICY, decodeRoomFrame, encodeRoomFrame,
   validRoomCode, validRoomId, validRoomSecret, validServerCommand,
 } from './contracts/server-room.js';
 import { createCourseDocument } from '../courses/document.js';
@@ -137,7 +137,7 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     connected = false; generation++; clear();
     if (socket && socket.readyState < 2) socket.close();
     if (!established) { end(reason ?? 'service-unavailable'); return; }
-    until ??= clock.now() + (wireSnapshot?.policy.reconnectGraceMs ?? 30000);
+    until ??= clock.now() + (wireSnapshot?.policy.reconnectGraceMs ?? DEFAULT_ROOM_POLICY.reconnectGraceMs);
     if (clock.now() >= until) { end('session-expired'); return; }
     status('reconnecting', reason);
     const delay = Math.min(5000, 500 * 2 ** Math.min(attempt++, 4)) * (0.8 + random() * 0.4);

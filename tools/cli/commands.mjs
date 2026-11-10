@@ -6,10 +6,13 @@ import { solvePar } from './par-solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
+import { FIXED_TIMESTEP } from '../../src/shared/constants.js';
 import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument, validateCourseDocument } from '../../src/courses/index.js';
 
-/** Safety cap: 120 simulated seconds at 240 Hz. */
-export const MAX_TICKS = 240 * 120;
+/** Simulation ticks per second, from the one fixed timestep (240 Hz). */
+export const TICKS_PER_SECOND = Math.round(1 / FIXED_TIMESTEP);
+/** Safety cap: 120 simulated seconds. */
+export const MAX_TICKS = TICKS_PER_SECOND * 120;
 
 const fail = message => ({ code: 1, lines: [`ERROR: ${message}`] });
 
@@ -68,7 +71,7 @@ export function runShot(holes, mapArg, puttArg, degArg, powerArg) {
   return {
     code: 0,
     result,
-    lines: [`${result.name} putt ${putt + 1}: ${outcome} after ${ticks} ticks (${round(ticks / 240)} s) at (${result.x}, ${result.y}, ${result.z}), ${result.strokes} stroke`],
+    lines: [`${result.name} putt ${putt + 1}: ${outcome} after ${ticks} ticks (${round(ticks / TICKS_PER_SECOND)} s) at (${result.x}, ${result.y}, ${result.z}), ${result.strokes} stroke`],
   };
 }
 
