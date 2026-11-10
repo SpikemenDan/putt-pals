@@ -4,6 +4,7 @@ import { MODE_OPTIONS, UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
 import { Row } from './Row.jsx';
 import { ColorPicker } from './ColorPicker.jsx';
+import { TiePicker } from './TiePicker.jsx';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
 
@@ -40,6 +41,7 @@ export function RoomLobby({ hidden }) {
       </select></label>
       <label hidden={!lobby?.showModes || soloOnly(mode)}><input type="checkbox" checked={!powerups} onChange={e => setPowerups(!e.target.checked)} data-ui="no-powerups" /> No power-ups (pure mini-golf)</label>
       <p className={app.status}>{lobby?.status}</p>
+      <TiePicker tie={lobby?.tie} />
       <button type="button" hidden={!lobby?.showStart} onClick={start}>Start Game</button>
       <button type="button" className={buttons.ghost} hidden={!lobby?.showInvite} onClick={() => send(UiCommands.INVITE)}>Copy invite</button>
       <button type="button" className={buttons.ghost} onClick={() => send(UiCommands.LEAVE)}>Leave room</button>

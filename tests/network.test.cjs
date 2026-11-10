@@ -131,23 +131,23 @@ const { EventEmitter } = require('node:events');
       assert.deepEqual(f.snapshots.at(-1).payload.presence, {});
     } finally { f.close(); }
   });
-  await run('late guests remain spectators and unjoined clients cannot affect room state', async () => {
+  await run('VIS-D: late arrivals enter open hole with remaining time; unjoined clients cannot affect state (#162)', async () => {
     const f = await fixture();
     try {
       f.command('START_VOTING'); for (const t of [f.host, ...f.guests]) f.command('CAST_VOTE', { mapIndex: 0 }, t);
       f.guests[0].close();
       const late = f.hub.create({ peerId: 'late', hostId: 'host' }); await late.connect();
       late.send({ type: 'command', payload: { type: 'CAST_VOTE', mapIndex: 8 } });
-      assert.equal(f.session.getSnapshot().players.late, undefined);
+      assert.equal(f.session.getSnapshot().players.late, undefined, 'unjoined client vote rejected');
       late.send({ type: 'command', payload: { type: 'JOIN_ROOM', name: '<b>Late</b>' } });
       assert.equal(f.session.getSnapshot().players.late.name, '<b>Late</b>');
-      assert.equal(f.session.getSnapshot().roster.includes('late'), false);
+      assert.equal(f.session.getSnapshot().roster.includes('late'), true, 'late arrival entered open hole');
       f.clock.increment(4000);
       const state = f.session.getSnapshot();
       late.send({ type: 'command', payload: { type: 'REPORT_SCORE', roundNumber: state.roundNumber, puttIndex: state.puttIndex, strokes: 1 } });
-      assert.equal(f.session.getSnapshot().players.late.done, false);
-      late.send({ type: 'presence', payload: { x: 1, y: 2, z: 0, mode: 'play', strokes: 0 } });
-      f.clock.increment(70); assert.equal(f.snapshots.at(-1).payload.presence.late, undefined);
+      assert.equal(f.session.getSnapshot().players.late.done, true, 'late arrival scored on open hole');
+      late.send({ type: 'presence', payload: { x: 1, y: 2, z: 0, mode: 'play', strokes: 1 } });
+      f.clock.increment(70); assert.ok(f.snapshots.at(-1).payload.presence.late, 'presence published for active late arrival');
       late.close();
     } finally { f.close(); }
   });

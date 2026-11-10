@@ -81,6 +81,11 @@ const assert = require('node:assert/strict');
     assert.equal(c.validSessionContext({...snapshot.session.context,powerups:false}),true);
     assert.equal(c.validSessionContext({...snapshot.session.context,mode:'pong',pong:{}}),true,'pong context is valid in pong mode');
     assert.equal(c.validSessionContext({...snapshot.session.context,mode:'classic',pong:{}}),false,'pong context rejected outside pong mode');
+    assert.equal(c.validSessionContext({...snapshot.session.context,tie:null}),true);
+    assert.equal(c.validSessionContext({...snapshot.session.context,tie:{options:[0,8],winner:0}}),true);
+    assert.equal(c.validSessionContext({...snapshot.session.context,tie:{options:[0],winner:0}}),false,'tie needs >= 2 options');
+    assert.equal(c.validSessionContext({...snapshot.session.context,tie:{options:[0,8],winner:5}}),false,'tie winner must be in options');
+    assert.equal(c.validSessionContext({...snapshot.session.context,tie:{options:[0,'bad'],winner:0}}),false,'tie options must be numbers');
   });
   await test('complete checkpoint differs from public snapshot and rejects incompatible versions',()=>{
     const cp=createServerCheckpointFixture();assert.ok(c.decodeRoomCheckpoint(JSON.stringify(cp)));

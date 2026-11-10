@@ -3,7 +3,7 @@
   "task": "SV1: shortest robust route within par 2..6 per putt (hole-in-one optional)",
   "mode": "full",
   "gravity": 700,
-  "simulationSha256": "8f12c7bf9e5fe59068d3ec19619e744b498dae5f6df01f5ffe12ffa6b6e0ab75",
+  "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
   "solverConfig": {
     "version": 2,
     "minPar": 2,
@@ -82,7 +82,7 @@
         "puttId": "grand-finale-putt-1",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "8f12c7bf9e5fe59068d3ec19619e744b498dae5f6df01f5ffe12ffa6b6e0ab75",
+        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
         "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "full"
       }
@@ -122,7 +122,7 @@
         "puttId": "grand-finale-putt-3",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "8f12c7bf9e5fe59068d3ec19619e744b498dae5f6df01f5ffe12ffa6b6e0ab75",
+        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
         "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
         "searchMode": "full"
       }

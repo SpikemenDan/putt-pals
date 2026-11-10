@@ -1,0 +1,60 @@
+.tiePicker {
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(255, 230, 240, 0.95);
+  border: 2px dashed var(--pink-d, #e60067);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.tieTitle {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pink-d, #e60067);
+  margin-bottom: 8px;
+}
+
+.tieGrid {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tieCard {
+  flex: 1 1 120px;
+  max-width: 160px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  transition: all 0.15s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tieCard.highlight {
+  border-color: var(--pink-d, #e60067);
+  background: #fff0f6;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(230, 0, 103, 0.25);
+}
+
+.winnerBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--pink-d, #e60067);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
