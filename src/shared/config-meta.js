@@ -54,6 +54,7 @@ export const TUNING_UNITS = Object.freeze([
   [/^aim\.canvasPullFraction$/, 'fraction of canvas width'],
   [/^aim\.dragRadiansPerPx$/, 'radians per CSS px'],
   [/^aim\.(?:guideMinCharge|shotMinCharge)$/, 'fraction of full power'],
+  [/^scoring\.(?:maxHoleScore|missedHolePenalty)$/, 'strokes'],
 ]);
 
 export const DISPLAY_UNITS = Object.freeze({

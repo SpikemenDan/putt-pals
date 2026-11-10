@@ -129,6 +129,9 @@ export const TUNING_FIELDS = Object.freeze([
   ['aim.keyStep', 0, 1, 'Aim rotation per arrow-key press (radians).'],
   ['aim.guideMinCharge', 0, 1, 'Below this charge no aim guide is drawn.'],
   ['aim.shotMinCharge', 0, 1, 'Below this charge a release cancels the shot.'],
+
+  ['scoring.maxHoleScore', 1, 50, 'Configured maximum strokes for a missed hole before penalty.'],
+  ['scoring.missedHolePenalty', 0, 50, 'Penalty strokes added to the maximum hole score for a missed hole.'],
 ]);
 
 /** Today's shipped values. */
@@ -162,6 +165,7 @@ export const DEFAULT_TUNING = {
     fullPullPx: 380, canvasPullFraction: 0.18, arrowMaxLength: 300, dragRadiansPerPx: 0.006, keyStep: 0.06,
     guideMinCharge: 0.015, shotMinCharge: 0.025,
   },
+  scoring: { maxHoleScore: 10, missedHolePenalty: 2 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

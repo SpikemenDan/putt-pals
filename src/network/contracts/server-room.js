@@ -91,10 +91,11 @@ export function validClientFrame(m) {
     && (m.type === 'command' ? validServerCommand(m.payload) : validServerPresence(m.payload));
 }
 
-const score = s => exact(s, ['score','timedOut','par','penalty']) && count(s.score) && typeof s.timedOut === 'boolean' && index(s.par,11) && s.par > 0 && index(s.penalty,11);
-const player = p => exact(p, ['id','name','color','connected','strokes','done','timedOut','score','scores']) && validRoomId(p.id) && name(p.name) && isColorIndex(p.color)
+const score = s => object(s) && ['score','timedOut','par','penalty'].every(k => Object.hasOwn(s, k)) && allowed(s, ['score','timedOut','par','penalty','missed']) && count(s.score) && typeof s.timedOut === 'boolean' && index(s.par,11) && s.par > 0 && index(s.penalty,11) && (s.missed === undefined || typeof s.missed === 'boolean');
+const player = p => object(p) && ['id','name','color','connected','strokes','done','timedOut','score','scores'].every(k => Object.hasOwn(p, k)) && allowed(p, ['id','name','color','connected','strokes','done','timedOut','score','scores','token','missed']) && validRoomId(p.id) && name(p.name) && isColorIndex(p.color)
   && typeof p.connected === 'boolean' && count(p.strokes) && typeof p.done === 'boolean' && typeof p.timedOut === 'boolean'
-  && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score));
+  && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score))
+  && (p.token === undefined || typeof p.token === 'string') && (p.missed === undefined || typeof p.missed === 'boolean');
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));
 const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'];
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
