@@ -81,7 +81,7 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
   let last = null, closed = false;
 
   if (transport.isHost) {
-    session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout } });
+    session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout }, random: Math.random });
     unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, floorAt });
     stops.push(session.subscribe(s => {
       last = s;

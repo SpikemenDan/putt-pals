@@ -610,6 +610,22 @@ function fakeClock() {
     root.remove(); store.dispose();
   });
 
+  await scenario('lobby: random tie picker animates when votes are tied (VIS-V #163)', async () => {
+    const t = await setup();
+    await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
+    await t.send({ type: 'START_VOTING', playerId: 'host' });
+    await t.send({ type: 'CAST_VOTE', playerId: 'host', mapIndex: 0 });
+    await t.send({ type: 'CAST_VOTE', playerId: 'g1', mapIndex: 8 });
+    assert.equal(t.session.getSnapshot().phase, 'play');
+    assert.ok(t.session.getSnapshot().tie, 'tie exists');
+    assert.ok(t.within('[data-ui=tie-picker]'), 'tie picker mounted in lobby');
+    const options = [...t.within('[data-ui=tie-picker]').querySelectorAll('[data-ui=tie-option]')];
+    assert.equal(options.length, 2);
+    assert.match(t.within('[data-ui=room-lobby] p:nth-of-type(2)').textContent, /^Vote tied! Random pick: /);
+    await t.step(2600);
+    await t.teardown();
+  });
+
   await scenario('cleanup: repeated mount/unmount leaves no store subscriptions, DOM or pending timers', async () => {
     for (let i = 0; i < 5; i++) {
       const t = await setup();

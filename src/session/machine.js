@@ -1,6 +1,6 @@
 import { setup, assign, createActor } from 'xstate';
 import { sessionDomain, sessionValue, sessionNode } from './recovery.js';
-import { createInitialSessionState, GameModes, resolveVote, SessionCommands } from '../shared/session.js';
+import { createInitialSessionState, GameModes, resolveVote, resolveVoteDetailed, SessionCommands } from '../shared/session.js';
 import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COUNTDOWN_SECONDS } from '../shared/constants.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { calculateTimeoutScore, calculateMissedHoleScore } from '../shared/scoring.js';
@@ -24,7 +24,7 @@ const seriesLength = mode => ({ tournament_3: 3, tournament_5: 5, tournament_7: 
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
-export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', hostColor, hostToken, serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses } = {}) {
+export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', hostColor, hostToken, serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses, random = null } = {}) {
   const initialControllerId = (serverOwned ? controllerId : hostId) ?? (restore ? Object.keys(restore.context?.players ?? {})[0] : undefined);
   if (!validIdentity({ playerId: initialControllerId }) || !validName(hostName)) throw new Error('Valid room controller identity and name required');
   if (typeof isReserved !== 'function') throw new Error('A reservation lookup is required');
@@ -121,7 +121,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     && e.strokes >= c.players[e.playerId].strokes && (e.timedOut === undefined || typeof e.timedOut === 'boolean')
     && scoreFitsTotal(c, e.playerId, e.timedOut === true ? timeoutScore(c, { strokes: e.strokes }) : e.strokes)
     && (!e.timedOut || (!replay(c) && clock.now() >= c.roundStartTime + c.roundLimitSeconds * 1000));
-  const clearSeries = c => ({ votes: {}, votingDeadline: 0, totals: {}, completedMaps: [], last: null, roster: [], players: resetPlayers(c, true) });
+  const clearSeries = c => ({ votes: {}, votingDeadline: 0, tie: null, totals: {}, completedMaps: [], last: null, roster: [], players: resetPlayers(c, true) });
 
   const machine = setup({
     delays: {
@@ -241,12 +241,16 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       mode: assign(({ event: e }) => ({ mode: e.mode })),
       powerups: assign(({ event: e }) => ({ powerups: e.enabled })),
       clearSeries: assign(({ context: c }) => clearSeries(c)),
-      clearVotes: assign({ votes: () => ({}), votingDeadline: 0 }),
+      clearVotes: assign({ votes: () => ({}), votingDeadline: 0, tie: null }),
+      clearTie: assign({ tie: null }),
       lobby: assign(({ context: c }) => ({ ...clearSeries(c), mode: GameModes.STANDARD })),
       vote: assign(({ context: c, event: e }) => ({ votes: { ...c.votes, [e.playerId]: e.mapIndex } })),
       deadline: assign(({ context: c }) => ({ votingDeadline: practice(c) ? 0 : c.votingDeadline || clock.now() + VOTING_COUNTDOWN_SECONDS * 1000 })),
-      votedMap: assign(({ context: c }) => round(c, resolveVote(c.votes, STARTER_COURSE_INDICES, { round: c.roundNumber, connectedIds: ids(c) }), 0, true)),
-      chosenPutt: assign(({ context: c, event: e }) => round(c, c.votes[controller(c)], e.puttIndex, true)),
+      votedMap: assign(({ context: c }) => {
+        const { winner, tie } = resolveVoteDetailed(c.votes, STARTER_COURSE_INDICES, { round: c.roundNumber, connectedIds: ids(c), random });
+        return { ...round(c, winner, 0, true), tie: tie || null };
+      }),
+      chosenPutt: assign(({ context: c, event: e }) => ({ ...round(c, c.votes[controller(c)], e.puttIndex, true), tie: null })),
       strokes: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes } } })),
       score: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], strokes: e.strokes, done: true, timedOut: e.timedOut === true, score: e.timedOut ? timeoutScore(c, { strokes: e.strokes }) : e.strokes } } })),
       forceTimeout: assign(({ context: c }) => ({ players: Object.fromEntries(Object.entries(c.players).map(([id, p]) => [id, active(c).includes(id) && !p.done ? {
@@ -288,7 +292,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
     context: {
       ...createInitialSessionState(),
       ...(serverOwned ? { controllerId: initialControllerId } : { hostId: initialControllerId }),
-      players: { [initialControllerId]: fresh(initialControllerId, hostName, isColorIndex(hostColor) ? hostColor : 0, hostToken) }, totals: {}, last: null,
+      players: { [initialControllerId]: fresh(initialControllerId, hostName, isColorIndex(hostColor) ? hostColor : 0, hostToken) }, totals: {}, last: null, tie: restore?.context?.tie ?? null,
     },
     on: {
       JOIN_ROOM: { guard: 'canJoin', actions: 'join' },
@@ -325,7 +329,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
           RETURN_TO_LOBBY: { guard: 'replayHost', target: 'lobby', actions: 'lobby' },
         },
         states: {
-          starting: { ...timed('startRemaining', 'active') },
+          starting: { ...timed('startRemaining', { target: 'active', actions: 'clearTie' }) },
           active: {
             initial: 'settling',
             states: {

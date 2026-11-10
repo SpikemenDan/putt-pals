@@ -101,10 +101,19 @@ const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','ro
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
 export function validSessionContext(c) {
   const hasPong = object(c) && Object.hasOwn(c, 'pong');
+  const hasTie = object(c) && Object.hasOwn(c, 'tie');
+  const extraKeys = [];
+  if (hasPong) extraKeys.push('pong');
+  if (hasTie) extraKeys.push('tie');
   if (hasPong) {
-    if (!exact(c, [...CONTEXT_KEYS, 'pong']) || c.mode !== GameModes.PONG || (c.pong !== null && !object(c.pong))) return false;
+    if (!exact(c, [...CONTEXT_KEYS, ...extraKeys]) || c.mode !== GameModes.PONG || (c.pong !== null && !object(c.pong))) return false;
   } else {
-    if (!exact(c, CONTEXT_KEYS)) return false;
+    if (!exact(c, [...CONTEXT_KEYS, ...extraKeys])) return false;
+  }
+  if (hasTie && c.tie !== null) {
+    if (!object(c.tie) || !exact(c.tie, ['options', 'winner'])) return false;
+    if (!Array.isArray(c.tie.options) || c.tie.options.length < 2 || !c.tie.options.every(n => index(n, 22))) return false;
+    if (!index(c.tie.winner, 22) || !c.tie.options.includes(c.tie.winner)) return false;
   }
   if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
