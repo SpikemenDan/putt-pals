@@ -5,6 +5,7 @@
 // unchanged and covered by solo.spec.cjs (rendered canvas, no console errors).
 const { test, expect } = require('@playwright/test');
 const { openApp } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 // The project's own launch options (CI Firefox forces software WebGL on) are replaced for this file.
 test.use({
@@ -29,7 +30,7 @@ test('webgl unavailable: start screen, a text-only hint and a solo game without 
 
   await ana.solo();
   await ana.button('Start Game').click();
-  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await pickMap(ana.page);
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });
   await expect(ana.ui('hud-info')).toContainText('Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0');
   await expect(notice, 'the notice stays visible in game').toBeVisible();

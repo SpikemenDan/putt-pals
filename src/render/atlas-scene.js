@@ -355,6 +355,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
       for (const m of instanced) m.dispose();
       library.dispose();
       renderer.dispose?.();
+      renderer.forceContextLoss?.(); // release the context now: browsers cap live contexts and drop the oldest, which can be the game's
     },
   };
 }

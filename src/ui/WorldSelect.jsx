@@ -106,7 +106,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
         {!open && GAIA_REGIONS.map(r => {
           const count = pinsOf[r.id].length; // a mode may offer only some courses; the region still reads on the map
           return (
-            <button key={r.id} type="button" disabled={!count} ref={el => { regionRefs.current[r.id] = el; }} className={`${styles.region}${hover === r.id ? ' ' + styles.lit : ''}`} data-region={r.id}
+            <button key={r.id} type="button" disabled={!count} ref={el => { regionRefs.current[r.id] = el; }} className={`${styles.region}${hover === r.id ? ' ' + styles.lit : ''}`} data-region={r.id} data-maps={pinsOf[r.id].map(p => p.index).join(' ')}
               onPointerEnter={e => count && e.pointerType !== 'touch' && light(r.id)} onPointerLeave={e => e.pointerType !== 'touch' && light(null)} onFocus={() => light(r.id)} onBlur={() => light(null)} onClick={() => openRegion(r.id)}>
               {r.name}
             </button>

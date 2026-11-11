@@ -3,6 +3,7 @@
 const { test, expect } = require('@playwright/test');
 const { until, openApp } = require('./support/app.cjs');
 const { roomCode, openPlayer } = require('./support/rooms.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 let contexts;
 test.beforeEach(() => { contexts = []; });
@@ -15,7 +16,7 @@ test('server rooms: tournament, late spectator and controller departure preserve
   const ben = await openPlayer(browser, info, 'Ben', { contexts }); await ben.join(code);
   await ana.ui('room-lobby').getByLabel('Game mode').selectOption('tournament_3');
   await ana.button('Start Game').click();
-  for (const p of [ana, ben]) await p.ui('map-select').locator('button[data-v]').first().click();
+  for (const p of [ana, ben]) await pickMap(p.page);
   await until(() => ben.ready(), { label: 'first map starts' });
   const cy = await openPlayer(browser, info, '<b>Cy</b>', { contexts }); await cy.join(code);
   const cyId = await cy.peerId();
@@ -49,7 +50,7 @@ test('server rooms: tournament, late spectator and controller departure preserve
     await expect(ben.ui('results')).toBeVisible();
     if (map < 2) {
       await ben.button('Next map vote').click();
-      for (const p of [ben, cy]) await p.ui('map-select').locator('button[data-v]').first().click();
+      for (const p of [ben, cy]) await pickMap(p.page);
       await until(() => cy.ready(), { label: 'late spectator joins the next map roster' });
     }
   }
@@ -110,7 +111,7 @@ test('server rooms: delayed frames and foreground switching retain synchronized 
   const times = await Promise.all([ana, ben].map(p => p.page.evaluate(() => window.__ppApp.room.now())));
   expect(Math.abs(times[0] - times[1])).toBeLessThan(1500);
   await ana.button('Start Game').click();
-  for (const p of [ana, ben]) await p.ui('map-select').locator('button[data-v]').first().click();
+  for (const p of [ana, ben]) await pickMap(p.page);
   await until(() => ben.ready(), { label: 'delayed client reaches the server-started putt' });
   const starts = await Promise.all([ana, ben].map(p => p.page.evaluate(() => window.__ppApp.room.snapshot.roundStartTime)));
   expect(starts[0]).toBe(starts[1]);

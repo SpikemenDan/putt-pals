@@ -569,6 +569,7 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       for (const mesh of instanced) mesh.dispose();
       library.dispose();
       renderer?.dispose?.();
+      renderer?.forceContextLoss?.(); // release the context now: browsers cap live contexts and drop the oldest, which can be the game's
     },
   };
 }

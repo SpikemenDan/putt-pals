@@ -4,6 +4,7 @@
 // only observes and never changes what the app does.
 const { test, expect } = require('@playwright/test');
 const { openApp, until, best } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 function installProbe() {
   const tracked = target => target === window || target === document || target instanceof HTMLCanvasElement;
@@ -31,14 +32,18 @@ function installProbe() {
   const nativeRaf = window.requestAnimationFrame, nativeCancel = window.cancelAnimationFrame;
   window.requestAnimationFrame = fn => { const id = nativeRaf.call(window, t => { frames.delete(id); fn(t); }); frames.add(id); return id; };
   window.cancelAnimationFrame = id => { frames.delete(id); return nativeCancel.call(window, id); };
-  const webgl = new Set();
+  // The game draws on one canvas for the page's life. The planet behind the menu and the 3D map select are backdrops with canvases of
+  // their own, built and released as those screens come and go; they must give their context back when they go.
+  const webgl = new Map();
   const getContext = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function (type, ...rest) { if (/webgl/.test(type)) webgl.add(this); return getContext.call(this, type, ...rest); };
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) { const gl = getContext.call(this, type, ...rest); if (/webgl/.test(type) && gl) webgl.set(this, gl); return gl; };
+  const backdrop = canvas => canvas.matches('[data-ui=loading-planet], [data-ui=atlas-canvas]');
   window.__ppProbe = () => ({
     listeners: [...listeners.values()].reduce((n, keys) => n + keys.size, 0),
     timers: timers.size,
     frames: frames.size,
-    webglCanvases: webgl.size,
+    webglCanvases: [...webgl.keys()].filter(c => !backdrop(c)).length,
+    liveBackdrops: [...webgl].filter(([c, gl]) => backdrop(c) && !gl.isContextLost()).length,
   });
 }
 
@@ -49,19 +54,25 @@ test('lifecycle: repeated join/leave keeps one loop and no leaked listeners, tim
   const probe = () => page.evaluate(() => window.__ppProbe());
   const settledAt = async (limit, label) => {
     // Banner and toast timers finish on their own; a leak is a count that never comes back down.
-    await until(async () => { const p = await probe(); return p.listeners <= limit.listeners && p.timers <= limit.timers; }, { timeout: 20_000, label });
+    let last = null;
+    try {
+      await until(async () => { last = await probe(); return last.listeners <= limit.listeners && last.timers <= limit.timers; }, { timeout: 20_000, label });
+    } catch (error) {
+      throw new Error(`${label}: baseline ${JSON.stringify(limit)}, now ${JSON.stringify(last)}`, { cause: error });
+    }
   };
   await page.waitForTimeout(1000);
   const base = await probe();
   testInfo.annotations.push({ type: 'baseline', description: JSON.stringify(base) });
-  expect(base.frames, 'one animation loop').toBeLessThanOrEqual(1);
+  // The game's loop, plus the planet's while the menu shows it.
+  expect(base.frames, "one animation loop and the planet's").toBeLessThanOrEqual(2);
 
   for (let i = 0; i < 5; i++) {
     await ana.solo();
     // Putt practice is the mode with an in-game Exit; other modes leave from the lobby or map picker.
     await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
     await ana.button('Start Game').click();
-    await ana.ui('map-select').locator('button[data-v]').first().click();
+    await pickMap(ana.page);
     await ana.button('Putt 1 · Par 2').click();
     await until(() => ana.ready(), { label: `cycle ${i + 1}: ready` });
     const shot = best(0, 0);
@@ -77,8 +88,9 @@ test('lifecycle: repeated join/leave keeps one loop and no leaked listeners, tim
     expect(await page.evaluate(() => window.__ppApp.room === null && window.__ppApp.putt === null), `cycle ${i + 1}: room and putt released`).toBe(true);
     await settledAt(base, `cycle ${i + 1}: listeners and timers back to baseline`);
     const now = await probe();
-    expect(now.frames, `cycle ${i + 1}: still one animation loop`).toBeLessThanOrEqual(1);
+    expect(now.frames, `cycle ${i + 1}: still one animation loop and the planet's`).toBeLessThanOrEqual(2);
     expect(now.webglCanvases, `cycle ${i + 1}: the WebGL renderer is reused`).toBe(1);
+    expect(now.liveBackdrops, `cycle ${i + 1}: only the menu's planet holds a context; the map select's was released`).toBeLessThanOrEqual(1);
     testInfo.annotations.push({ type: `cycle ${i + 1}`, description: JSON.stringify(now) });
   }
 

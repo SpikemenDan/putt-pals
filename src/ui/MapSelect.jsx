@@ -37,7 +37,7 @@ export function MapSelect({ hidden }) {
   );
   if (!hidden && createAtlasScene && !noAtlas && voting) {
     return (
-      <div data-ui="map-select">
+      <div className={styles.atlas} data-ui="map-select">
         <WorldSelect cards={voting.cards} onPick={pick} onUnavailable={fallBack}>
           <div className={styles.bar}>{header}<p className={app.status}>{voting.status}</p>{putts}</div>
         </WorldSelect>
