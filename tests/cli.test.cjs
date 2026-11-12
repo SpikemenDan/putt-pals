@@ -351,9 +351,10 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.result.par, 2, 'a one-stroke route still gives par 2: par is never below 2');
     assert.equal(out.result.gravity, 700);
   });
-  run('solver refuses a gravity the loaded simulation cannot honour', () => {
-    assert.throws(() => parSolver.assertWorldGravity(250), /per-world gravity injection is pending/);
+  run('solver accepts any valid world gravity and refuses nonsense (per-world runs: tests/world-gravity.test.cjs)', () => {
+    assert.doesNotThrow(() => parSolver.assertWorldGravity(250));
     assert.doesNotThrow(() => parSolver.assertWorldGravity(700));
+    assert.throws(() => parSolver.assertWorldGravity(Number.NaN), /finite number > 0/);
   });
   run('solve rejects missing, invalid and unknown arguments', () => {
     for (const args of [[], ['', 0], [99, 0], [0, 99], [0, 0, '--typo']]) {

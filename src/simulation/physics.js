@@ -674,9 +674,10 @@ export function stopBall(player, events = []) {
  * @param {number} [hazardTime=0] Time for moving obstacles in seconds
  * @param {object} [globalHazardTuning=TUNING.globalHazards] Validated force settings; local tuning previews may inject candidates.
  * @param {object} [courseMechanicTuning=TUNING.courseMechanics] Validated isolated preview settings.
+ * @param {number} [gravity=GRAVITY] Vertical gravity in units/s^2; worlds inject their own (VIS-W). Also drives slope pull.
  * @returns {Array<object>} Emitted domain events
  */
-export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, globalHazardTuning = TUNING.globalHazards, courseMechanicTuning = TUNING.courseMechanics) {
+export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, globalHazardTuning = TUNING.globalHazards, courseMechanicTuning = TUNING.courseMechanics, gravity = GRAVITY) {
   if (!player.moving || player.mode !== 'play') return [];
   const R = ballRadiusOf(player);
   // Resolve fast cup crossings spatially instead of depending on tick alignment.
@@ -705,15 +706,15 @@ export function stepBall(player, course, dt = FIXED_TIMESTEP, hazardTime = 0, gl
   }
   const steps = crossesCup ? Math.min(128, Math.max(1,
     Math.ceil(Math.sqrt(distance2) / (R / 2)))) : 1;
-  if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning);
+  if (steps === 1) return stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning, gravity);
   const events = [];
   for (let i = 0; i < steps && player.moving && player.mode === 'play'; i++) {
-    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps, globalHazardTuning, courseMechanicTuning));
+    events.push(...stepBallTick(player, course, dt / steps, hazardTime + i * dt / steps, globalHazardTuning, courseMechanicTuning, gravity));
   }
   return events;
 }
 
-function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning) {
+function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, courseMechanicTuning, gravity) {
   if (!player.moving || player.mode !== 'play') return [];
 
   const events = [];
@@ -790,7 +791,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   if (!air && ((globalHazards?.az || 0)+(mechanicForce?.z || 0)) > 0) { player.vz = Math.max(0, player.vz); air = true; }
 
   if (air) {
-    player.vz -= GRAVITY * dt;
+    player.vz -= gravity * dt;
     if (globalHazards) player.vz += globalHazards.az * dt;
     if (mechanicForce) player.vz += mechanicForce.z * dt;
   } else {
@@ -868,8 +869,8 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
 
     if (Math.abs(gx) < 20 && Math.abs(gy) < 20) {
       const den = 1 + 0.6 * (gx * gx + gy * gy);
-      player.vx -= (gx * GRAVITY * dt) / den;
-      player.vy -= (gy * GRAVITY * dt) / den;
+      player.vx -= (gx * gravity * dt) / den;
+      player.vy -= (gy * gravity * dt) / den;
       player.vz = gx * player.vx + gy * player.vy;
     }
 
@@ -905,7 +906,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
       if (outside > 0 && outside < CUPT.filletWidth && fd > 0 && Math.abs(surfaceHeight(course, player.x, player.y, player.z) - surfaceHeight(course, targetCupPos[0], targetCupPos[1], player.z)) <= 1) {
         const s = 1 - outside / CUPT.filletWidth;
         const slope = (2 * CUPT.filletDepth * s) / CUPT.filletWidth;
-        const pull = (slope * GRAVITY * dt) / (1 + 0.6 * slope * slope);
+        const pull = (slope * gravity * dt) / (1 + 0.6 * slope * slope);
         player.vx -= (fx / fd) * pull;
         player.vy -= (fy / fd) * pull;
       }
@@ -953,7 +954,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
             player.z = f + 1;
             player.vz = Math.max(player.vz, 10);
           }
-          player.vz += GRAVITY * 1.6 * dt;
+          player.vz += gravity * 1.6 * dt;
           player.padCooldown = 0.05;
         }
       }

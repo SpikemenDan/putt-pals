@@ -20,6 +20,7 @@ import {
   contactHeight,
   stepBall,
   cupOf,
+  GRAVITY,
 } from './physics.js';
 
 /**
@@ -60,6 +61,7 @@ export class SimulationEngine {
    * @param {number} [puttIndex=0] Putt index
    * @param {object} [options={}]
    * @param {number|((simTime: number) => number)} [options.hazardTime] Custom hazard time function/constant
+   * @param {number} [options.gravity] Vertical gravity in units/s^2 (VIS-W); defaults to Gaia's TUNING.gravity
    */
   constructor(baseCourse, puttIndex = 0, options = {}) {
     this.baseCourse = baseCourse;
@@ -69,6 +71,9 @@ export class SimulationEngine {
     this.simTime = 0;
     this.tickCount = 0;
     this.hazardTimeOption = options.hazardTime ?? 0;
+    const gravity = options.gravity ?? GRAVITY;
+    if (typeof gravity !== 'number' || !Number.isFinite(gravity) || gravity < 0) throw new Error('SimulationEngine gravity must be a finite number >= 0');
+    this.gravity = gravity;
     this.disposed = false;
   }
 
@@ -171,7 +176,7 @@ export class SimulationEngine {
     for (const [id, player] of this.players.entries()) {
       if (!player.moving || player.mode !== 'play') continue;
 
-      const playerEvents = stepBall(player, this.course, dt, currentHazardTime);
+      const playerEvents = stepBall(player, this.course, dt, currentHazardTime, undefined, undefined, this.gravity);
       for (const ev of playerEvents) {
         ev.playerId = id;
         tickEvents.push(ev);

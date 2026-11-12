@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-10T02:03:56.269Z",
-  "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
+  "generatedAt": "2026-11-12T05:51:40.277Z",
+  "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
   "configuration": {
     "version": 1,
     "angleSteps": 720,
@@ -49,15 +49,15 @@
         "deg": 30.5,
         "power": 0.8
       },
-      "elapsedMs": 682.5129000000001,
+      "elapsedMs": 697.4821,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-1",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -86,15 +86,15 @@
         "deg": 25,
         "power": 0.65
       },
-      "elapsedMs": 530.8228999999999,
+      "elapsedMs": 539.6261,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-2",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -123,15 +123,15 @@
         "deg": 13,
         "power": 1
       },
-      "elapsedMs": 298.32039999999984,
+      "elapsedMs": 300.9248,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-3",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -160,15 +160,15 @@
         "deg": 13,
         "power": 0.9
       },
-      "elapsedMs": 315.24620000000004,
+      "elapsedMs": 352.71699999999987,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-4",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -197,15 +197,15 @@
         "deg": 38.5,
         "power": 0.4
       },
-      "elapsedMs": 163.78219999999988,
+      "elapsedMs": 172.4315999999999,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-5",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -234,15 +234,15 @@
         "deg": 13,
         "power": 0.7
       },
-      "elapsedMs": 278.1631000000002,
+      "elapsedMs": 285.4830999999999,
       "provenance": {
         "version": 2,
         "courseId": "switchback-garden",
         "puttId": "switchback-garden-putt-6",
         "gravity": 700,
         "courseSha256": "9df7fd0ff1e0b4a6d31b159ae2f15b3f31418519f873b211addf69b7ab3416dd",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -271,15 +271,15 @@
         "deg": 22.5,
         "power": 1
       },
-      "elapsedMs": 575.75,
+      "elapsedMs": 631.4672,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-1",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -308,15 +308,15 @@
         "deg": 15.5,
         "power": 0.65
       },
-      "elapsedMs": 520.8042,
+      "elapsedMs": 526.8789999999999,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-2",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -345,15 +345,15 @@
         "deg": 0,
         "power": 0.35
       },
-      "elapsedMs": 7.888100000000122,
+      "elapsedMs": 6.966899999999896,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-3",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -382,15 +382,15 @@
         "deg": 39.5,
         "power": 0.95
       },
-      "elapsedMs": 1271.2300999999998,
+      "elapsedMs": 1332.1269000000002,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-4",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -419,15 +419,15 @@
         "deg": 14,
         "power": 0.9
       },
-      "elapsedMs": 499.5055000000002,
+      "elapsedMs": 505.9336000000003,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-5",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -456,15 +456,15 @@
         "deg": 25.5,
         "power": 0.6
       },
-      "elapsedMs": 915.0060000000003,
+      "elapsedMs": 941.9841999999999,
       "provenance": {
         "version": 2,
         "courseId": "dune-serpent",
         "puttId": "dune-serpent-putt-6",
         "gravity": 700,
         "courseSha256": "2b4858358e2350733bc402a4e5f6f907432ecb6adfbf10e0a3a4ce81b2af40aa",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -493,15 +493,15 @@
         "deg": 19,
         "power": 0.65
       },
-      "elapsedMs": 1353.6481000000003,
+      "elapsedMs": 1373.4399000000003,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-1",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -530,15 +530,15 @@
         "deg": 15,
         "power": 0.75
       },
-      "elapsedMs": 1686.3764,
+      "elapsedMs": 1825.3192,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-2",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -567,15 +567,15 @@
         "deg": 8,
         "power": 1
       },
-      "elapsedMs": 942.0099000000009,
+      "elapsedMs": 935.5267000000003,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-3",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -604,15 +604,15 @@
         "deg": 30.5,
         "power": 0.95
       },
-      "elapsedMs": 3798.6286999999993,
+      "elapsedMs": 3763.9118,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-4",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -641,15 +641,15 @@
         "deg": 15.5,
         "power": 0.65
       },
-      "elapsedMs": 1295.5234,
+      "elapsedMs": 1320.6241999999984,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-5",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -678,15 +678,15 @@
         "deg": 33.5,
         "power": 0.75
       },
-      "elapsedMs": 4076.4521000000004,
+      "elapsedMs": 4079.448199999999,
       "provenance": {
         "version": 2,
         "courseId": "frost-hollow",
         "puttId": "frost-hollow-putt-6",
         "gravity": 700,
         "courseSha256": "865fea855b07c54c64eec36119fc7dad2cd4279448421019ba0de14b4d310788",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -715,15 +715,15 @@
         "deg": 15.5,
         "power": 0.75
       },
-      "elapsedMs": 1435.5325000000012,
+      "elapsedMs": 1471.3691,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-1",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -752,15 +752,15 @@
         "deg": 0,
         "power": 0.8
       },
-      "elapsedMs": 37.87879999999859,
+      "elapsedMs": 40.604599999998754,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-2",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -789,15 +789,15 @@
         "deg": 20,
         "power": 1
       },
-      "elapsedMs": 1579.4281999999985,
+      "elapsedMs": 1599.8708000000006,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-3",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -826,15 +826,15 @@
         "deg": 30,
         "power": 1
       },
-      "elapsedMs": 1909.1169999999984,
+      "elapsedMs": 1948.1892000000007,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-4",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -863,15 +863,15 @@
         "deg": 17,
         "power": 1
       },
-      "elapsedMs": 1511.3810000000012,
+      "elapsedMs": 1557.0352999999996,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-5",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -900,15 +900,15 @@
         "deg": 6,
         "power": 0.85
       },
-      "elapsedMs": 600.2056000000011,
+      "elapsedMs": 640.9457999999977,
       "provenance": {
         "version": 2,
         "courseId": "slime-springs",
         "puttId": "slime-springs-putt-6",
         "gravity": 700,
         "courseSha256": "b946561205331adaf368c81790dac9834ea9acfdc608b14e10551bca4deaf783",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -937,15 +937,15 @@
         "deg": 32.5,
         "power": 0.75
       },
-      "elapsedMs": 2820.3603999999978,
+      "elapsedMs": 2948.119999999999,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-1",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -974,15 +974,15 @@
         "deg": 10.5,
         "power": 0.9
       },
-      "elapsedMs": 1598.3703999999998,
+      "elapsedMs": 1618.612100000002,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-2",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1011,15 +1011,15 @@
         "deg": 64,
         "power": 0.7
       },
-      "elapsedMs": 6187.926500000001,
+      "elapsedMs": 6587.854000000003,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-3",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1048,15 +1048,15 @@
         "deg": 31.5,
         "power": 0.7
       },
-      "elapsedMs": 2716.116600000001,
+      "elapsedMs": 2801.2174000000014,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-4",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1085,15 +1085,15 @@
         "deg": 57.5,
         "power": 1
       },
-      "elapsedMs": 7140.060500000007,
+      "elapsedMs": 6195.756600000001,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-5",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1119,15 +1119,15 @@
         "deg": 0,
         "power": 0.75
       },
-      "elapsedMs": 41524.726299999995,
+      "elapsedMs": 43977.0771,
       "provenance": {
         "version": 2,
         "courseId": "cyclone-ring",
         "puttId": "cyclone-ring-putt-6",
         "gravity": 700,
         "courseSha256": "779e038e1a2f01665b507460fcbd7ceaa58d80adfd64174d1e22bc771d4fa57a",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1153,15 +1153,15 @@
         "deg": 15,
         "power": 0.9
       },
-      "elapsedMs": 47337.7194,
+      "elapsedMs": 48633.904500000004,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-1",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1190,15 +1190,15 @@
         "deg": 0,
         "power": 0.8
       },
-      "elapsedMs": 20.448200000013458,
+      "elapsedMs": 15.052200000005541,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-2",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1224,15 +1224,15 @@
         "deg": 13.5,
         "power": 0.8
       },
-      "elapsedMs": 42148.93549999999,
+      "elapsedMs": 40594.7764,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-3",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1261,15 +1261,15 @@
         "deg": 50.5,
         "power": 0.75
       },
-      "elapsedMs": 3547.725199999986,
+      "elapsedMs": 4003.592399999994,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-4",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1298,15 +1298,15 @@
         "deg": 21,
         "power": 0.75
       },
-      "elapsedMs": 3561.028099999996,
+      "elapsedMs": 3941.242200000008,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-5",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     },
@@ -1335,15 +1335,15 @@
         "deg": 7,
         "power": 0.8
       },
-      "elapsedMs": 722.047499999986,
+      "elapsedMs": 753.8136000000231,
       "provenance": {
         "version": 2,
         "courseId": "grand-finale",
         "puttId": "grand-finale-putt-6",
         "gravity": 700,
         "courseSha256": "97cf219dff1101d1c95b956b67fb028d5c8b5337d7a2409f39d3148352b0774e",
-        "simulationSha256": "d86607df0fccbe7d201dc44779de062993d2d0c16b053f0dc87e02a2b9530f7a",
-        "configurationSha256": "6af705a140fecb6d4a0ba17cc2465bad9a9c1c1f760b31dda9f0a67a703396b9",
+        "simulationSha256": "53aed94294984a363e393d50cb07545af6b751b761ea52950bd58b286da5397a",
+        "configurationSha256": "1586bd3f0065b9d59b3da69745b6bc1c6b0b09dd11397a5bacdeded342bfab95",
         "searchMode": "fast"
       }
     }
