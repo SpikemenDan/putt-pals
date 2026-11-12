@@ -1,4 +1,5 @@
 export { PuttPalsUi } from './App.jsx';
+export { spreadPins } from './WorldSelect.jsx';
 export { PongHud } from './PongHud.jsx';
 export { mountUi, createUiDispatcher } from './mount.jsx';
 export { TIPS, TIP_MS, tipAt } from './tips.js';

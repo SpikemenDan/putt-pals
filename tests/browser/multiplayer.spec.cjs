@@ -1,6 +1,7 @@
 // Four players in separate browser contexts over the local room Worker: one room, one full map, identical results.
 const { test, expect } = require('@playwright/test');
 const { openApp, until, playPutt } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 const NAMES = ['Ana', 'Ben', 'Cy', 'Dee'];
 
@@ -28,7 +29,7 @@ test('multiplayer: four pages on real WebSockets play a full map and agree on th
     await ana.button('Start Game').click();
     for (const p of players) {
       await expect(p.ui('map-select')).toBeVisible();
-      await p.ui('map-select').locator('button[data-v]').first().click();
+      await pickMap(p.page);
     }
     for (const p of players) await until(() => p.ready(), { label: p.name + ' map start' });
     // Everyone sees the other three balls and a four-row scoreboard.

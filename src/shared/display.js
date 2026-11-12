@@ -5,7 +5,8 @@
  * values without desyncing a room or invalidating recorded difficulty. Defaults equal the values the renderer
  * used before they were parameterized. Every field is validated at load: finite numbers inside a sane range.
  *
- * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier.
+ * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier. The `loading` group
+ * (loading screen, src/render/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field.
  */
 
 /** Field spec: [dotted path, min, max, description]. Drives validation and docs/DISPLAY.md. */
@@ -16,12 +17,28 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['aim.arrowHeadHalfWidth', 0.1, 100, 'Half the width of the aim arrow head.'],
   ['aim.arrowHeadLength', 1, 200, 'Length of the aim arrow head (capped at half the arrow so short arrows stay readable).'],
   ['aim.arrowOpacity', 0.05, 1, 'Opacity of the aim arrow.'],
+  ['loading.spinSpeed', 0, 60, 'Loading screen: planet rotation speed (0 holds it still). Ignored when the player prefers reduced motion.'],
+  ['loading.axisTilt', -60, 60, 'Loading screen: tilt of the planet axis away from the horizon line, so the poles lean up or down.'],
+  ['loading.horizonHeight', 0.3, 0.9, 'Loading screen: where the top of the planet sits, as a fraction of the screen height measured from the top (higher number = lower planet).'],
+  ['loading.cameraAltitude', 0.15, 1.5, 'Loading screen: how high the camera flies above the ground, as a fraction of the planet radius (below the top of the blue air, about 0.6, it flies in the atmosphere; about 1.2 is out in space).'],
+  ['loading.cloudCover', 0, 1, 'Loading screen: how much of the planet the cloud layer covers (0 = clear, 1 = overcast).'],
+  ['loading.cloudDrift', 0, 4, 'Loading screen: cloud layer speed relative to the planet spin (1 = clouds turn with the ground, above 1 they slide ahead of it).'],
+  ['loading.finishTime', 0.1, 3, 'Loading screen: once the game is ready, seconds all three balls stay lit before the screen closes.'],
+  ['loading.atmosphere', 0, 1, 'Loading screen: strength of the blue air around the planet, from thin (0) to thick (1).'],
+  ['loading.atmosphereHeight', 0.1, 0.8, 'Loading screen: how high the blue air reaches above the ground, as a fraction of the planet radius.'],
+  ['loading.citySize', 0.5, 3, 'Loading screen: size of cities, towns, villages, ports and mills as a multiplier of their audited sizes (docs/GAIA_MAP.md).'],
+  ['loading.lunaSize', 1, 8, 'Loading screen: size of Luna in the sky: 1 is its true apparent size at the real Earth-Moon distance, higher is magnified.'],
+  ['loading.outlineWidth', 0, 4, 'Loading screen: ink outline width on cities, ships, planes and clouds, in pixels at 1280 wide; 0 turns outlines off.'],
+  ['loading.planes', 0, 12, 'Loading screen: planes flying between cities, with contrails (rounded to whole planes; 0 hides them).'],
+  ['loading.boats', 0, 20, 'Loading screen: boats on the sea (rounded to whole boats; 0 hides them).'],
+  ['loading.satellites', 0, 8, 'Loading screen: satellites orbiting the planet (rounded to whole satellites; 0 hides them).'],
 ]);
 
 /** Values the renderer used before they were parameterized. */
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

@@ -15,17 +15,16 @@ import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView, resolveRenderCourse } from '../render/index.js';
 import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, placementFloor, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
-import { BALL_RADIUS, MAX_DEPLOYABLES, STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
+import { createAtlasScene } from '../render/atlas-scene.js';
+import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
 import { createPutt } from './putt.js';
 import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
 
-/** Start-screen panorama (M1b): seconds per camera lap and the course it shows. */
-const PANORAMA_LAP_SECONDS = 90;
-const PANORAMA_MAP = STARTER_COURSE_INDICES[0];
 
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
 /** Per-tab room identity for each code, so a reload can resume the same seat. */
@@ -198,7 +197,6 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     endPutt();
     smooth.clear(); // new tee positions must not glide from the previous hole
     activeRound = s.roundNumber;
-    panoramaBuilt = false;
     const definition = data.definitions[s.mapIndex];
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
@@ -286,31 +284,6 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     if (key === lastLocal) return;
     lastLocal = key;
     setLocal(partial);
-  }
-
-  /** Which course the start-screen panorama has built; reset whenever a game round replaces the scene. */
-  let panoramaBuilt = false;
-
-  /** Slowly orbits a course behind the start screen (M1b). Pure view work: no room, putt or input is involved. */
-  function drawPanorama(t, dt) {
-    if (!panoramaBuilt) {
-      view.setCourse(data.definitions[PANORAMA_MAP], 0);
-      panoramaBuilt = true;
-    }
-    const { course, transform } = renderer.course;
-    const tiles = course.tiles?.length ? course.tiles : [[0, 0, 800, 500]];
-    const x0 = Math.min(...tiles.map(r => r[0])), x1 = Math.max(...tiles.map(r => r[0] + r[2]));
-    const y0 = Math.min(...tiles.map(r => r[1])), y1 = Math.max(...tiles.map(r => r[1] + r[3]));
-    const [cx, cy, cz] = transform.ground((x0 + x1) / 2, (y0 + y1) / 2, 0);
-    const span = Math.max(x1 - x0, y1 - y0);
-    const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const angle = reducedMotion ? 0.6 : t / 1000 / PANORAMA_LAP_SECONDS * Math.PI * 2;
-    const radius = span * 0.5 + 110, height = span * 0.26 + 70;
-    renderer.resize(renderer.canvasWidth());
-    renderer.render({
-      now: t, dt, hazardTime: t / 1000, local: null, remotes: [], aim: null,
-      camera: { position: [cx + Math.cos(angle) * radius, height, cz + Math.sin(angle) * radius], look: [cx, 10, cz], sunTarget: [cx, 0, cz], ball: null, fadeTarget: null },
-    });
   }
 
   // ---------------------------------------------------------------- deployable placement (G1e)
@@ -408,9 +381,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     const dt = Math.min(0.05, Math.max(0, (t - lastFrame) / 1000));
     lastFrame = t;
     const screens = store.getSnapshot().screens;
-    if (view && renderer && screens.landing && !screens.game && !room) drawPanorama(t, dt);
-    else if (room && putt && view && screens.game) {
-      panoramaBuilt = false;
+    if (room && putt && view && screens.game) {
       if (room.connected) {
         putt.setAuras(auraSourcesOf(remoteBalls()));
         const placed = activeDeployables(room.deployables, room.snapshot.mapIndex, room.snapshot.puttIndex);
@@ -632,7 +603,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
   setLocal({ volume: audio.getStatus?.().volume ?? 1 });
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '' });
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }), createAtlasScene: options => createAtlasScene({ THREE, ...options }) });
 
   return {
     store,

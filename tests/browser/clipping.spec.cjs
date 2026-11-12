@@ -3,6 +3,7 @@
 // The shots are attached to the report (test-results/browser) and are not committed.
 const { test, expect } = require('@playwright/test');
 const { openApp, until } = require('./support/app.cjs');
+const { pickMap, mapCount } = require('./support/maps.cjs');
 
 // Ball cam, Hole view, World view (press `c` to cycle) and a close ball cam (wheel zoom). Putts after the
 // first are shot close only, to keep the run short.
@@ -15,7 +16,7 @@ test('clipping: every map renders non-blank from every camera view without page 
   await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
   await ana.button('Start Game').click();
   await expect(ana.ui('map-select')).toBeVisible();
-  const maps = await ana.ui('map-select').locator('button[data-v]').count();
+  const maps = await mapCount(ana.page);
   expect(maps, 'map picker lists the courses').toBeGreaterThan(0);
 
   const canvas = page.locator('[data-ui=game] canvas');
@@ -55,7 +56,7 @@ test('clipping: every map renders non-blank from every camera view without page 
   };
 
   for (let map = 0; map < maps; map++) {
-    await ana.ui('map-select').locator('button[data-v]').nth(map).click();
+    await pickMap(ana.page, map);
     const putts = await page.getByRole('button', { name: /^Putt \d+ · Par \d+$/ }).count();
     expect(putts, `map ${map} lists its putts`).toBeGreaterThan(0);
     await page.getByRole('button', { name: /^Putt 1 · Par \d+$/ }).click();

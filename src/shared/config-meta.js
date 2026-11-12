@@ -65,6 +65,21 @@ export const DISPLAY_UNITS = Object.freeze({
   'aim.arrowHeadHalfWidth': 'world units',
   'aim.arrowHeadLength': 'world units',
   'aim.arrowOpacity': 'opacity, 0 to 1',
+  'loading.spinSpeed': 'degrees/s',
+  'loading.axisTilt': 'degrees',
+  'loading.horizonHeight': 'fraction of screen height',
+  'loading.cameraAltitude': 'fraction of the planet radius',
+  'loading.cloudCover': 'fraction, 0 to 1',
+  'loading.cloudDrift': 'multiplier of spin speed',
+  'loading.finishTime': 'seconds',
+  'loading.atmosphere': 'fraction, 0 (thin) to 1 (thick)',
+  'loading.atmosphereHeight': 'fraction of the planet radius',
+  'loading.citySize': 'multiplier',
+  'loading.outlineWidth': 'CSS px at 1280 wide',
+  'loading.lunaSize': 'multiplier of true apparent size',
+  'loading.planes': 'count',
+  'loading.boats': 'count',
+  'loading.satellites': 'count',
 });
 
 /** How a change takes effect. */

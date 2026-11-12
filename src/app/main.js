@@ -12,7 +12,14 @@ const app = createApp({ root: document.getElementById('root'), THREE,
 });
 if (tuner) {
   window.__ppTuner = tuner;
-  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); });
+  if (new URLSearchParams(window.location.search).has('map')) setTimeout(() => { // ?map: straight to the level select, through the real solo flow
+    const press = text => [...document.querySelectorAll('button')].find(b => b.textContent === text)?.click();
+    press('Play solo');
+    const poll = setInterval(() => { if (document.querySelector('[data-ui=map-select]')?.offsetParent !== undefined && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start Game')) { press('Start Game'); clearInterval(poll); } }, 200);
+  }, 300);
+  if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)); // ?art: the flat master map on its own
+  if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: live close-ups of the loading-screen city, ship and plane
+  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); mountLoadingPreview(document, app); });
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
 if (window.__PP_APP_HOOK) window.__ppApp = app;

@@ -2,6 +2,7 @@
 // Inputs use public UI/shot commands; the app hook is read-only.
 const { test, expect } = require("@playwright/test");
 const { openApp, until } = require("./support/app.cjs");
+const { pickMap } = require('./support/maps.cjs');
 // Re-measured at the shared U2 launch speed: this overlaps the cup but must not capture.
 const grazing = { deg: 30.5, power: 0.86 };
 const current = require("../fixtures/cup-capture/solutions.json").results.find(
@@ -15,7 +16,7 @@ test("cup: a grazing shot misses, while a centred shot still sinks", async ({
   await ana.solo();
   await ana.ui("room-lobby").locator("select").selectOption("putt_practice");
   await ana.button("Start Game").click();
-  await ana.ui("map-select").locator("button[data-v]").first().click();
+  await pickMap(ana.page);
   await ana.button("Putt 1 · Par 2").click();
   await until(() => ana.ready(), { label: "ready for cup regression" });
   await page.evaluate(() => {

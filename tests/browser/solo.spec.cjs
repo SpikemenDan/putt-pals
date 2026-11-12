@@ -1,6 +1,7 @@
 // Solo play in a real browser: the built app, real WebGL, the full first map through the real UI.
 const { test, expect } = require('@playwright/test');
 const { openApp, until, playPutt } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 test('solo: a full six-putt map renders in WebGL and scores six holes in one', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
@@ -9,7 +10,7 @@ test('solo: a full six-putt map renders in WebGL and scores six holes in one', a
   await expect(ana.button('Copy invite')).toBeHidden();
   await ana.button('Start Game').click();
   await expect(ana.ui('map-select')).toBeVisible();
-  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await pickMap(ana.page);
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });
   await expect(ana.ui('hud-info')).toContainText('Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0');
 

@@ -1,6 +1,7 @@
 // Putt Pong (1v1) integration in a real browser: mode selection, 3D cup racks, HUD tracker, and match flow.
 const { test, expect } = require('@playwright/test');
 const { openApp, until } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 test('putt pong solo flow: select Putt Pong mode, start match, verify 3D racks and HUD tracker', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
@@ -14,7 +15,7 @@ test('putt pong solo flow: select Putt Pong mode, start match, verify 3D racks a
   // Start the game
   await ana.button('Start Game').click();
   await expect(ana.ui('map-select')).toBeVisible({ timeout: 15_000 });
-  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await pickMap(ana.page);
 
   // Wait for game view
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });

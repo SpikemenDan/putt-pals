@@ -49,7 +49,7 @@ void main(){
   if(len>1e-4&&clip.w>0.)clip.xy+=dir/len*ink*2./res*clip.w;
   gl_Position=clip;
 }`;
-const INK_FRAGMENT = `
+const inkFragment = color => `
 #ifdef INK_CUP
 varying vec3 cupWorld;uniform vec2 cupCenter;uniform float cupRadius;
 #endif
@@ -57,7 +57,7 @@ void main(){
 #ifdef INK_CUP
   if(distance(cupWorld.xz,cupCenter)<cupRadius)discard;
 #endif
-  gl_FragColor=vec4(${INK_COLOR},1.);
+  gl_FragColor=vec4(${color},1.);
 }`;
 
 /**
@@ -85,8 +85,9 @@ export function sizeInk(uniforms, width, height) {
  * @param {{center: [number, number], radius: number}|null} [options.cup=null] Cup cutout (world x/z), as on the turf
  * @param {number} [options.lift=0] Moves the hull this far toward the camera (view units). A ball's back
  *   half can touch a wall it rests against; a small lift (a third of its radius) keeps the ring in front.
+ * @param {string} [options.color=INK_COLOR] GLSL vec3 of the line
  */
-export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null, lift = 0 } = {}) {
+export function createInkMaterial(THREE, uniforms, { planar = false, overlay = false, cup = null, lift = 0, color = INK_COLOR } = {}) {
   const defines = {};
   const own = { ink: uniforms.ink, res: uniforms.res };
   if (planar) defines.INK_PLANAR = '';
@@ -97,7 +98,7 @@ export function createInkMaterial(THREE, uniforms, { planar = false, overlay = f
     own.cupRadius = { value: cup.radius };
   }
   const material = new THREE.ShaderMaterial({
-    defines, uniforms: own, vertexShader: INK_VERTEX, fragmentShader: INK_FRAGMENT,
+    defines, uniforms: own, vertexShader: INK_VERTEX, fragmentShader: inkFragment(color),
     side: planar ? THREE.DoubleSide : THREE.BackSide, fog: false,
     polygonOffset: planar, polygonOffsetFactor: planar ? 1 : 0, polygonOffsetUnits: planar ? 1 : 0,
     // Translucent owners and planar hulls draw after their owner (see addInk).

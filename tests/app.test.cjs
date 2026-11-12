@@ -108,21 +108,18 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await first.dispose(); await reloaded.dispose(); await junk.dispose();
   });
 
-  await scenario('start screen: a 3D panorama orbits behind the menu, then hands the canvas to the game', async () => {
+  await scenario('start screen: the planet is the backdrop of the menu, and leaves with it', async () => {
     const W = world();
     const ana = await W.client('Ana');
     await W.run(1000);
-    assert.ok(ana.app.renderer.course, 'a course is built for the panorama');
-    assert.ok(ana.shown('[data-ui=landing]') && ana.shown('[data-ui=backdrop]'), 'the canvas stays visible behind the menu');
-    assert.ok(!ana.shown('[data-ui=game]'), 'the backdrop is not the game screen');
-    assert.equal(ana.$('[data-ui=backdrop]').getAttribute('aria-hidden'), 'true');
-    const first = ana.app.renderer.camera.position.clone();
-    await W.run(5000);
-    assert.ok(ana.app.renderer.camera.position.distanceTo(first) > 1, 'the camera orbits');
+    assert.ok(ana.shown('[data-ui=landing]') && ana.$('[data-ui=planet-stage]'), 'the planet stands behind the menu');
+    assert.equal(ana.$('[data-ui=planet-stage]').getAttribute('aria-hidden'), 'true');
+    assert.ok(!ana.shown('[data-ui=game]'), 'the game screen stays hidden');
     assert.equal(ana.app.putt, null, 'no putt or input is involved');
     await ana.solo();
     assert.ok(ana.shown('[data-ui=room-lobby]') && !ana.shown('[data-ui=landing]'), 'the menu is gone');
-    assert.ok(!ana.shown('[data-ui=backdrop]'), 'the panorama backdrop is gone with the menu');
+    while (ana.$('[data-ui=loading]')) await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+    assert.equal(ana.$('[data-ui=planet-stage]'), null, 'and the planet with it, once loading has closed');
   });
 
   await scenario('feedback cues: a resting ball pulses the ring cue; disabled buttons and sinks stay silent', async () => {
@@ -223,7 +220,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await W.until(() => ana.ready(), 10000, 'ready');
     await W.run(500);
-    const canvas = ana.$('canvas');
+    const canvas = ana.$('canvas:not([data-ui=loading-planet])');
     const ev = (type, x, y) => canvas.dispatchEvent(new ana.win.w.PointerEvent(type, { bubbles: true, pointerId: 1, button: 0, clientX: x, clientY: y }));
     await act(async () => { ev('pointerdown', 400, 250); ev('pointermove', 330, 300); });
     await W.run(100);
@@ -311,7 +308,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'guest voting');
     for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
     await W.until(() => ana.ready() && ben.ready(), 10000, 'putt start');
-    const canvas = ben.$('canvas');
+    const canvas = ben.$('canvas:not([data-ui=loading-planet])');
     canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 500, right: 800, bottom: 500 });
     const click = async (c, button) => act(async () => { c.dispatchEvent(new ben.win.w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 400, clientY: 300, button })); });
     ben.putt.player.inventory.push('bumper');
@@ -465,6 +462,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       await ana.click(ana.button('×') || ana.$('[aria-label="Close scorecard"]'));
       await act(async () => { ana.app.dispatch({ type: 'leave' }); });
       await W.settle();
+      while (ana.$('[data-ui=loading]')) await act(async () => { await new Promise(r => setTimeout(r, 50)); }); // the loading screen closes on a real timer; its scene must leave no loop behind
       assert.ok(ana.shown('[data-ui=landing]'));
       assert.equal(ana.app.room, null);
       assert.equal(ana.app.putt, null);

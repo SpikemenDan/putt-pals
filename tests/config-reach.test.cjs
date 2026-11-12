@@ -69,8 +69,52 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(normal.scale, 1);
     assert.equal(big.scale, 2, 'ball.visualScale reaches the renderer');
     assert.ok(Math.abs((big.y - normal.y) - 5) < 1e-9, 'and its resting height');
+    // Loading screen (src/render/planet-scene.js): each setting changes exactly its own measurement.
+    const THREE = await import(url('node_modules/three/build/three.module.js'));
+    const { createPlanetScene } = await import(url('src/render/planet-scene.js'));
+    const { buildPlanet, mulberry32 } = await import(url('src/render/planet-data.js'));
+    const sharedPlanet = buildPlanet(mulberry32(9));
+    const loadingMeasure = display => {
+      const dom = new JSDOM('<canvas></canvas>', { pretendToBeVisual: true });
+      dom.window.HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: (_, k) => (k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}), set: () => true });
+      const canvas = dom.window.document.querySelector('canvas');
+      canvas.getBoundingClientRect = () => ({ width: 1280, height: 720 });
+      let seen = null;
+      const createWebGLRenderer = () => ({ render(scene) { seen = scene; }, setPixelRatio() {}, getPixelRatio: () => 1, setSize() {}, setClearColor() {}, dispose() {}, capabilities: { getMaxAnisotropy: () => 1 } });
+      const scene = createPlanetScene({ THREE, canvas, display, random: mulberry32(9), planet: sharedPlanet, win: dom.window, createWebGLRenderer });
+      scene.start();
+      scene.step(0.5);
+      seen.updateMatrixWorld(true);
+      const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(seen.children.find(o => o.isGroup).quaternion);
+      let glow = null, gate = null;
+      seen.traverse(o => { const u = o.material?.uniforms; if (u?.atmosphere && glow === null) glow = u.atmosphere.value; if (u?.cloudGate && gate === null) gate = u.cloudGate.value; });
+      const cloudLead = seen.children.find(o => o.isGroup).children.map(g => g.rotation.y);
+      const out = { spin: scene.spin, axisX: axis.x, glow, gate, cloudLead: cloudLead[1] - cloudLead[0], traffic: scene.traffic, stats: scene.stats, camera: scene.cameraPosition };
+      scene.dispose(); dom.window.close();
+      return out;
+    };
+    const lbase = loadingMeasure(DEFAULT_DISPLAY);
+    const changed = (key, value) => loadingMeasure(createDisplay({ loading: { [key]: value } }));
+    assert.ok(Math.abs(changed('spinSpeed', 40).spin - 20) < 1e-9 && Math.abs(lbase.spin - 2) < 1e-9, 'loading.spinSpeed turns the planet');
+    assert.ok(changed('horizonHeight', 0.8).stats.limb < lbase.stats.limb && changed('horizonHeight', 0.8).stats.cameraHeight > lbase.stats.cameraHeight, 'loading.horizonHeight moves the horizon down the screen');
+    assert.ok(changed('axisTilt', -40).axisX < lbase.axisX - 0.01 || changed('axisTilt', -40).axisX > lbase.axisX + 0.01, 'loading.axisTilt reorients the planet');
+    assert.ok(changed('cloudCover', 1).stats.deckClouds > lbase.stats.deckClouds && changed('cloudCover', 0).stats.deckClouds === 0, 'loading.cloudCover sets the high clouds');
+    assert.ok(changed('cloudCover', 1).gate < lbase.gate, 'and the cloud layer on the planet');
+    assert.ok(changed('cloudDrift', 4).cloudLead > lbase.cloudLead, 'loading.cloudDrift slides the clouds ahead of the ground');
+    assert.deepEqual(lbase.traffic, { planes: 3, boats: 9, satellites: 2 });
+    assert.ok(changed('atmosphere', 0.1).glow < lbase.glow && changed('atmosphere', 1).glow > lbase.glow, 'loading.atmosphere sets the air glow');
+    assert.ok(changed('atmosphereHeight', 0.8).stats.airTop > lbase.stats.airTop && Math.abs(lbase.stats.airTop - 162) < 1e-9, 'loading.atmosphereHeight lifts the top of the air');
+    assert.ok(changed('citySize', 3).stats.tallestCity > lbase.stats.tallestCity * 1.5 && lbase.stats.tallestCity > 5 && lbase.stats.tallestCity < 10, 'loading.citySize makes the skylines taller; by default the tallest stands clear of the ground but below the big mountains');
+    assert.ok(Math.abs(changed('outlineWidth', 3).stats.ink - 3) < 1e-9 && Math.abs(lbase.stats.ink - 1.6) < 1e-9, 'loading.outlineWidth sets the ink width in pixels at 1280 wide');
+    assert.ok(Math.abs(changed('lunaSize', 1).stats.lunaPixels * 2.6 - lbase.stats.lunaPixels) < 1e-6 && changed('lunaSize', 1).stats.lunaPixels > 5 && changed('lunaSize', 1).stats.lunaPixels < 16, 'loading.lunaSize scales Luna, and 1 is its true size at the real distance');
+    assert.equal(changed('planes', 2).traffic.planes, 2, 'loading.planes sets the number of planes');
+    assert.equal(changed('boats', 5).traffic.boats, 5, 'loading.boats sets the number of boats');
+    assert.equal(changed('satellites', 6).traffic.satellites, 6, 'loading.satellites sets the number of satellites');
+    const reach = m => Math.hypot(...m.camera) - 100;
+    assert.ok(Math.abs(reach(lbase) - 40) < 1e-6 && Math.abs(reach(changed('cameraAltitude', 1.2)) - 120) < 1e-6, 'loading.cameraAltitude sets how high the camera flies (40 units by default, inside the air)');
+    // loading.finishTime is checked in tests/ui.test.cjs, where the screen really closes after it.
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale'].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cameraAltitude', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

@@ -4,6 +4,7 @@ const { test, expect } = require('@playwright/test');
 const { until, playPutt } = require('./support/app.cjs');
 const { roomCode, openPlayer } = require('./support/rooms.cjs');
 const { startLocalRoomWorker } = require('./support/local-worker.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 let contexts = [];
 test.beforeEach(async () => { contexts = []; });
@@ -27,7 +28,7 @@ test('recovery: a player reloading mid-map resumes the same seat and scores', as
   await ana.button('Start Game').click();
   for (const p of players) {
     await expect(p.ui('map-select')).toBeVisible();
-    await p.ui('map-select').locator('button[data-v]').first().click();
+    await pickMap(p.page);
   }
   await until(async () => (await ana.snapshot())?.puttIndex === 0 && await ana.ready(), { label: 'first putt' });
   await playPutt(players);

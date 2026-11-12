@@ -1,6 +1,7 @@
 // Putt practice mode features, single-putt replay, and navigation in browser.
 const { test, expect } = require('@playwright/test');
 const { openApp, until, playPutt } = require('./support/app.cjs');
+const { pickMap } = require('./support/maps.cjs');
 
 test('putt practice: the picker starts a putt, completion replays it, the bar steps putts and returns to maps', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
@@ -8,7 +9,7 @@ test('putt practice: the picker starts a putt, completion replays it, the bar st
   await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
   await ana.button('Start Game').click();
   await expect(ana.ui('map-select')).toBeVisible();
-  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await pickMap(ana.page);
   await ana.button('Putt 3 · Par 2').click();
   await until(async () => (await ana.ready()) && (await page.evaluate(() => window.__ppApp.putt?.puttIndex)) === 2, { label: 'putt 3' });
   await expect(ana.ui('hud-info')).toContainText('Switchback Garden · PUTT 3/6 · PAR 2 · STROKES 0 · PRACTICE');
@@ -47,7 +48,7 @@ test('course practice: a real two-minute timeout scores par + penalty and the ma
   await ana.ui('room-lobby').locator('select').selectOption('practice');
   await ana.button('Start Game').click();
   await expect(ana.ui('map-select').locator('p').first()).toHaveText('Practice · pick any map to start. No voting, no opponents.');
-  await ana.ui('map-select').locator('button[data-v]').first().click();
+  await pickMap(ana.page);
   await until(() => ana.ready(), { label: 'ready' });
 
   // Fast-forward into the final 10 seconds to verify warning state without real-time waiting

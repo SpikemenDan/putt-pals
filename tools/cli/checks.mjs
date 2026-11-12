@@ -133,6 +133,8 @@ export const RULES = [
   { test: f => f === 'wrangler.jsonc' || f.startsWith('services/') || f === 'scripts/prepare-cloudflare-preview.mjs', scripts: ['test:rooms:local'], reason: 'Worker and room runtime configuration' },
   { test: f => f === 'playwright.config.cjs' || f.startsWith('tests/browser/'), scripts: ['test:browser'], reason: 'real-browser suite configuration' },
   { test: f => f.startsWith('tools/overnight/'), scripts: ['test:overnight'], reason: 'overnight tooling (the CLI entry is not imported by its tests)' },
+  { test: f => f === 'tools/gaia/import-azgaar.mjs', scripts: ['test:ui'], reason: 'run by hand; writes src/shared/gaia-reference.js, which the map tests read' },
+  { test: f => /^src\/ui\/fonts\/.*\.(?:otf|ttf|woff2?)$/.test(f), scripts: ['build'], reason: 'font file, reached only through a stylesheet' },
   { test: f => f.startsWith('.github/'), scripts: [], note: 'CI or template change: nothing runs locally; confirm on the PR\'s CI run', reason: 'GitHub configuration' },
   { test: f => f.startsWith('prototypes/'), scripts: [], note: 'isolated prototype with its own package; no suite covers it', reason: 'prototype' },
   { test: f => f === 'scripts/make-portable.cjs', scripts: [], note: 'only build:portable runs this, and that distribution path is unverified', reason: 'portable build helper' },
