@@ -47,7 +47,12 @@ async function openApp(page, name) {
       const view = await visible('landing').getAttribute('data-view');
       if (view === id) return;
       if (view !== 'home') await page.locator('[data-ui=menu-back]').click();
-      await page.locator(`[data-menu=${id}]`).click();
+      // The main buttons bob while idle (display.menu.bob), so they are never "stable" for Playwright's
+      // actionability wait. Check what a player needs (visible, enabled), then click without that wait.
+      const button = page.locator(`[data-menu=${id}]`);
+      await expect(button).toBeVisible();
+      await expect(button).toBeEnabled();
+      await button.click({ force: true });
     },
     async solo() {
       await p.menu('solo');
