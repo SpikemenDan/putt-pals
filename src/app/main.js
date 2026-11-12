@@ -21,10 +21,10 @@ if (tuner) {
     press('Play solo');
     const poll = setInterval(() => { if (document.querySelector('[data-ui=map-select]')?.offsetParent !== undefined && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start Game')) { press('Start Game'); clearInterval(poll); } }, 200);
   }, 300);
-  if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)); // ?art: the flat master map on its own
-  if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: live close-ups of the loading-screen city, ship and plane
-  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); mountLoadingPreview(document, app); });
-  if (worldPreview) import('../devtools/world-preview.js').then(({ mountWorldPreview }) => mountWorldPreview(document, worldPreview, app));
+  if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)).catch(error => console.error('Dev tool failed to load (?art)', error)); // ?art: the flat master map on its own
+  if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)).catch(error => console.error('Dev tool failed to load (?gallery)', error)); // ?gallery: live close-ups of the loading-screen city, ship and plane
+  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); mountLoadingPreview(document, app); }).catch(error => console.error('Dev tools failed to load', error));
+  if (worldPreview) import('../devtools/world-preview.js').then(({ mountWorldPreview }) => mountWorldPreview(document, worldPreview, app)).catch(error => console.error('Dev tool failed to load (?world)', error));
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
 if (window.__PP_APP_HOOK) window.__ppApp = app;

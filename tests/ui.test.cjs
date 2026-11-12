@@ -251,6 +251,22 @@ function fakeClock() {
     await pause();
     assert.ok(calls.includes('world'));
     assert.equal(doc.activeElement, region('desert'), 'Back to world returns focus to the region');
+    { // a fly-in that rejects must leave the world view usable, not a half-opened region
+      const failing = { ...scene, openRegion: async () => { throw new Error('fly-in failed'); } }, logged = [], realError = console.error;
+      const t2 = await setup({ createAtlasScene: () => failing });
+      await t2.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
+      await t2.send({ type: 'SET_MODE', playerId: 'host', mode: 'tournament_3' });
+      await t2.send({ type: 'START_VOTING', playerId: 'host' });
+      console.error = (...args) => logged.push(args);
+      try {
+        await act(async () => { t2.within('[data-region=desert]').click(); });
+        await pause();
+      } finally { console.error = realError; }
+      assert.ok(logged.length >= 1, 'the failure is reported');
+      assert.equal(t2.within('[data-ui=world-select]').dataset.view, 'world', 'the menu returns to the world view');
+      assert.ok(!t2.within('[data-region=desert]').disabled, 'regions can be opened again');
+      await t2.teardown();
+    }
     await t.teardown();
   });
 
