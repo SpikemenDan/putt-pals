@@ -3,10 +3,10 @@ const { test, expect } = require('@playwright/test');
 const { openApp } = require('./support/app.cjs');
 const { roomCode, openPlayer } = require('./support/rooms.cjs');
 
-const MAX_PLAYERS = 4;
-
-test('connect errors: a fifth player is told the room is full and stays on the start screen @slow', async ({ browser }, testInfo) => {
-  test.setTimeout(600_000);
+test('connect errors: a player past the cap is told the room is full and stays on the start screen @slow', async ({ browser }, testInfo) => {
+  test.setTimeout(900_000);
+  // The real room cap, read from the shared constants the server enforces (ES module, so imported dynamically).
+  const { MAX_PLAYERS } = await import('../../src/shared/constants.js');
   const code = roomCode('N2F');
   const contexts = [];
   try {
@@ -19,8 +19,9 @@ test('connect errors: a fifth player is told the room is full and stays on the s
     const [host] = players;
     await expect(host.lobbyStatus()).toHaveText(`Room ${code} · ${MAX_PLAYERS} players · You control the room`, { timeout: 30_000 });
 
-    const extra = await openPlayer(browser, testInfo, 'P5', { contexts });
-    await extra.ui('landing').getByLabel('Your name').fill('P5');
+    const extraName = 'P' + (MAX_PLAYERS + 1);
+    const extra = await openPlayer(browser, testInfo, extraName, { contexts });
+    await extra.ui('landing').getByLabel('Your name').fill(extraName);
     await extra.ui('landing').getByLabel(/room code/i).fill(code);
     await extra.button('Join room').click();
     await expect(extra.ui('connect-error')).toHaveText('That room is full. Ask someone to leave, or use a different room code.', { timeout: 30_000 });
