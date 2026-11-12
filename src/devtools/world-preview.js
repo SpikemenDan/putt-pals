@@ -1,6 +1,6 @@
 /**
  * Development-only world gravity preview (VIS-W #164): play the current course as if it were on Gaia, Ares or Luna,
- * and try candidate gravity values with a slider before the owner confirms them.
+ * and try other gravity values with a slider (Ares 490 and Luna 315 were accepted this way on 2026-11-12).
  *
  * Gravity is a physics setting, so nothing here applies live. A change is staged and only takes effect when the
  * putt restarts (the "Apply and restart putt" button, or the next putt). The preview applies in solo rooms only:

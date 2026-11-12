@@ -14,8 +14,8 @@
 export const TUNING_FIELDS = Object.freeze([
   ['ball.radius', 1, 50, 'Ball radius. Collision and cup-fit geometry.'],
   ['gravity', 0, 5000, 'Gaia (default world) vertical gravity, units/s^2; also drives slope acceleration. Ares and Luna use worlds.*.gravity.'],
-  ['worlds.ares.gravity', 0, 5000, 'Ares vertical gravity, units/s^2 (VIS-W). Provisional starting value pending owner playtest.'],
-  ['worlds.luna.gravity', 0, 5000, 'Luna vertical gravity, units/s^2 (VIS-W). Provisional starting value pending owner playtest.'],
+  ['worlds.ares.gravity', 0, 5000, 'Ares vertical gravity, units/s^2 (VIS-W). Owner-accepted after playtest, 2026-11-12.'],
+  ['worlds.luna.gravity', 0, 5000, 'Luna vertical gravity, units/s^2 (VIS-W). Owner-accepted after playtest, 2026-11-12.'],
   ['shotPower', 1, 10000, 'Launch speed at full charge (speed = charge * shotPower).'],
   ['wallHeight', 1, 500, 'Wall height; the ball clears walls above this z.'],
 
@@ -171,7 +171,7 @@ export const DEFAULT_TUNING = {
     guideMinCharge: 0.015, shotMinCharge: 0.025,
   },
   scoring: { maxHoleScore: 10, missedHolePenalty: 2 },
-  // Owner, 2026-11-11: Gaia 700 (gravity above), Ares 490, Luna 315 as starting values (1.0, 0.7, 0.45).
+  // Owner, 2026-11-11, accepted after playtest 2026-11-12: Gaia 700 (gravity above), Ares 490, Luna 315 (1.0, 0.7, 0.45).
   worlds: { ares: { gravity: 490 }, luna: { gravity: 315 } },
 };
 
