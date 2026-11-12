@@ -1,7 +1,6 @@
 /* Announcement banner (legacy #banner) in the caption-box comic style of the HUD (#203): flat colour, thick ink,
    hard offset shadows, a slight tilt; no gradients or glows. Kinds: event (putt / map results), power, hio.
-   Three candidate looks for owner review; the development catalog can switch them with html[data-banner-style]:
-   tab (default) mirrors the HUD title card, stamp is a cream caption with a coloured header, strip is a slanted band. */
+   Owner-chosen "tab" look: a headline box in the kind colour with a cream caption tab, mirroring the HUD title card. */
 .banner{--kind:var(--yellow);position:fixed;left:50%;top:14%;z-index:50;display:flex;flex-direction:column;align-items:center;max-width:min(92vw,720px);
   opacity:0;pointer-events:none;color:var(--ink);text-align:center;transform:translate(-50%,-24px) rotate(-2deg);transition:opacity .3s,transform .3s cubic-bezier(.2,1.6,.4,1)}
 .banner.show{opacity:1;transform:translate(-50%,0) rotate(-2deg)}
@@ -10,21 +9,9 @@
 .banner b,.banner i{display:block;font-style:normal;text-transform:uppercase;color:var(--ink)}
 .banner i:empty{display:none}
 
-/* tab: a headline box in the kind colour with a cream caption tab stuck under its right edge, like the title card. */
 .banner b{padding:10px 34px 12px;background:var(--kind);border:4px solid var(--ink);box-shadow:7px 7px 0 var(--ink);font:900 38px/1.05 var(--font);letter-spacing:3px}
 .banner i{align-self:flex-end;margin:-6px 14px 0 0;padding:4px 12px;background:var(--paper);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);font:900 13px var(--font);letter-spacing:2px;transform:rotate(3deg)}
 .banner.hio b{color:#fff;text-shadow:3px 3px 0 var(--ink)}
 
-/* stamp: one cream caption box; the subtitle rides in a kind-coloured header band, the headline sits below in ink. */
-:global(html[data-banner-style=stamp]) .banner{flex-direction:column-reverse;background:var(--paper);border:4px solid var(--ink);box-shadow:8px 8px 0 var(--ink)}
-:global(html[data-banner-style=stamp]) .banner b{padding:8px 36px 12px;background:none;border:0;box-shadow:none;color:var(--ink);text-shadow:none}
-:global(html[data-banner-style=stamp]) .banner i{align-self:stretch;margin:0;padding:5px 14px;background:var(--kind);border:0;border-bottom:4px solid var(--ink);box-shadow:none;transform:none}
-
-/* strip: a wide slanted band across the top of the course, headline left, subtitle in an ink chip on the right. */
-:global(html[data-banner-style=strip]) .banner{flex-direction:row;align-items:center;gap:18px;width:min(92vw,760px);max-width:none;padding:10px 26px;background:var(--kind);border-block:4px solid var(--ink);box-shadow:0 7px 0 var(--ink);transform:translate(-50%,-24px) skewY(-3deg)}
-:global(html[data-banner-style=strip]) .banner.show{transform:translate(-50%,0) skewY(-3deg)}
-:global(html[data-banner-style=strip]) .banner b{flex:1;padding:0;background:none;border:0;box-shadow:none;min-width:0;text-align:left;font-size:28px;line-height:1;overflow-wrap:anywhere}
-:global(html[data-banner-style=strip]) .banner i{flex:none;white-space:nowrap;align-self:center;margin:0;padding:5px 12px;background:var(--ink);color:var(--paper);border:0;box-shadow:none;transform:rotate(-2deg)}
-
 @media (prefers-reduced-motion:reduce){.banner{transition:opacity .01s}}
-@media (max-width:640px){.banner b{padding:8px 18px 10px;font-size:22px;letter-spacing:2px}:global(html[data-banner-style=strip]) .banner b{font-size:20px}}
+@media (max-width:640px){.banner b{padding:8px 18px 10px;font-size:22px;letter-spacing:2px}}

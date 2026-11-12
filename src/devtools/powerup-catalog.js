@@ -22,23 +22,16 @@ const STYLE = `
 [data-ui=powerup-catalog] .status{min-height:32px;margin:8px 0 0;line-height:1.3}
 `;
 
-const BANNER_STYLES = [['tab', 'Tab'], ['stamp', 'Stamp'], ['strip', 'Strip']];
 const BANNER_SAMPLES = [
   ['Putt', 'PUTT 2 / 6', 'SWITCHBACK GARDEN', 'event'],
   ['Power-up', 'Ana', 'TORNADO ACTIVATED', 'power'],
   ['Hole in one', 'Ben', 'HOLE IN ONE', 'hio'],
   ['Winner', 'Captain Longname', 'MAP WINNER · DUNE SERPENT', 'event'],
 ];
-/** Development only: the candidate look shown by every banner, kept for this tab session. */
-function setBannerStyle(doc, value) {
-  if (value === 'tab') delete doc.documentElement.dataset.bannerStyle; else doc.documentElement.dataset.bannerStyle = value;
-  try { doc.defaultView?.sessionStorage.setItem('pp-banner-style', value); } catch { /* storage unavailable */ }
-}
 
 const GROUPS =[['self-utility', 'Self'], ['aim-sabotage', 'Sabotage'], ['ball-aura', 'Auras'], ['deployable', 'Course'], ['global-hazard', 'Weather']];
 
 export function mountPowerupCatalog(doc, app, catalog = POWERUP_CATALOG) {
-  try { const saved = doc.defaultView?.sessionStorage.getItem('pp-banner-style'); if (BANNER_STYLES.some(([v]) => v === saved)) setBannerStyle(doc, saved); } catch { /* storage unavailable */ }
   const style = doc.createElement('style'); style.textContent = STYLE;
   const box = doc.createElement('div'); box.dataset.ui = 'powerup-catalog';
   const drawer = doc.createElement('div'); drawer.className = 'drawer'; drawer.hidden = true;
@@ -57,23 +50,15 @@ export function mountPowerupCatalog(doc, app, catalog = POWERUP_CATALOG) {
     }
     drawer.append(heading, grid);
   }
-  // Banner review (#203): switch between the candidate banner looks and fire sample announcements over the course.
+  // Banner preview (#203): fire sample announcements over the course.
   const bannerHeading = doc.createElement('h2'); bannerHeading.textContent = 'Banners';
-  const styleRow = doc.createElement('div'); styleRow.className = 'row';
-  const styleButtons = BANNER_STYLES.map(([value, label]) => {
-    const b = doc.createElement('button'); b.type = 'button'; b.className = 'pill'; b.textContent = label;
-    b.addEventListener('click', () => { setBannerStyle(doc, value); for (const o of styleButtons) o.setAttribute('aria-pressed', String(o === b)); });
-    b.setAttribute('aria-pressed', String((doc.documentElement.dataset.bannerStyle || 'tab') === value));
-    return b;
-  });
-  styleRow.append(...styleButtons);
   const sampleRow = doc.createElement('div'); sampleRow.className = 'row';
   for (const [label, text, sub, kind] of BANNER_SAMPLES) {
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'pill'; b.textContent = label;
     b.addEventListener('click', () => app.store?.announce(text, sub, kind));
     sampleRow.append(b);
   }
-  drawer.append(bannerHeading, styleRow, sampleRow, status);
+  drawer.append(bannerHeading, sampleRow, status);
   const tab = doc.createElement('button'); tab.type = 'button'; tab.className = 'tab'; tab.textContent = 'POWER-UPS'; tab.setAttribute('aria-expanded', 'false');
   tab.addEventListener('click', () => { drawer.hidden = !drawer.hidden; tab.setAttribute('aria-expanded', String(!drawer.hidden)); });
   box.append(drawer, tab);
