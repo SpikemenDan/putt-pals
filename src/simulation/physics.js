@@ -17,7 +17,7 @@ import { TUNING } from '../shared/tuning.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { auraAcceleration, ballRadiusOf, clearAtRest } from '../gameplay/effects.js';
-import { evaluateGlobalHazards } from '../gameplay/global-hazards.js';
+import { evaluateGlobalHazards, hazardHoldsBall } from '../gameplay/global-hazards.js';
 import { bumperContact, orbitalAcceleration, orbitalHolds } from './deployables.js';
 
 export const GRAVITY = TUNING.gravity;
@@ -1282,7 +1282,7 @@ function stepBallTick(player, course, dt, hazardTime, globalHazardTuning, course
   if (
     gnd &&
     !(mechanicForce && Math.hypot(mechanicForce.x,mechanicForce.y,mechanicForce.z)>0) &&
-    !(globalHazards && Math.hypot(globalHazards.ax, globalHazards.ay, globalHazards.az) > 0) &&
+    !(globalHazards && hazardHoldsBall(player.globalHazards, hazardTime, player, player.globalHazardBounds, course, globalHazardTuning)) &&
     slope < REST.maxSlope &&
     !onCupFillet &&
     Math.hypot(player.vx, player.vy) < REST.maxSpeed &&

@@ -7,5 +7,9 @@
 .row span{color:var(--mut);min-width:70px;text-align:right}
 .row.hd span{color:var(--yellow)}
 .row.inRoster{padding:14px 0}
-.row.inSb span{min-width:48px}
+.row.inSb{gap:6px}
+.row.inSb span{min-width:32px}
+.row.hd.inSb{letter-spacing:.2px;background:rgba(0,0,0,.28);color:#ffc93c}
+.row.hd.inSb span{color:#ffc93c}
+.row.inSb i{border-color:#fff4d6}
 .row.inSb b{min-width:0}

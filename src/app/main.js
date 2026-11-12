@@ -8,7 +8,7 @@ import { createDisplayTuner } from '../devtools/display-tuner.js';
 const tuner = import.meta.env.DEV ? createDisplayTuner({ storage: (() => { try { return window.sessionStorage; } catch { return null; } })() }) : null;
 const app = createApp({ root: document.getElementById('root'), THREE,
   serverEndpoint: window.__PP_ROOM_ENDPOINT,
-  ...(tuner ? { display: tuner.display } : {}),
+  ...(tuner ? { display: tuner.display, soloHazards: true } : {}), // development only: lets the preview try weather without a second player
 });
 if (tuner) {
   window.__ppTuner = tuner;
@@ -19,7 +19,7 @@ if (tuner) {
   }, 300);
   if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)); // ?art: the flat master map on its own
   if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)); // ?gallery: live close-ups of the loading-screen city, ship and plane
-  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/deployables-preview.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountDeployablesPreview }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountDeployablesPreview(document, app); mountLoadingPreview(document, app); });
+  Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); mountLoadingPreview(document, app); });
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
 if (window.__PP_APP_HOOK) window.__ppApp = app;

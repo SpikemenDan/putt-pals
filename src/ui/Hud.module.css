@@ -2,41 +2,93 @@
    cream panels with ink outlines and hard shadows over the toon course. */
 .stage{position:relative}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.info{background:var(--yellow);color:var(--ink);padding:8px 16px;border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:900 14px var(--font);letter-spacing:1.5px}
-.info.warn{background:var(--red);color:#fff}
 .conn{color:var(--mut);font-size:14px;font-weight:700}
 .canvas{width:100%;display:block;border:4px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--ink);touch-action:none;background:#8fd0ff}
 .ctl{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
-.hit{padding:7px 12px;border-radius:8px;background:var(--ink);color:var(--yellow);font:900 12px var(--font);letter-spacing:1px;cursor:default}
-.pw{flex:1;min-width:120px;height:22px;border:var(--line) solid var(--ink);border-radius:11px;background:#fff;overflow:hidden;container-type:inline-size}
+.hit{padding:7px 12px;background:var(--ink);color:var(--yellow);font:900 12px var(--font);letter-spacing:1px;cursor:default}
+.pw{flex:1;min-width:120px;height:22px;border:var(--line) solid var(--ink);background:#fff;overflow:hidden;container-type:inline-size}
 .pwi{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green) 0 55%,var(--yellow) 55% 80%,var(--red) 80%);background-size:100cqw 100%;border-right:var(--line) solid var(--ink)}
 .accuracy{font:900 12px var(--font);color:var(--ink);min-width:160px}
-.inv{margin:4px 0}
 .toast{min-height:22px;color:#fff;font:900 18px var(--font);margin:4px 0;text-shadow:-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink),2px 2px 0 var(--ink),0 3px 0 var(--ink)}
-.sb{margin-top:16px;border:var(--line) solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);overflow:hidden;box-shadow:var(--shadow)}
+.sb{margin-top:16px;border:var(--line) solid var(--ink);background:var(--paper);color:var(--ink);overflow:hidden;box-shadow:var(--shadow)}
 .guide{display:none}
 .bar,.ctl,.inv,.toast,.sb{position:absolute;z-index:5;margin:0}
 .bar{left:12px;right:12px;top:12px;pointer-events:none}.bar>*{pointer-events:auto}
-.bar>span:last-child,.ctl{background:var(--paper);border:var(--line) solid var(--ink);border-radius:14px;box-shadow:var(--shadow);color:var(--ink)}
-.bar>span:last-child{padding:4px 8px}
-.bar button{padding:6px 11px;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+.ctl{background:var(--paper);border:var(--line) solid var(--ink);box-shadow:var(--shadow);color:var(--ink)}
 .ctl{left:12px;right:12px;bottom:12px;padding:8px 14px}
-.inv{left:14px;bottom:76px}.toast{left:50%;bottom:78px;transform:translateX(-50%);text-align:center}
-.sb{top:68px;right:12px;width:250px;max-height:55%;overflow:auto;margin-top:0}
-.hazardIndicators{position:absolute;z-index:5;left:14px;top:64px;display:flex;flex-wrap:wrap;gap:5px;max-width:50%;pointer-events:none}
-.hazardIndicators span,.hazardPrompt{border:2px solid var(--ink);border-radius:8px;background:var(--paper);color:var(--ink);padding:5px 8px;box-shadow:3px 3px 0 var(--ink);font:900 12px var(--font)}
+.inv{left:18px;bottom:80px;display:flex;gap:12px}.toast{left:50%;bottom:78px;transform:translateX(-50%);text-align:center}
+.sb{top:70px;right:12px;width:230px;max-height:50%;overflow:auto;margin-top:0}
+.hazardIndicators{position:absolute;z-index:5;left:14px;top:82px;display:flex;flex-wrap:wrap;gap:5px;max-width:50%;pointer-events:none}
+.hazardIndicators span,.hazardPrompt{border:var(--line) solid var(--ink);background:var(--paper);color:var(--ink);padding:4px 9px;box-shadow:3px 3px 0 var(--ink);font:900 11px var(--font)}
 .hazardPrompt{position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;max-width:min(90%,600px)}
 @media (max-width:640px){.sb{width:170px;top:62px}.hazardIndicators{position:static;max-width:none;margin:4px 0}}
 @media (max-width:640px){
 .bar,.ctl,.inv,.toast,.sb{position:static}
-.bar{display:block;margin-bottom:6px}.info{display:block;font-size:12px;letter-spacing:1px;padding:7px 10px;margin-bottom:6px}
-.bar>span:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 6px}.bar button{padding:6px 9px;font-size:12px;margin:2px}
+.bar{display:block;margin-bottom:6px}.title{margin-bottom:6px;transform:none}.titleMain b{font-size:14px}.stat{min-width:44px;padding:6px}
+.tools{flex-wrap:wrap}
 .ctl{margin:8px 0;padding:8px 10px}.hit{padding:6px 10px}.accuracy{min-width:0;flex:1 1 100%}
 .toast{transform:none;text-align:center;min-height:24px;margin:4px 0}
 .hazardPrompt{position:static;transform:none;max-width:none;margin:8px 0}
 .inv{margin:4px 0}
 .sb{width:auto;max-height:none;margin:8px 0 0}
 }
+
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* Caption-box style: the look of the big putt banner. Flat cream and yellow boxes, thick ink, hard offset shadows and a slight
+   hand-placed tilt. No gradients, glows or rims: this is printed comic art, not a glossy game panel. */
+.stage{--cream:#fff8e4}
+
+.title{display:flex;align-items:stretch;transform:rotate(-1deg);transform-origin:left center}
+.titleMain{display:flex;flex-direction:column;justify-content:center;padding:7px 18px;background:var(--yellow);border:var(--line) solid var(--ink);box-shadow:var(--shadow);min-width:0}
+.titleMain b{font:900 17px/1.05 var(--font);letter-spacing:.3px;color:var(--ink);text-transform:uppercase;white-space:nowrap}
+.titleMain i{margin-top:3px;font:900 10px var(--font);font-style:normal;letter-spacing:1.5px;color:var(--ink);text-transform:uppercase}
+.stat{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;padding:5px 10px;margin-left:-3px;background:var(--cream);border:var(--line) solid var(--ink);box-shadow:var(--shadow)}
+.stat small{font:900 9px var(--font);letter-spacing:1px;color:var(--mut);text-transform:uppercase}
+.stat b{margin-top:1px;font:900 19px/1 var(--font);color:var(--ink)}
+.statTimer{min-width:74px}
+.warn{color:inherit}
+.titleWarn .statTimer{background:var(--red)}
+.titleWarn .statTimer small,.titleWarn .statTimer b{color:#fff}
+.titleWarn .statTimer b{animation:hudPulse .8s ease-in-out infinite alternate}
+@keyframes hudPulse{to{transform:scale(1.12)}}
+
+.tools{display:flex;align-items:center;gap:8px}
+.tools[hidden]{display:none}
+.tool{position:relative;width:42px;height:42px;margin:0;padding:6px;border:var(--line) solid var(--ink);border-radius:0;background:var(--cream);box-shadow:3px 3px 0 var(--ink);transition:transform .08s}
+.tool:hover:not(:disabled){transform:translate(-1px,-1px) rotate(-2deg);filter:none}
+.tool:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.toolOn{background:var(--yellow)}
+.toolWrap{position:relative;display:inline-flex}
+.toolWrap::after{content:attr(data-tip);position:absolute;z-index:9;top:calc(100% + 8px);right:0;padding:4px 9px;border:var(--line) solid var(--ink);background:var(--yellow);color:var(--ink);font:900 11px var(--font);white-space:nowrap;box-shadow:3px 3px 0 var(--ink);opacity:0;pointer-events:none}
+.toolWrap:hover::after,.toolWrap:focus-within::after{opacity:1}
+.icon,.chipIcon,.slotIcon{display:block;line-height:0}
+.icon{width:100%;height:100%}
+.chipIcon{display:inline-block;width:17px;height:17px;margin-right:5px;vertical-align:-4px}
+
+.settings{position:absolute;z-index:7;top:70px;right:12px;width:230px;padding:13px;border:var(--line) solid var(--ink);background:var(--cream);color:var(--ink);box-shadow:var(--shadow)}
+.settings h2{margin:-13px -13px 11px;padding:6px 13px;background:var(--yellow);border-bottom:var(--line) solid var(--ink);font:900 13px var(--font);letter-spacing:.5px;text-transform:uppercase}
+.settings button{display:block;width:100%;margin:0 0 10px;padding:7px 10px;font-size:12px;border-radius:0;box-shadow:3px 3px 0 var(--ink)}
+.settings label{margin:0 0 11px;font:900 11px var(--font);letter-spacing:.5px;color:var(--ink);text-transform:uppercase}
+.settings input[type=range]{padding:0;margin-top:7px;border:0;box-shadow:none;accent-color:var(--pink);background:transparent}
+.settings .conn{margin:2px 0 0;font-size:12px;color:var(--mut)}
+
+.slot{position:relative;width:60px;height:60px;margin:0;padding:7px;border:var(--line) solid var(--ink);border-radius:0;background:var(--cream);box-shadow:var(--shadow);transition:transform .08s}
+.slot:nth-child(odd){transform:rotate(-2deg)}
+.slot:nth-child(even){transform:rotate(1.5deg)}
+.slot:hover:not(:disabled){transform:translate(-1px,-2px) rotate(0);filter:none}
+.slotEmpty{background:rgba(255,248,228,.45);border-style:dashed;box-shadow:none;cursor:default}
+.slotEmpty:hover:not(:disabled){transform:rotate(-1deg)}
+.slotIcon{width:100%;height:100%;animation:slotPop .22s ease-out}
+@keyframes slotPop{from{transform:scale(.4) rotate(-10deg)}}
+.slotKey{position:absolute;z-index:1;top:-9px;left:-9px;width:22px;height:22px;border:2px solid var(--ink);background:var(--yellow);color:var(--ink);font:900 11px/18px var(--font);text-align:center}
+.slotEmpty .slotKey{background:var(--cream)}
+.slotTip{position:absolute;z-index:9;left:0;bottom:calc(100% + 13px);width:216px;padding:8px 10px;border:var(--line) solid var(--ink);background:var(--cream);color:var(--ink);box-shadow:var(--shadow);font:700 12px/1.35 "Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif;letter-spacing:0;text-align:left;opacity:0;pointer-events:none}
+.slotTip b{display:block;margin:-8px -10px 5px;padding:4px 10px;background:var(--yellow);border-bottom:2px solid var(--ink);font:900 12px var(--font);text-transform:uppercase}
+.slot:hover .slotTip,.slot:focus-visible .slotTip{opacity:1}
+
+.sb>*{padding:6px 10px;font-size:12px}
+.sb>:first-child{font-size:10px}
 
 /* Start-screen panorama (M1b): the always-mounted game canvas fills the page behind the menu; the HUD is hidden. */
 .backdrop{position:fixed;inset:0;z-index:0;pointer-events:none}

@@ -21,7 +21,7 @@ import { activeGlobalHazards, createGlobalHazard, validGlobalHazardCommand } fro
  * own actions use the returned function's `deploy(command)` and `hit(id)`. `floorAt(map, putt, x, y)` is the
  * optional course check (on the floor, clear of walls). Records are dropped when the putt changes.
  */
-export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, floorAt } = {}) {
+export function bindRoomSession(transport, session, { clock = globalThis, graceMs = RECONNECT_GRACE_PERIOD_MS, heartbeatMs = 0, linkTimeoutMs = 0, floorAt, soloHazards = false } = {}) {
   if (!transport.isHost || session.getSnapshot().hostId !== transport.peerId) throw new Error('Host session required');
   const positions = new Map(); let dirty = false, stopped = false, timer;
   let deployables = [], deploySequence = 0, deployReason = '';
@@ -75,7 +75,7 @@ export function bindRoomSession(transport, session, { clock = globalThis, graceM
   const activateHazard = (id, command) => {
     const snapshot = session.getSnapshot();
     if (!validGlobalHazardCommand(command) || snapshot.phase !== 'play' || snapshot.powerups === false
-        || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(snapshot.mode) || snapshot.roster.length < 2
+        || [GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(snapshot.mode) || (snapshot.roster.length < 2 && !soloHazards)
         || !snapshot.roster.includes(id) || !snapshot.players[id]?.connected) return false;
     if (command.kind === 'lightning' && (!snapshot.roster.includes(command.targetId) || command.targetId === id || !snapshot.players[command.targetId]?.connected)) return false;
     const sequence = ++hazardSequence;

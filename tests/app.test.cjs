@@ -553,7 +553,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(c.text('[data-ui=hud-info]'), 'Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0 · 2:00');
     assert.ok(c.putt, 'the round starts without a 3D view');
     await c.shoot(0, 0.5);
-    for (const label of ['View: Ball cam', 'Quality: High']) await c.click(label);
+    for (const label of ['View: Ball cam', 'Settings', 'Quality: High']) await c.click(label);
     await w.run(2000);
     assert.equal(c.shown('[data-ui=webgl-notice]'), true, 'the notice stays visible in game');
     assert.equal(w.renderers.instances.length, 0);

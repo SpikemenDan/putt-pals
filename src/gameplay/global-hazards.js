@@ -36,6 +36,8 @@ const activeAt = (record, time) => record && finite(time) && finite(record.start
 
 const roomId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value)
   && !['__proto__', 'constructor', 'prototype'].includes(value);
+const VORTEX_KINDS = ['tornado', 'hurricane'];
+const spot = value => finite(value) && Math.abs(value) <= 1000000; // a placed Tornado or Hurricane; the room clamps it to the putt
 const HAZARD_KEYS = ['id', 'kind', 'owner', 'roundNumber', 'map', 'putt', 'startTime', 'endTime', 'seed'];
 
 /** Client command shape; the room assigns owner, timing, identity and seed. */
@@ -44,6 +46,7 @@ export function validGlobalHazardCommand(command) {
   if (command.kind === 'wind') return Object.keys(command).length === 2 && finite(command.direction)
     && command.direction >= -Math.PI && command.direction <= Math.PI;
   if (command.kind === 'lightning') return Object.keys(command).length === 2 && roomId(command.targetId);
+  if (VORTEX_KINDS.includes(command.kind)) return Object.keys(command).length === 3 && spot(command.x) && spot(command.y);
   return Object.keys(command).length === 1;
 }
 
@@ -53,6 +56,7 @@ export function validGlobalHazard(record) {
   const keys = [...HAZARD_KEYS];
   if (record.kind === 'wind') keys.push('direction');
   if (record.kind === 'lightning') keys.push('targetId');
+  if (VORTEX_KINDS.includes(record.kind)) keys.push('x', 'y');
   if (Object.keys(record).length !== keys.length || !keys.every(key => Object.hasOwn(record, key))) return false;
   return roomId(record.id) && roomId(record.owner) && Number.isSafeInteger(record.roundNumber) && record.roundNumber >= 0
     && Number.isSafeInteger(record.map) && record.map >= 0 && record.map < 22
@@ -60,7 +64,8 @@ export function validGlobalHazard(record) {
     && finite(record.startTime) && finite(record.endTime) && record.endTime > record.startTime
     && Number.isSafeInteger(record.seed) && record.seed >= 0 && record.seed <= 0xffffffff
     && (record.kind !== 'wind' || finite(record.direction) && record.direction >= -Math.PI && record.direction <= Math.PI)
-    && (record.kind !== 'lightning' || roomId(record.targetId));
+    && (record.kind !== 'lightning' || roomId(record.targetId))
+    && (!VORTEX_KINDS.includes(record.kind) || spot(record.x) && spot(record.y));
 }
 
 /** Create a timed record using host-assigned identity, time and seed. */
@@ -74,11 +79,12 @@ export function createGlobalHazard(list, command, context, tuning = TUNING.globa
     map: context.map,
     putt: context.putt,
     startTime: context.now,
-    endTime: context.now + (command.kind === 'lightning' ? tuning.lightningWindowSeconds : tuning.durationSeconds),
+    endTime: context.now + (command.kind === 'lightning' ? tuning.lightningWindowSeconds : command.kind === 'wind' ? tuning.windDurationSeconds : tuning.durationSeconds),
     seed: context.seed,
   };
   if (command.kind === 'wind') record.direction = command.direction;
   if (command.kind === 'lightning') record.targetId = command.targetId;
+  if (VORTEX_KINDS.includes(command.kind)) { record.x = command.x; record.y = command.y; }
   if (!validGlobalHazard(record)) return null;
   // Opposing weather does not stack; a new weather activation replaces the old one.
   const kinds = command.kind === 'rain' || command.kind === 'snow' ? ['rain', 'snow'] : [command.kind];
@@ -103,7 +109,8 @@ export function courseBounds(course) {
 }
 
 /**
- * Get a repeatable vortex centre constrained to `[minX, minY, maxX, maxY]`.
+ * Get a repeatable vortex centre: it starts at the spot it was placed at, wanders up to `roamRadius` around it and is
+ * always kept inside `[minX, minY, maxX, maxY]`, inset by `roamInset`, so it stays in its own putt.
  * @param {object} record Validated tornado/hurricane record with seed/startTime/endTime
  * @param {number} time Synchronized room time in seconds
  * @param {number[]} bounds Course bounds
@@ -113,16 +120,15 @@ export function globalHazardCenter(record, time, bounds, tuning = TUNING.globalH
   if (!activeAt(record, time) || !['tornado', 'hurricane'].includes(record.kind)
       || record.seed == null || !Array.isArray(bounds) || bounds.length !== 4) return null;
   const [minX, minY, maxX, maxY] = bounds;
-  const { roamRadius: radius, roamPeriod: period } = tuning;
-  if (![minX, minY, maxX, maxY, radius, period].every(finite) || maxX < minX || maxY < minY || radius < 0 || period <= 0) return null;
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-  const rx = Math.min(radius, (maxX - minX) / 2), ry = Math.min(radius, (maxY - minY) / 2);
-  if (rx === 0 || ry === 0) return { x: cx, y: cy };
-  const phase = (time - record.startTime) / period * Math.PI * 2 + unit(record.seed, 0) * Math.PI * 2;
-  const secondary = phase * 0.63 + unit(record.seed, 1) * Math.PI * 2;
+  const { roamRadius: radius, roamPeriod: period, roamInset: inset } = tuning;
+  if (![minX, minY, maxX, maxY, radius, period, inset, record.x, record.y].every(finite) || maxX < minX || maxY < minY || radius < 0 || period <= 0) return null;
+  const px = (maxX - minX) * inset, py = (maxY - minY) * inset;
+  const start = unit(record.seed, 0) * Math.PI * 2, offset = unit(record.seed, 1) * Math.PI * 2;
+  const wander = (u, wave) => wave(u) * 0.72 + wave(u * 0.63 + offset) * 0.28;
+  const phase = (time - record.startTime) / period * Math.PI * 2 + start;
   return {
-    x: clamp(cx + Math.cos(phase) * rx * 0.72 + Math.cos(secondary) * rx * 0.28, minX, maxX),
-    y: clamp(cy + Math.sin(phase) * ry * 0.72 + Math.sin(secondary) * ry * 0.28, minY, maxY),
+    x: clamp(record.x + (wander(phase, Math.cos) - wander(start, Math.cos)) * radius, minX + px, maxX - px),
+    y: clamp(record.y + (wander(phase, Math.sin) - wander(start, Math.sin)) * radius, minY + py, maxY - py),
   };
 }
 
@@ -142,8 +148,9 @@ export function evaluateGlobalHazards(records, time, position, bounds, tuning = 
       result.frictionMultiplier *= tuning.snowFrictionMultiplier;
       result.dragMultiplier *= tuning.snowDragMultiplier;
     } else if (record.kind === 'wind' && finite(record.direction)) {
-      result.ax += Math.cos(record.direction) * tuning.windAcceleration;
-      result.ay += Math.sin(record.direction) * tuning.windAcceleration;
+      const gust = tuning.windAcceleration * gustStrength(record, time); // walls do not block this; only the drawn wind reacts to them
+      result.ax += Math.cos(record.direction) * gust;
+      result.ay += Math.sin(record.direction) * gust;
     } else if (record.kind === 'tornado' || record.kind === 'hurricane') {
       const center = globalHazardCenter(record, time, bounds, tuning);
       if (!center) continue;
@@ -160,6 +167,55 @@ export function evaluateGlobalHazards(records, time, position, bounds, tuning = 
     }
   }
   return result;
+}
+
+/** Gust strength 0..1: a smooth rise, peak at the middle of the gust and fall; zero outside it. */
+export function gustStrength(record, time) {
+  if (!activeAt(record, time)) return 0;
+  const s = Math.sin(Math.PI * (time - record.startTime) / (record.endTime - record.startTime));
+  return s * s;
+}
+
+/**
+ * Distance from (x, y) along the unit direction (dx, dy) to the first wall in `course.w`, up to `maxDistance`; Infinity when
+ * nothing is in the way, 0 when the point is inside a wall.
+ */
+export function rayToWall(course, x, y, dx, dy, maxDistance) {
+  let best = Infinity;
+  for (const r of course?.w || []) {
+    let near = 0, far = maxDistance; // slab test, written out because it runs per tick and per ribbon point
+    if (Math.abs(dx) < 1e-9) { if (x < r[0] || x > r[0] + r[2]) continue; } else {
+      const a = (r[0] - x) / dx, b = (r[0] + r[2] - x) / dx;
+      near = Math.max(near, Math.min(a, b)); far = Math.min(far, Math.max(a, b));
+    }
+    if (Math.abs(dy) < 1e-9) { if (y < r[1] || y > r[1] + r[3]) continue; } else {
+      const a = (r[1] - y) / dy, b = (r[1] + r[3] - y) / dy;
+      near = Math.max(near, Math.min(a, b)); far = Math.min(far, Math.max(a, b));
+    }
+    if (near <= far && near < best) best = near;
+  }
+  return best;
+}
+
+const PINNED_GAP = TUNING.ball.radius + 3; // a wall this close downwind stops the ball, so the wind cannot move it
+
+/**
+ * True while a hazard is really moving this ball: it wakes a resting ball and keeps a slow one from stopping. A gust too weak to beat
+ * the surface, or one holding the ball against a wall, does not count, so that ball can rest and be played.
+ */
+export function hazardHoldsBall(records, time, ball, bounds, course, tuning = TUNING.globalHazards) {
+  if (!records?.length) return false;
+  for (const record of records) {
+    if (!activeAt(record, time)) continue;
+    if (record.kind === 'wind') {
+      const pinned = rayToWall(course, ball.x, ball.y, Math.cos(record.direction), Math.sin(record.direction), PINNED_GAP) !== Infinity;
+      if (!pinned && tuning.windAcceleration * gustStrength(record, time) > tuning.windWakeAccel) return true;
+    } else if (VORTEX_KINDS.includes(record.kind)) {
+      const force = evaluateGlobalHazards([record], time, ball, bounds, tuning);
+      if (Math.hypot(force.ax, force.ay, force.az) > 0) return true;
+    }
+  }
+  return false;
 }
 
 /** Deterministic one-shot Lightning impulse; callers apply each activation id once. */

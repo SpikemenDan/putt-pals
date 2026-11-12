@@ -20,7 +20,8 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
   let context = null, master = null, noise = null, muted = false, disposed = false, resumePending = null, closePending = null, failedClose = null;
   const voices = new Set(), bindings = new Map();
   const report = error => { try { onError(error); } catch { /* Diagnostics must not interrupt game teardown. */ } };
-  try { muted = storage?.getItem('pp_mute') === '1'; } catch { /* Storage can be denied. */ }
+  let volume = 1;
+  try { muted = storage?.getItem('pp_mute') === '1'; const v = Number(storage?.getItem('pp_volume') ?? 1); if (v >= 0 && v <= 1) volume = v; } catch { /* Storage can be denied. */ }
   const disconnect = node => { try { node.disconnect(); } catch { /* Already disconnected. */ } };
   const closeContext = c => {
     try { return Promise.resolve(c?.close()).catch(report); } catch (error) { report(error); return Promise.resolve(); }
@@ -66,7 +67,7 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
       try {
         created = createContext();
         if (!created) return Promise.resolve(false);
-        gain = created.createGain(); gain.gain.value = muted ? 0 : .7; gain.connect(created.destination);
+        gain = created.createGain(); gain.gain.value = muted ? 0 : .7 * volume; gain.connect(created.destination);
         const buffer = created.createBuffer(1, Math.floor(created.sampleRate * .5), created.sampleRate);
         const samples = buffer.getChannelData(0);
         for (let i = 0; i < samples.length; i++) samples[i] = random() * 2 - 1;
@@ -114,9 +115,17 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     if (disposed || typeof value !== 'boolean') return false;
     muted = value;
     try { storage?.setItem('pp_mute', muted ? '1' : '0'); } catch { /* Optional persistence. */ }
-    if (master) master.gain.value = muted ? 0 : .7;
+    if (master) master.gain.value = muted ? 0 : .7 * volume;
     // Stop scheduled tails so unmuting cannot revive a stale sink/banner.
     if (muted) for (const voice of [...voices]) finishVoice(voice, true);
+    return true;
+  }
+  /** Master volume, 0 to 1, saved locally; muting is separate and keeps it. */
+  function setVolume(value) {
+    if (!(value >= 0 && value <= 1)) return false;
+    volume = value;
+    if (master) master.gain.value = muted ? 0 : .7 * volume;
+    try { storage?.setItem('pp_volume', String(value)); } catch { /* Storage can be denied. */ }
     return true;
   }
   async function toggleMute() {
@@ -181,6 +190,6 @@ export function createAudioAdapter({ createContext = defaultContext, storage = d
     const old = context; context = null; master = null; noise = null;
     closePending = failedClose ? Promise.all([closeContext(old), failedClose]).then(() => {}) : closeContext(old); return closePending;
   }
-  return { unlock, play, setMuted, toggleMute, bindGestures, updateListener, handleEvent, resetSession, dispose,
-    getStatus: () => Object.freeze({ muted, disposed, contextState: context?.state ?? (disposed ? 'closed' : 'uninitialized'), activeVoices: voices.size }) };
+  return { unlock, play, setMuted, setVolume, toggleMute, bindGestures, updateListener, handleEvent, resetSession, dispose,
+    getStatus: () => Object.freeze({ muted, volume, disposed, contextState: context?.state ?? (disposed ? 'closed' : 'uninitialized'), activeVoices: voices.size }) };
 }
