@@ -7,7 +7,7 @@ Task: [U1 #7](https://github.com/SpikemenDan/putt-pals/issues/7), React screens 
 - `src/ui/`: React 19 screens with CSS Modules: landing, room lobby with start countdown, map voting and putt-practice picker, in-game HUD (info line, bar buttons, putt-practice bar, inventory, toast, scoreboard, power meter, help text), paper scorecard overlay, results card, banner and disconnect notice. There is also a cached immutable UI store for `useSyncExternalStore`, pure view models ported from the legacy HUD/scorecard/results code, commands and join validation, and `mountUi()`/`createUiDispatcher()`.
 - `src/input/`: desktop pointer and keyboard adapter producing typed commands and driving the R1 camera rig, plus the shared aim rules (spread, sway, shot angle).
 - Tests: `tests/ui.test.cjs` (`npm run test:ui`), `tests/input.test.cjs` (`npm run test:input`) and helpers in `tests/support/`. Both suites are in `npm test` and CI.
-- Real-browser evidence tooling, not in `npm test`: `scripts/ui-visual-parity.cjs` and `scripts/ui-visual-diff.py`.
+- Real-browser evidence tooling, not in `npm test`: `scripts/ui-visual-parity.cjs` and `scripts/ui-visual-diff.py` (both scripts since removed).
 
 The UI is built against the accepted L1 session snapshots (merged), which exceeds the C1 mock requirement. No legacy HTML, simulation, session, network, renderer or course code changed.
 
@@ -60,4 +60,4 @@ Not verified: Firefox/WebKit rendering, real input devices, screen readers, and 
 ## Next
 
 - I1: mount `PuttPalsUi`, feed `store.setRoom/setLocal/tick` from the session/transport and simulation, give `createUiDispatcher` and the input adapter one command handler, and pass `input.frameAim()`/`input.keys` to `createGameView().frame()`.
-- T1: adopt `scripts/ui-visual-parity.cjs` into `tests/browser` with Playwright as a dependency.
+- T1: adopt `scripts/ui-visual-parity.cjs` (script since removed) into `tests/browser` with Playwright as a dependency.

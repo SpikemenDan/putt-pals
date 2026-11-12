@@ -92,7 +92,7 @@ done
 node scripts/aggregate-difficulty.mjs sweep <measured-commit>   # AGGREGATE_OK, LADDER_OK
 ```
 
-`scripts/aggregate-difficulty.mjs` only combines the two sweeps. It measures nothing, exits 1 if a putt is missing or the solvers disagree, and never edits course data.
+`scripts/aggregate-difficulty.mjs` (script since removed) only combines the two sweeps. It measures nothing, exits 1 if a putt is missing or the solvers disagree, and never edits course data.
 
 ## Limits
 

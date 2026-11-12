@@ -20,7 +20,6 @@ Statuses: READY (eligible after dependency and overlap checks), ACTIVE, BLOCKED 
 | [F1 #101](https://github.com/SpikemenDan/putt-pals/issues/101) | REVIEW | none | PR #132 merged (local ball and trail skins, celebrations); issue acceptance remains open |
 | [CL2 #103](https://github.com/SpikemenDan/putt-pals/issues/103) | CLOSED | none | Render clipping fixes. PR #128 merged (camera collision, wall fade, depth-tested aim arrow); confirmed and accepted by owner; issue closed |
 | [VIS-C #161](https://github.com/SpikemenDan/putt-pals/issues/161) | REVIEW | none | PR #171 merged (30-colour palette, unique per room, `PROTOCOL_VERSION` 2); owner look acceptance remains |
-| [#177](https://github.com/SpikemenDan/putt-pals/issues/177) | READY | none | Stale in-game help and start-screen text (map and power-up counts, engine-migration paragraph) |
 
 On 2026-10-29 the owner delegated implementation ordering (tasks that leave trajectories unchanged may start now) and decided that holes need only be possible in par, not in one shot. Order: S3 (merged) then SV1 (par solver) come before G1g and K1, which no longer wait for Q1 or N4. Labels lag merges; read the issue and main before acting.
 
@@ -78,7 +77,7 @@ All merged to main; details in the PRs and docs/reviews/.
 | --- | --- |
 | Baseline and tooling | W1 workflow and CI; B1 inventory (PR #1); B2 solver launch fix; B3 Vite and jsdom; B4 difficulty sweep (#4, PR #28); C2 root cleanup (#19) |
 | Shared core | C1 contracts (#3); S1 headless simulation (#5); S2 cup capture (#54, PR #55); D1 course data and CLI (#8, PRs #22 and #31) |
-| Application | L1 room lifecycle (#9, PR #23); A1 procedural audio (#10, PR #25); N1 transports (#11, PR #24); R1 renderer (#6, PR #27); U1 React UI and input (#7, PR #29); I1 modular app (#12, PR #31); I2 and I2b WebGL fallback (#38 PR #40, #41 PR #45) |
+| Application | #177 stale help text (PR #182); L1 room lifecycle (#9, PR #23); A1 procedural audio (#10, PR #25); N1 transports (#11, PR #24); R1 renderer (#6, PR #27); U1 React UI and input (#7, PR #29); I1 modular app (#12, PR #31); I2 and I2b WebGL fallback (#38 PR #40, #41 PR #45) |
 | Networking | N2 guest recovery and interpolation (#13, PR #43); N2b browser specs (#47, PR #49); T1c join flake (#48, PR #50); N4a contracts (#66, PR #74); N4b local runtime (#68, PR #75); N4c coordination (#69, PRs #81/#120); N4d recovery (#70, PR #122); N4e browser adoption (#71, PR #123); N4f coverage/quota evidence (#72, PR #129) |
 | Testing | T1 Playwright suites and browser-ci (#15, PR #37) |
 | Rendering | R2 Three.js 0.186.1 (#16, PR #53); R2w Windows GPU validation (#52, PR #56); R2c shader colours (#57, PR #63) |
@@ -89,7 +88,7 @@ All merged to main; details in the PRs and docs/reviews/.
 
 ## Developer workflow improvements
 
-These tasks are pending until implementation and verification are recorded.
+Status per row; pending rows remain open until implementation and verification are recorded.
 IDs below do not imply that GitHub issues have already been created.
 
 | ID | Outcome | Dependencies |
