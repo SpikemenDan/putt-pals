@@ -42,12 +42,21 @@ async function openApp(page, name) {
     banners: () => page.evaluate(() => window.__ppBanners),
     ui: visible,
     button: label => page.getByRole('button', { name: label, exact: true }),
+    /** Main menu (VIS-M2): open Solo, Party, Custom or Settings, stepping back first from another sub-menu. */
+    async menu(id) {
+      const view = await visible('landing').getAttribute('data-view');
+      if (view === id) return;
+      if (view !== 'home') await page.locator('[data-ui=menu-back]').click();
+      await page.locator(`[data-menu=${id}]`).click();
+    },
     async solo() {
+      await p.menu('solo');
       await visible('landing').getByLabel('Your name').fill(name);
       await p.button('Play solo').click();
       await expect(visible('room-lobby')).toBeVisible();
     },
     async join(code) {
+      await p.menu('party');
       await visible('landing').getByLabel('Your name').fill(name);
       await visible('landing').getByLabel(/room code/i).fill(code);
       await p.button('Join room').click();

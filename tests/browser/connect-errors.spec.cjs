@@ -20,6 +20,7 @@ test('connect errors: a fifth player is told the room is full and stays on the s
     await expect(host.lobbyStatus()).toHaveText(`Room ${code} · ${MAX_PLAYERS} players · You control the room`, { timeout: 30_000 });
 
     const extra = await openPlayer(browser, testInfo, 'P5', { contexts });
+    await extra.menu('party');
     await extra.ui('landing').getByLabel('Your name').fill('P5');
     await extra.ui('landing').getByLabel(/room code/i).fill(code);
     await extra.button('Join room').click();
@@ -42,6 +43,7 @@ test('connect errors: online rooms work without WebRTC', async ({ page }) => {
   await page.addInitScript(() => { for (const key of ['RTCPeerConnection', 'webkitRTCPeerConnection']) { try { delete window[key]; } catch { /* not configurable */ } window[key] = undefined; } });
   const ana = await openApp(page, 'Ana');
   expect(await page.evaluate(() => typeof window.RTCPeerConnection)).toBe('undefined');
+  await ana.menu('party');
   await ana.ui('landing').getByLabel('Your name').fill('Ana');
   await ana.ui('landing').getByLabel(/room code/i).fill(roomCode('N2W'));
   await ana.button('Join room').click();

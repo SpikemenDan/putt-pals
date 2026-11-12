@@ -159,6 +159,7 @@ const pacing = intervals => {
         watch(appPage);
         await appPage.addInitScript(() => { window.__PP_APP_HOOK = true; });
         await appPage.goto(url + '/');
+        await appPage.locator('[data-menu=solo]').click();
         await appPage.locator('[data-ui=landing]').getByLabel('Your name').fill('R2w');
         await appPage.getByRole('button', { name: 'Play solo', exact: true }).click();
         await appPage.getByRole('button', { name: 'Start Game', exact: true }).click();
