@@ -15,6 +15,8 @@ async function explained(log, label, fn) {
   try { await fn(); } catch (error) { error.message += `\n--- ${label}: page console ---\n` + (log.join('\n') || '(empty)'); throw error; }
 }
 
+const ROOM_SOCKET_UNLOAD = /The connection to wss?:\/\/[^\s"]+\/api\/rooms\/[a-z0-9]+\/socket was interrupted while the page was loading/;
+
 /** Opens the app in a page and returns a player handle. Collects page errors for assertions. */
 async function openApp(page, name) {
   const errors = [], log = [];
@@ -22,7 +24,9 @@ async function openApp(page, name) {
   page.on('console', message => {
     log.push(message.type() + ': ' + message.text());
     // Headed browsers request /favicon.ico, which the app does not ship; that 404 is not an app error.
-    if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) errors.push(message.text());
+    // Firefox reports an open room socket cut by a navigation (a spec's own page.reload()) as a console error; the
+    // browser writes it, not the app, and whether it appears depends on timing. Only that exact message is ignored.
+    if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico') && !ROOM_SOCKET_UNLOAD.test(message.text())) errors.push(message.text());
   });
   await page.addInitScript(() => {
     window.__PP_APP_HOOK = true;

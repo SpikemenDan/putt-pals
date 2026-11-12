@@ -27,15 +27,15 @@ A tournament takes place on one world. Each destination has its own visual ident
 | **Ares** | Rugged, Mars-inspired planet | Lower than Gaia | Hot, cold and temperate regions with distinct terrain |
 | **Luna** | Gaia's barren moon | Lower than Ares | Craters, dust fields, rocky landscapes and lunar installations |
 
-- Gravity must noticeably change shots, jumps, airtime and strategy. Today `gravity` in `src/shared/tuning.js` is one number (700 units/s^2); it becomes a per-world profile with Gaia as the shipped default, and the numbers for Ares and Luna are set by owner playtesting (not yet decided).
+- Gravity must noticeably change shots, jumps, airtime and strategy. Today `gravity` in `src/shared/tuning.js` is one number (700 units/s^2); it becomes a per-world profile with Gaia as the shipped default, and Ares and Luna start at 490 and 315 units/s^2, to be confirmed by owner playtesting (see "Decided 2026-11-11").
 - Players choose maps through a view of the chosen world and its regions. Each region holds several individually named courses (for example the snowy trio Frostbite Falls, Glacier Glide and Aurora Ridge). Regions are places with their own identity, never one course recoloured.
 - Suggested Gaia biomes: polar and alpine, desert, tropical, temperate forest, wetlands and volcanic, with cities and settlements inside them.
-- **Environmental effects.** The core power-up set is the same everywhere. The precipitation power-up gives rain on warm Gaia maps and snow on cold Gaia maps, and both make the course slippery (gameplay). On Ares the equivalent effect is **wind** and on Luna it is **dust and solar activity**; these Ares and Luna effects are **visual only** (owner, 2026-11-03) and add atmosphere without changing physics. Effects must clearly communicate what is happening.
+- **Environmental effects.** The core power-up set is the same everywhere. The precipitation power-up gives rain on warm Gaia maps and snow on cold Gaia maps, and both make the course slippery (gameplay). On Ares the equivalent effect is **wind** and on Luna it is **dust and solar activity**; these Ares and Luna effects are **visual only** (owner, 2026-11-03) and add atmosphere without changing physics. The precipitation power-up is not in the Ares and Luna power-up pools (owner, 2026-11-11). Effects must clearly communicate what is happening.
 
 ### Look and feel
 
 - **Bold comic style.** Thick black outlines, action crosshatching, saturated colour and caption-box UI. The inspiration is a comic look; all lettering, characters, logos and art are original and nothing is copied from existing works.
-- **Sky and planets.** Dynamic skies, birds and sun flares remain. Whether individual holes keep the floating-island-in-the-clouds layout on planet surfaces, or become ground-based planet courses, is an open owner decision (see "Open decisions" below); until then K1a keeps its current scope.
+- **Sky and planets.** Dynamic skies, birds and sun flares remain. Holes keep the floating-island layout, and each island hovers over its region's ground, which is scenery only (owner, 2026-11-11; see "Decided 2026-11-11" below).
 - **Atmosphere.** Courses carry their own weather, from rainstorms with lightning to snowy peaks, dust and wind. This ambient weather is visual only and is separate from the gameplay weather power-ups below.
 - **Console feel.** Snappy arcade menus, punchy audio and glowing player markers, so it plays like a premium game rather than a web page.
 
@@ -163,14 +163,19 @@ Assumptions confirmed by the owner (2026-10-29): "the other person" in the redem
 Raised by the 2026-11-03 vision; nothing below is decided or scheduled.
 
 - Skins unlocking through play or an account (not needed now).
-- **Island versus planet-surface courses.** The current plan has each putt on an isolated floating island (K1a). The vision places courses in regions on planets. Keep islands, move to ground-based courses, or mix.
-- **Where Practice, Putt Pong and No Power-Ups live in the menu.** The vision names only Solo, Party and Custom. Likely homes: No Power-Ups as a Custom rule (GM1 flag), Practice under Solo, Putt Pong a Party/Custom option. Needs the owner.
-- **Gravity numbers** for Gaia, Ares and Luna, and whether gravity is a Custom setting.
 - **Missed-hole numbers:** the maximum-hole score and the missed-hole penalty (tuning fields to be added) and how a rejoining player's hole timer is held while they are away.
-- **Course content volume.** How many regions and named maps each world ships with first, and how many of the 22 existing maps are kept, moved to a world or retired.
-- **Ares and Luna environment power-up.** Their environment is visual only; whether the weather power-up still exists there as a cosmetic item, or is replaced, is not stated.
 - **Late join and rejoin across a tournament:** how a late arrival's penalties are scored in a tournament total.
 - **Product rename** from Putt Pals to Putt Planet in code, package and hosting (VIS-R).
+
+### Decided 2026-11-11
+
+The owner accepted these from the decision brief on 2026-11-11.
+
+- **Gravity (VIS-W #164).** Starting values are Gaia 700, Ares 490 and Luna 315 units/s^2 (1.0, 0.7 and 0.45 of Gaia). Gaia keeps today's value. The Ares and Luna numbers are provisional until the owner confirms them with a gravity slider in a local preview. Rolling friction stays independent of gravity, so flat putts roll the same distance on every world. Gravity is fixed per world in normal play; whether Custom can change it is left to VIS-U #168. The real Mars and Moon ratios (266 and 116) were rejected: a Chip In shot would stay airborne for over 5 seconds on Luna.
+- **Islands over their region (VIS-G #165).** Courses stay floating islands with today's physics and geometry rules. Each island hovers over its region's ground, which is scenery only. Ground-based courses may be added later as separate work.
+- **Content volume (VIS-G #165).** All 22 current maps are kept and re-homed into Gaia's six regions by theme, plus 2 new maps, giving four maps per region (24). Ares and Luna each start with two regions of four maps (8 each), designed and solved after their gravity is confirmed.
+- **Menu homes (VIS-M #174-#176).** The main menu keeps Solo, Party and Custom. Practice is a choice inside Solo beside Casual and Tournament, and includes Putt Pong practice. Putt Pong is a format in the Party vote, offered only when exactly two players are in the party. No Power-Ups becomes a Custom rule (the GM1 flag); today's lobby toggle stays until the Custom editor (VIS-U #168) exists.
+- **Weather power-up on Ares and Luna (VIS-E #166).** The precipitation power-up is left out of the Ares and Luna power-up pools through a per-world catalog flag. Ares wind and Luna dust and solar activity stay visual-only scenery. A gameplay version for those worlds can come back later as its own task.
 
 ## Technology
 
