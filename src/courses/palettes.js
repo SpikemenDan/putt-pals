@@ -6,7 +6,7 @@
  * horizon and the three below it, a sun strength, a cloud tint and an optional ambient weather.
  * Weather is visual only: nothing here reaches the simulation, so no gameplay changes.
  *
- * Courses without an entry (the 16 non-starter maps) use the Switchback Garden palette. The garden
+ * Courses without an entry (the 16 legacy non-starter maps) use the Switchback Garden palette. The garden
  * surface colours are the approved V1a look; `materials.js` TOON_PALETTE must stay equal to them.
  */
 
@@ -58,6 +58,25 @@ const DUNE = freezePalette({
     sun: 1,
     cloudTint: 0xfff2dc,
     clouds: { seed: 8, ring: 9, deck: 7, scale: 0.9, drift: 0.003 },
+  },
+  weather: null,
+});
+
+/** Obsidian Spiral (VIS-G #165): black basalt, glowing orange walls and a smoky red sky over the Emberfall Isles. */
+const EMBER = freezePalette({
+  id: 'ember',
+  surfaces: {
+    turf: 0x4b3a52, tile: 0x1f1526, wall: 0xff6b1a, platform: 0xc2410c, ramp: 0xffb020,
+    sand: 0x8a7b84, ice: 0x8be8ff, slime: 0xc4f53a,
+    padRing: 0xffd23f, fanRing: 0x3a2a33, fanBlade: 0xffe0c2,
+    cupSleeve: 0x120a10, cupRim: 0xffd23f, pole: 0xffffff, flag: 0xff3d1f, wind: 0xffc9a8,
+  },
+  sky: {
+    up: [0x2b1a2e, 0x5a2333, 0x8f2f2f, 0xc4472a, 0xe86a2c],
+    down: [0x7a2a2c, 0x4d1f2a, 0x2b1622],
+    sun: 0.8,
+    cloudTint: 0x6b5560,
+    clouds: { seed: 23, ring: 12, deck: 9, scale: 1.1, drift: 0.004 },
   },
   weather: null,
 });
@@ -134,7 +153,7 @@ const FINALE = freezePalette({
   weather: null,
 });
 
-/** Palette per course name; the six starter maps. */
+/** Palette per course name: the six starter maps and the VIS-G additions (Sandstorm Spire shares the desert palette). */
 export const COURSE_PALETTES = Object.freeze({
   'Switchback Garden': GARDEN,
   'Dune Serpent': DUNE,
@@ -142,6 +161,8 @@ export const COURSE_PALETTES = Object.freeze({
   'Slime Springs': SLIME,
   'Cyclone Ring': CYCLONE,
   'Grand Finale': FINALE,
+  'Sandstorm Spire': DUNE,
+  'Obsidian Spiral': EMBER,
 });
 
 export const DEFAULT_PALETTE = GARDEN;

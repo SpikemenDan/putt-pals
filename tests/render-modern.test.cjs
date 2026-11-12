@@ -87,7 +87,9 @@ const { JSDOM } = require('jsdom');
     const c0 = build.course;
     for (const mode of ['play', 'sunk', 'play']) view.frame({now: builds * 1000, dt: 1/60, local: {x: c0.tee[0], y: c0.tee[1], z: 0, vx: 0, vy: 0, mode, moving: true, color: 0, effect: 'mag'}, remotes: [{id: 'guest', name: '<Guest>', x: 100, y: 100, z: 0, color: 1, effect: 'steady'}], aim: {charge: .5, angle: .2, aimAngle: .2, spread: .1}});
   }
-  assert.equal(builds, 52); assert.ok(patches > 52);
+  // 22 legacy maps give 52 putt builds (16 single-putt + 36 starter putts); the two added starters (22, 23) add 2 x 6 more.
+  const expectedBuilds = definitions.reduce((n, c) => n + (c.putts?.length || 1), 0);
+  assert.equal(expectedBuilds, 52 + 12); assert.equal(builds, expectedBuilds); assert.ok(patches > 52);
   assert.equal(trees, 0, 'no landscape trees');
   assert.ok(inked > 52 * 10 && cutInk >= 52, `ink on every solid (${inked} hulls, ${cutInk} with the cup cutout)`);
   assert.ok(r.localBall.userData.ink?.material === r.library.ink.ball, 'local ball is inked, lifted so a wall behind it cannot clip the ring');
@@ -151,9 +153,12 @@ const { JSDOM } = require('jsdom');
     const { COURSE_PALETTES, DEFAULT_PALETTE, PALETTE_ROLES, paletteForCourse } = await import('../src/courses/palettes.js');
     const { lightningFlash, LIGHTNING_PERIOD } = await import('../src/render/weather.js');
     const starters = ['Switchback Garden', 'Dune Serpent', 'Frost Hollow', 'Slime Springs', 'Cyclone Ring', 'Grand Finale'];
-    assert.deepEqual(Object.keys(COURSE_PALETTES), starters, 'one palette per starter map');
+    // VIS-G added two starters after the original six: Sandstorm Spire reuses the desert palette, Obsidian Spiral has its own (ember).
+    assert.deepEqual(Object.keys(COURSE_PALETTES), [...starters, 'Sandstorm Spire', 'Obsidian Spiral'], 'one palette per starter map');
+    assert.equal(COURSE_PALETTES['Sandstorm Spire'], COURSE_PALETTES['Dune Serpent'], 'Sandstorm Spire shares the desert palette');
+    assert.ok(!starters.some(n => COURSE_PALETTES[n] === COURSE_PALETTES['Obsidian Spiral']), 'Obsidian Spiral has a palette of its own');
     const palettes = starters.map(name => COURSE_PALETTES[name]);
-    for (const p of palettes) {
+    for (const p of [...palettes, COURSE_PALETTES['Obsidian Spiral']]) {
       assert.deepEqual(Object.keys(p.surfaces).sort(), [...PALETTE_ROLES].sort(), `${p.id} defines every surface role`);
       assert.ok(Object.values(p.surfaces).every(Number.isInteger) && p.sky.up.length === 5 && p.sky.down.length === 3, `${p.id} palette shape`);
       assert.ok(Object.values(p.sky.clouds).every(Number.isFinite) && p.sky.clouds.ring > 0 && p.sky.clouds.deck > 0 && p.sky.clouds.scale > 0, `${p.id} cloud parameters`);

@@ -202,7 +202,7 @@ function fakeClock() {
 
   await scenario('level select: world, region, course and back, with the real vote', async () => {
     const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
-    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i), 'all 22 course ids appear once');
+    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 24 }, (_, i) => i), 'all 24 course ids appear once');
     const foot = data.gaiaRegions();
     for (const r of GAIA_REGIONS) {
       assert.ok(foot.byId[r.id].area > 40, `${r.name} has terrain`);
@@ -302,8 +302,8 @@ function fakeClock() {
     const { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
     assert.equal(GAIA_REGIONS.length, 6);
     assert.ok(GAIA_REGIONS.every(r => r.maps.length === REGION_COURSES[r.id].length), 'one site per course in every region');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 22, 'every site has its own name');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 22, 'every site has its own id');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 24, 'every site has its own name');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 24, 'every site has its own id');
     const gaia = scene.gaiaPlanet();
     assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
     // The globe's land is the reference coast: the shoreline of the field runs along it, lakes included.
@@ -434,7 +434,7 @@ function fakeClock() {
     assert.ok(Math.min(...alt('planes')) > PLANET_RADIUS + 23 && Math.min(...alt('satellites')) > PLANET_RADIUS + 40, 'each has its own layer, above the clouds');
     full.scene.dispose();
     assert.ok(a.frames() > 400, 'each step draws');
-    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 22, 'the living world is in the scene');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 24, 'the living world is in the scene');
     // The size audit, measured from the real models: a sensible order from trees up.
     const sz = a.scene.sizes;
     assert.ok(sz.tree < sz.house * 1.3 && sz.house < sz.mill && sz.mill < sz.lighthouse + 1 && sz.lighthouse < sz.city && sz.city <= sz.peak, `trees < houses < mills < lighthouses < cities <= mountains (${JSON.stringify(sz)})`);
@@ -657,7 +657,7 @@ function fakeClock() {
     const status = () => t.within('[data-ui=map-select] p').textContent;
     assert.equal(status(), 'Map 1/3 · Vote for a map. The first vote starts a 15s countdown.');
     const cards = [...t.within('[data-ui=map-select]').querySelectorAll('button[data-v]')];
-    assert.deepEqual(cards.map(c => c.querySelector('strong').textContent), ['01 · Switchback Garden', '02 · Dune Serpent', '03 · Frost Hollow', '04 · Slime Springs', '05 · Cyclone Ring', '06 · Grand Finale']);
+    assert.deepEqual(cards.map(c => c.querySelector('strong').textContent), ['01 · Switchback Garden', '02 · Dune Serpent', '03 · Frost Hollow', '04 · Slime Springs', '05 · Cyclone Ring', '06 · Grand Finale', '07 · Sandstorm Spire', '08 · Obsidian Spiral']);
     assert.equal(cards[1].querySelectorAll('svg rect').length > 0, true, 'course preview drawn as SVG');
     await click(cards[1]);
     assert.equal(cards[1].dataset.v, '1'); assert.equal(cards[1].getAttribute('aria-pressed'), 'true');

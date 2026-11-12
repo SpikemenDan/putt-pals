@@ -7,6 +7,7 @@
 
 import { TUNING } from '../shared/tuning.js';
 
+import { MAP_COUNT } from '../shared/map-count.js';
 export const GLOBAL_HAZARD_KINDS = Object.freeze(['rain', 'snow', 'wind', 'lightning', 'tornado', 'hurricane']);
 export const GLOBAL_HAZARD_LIMIT = 32;
 const finite = Number.isFinite;
@@ -59,7 +60,7 @@ export function validGlobalHazard(record) {
   if (VORTEX_KINDS.includes(record.kind)) keys.push('x', 'y');
   if (Object.keys(record).length !== keys.length || !keys.every(key => Object.hasOwn(record, key))) return false;
   return roomId(record.id) && roomId(record.owner) && Number.isSafeInteger(record.roundNumber) && record.roundNumber >= 0
-    && Number.isSafeInteger(record.map) && record.map >= 0 && record.map < 22
+    && Number.isSafeInteger(record.map) && record.map >= 0 && record.map < MAP_COUNT
     && Number.isSafeInteger(record.putt) && record.putt >= 0 && record.putt < 6
     && finite(record.startTime) && finite(record.endTime) && record.endTime > record.startTime
     && Number.isSafeInteger(record.seed) && record.seed >= 0 && record.seed <= 0xffffffff

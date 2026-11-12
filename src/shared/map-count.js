@@ -4,4 +4,4 @@
  * simulation's import closure, so the wire contracts can read it without importing course data. Changing it is a protocol change: bump
  * PROTOCOL_VERSION and SERVER_ROOM_VERSION with it (docs/GITHUB_WORKFLOW.md).
  */
-export const MAP_COUNT = 22;
+export const MAP_COUNT = 24;

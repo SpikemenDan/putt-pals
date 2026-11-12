@@ -6,7 +6,7 @@ import { solvePar } from './par-solver.mjs';
  */
 
 import { SimulationEngine } from '../../src/simulation/index.js';
-import { FIXED_TIMESTEP } from '../../src/shared/constants.js';
+import { FIXED_TIMESTEP, STARTER_COURSE_INDICES } from '../../src/shared/constants.js';
 import { buildCourseCatalog, detectStaleCourses, detectStaleHashes, generateArena, validateCourseDefinitions, createCourseDocument, validateCourseDocument } from '../../src/courses/index.js';
 
 /** Simulation ticks per second, from the one fixed timestep (240 Hz). */
@@ -28,15 +28,21 @@ export function runList(raw) {
 
 /** Schema check plus stale-metadata check against the recorded inventory. */
 export function runValidate({ raw, inventory, hashes, courseHashes }) {
-  const catalog = buildCourseCatalog(raw);
-  const stale = detectStaleCourses(raw, inventory.courses);
+  // Starters are checked against the maps actually supplied, so the 22-map legacy reference is valid on its own.
+  const catalog = buildCourseCatalog(raw, STARTER_COURSE_INDICES.filter(index => index < raw.length));
+  // The inventory records the legacy export only. Maps added after it (VIS-G placeholders from index 22) are not stale
+  // metadata; every recorded map must still match exactly, and a missing legacy map still fails.
+  const recorded = inventory.courses;
+  const stale = detectStaleCourses(raw.slice(0, recorded.length), recorded);
+  const added = Math.max(0, raw.length - recorded.length);
   const staleHashes = hashes ? detectStaleHashes(hashes, inventory) : { differences: [] };
   const problems = [...catalog.errors, ...stale.differences, ...staleHashes.differences,
     ...(courseHashes ? detectStaleHashes(courseHashes, inventory).differences.map(message => `Imported courses: ${message}`) : [])];
   if (problems.length) return { code: 1, lines: ['VALIDATE FAILED', ...problems.map(p => `  ${p}`)] };
   return {
     code: 0,
-    lines: [`VALIDATE OK: ${catalog.courses.length} courses match the schema and the recorded inventory`],
+    lines: [`VALIDATE OK: ${catalog.courses.length} courses match the schema; the ${recorded.length} legacy courses match the recorded inventory`
+      + (added ? ` (${added} added after the legacy export)` : '')],
   };
 }
 

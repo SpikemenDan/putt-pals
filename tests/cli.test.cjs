@@ -19,6 +19,8 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
   const inventory = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/source-inventory.json'), 'utf8'));
   const { createCourseData, validateCourseGeometry, createCourseDocument, generateArena, buildArenaGeometry, arenaNames } = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const data = createCourseData();
+  const { MAP_COUNT } = await import(pathToFileURL(path.join(root, 'src/shared/map-count.js')).href);
+  const { STARTER_COURSE_INDICES } = await import(pathToFileURL(path.join(root, 'src/shared/constants.js')).href);
   const courseAdapter = await import(pathToFileURL(path.join(root, 'src/courses/index.js')).href);
   const arenaDataModule = await import(pathToFileURL(path.join(root, 'src/courses/arena-specs.js')).href);
   let failed = 0;
@@ -156,11 +158,12 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     const routeless = syntheticRoutes((map, putt) => (map === 0 && putt === 0 ? { status: 'none', route: undefined, strokes: undefined, par: undefined } : {}));
     assert.equal(commands.runRank(document.courses, routeless).code, 1);
   });
-  run('rank orders the six starters by summed route difficulty', () => {
+  run('rank orders every starter by summed route difficulty', () => {
     const out = commands.runRank(createCourseDocument().courses, syntheticRoutes((map) => ({ difficulty: map === 5 ? 1 : 3 })));
     assert.equal(out.code, 0, out.lines.join('\n'));
     const rows = out.lines.filter(line => /^\d\. map/.test(line));
-    assert.equal(rows.length, 6);
+    assert.equal(rows.length, STARTER_COURSE_INDICES.length);
+    assert.equal(rows.length, 8, 'six original starters plus Sandstorm Spire and Obsidian Spiral');
     assert.match(rows[0], /map 5 Cyclone Ring/);
   });
   run('process: measure-par writes a report whose provenance matches the current inputs', () => {
@@ -237,14 +240,16 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(out.status, 0, out.stderr);
     const document = JSON.parse(out.stdout);
     assert.equal(document.schemaVersion, 1);
-    assert.equal(document.courses.length, 22);
-    assert.equal(document.courses.filter(c => c.starter).length, 6);
+    assert.equal(document.courses.length, MAP_COUNT);
+    assert.equal(document.courses.length, 24);
+    assert.equal(document.courses.filter(c => c.starter).length, STARTER_COURSE_INDICES.length);
+    assert.equal(document.courses.filter(c => c.starter).length, 8);
     assert.equal(document.courses[0].putts[0].id, 'switchback-garden-putt-1');
   });
   run('process: check succeeds', () => {
     const check = cli('check');
     assert.equal(check.status, 0, check.stderr);
-    assert.match(check.stdout, /CHECK OK: 22 courses/);
+    assert.match(check.stdout, /CHECK OK: 24 courses/);
   });
   run('all six arena transforms and resolved rules match the recorded legacy generation exactly', () => {
     const recorded = reference.arenas();
@@ -279,9 +284,12 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
     assert.equal(cli('arena', 'unknown').status, 1);
   });
   run('imported geometry and resolved rules exactly match all legacy courses', () => {
-    assert.equal(data.definitions.length, reference.holeCount);
-    assert.equal(reference.canonicalSha256(data.definitions), reference.holesCanonicalSha256, 'geometry matches the recorded legacy HOLES');
-    assert.deepEqual(data.rules, JSON.parse(JSON.stringify(raw)));
+    // The legacy recordings cover the 22 legacy maps only; maps added after them (22+) have no legacy source to match.
+    assert.equal(reference.holeCount, 22);
+    assert.equal(data.definitions.length, MAP_COUNT);
+    assert.ok(data.definitions.length >= reference.holeCount);
+    assert.equal(reference.canonicalSha256(data.definitions.slice(0, reference.holeCount)), reference.holesCanonicalSha256, 'geometry matches the recorded legacy HOLES');
+    assert.deepEqual(data.rules.slice(0, reference.holeCount), JSON.parse(JSON.stringify(raw)));
     assert.deepEqual(data.sourceHashes, reference.sources());
     const fresh = createCourseData();
     fresh.definitions[0].w[0][0] += 99;
@@ -374,15 +382,22 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.deepEqual(provenanceTools.assessDifficultyResult(saved, expected), { current: true, complete: false, differences: [] });
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   });
-  run('list shows 22 courses and 6 starters', () => {
-    const { code, lines } = commands.runList(raw);
+  run('list shows 24 courses and 8 starters', () => {
+    const { code, lines } = commands.runList(data.rules);
     assert.equal(code, 0);
-    assert.equal(lines.length, 22);
-    assert.equal(lines.filter(l => l.includes('starter')).length, 6);
+    assert.equal(lines.length, MAP_COUNT);
+    assert.equal(lines.length, 24);
+    assert.equal(lines.filter(l => l.includes('starter')).length, STARTER_COURSE_INDICES.length);
+    assert.equal(lines.filter(l => l.includes('starter')).length, 8);
   });
   run('validate passes on the live data', () => {
     const { code, lines } = commands.runValidate({ raw, inventory });
     assert.equal(code, 0, lines.join('\n'));
+  });
+  run('validate still fails when a legacy map is missing from the live data', () => {
+    const { code, lines } = commands.runValidate({ raw: raw.slice(0, 21), inventory });
+    assert.equal(code, 1);
+    assert.ok(lines.some(l => /course count: live 21, recorded 22/.test(l)), lines.join('\n'));
   });
   run('validate fails on stale data', () => {
     const edited = JSON.parse(JSON.stringify(raw));
@@ -407,15 +422,15 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.equal(commands.runShot(data.definitions, ...args).code, 1, JSON.stringify(args));
     }
   });
-  run('process: list exits 0 and prints 22 lines', () => {
+  run('process: list exits 0 and prints 24 lines', () => {
     const r = cli('list');
     assert.equal(r.status, 0, r.stderr);
-    assert.equal(r.stdout.trim().split('\n').length, 22);
+    assert.equal(r.stdout.trim().split('\n').length, 24);
   });
   run('process: validate exits 0', () => {
     const r = cli('validate');
     assert.equal(r.status, 0, r.stdout + r.stderr);
-    assert.match(r.stdout, /VALIDATE OK: 22 courses/);
+    assert.match(r.stdout, /VALIDATE OK: 24 courses match the schema; the 22 legacy courses match the recorded inventory \(2 added after the legacy export\)/);
   });
   run('process: shot sinks a known reference shot', () => {
     const r = cli('shot', '0', '0', String(currentFirstShot.deg), String(currentFirstShot.power));
