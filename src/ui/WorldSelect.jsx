@@ -6,8 +6,8 @@ import styles from './WorldSelect.module.css';
 /** Room a course pin and its label need on screen, in CSS px, so none cover another. */
 const PIN_W = 176, PIN_H = 62;
 
-/** Screen spots for pins, pushed apart and kept on screen. Each starts where its site is. */
-export function spreadPins(sites, width, height) {
+/** Screen spots for pins, pushed apart and kept on screen below `top` (the bottom of the header, so no tag hides under it). Each starts where its site is. */
+export function spreadPins(sites, width, height, top = 96) {
   const spots = sites.map(s => ({ x: s.x, y: s.y }));
   for (let pass = 0; pass < 80; pass++) {
     for (let i = 0; i < spots.length; i++) for (let j = i + 1; j < spots.length; j++) {
@@ -15,7 +15,7 @@ export function spreadPins(sites, width, height) {
       if (ox <= 0 || oy <= 0) continue;
       if (oy < ox) { const push = oy / 2 * (a.y <= b.y ? -1 : 1); a.y += push; b.y -= push; } else { const push = ox / 2 * (a.x <= b.x ? -1 : 1); a.x += push; b.x -= push; }
     }
-    for (const s of spots) { s.x = Math.min(width - PIN_W / 2 - 8, Math.max(PIN_W / 2 + 8, s.x)); s.y = Math.min(height - PIN_H - 8, Math.max(96, s.y)); }
+    for (const s of spots) { s.x = Math.min(width - PIN_W / 2 - 8, Math.max(PIN_W / 2 + 8, s.x)); s.y = Math.min(height - PIN_H - 8, Math.max(top, s.y)); }
   }
   return spots;
 }
@@ -71,6 +71,15 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     return () => { clearTimeout(retry); sceneRef.current = null; scene?.dispose(); };
   }, [createAtlasScene, onUnavailable]);
 
+  /** Bottom of the header the map select lays over the atlas (its children), in stage pixels: its height changes with the status and the
+   *  browser's fonts, so course tags are kept below what it measures, never below a guess. */
+  const headerBottom = () => {
+    const canvas = canvasRef.current, stage = canvas?.parentElement;
+    if (!stage) return 74;
+    const top = stage.getBoundingClientRect().top;
+    return [...stage.children].filter(el => el !== canvas && !el.classList.contains(styles.layer))
+      .reduce((low, el) => Math.max(low, el.getBoundingClientRect().bottom - top), 74);
+  };
   const light = id => { setHover(id); sceneRef.current?.highlight(id); };
   const openRegion = async id => {
     const scene = sceneRef.current;
@@ -81,7 +90,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     await scene.openRegion(id);
     if (openRef.current !== id) return;
     const { width, height } = scene.size;
-    spotsRef.current[id] = spreadPins(pinsOf[id].map(p => scene.project(p.site.u, p.site.lat)), width, height);
+    spotsRef.current[id] = spreadPins(pinsOf[id].map(p => scene.project(p.site.u, p.site.lat)), width, height, headerBottom() + 22); // a tag's top sits 14px above its spot
     scene.step(0);
     setSettled(true);
     scene.highlight(id);

@@ -222,6 +222,7 @@ function fakeClock() {
     }
     const spots = ui.spreadPins([{ x: 400, y: 300 }, { x: 410, y: 305 }, { x: 405, y: 310 }, { x: 395, y: 300 }], 1280, 720);
     spots.forEach((a, i) => spots.slice(i + 1).forEach(b => assert.ok(Math.abs(a.x - b.x) >= 170 || Math.abs(a.y - b.y) >= 60, 'pins and labels never overlap')));
+    assert.ok(ui.spreadPins([{ x: 400, y: 20 }, { x: 600, y: 140 }], 1280, 720, 180).every(s => s.y >= 180), 'course tags stay below a tall header');
     let builds = 0;
     const calls = [], scene = { onFrame() {}, start() {}, step() {}, dispose() { calls.push('disposed'); }, highlight(id) { calls.push('light:' + id); }, project: () => ({ x: 300, y: 200 }), hit: () => 'desert', size: { width: 1280, height: 720 }, openRegion: async id => { calls.push('open:' + id); }, openWorld: async () => { calls.push('world'); } };
     const t = await setup({ createAtlasScene: () => { builds++; return scene; } });
