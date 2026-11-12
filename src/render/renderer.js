@@ -7,8 +7,9 @@
  * releases every GPU resource the renderer created.
  */
 
-import { BALL_RADIUS } from '../shared/constants.js';
+import { BALL_RADIUS, MAX_PLAYER_NAME_LENGTH } from '../shared/constants.js';
 import { DISPLAY } from '../shared/display.js';
+import { TUNING } from '../shared/tuning.js';
 import { movingRect, surfaceHeight } from '../simulation/physics.js';
 import { createMaterialLibrary, PLAYER_COLORS, colorHex } from './materials.js';
 import { buildCourseScene, createLabel, disposeLabel } from './course-scene.js';
@@ -333,7 +334,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       for (const entry of remotes.values()) { entry.ball.visible = false; if (entry.label) entry.label.visible = false; if (entry.aura) entry.aura.visible = false; entry.blob.visible = false; }
       for (const p of shown) {
         const entry = remoteActor(p.id);
-        const name = String(p.name).slice(0, 14);
+        const name = String(p.name).slice(0, MAX_PLAYER_NAME_LENGTH);
         if (entry.name !== name) {
           if (entry.label) { scene.remove(entry.label); disposeLabel(entry.label); }
           entry.label = createLabel(library, name);
@@ -377,7 +378,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         a.needsUpdate = true;
       }
       aimGuide.hide();
-      if (aim && me.mode === 'play' && !me.moving && aim.charge > 0.015) aimGuide.show(new V(me.x + o[0], me.z + R, me.y + o[1]), aim);
+      if (aim && me.mode === 'play' && !me.moving && aim.charge > TUNING.aim.guideMinCharge) aimGuide.show(new V(me.x + o[0], me.z + R, me.y + o[1]), aim);
 
       if (pose.ball) localBall.position.set(...pose.ball);
       camera.position.set(...pose.position);

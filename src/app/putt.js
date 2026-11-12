@@ -5,7 +5,7 @@
  * One instance per round; the app discards it when the room moves on.
  */
 
-import { FIXED_TIMESTEP } from '../shared/constants.js';
+import { FIXED_TIMESTEP, MAX_PLAYER_NAME_LENGTH } from '../shared/constants.js';
 import { TUNING } from '../shared/tuning.js';
 import { calculateTimeoutScore } from '../shared/scoring.js';
 import { SimulationEventTypes } from '../shared/simulation.js';
@@ -176,7 +176,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
     /** Another player's opponent-targeted effect message lands on this player; returns the toast, or null when it cannot. */
     receiveAttack(type, from) {
       if (disposed || !receiveEffect(player, type)) return null;
-      return String(from || 'Someone').slice(0, 14) + ' used ' + powerupName(type) + ' on you!';
+      return String(from || 'Someone').slice(0, MAX_PLAYER_NAME_LENGTH) + ' used ' + powerupName(type) + ' on you!';
     },
 
     /** Love / Hate Ball sources from other players' balls (G1d); this client applies them to its own ball while it rolls. */

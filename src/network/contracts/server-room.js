@@ -1,6 +1,6 @@
 /** N4a v2 contracts: additive, not used by the current PeerJS/solo runtime. */
 import { GameModes } from '../../shared/session.js';
-import { MAX_PLAYERS, MAX_DEPLOYABLES } from '../../shared/constants.js';
+import { MAX_PLAYERS, MAX_DEPLOYABLES, MAX_TIMEOUT_SECONDS, MIN_TIMEOUT_SECONDS, RECONNECT_GRACE_PERIOD_MS, STARTER_COURSE_INDICES } from '../../shared/constants.js';
 import { isColorIndex } from '../../shared/colors.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
@@ -18,7 +18,7 @@ export const SERVER_ROOM_LIMITS = Object.freeze({
   pingIntervalMs: 15000, linkTimeoutMs: 45000, pendingHandshakes: 8,
   outgoingQueueBytes: 262144,
 });
-export const DEFAULT_ROOM_POLICY = Object.freeze({ reconnectGraceMs: 30000, controllerTransferDelayMs: 0, emptyRoomTtlMs: 900000 });
+export const DEFAULT_ROOM_POLICY = Object.freeze({ reconnectGraceMs: RECONNECT_GRACE_PERIOD_MS, controllerTransferDelayMs: 0, emptyRoomTtlMs: 900000 });
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const exact = (v, fields) => object(v) && Object.keys(v).length === fields.length && fields.every(k => Object.hasOwn(v, k));
 const allowed = (v, fields) => object(v) && Object.keys(v).every(k => fields.includes(k));
@@ -63,7 +63,7 @@ export function validServerCommand(c) {
     case 'SET_COLOR': return isColorIndex(c.color);
     case 'SET_MODE': return modes.includes(c.mode);
     case 'SET_POWERUPS': return typeof c.enabled === 'boolean';
-    case 'CAST_VOTE': return [0, 8, 20, 21, 5, 19].includes(c.mapIndex);
+    case 'CAST_VOTE': return STARTER_COURSE_INDICES.includes(c.mapIndex);
     case 'START_ROUND': return index(c.puttIndex, 6);
     case 'PRACTICE_STEP': return [-1, 0, 1].includes(c.step);
     case 'UPDATE_STROKES': return count(c.strokes);
@@ -116,10 +116,10 @@ export function validSessionContext(c) {
     if (!index(c.tie.winner, 22) || !c.tie.options.includes(c.tie.winner)) return false;
   }
   if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
-    || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
+    || !count(c.roundLimitSeconds) || c.roundLimitSeconds < MIN_TIMEOUT_SECONDS || c.roundLimitSeconds > MAX_TIMEOUT_SECONDS || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
-    || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && [0,8,20,21,5,19].includes(v))
+    || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && STARTER_COURSE_INDICES.includes(v))
     || !Array.isArray(c.completedMaps) || c.completedMaps.length > 9 || !c.completedMaps.every(n => index(n,22))
     || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
   return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))

@@ -22,6 +22,28 @@ const source = rel => fs.readFileSync(path.join(root, rel), 'utf8');
   assert.equal(contracts.DEFAULT_ROOM_POLICY.reconnectGraceMs, 30000);
   assert.doesNotMatch(source('src/network/server-room.js'), /\?\?\s*30000\b/, 'no second copy of the reconnect grace default');
 
+  // Room contract snapshot rules read the shared session constants: limits 120..600 s, votes only for starter maps.
+  assert.doesNotMatch(source('src/network/contracts/server-room.js'), /reconnectGraceMs:\s*30000|\[0,\s*8,\s*20,\s*21,\s*5,\s*19\]|roundLimitSeconds\s*[<>]\s*\d/, 'no copied session defaults');
+  const { createServerRoomFixture } = await load('src/network/contracts/server-room-mocks.js');
+  const context = overrides => Object.assign(structuredClone(createServerRoomFixture().session.context), overrides);
+  assert.equal(contracts.validSessionContext(context({})), true, 'fixture context is valid');
+  for (const [limit, ok] of [[119, false], [120, true], [600, true], [601, false]]) {
+    assert.equal(contracts.validSessionContext(context({ roundLimitSeconds: limit })), ok, `round limit ${limit}`);
+  }
+  const voter = Object.keys(createServerRoomFixture().session.context.players)[0];
+  for (const [map, ok] of [[0, true], [8, true], [20, true], [21, true], [5, true], [19, true], [1, false], [7, false]]) {
+    assert.equal(contracts.validSessionContext(context({ votes: { [voter]: map } })), ok, `vote for map ${map}`);
+    assert.equal(contracts.validServerCommand({ type: 'CAST_VOTE', mapIndex: map }), ok, `CAST_VOTE for map ${map}`);
+  }
+
+  // Player names: the attack toast and name labels trim to the 14-character name limit.
+  assert.equal((await load('src/shared/constants.js')).MAX_PLAYER_NAME_LENGTH, 14);
+  assert.doesNotMatch(source('src/app/putt.js'), /slice\(0,\s*14\)/);
+  assert.doesNotMatch(source('src/render/renderer.js'), /slice\(0,\s*14\)/, 'name labels use the shared name limit');
+  // Aim guide: the renderer reads aim.guideMinCharge (0.015) instead of a copy.
+  assert.equal((await load('src/shared/tuning.js')).TUNING.aim.guideMinCharge, 0.015);
+  assert.doesNotMatch(source('src/render/renderer.js'), /charge\s*>\s*0\.015/);
+
   // CLI timing: 240 Hz from the fixed timestep, a 120 s safety cap.
   assert.equal(cli.TICKS_PER_SECOND, 240);
   assert.equal(cli.MAX_TICKS, 28800);

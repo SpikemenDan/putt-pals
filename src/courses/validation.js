@@ -6,6 +6,8 @@ import { MIN_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS, DEFAULT_PENALTY, MIN_CUP_RADI
 const point = value => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
 const contains = (rect, p) => Array.isArray(rect) && rect.length >= 4 && rect.every(Number.isFinite)
   && p[0] >= rect[0] && p[0] <= rect[0] + rect[2] && p[1] >= rect[1] && p[1] <= rect[1] + rect[3];
+/** Upper bound (seconds) on the time limit derived from par when a course gives none. */
+const DEFAULT_LIMIT_CAP_SECONDS = 300;
 const validLimit = limit => Number.isFinite(limit) && limit >= MIN_TIMEOUT_SECONDS && limit <= MAX_TIMEOUT_SECONDS;
 
 /** Pure positional checks shared by legacy migration and normalized documents. */
@@ -48,7 +50,7 @@ export function validateCourseDefinitions(definitions, rules) {
       errors.push(...validatePuttPositions(course, active).map(error => `${label} putt ${pi}: ${error}`));
       const par = putt.par || course.par || 4;
       const penalty = course.putts && Number.isInteger(putt.pen) && putt.pen > 0 ? putt.pen : DEFAULT_PENALTY;
-      const limitSeconds = validLimit(putt.limit) ? putt.limit : validLimit(course.limit) ? course.limit : Math.min(300, MIN_TIMEOUT_SECONDS * Math.max(1, par / 2));
+      const limitSeconds = validLimit(putt.limit) ? putt.limit : validLimit(course.limit) ? course.limit : Math.min(DEFAULT_LIMIT_CAP_SECONDS, MIN_TIMEOUT_SECONDS * Math.max(1, par / 2));
       const cupRadius = Number.isFinite(active.cup) ? Math.max(MIN_CUP_RADIUS, Math.min(DEFAULT_CUP_RADIUS, active.cup)) : DEFAULT_CUP_RADIUS;
       const resolved = { tee: active.tee, hole: active.hole, par, penalty, limitSeconds, cupRadius };
       integrityPutts[pi] = { tee: active.tee, hole: active.hole, cupRadius };
