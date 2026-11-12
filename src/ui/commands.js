@@ -21,6 +21,8 @@ export const UiCommands = Object.freeze({
   SET_COLOR: 'set-color',
   /** { type, kind, id } — Choose a cosmetic (kind: ball, trail or celebration; id from the cosmetics catalog). */
   SET_COSMETIC: 'set-cosmetic',
+  /** { type, volume } — Sound volume, 0 to 1. Saved locally. */
+  SET_VOLUME: 'set-volume',
   /** { type } — Quality: High/Low. */
   TOGGLE_QUALITY: 'toggle-quality',
   /** { type, event } — an L1 SessionEvents command without playerId; the app binds the sender. */

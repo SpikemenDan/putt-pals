@@ -100,12 +100,12 @@ export const POWERUP_CATALOG = deepFreeze([
     banner: 'ORBITAL BUMPER', toast: 'An orbital bumper is placed on the course. Its ring bends nearby shots.',
   },
   ...[
-    ['rain', 'Rain', 'Reduces rolling friction for the whole room.'],
-    ['snow', 'Snow', 'Increases rolling resistance for the whole room.'],
-    ['wind', 'Wind', 'Pushes every ball in the selected direction.'],
+    ['rain', 'Rain', 'Wets the course for everyone, so every ball slides further.'],
+    ['snow', 'Snow', 'Ices the course for everyone, so every ball slides much further.'],
+    ['wind', 'Wind', 'A long gust pushes every ball the way you choose.'],
     ['lightning', 'Lightning', 'Strikes the selected opponent once.'],
-    ['tornado', 'Tornado', 'A roaming vortex flings nearby balls and lifts them.'],
-    ['hurricane', 'Hurricane', 'A roaming vortex pulls nearby balls toward its centre.'],
+    ['tornado', 'Tornado', 'Place a tornado that wanders, lifting and flinging nearby balls.'],
+    ['hurricane', 'Hurricane', 'Place a hurricane that wanders, pulling nearby balls in.'],
   ].map(([id, name, toast]) => ({
     id, name, group: 'global-hazard', target: PowerupTargets.GLOBAL, solo: false, weight: 1,
     duration: { kind: DurationKinds.TIMED }, hook: PowerupHooks.GLOBAL_HAZARD,

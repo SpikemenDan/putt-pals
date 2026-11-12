@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { courseRules } from '../courses/definitions.js';
 import { spawnPool } from '../gameplay/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useView } from './context.js';
+import { HUD_ICONS, powerupIcon } from './icons.js';
 import { PowerMeter } from './PowerMeter.jsx';
 import { PongHud } from './PongHud.jsx';
 import { Row } from './Row.jsx';
@@ -15,59 +17,99 @@ import hud from './Hud.module.css';
  */
 const POWERUP_COUNT = spawnPool().length;
 
+/**
+ * Square icon button with a hover tooltip. The label stays in the DOM for screen readers. The tooltip belongs to the wrapper, not the
+ * button, because generated text inside a button becomes part of its accessible name.
+ */
+function Tool({ icon, label, tip = label, active, onClick }) {
+  return (
+    <span className={hud.toolWrap} data-tip={tip}>
+      <button type="button" className={`${hud.tool}${active ? ' ' + hud.toolOn : ''}`} aria-pressed={active === undefined ? undefined : active} onClick={onClick}>
+        <Svg markup={HUD_ICONS[icon]} /><span className={hud.sr}>{label}</span>
+      </button>
+    </span>
+  );
+}
+
+/** One readout in the title plate. */
+const Stat = ({ label, value, timer }) => <div className={`${hud.stat}${timer ? ' ' + hud.statTimer : ''}`}><small>{label}</small><b>{value}</b></div>;
+
+/** Fixed markup from icons.js; never peer content. */
+const Svg = ({ markup, className }) => <span className={className || hud.icon} aria-hidden="true" dangerouslySetInnerHTML={{ __html: markup }} />;
+
 export function GameScreen({ hidden, backdrop = false, onCanvas }) {
   const { send, session } = useCommands();
   const view = useView(v => v.hud);
   const toast = useView(v => v.toast);
+  const [scoreOpen, setScoreOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const ghost = buttons.ghost;
   return (
     <div hidden={hidden} data-ui={backdrop ? 'backdrop' : 'game'} className={backdrop ? hud.backdrop : undefined} aria-hidden={backdrop || undefined}>
       <div className={hud.stage}>
         <div className={hud.bar}>
-          <span className={`${hud.info}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>
-          <span>
-            <button type="button" className={ghost} onClick={() => send(UiCommands.CYCLE_CAMERA)}>{view?.viewLabel || 'View: Ball cam'}</button>
-            <button type="button" className={ghost} onClick={() => send(UiCommands.TOGGLE_CARD)}>Card</button>
-            <span hidden={!view?.practiceBar}>
-              <button type="button" className={ghost} onClick={() => session({ type: 'PRACTICE_STEP', step: -1 })}>‹ Prev putt</button>
-              <button type="button" className={ghost} onClick={() => session({ type: 'PRACTICE_STEP', step: 0 })}>Restart</button>
-              <button type="button" className={ghost} onClick={() => session({ type: 'PRACTICE_STEP', step: 1 })}>Next putt ›</button>
-              <button type="button" className={ghost} onClick={() => session({ type: 'PRACTICE_MAPS' })}>Maps</button>
-              <button type="button" className={ghost} onClick={() => session({ type: 'RETURN_TO_LOBBY' })}>Exit</button>
+          <span className={`${hud.sr}${view?.warn ? ' ' + hud.warn : ''}`} data-ui="hud-info">{view?.info}</span>
+          <div className={`${hud.title}${view?.warn ? ' ' + hud.titleWarn : ''}`} aria-hidden="true">
+            <div className={hud.titleMain}>
+              <b>{view?.title?.map}</b>
+              {view?.title?.putt && <i>Putt {view.title.putt}</i>}
+            </div>
+            <Stat label="Par" value={view?.title?.par} />
+            <Stat label={view?.title?.statLabel} value={view?.title?.stat} />
+            {view?.title?.time && <Stat label="Time" value={view.title.time} timer />}
+          </div>
+          <span className={hud.tools} role="toolbar" aria-label="Game controls">
+            <Tool icon="view" label={view?.viewLabel || 'View: Ball cam'} onClick={() => send(UiCommands.CYCLE_CAMERA)} />
+            <Tool icon="card" label="Card" tip="Scorecard" onClick={() => send(UiCommands.TOGGLE_CARD)} />
+            <Tool icon="scoreboard" label="Scoreboard" active={scoreOpen} onClick={() => setScoreOpen(open => !open)} />
+            <span className={hud.tools} data-ui="practice-bar" hidden={!view?.practiceBar}>
+              <Tool icon="prev" label="‹ Prev putt" tip="Previous putt" onClick={() => session({ type: 'PRACTICE_STEP', step: -1 })} />
+              <Tool icon="restart" label="Restart" onClick={() => session({ type: 'PRACTICE_STEP', step: 0 })} />
+              <Tool icon="next" label="Next putt ›" tip="Next putt" onClick={() => session({ type: 'PRACTICE_STEP', step: 1 })} />
+              <Tool icon="maps" label="Maps" onClick={() => session({ type: 'PRACTICE_MAPS' })} />
+              <Tool icon="exit" label="Exit" onClick={() => session({ type: 'RETURN_TO_LOBBY' })} />
             </span>
-            <button type="button" className={ghost} onClick={() => send(UiCommands.INVITE)}>Invite</button>
-            <button type="button" className={ghost} onClick={() => send(UiCommands.TOGGLE_SOUND)}>{view?.soundLabel || 'Sound: On'}</button>
-            <button type="button" className={ghost} onClick={() => send(UiCommands.TOGGLE_QUALITY)}>{view?.qualityLabel || 'Quality: High'}</button>
-            {' '}<span className={hud.conn}>{view?.connection}</span>
+            <Tool icon="invite" label="Invite" onClick={() => send(UiCommands.INVITE)} />
+            <Tool icon="settings" label="Settings" active={settingsOpen} onClick={() => setSettingsOpen(open => !open)} />
           </span>
+        </div>
+        <div className={hud.settings} data-ui="settings" hidden={!settingsOpen}>
+          <h2>Settings</h2>
+          <button type="button" className={ghost} onClick={() => send(UiCommands.TOGGLE_SOUND)}>{view?.soundLabel || 'Sound: On'}</button>
+          <label>Volume
+            <input type="range" min="0" max="100" step="5" value={Math.round((view?.volume ?? 1) * 100)} onChange={e => send(UiCommands.SET_VOLUME, { volume: Number(e.target.value) / 100 })} />
+          </label>
+          <button type="button" className={ghost} onClick={() => send(UiCommands.TOGGLE_QUALITY)}>{view?.qualityLabel || 'Quality: High'}</button>
+          <p className={hud.conn}>{view?.connection}</p>
         </div>
         <canvas className={hud.canvas} width="800" height="500" ref={onCanvas} aria-label="Course. Drag back from the ball and release to putt." />
         {!!view?.pong && <PongHud pong={view.pong} />}
         {!!view?.activeHazards?.length && <div className={hud.hazardIndicators} aria-label="Active gameplay hazards">
-          {view.activeHazards.map(h => <span key={h.id}>{h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
+          {view.activeHazards.map(h => <span key={h.id}><Svg markup={powerupIcon(h.kind)} className={hud.chipIcon} />{h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
         </div>}
         <PowerMeter />
         <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
         <div className={hud.inv}>
           {(view?.inventory || []).map(slot => (
-            <button type="button" key={slot.index} className={slot.kind === 'empty' ? ghost : slot.kind === 'attack' ? buttons.atk : undefined}
-              onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>{slot.label}</button>
+            <button type="button" key={slot.index} className={`${hud.slot}${slot.kind === 'empty' ? ' ' + hud.slotEmpty : ''}`}
+              onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>
+              <span className={hud.sr}>{slot.label}</span>
+              <span className={hud.slotKey} aria-hidden="true">{slot.index + 1}</span>
+              {slot.id && <Svg key={slot.id} markup={powerupIcon(slot.id)} className={hud.slotIcon} />}
+              {slot.id && <span className={hud.slotTip} aria-hidden="true"><b>{slot.name}</b>{slot.ability}</span>}
+            </button>
           ))}
         </div>
         {view?.hazardPrompt && <div className={hud.hazardPrompt} role="dialog" aria-label={`${view.hazardPrompt.kind} options`}>
-          <b>{view.hazardPrompt.kind[0].toUpperCase() + view.hazardPrompt.kind.slice(1)}</b>{' '}
-          {view.hazardPrompt.kind === 'wind' && ['E','SE','S','SW','W','NW','N','NE'].map((label, i) => (
-            <button type="button" className={ghost} key={label} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index, direction: i * Math.PI / 4 <= Math.PI ? i * Math.PI / 4 : i * Math.PI / 4 - 2 * Math.PI })}>{label}</button>
-          ))}
-          {view.hazardPrompt.kind === 'lightning' && view.hazardPrompt.targets.map(target => (
+          <b>Strike who?</b>{' '}
+          {view.hazardPrompt.targets.map(target => (
             <button type="button" className={ghost} key={target.id} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index, targetId: target.id })}>{target.name}</button>
           ))}
-          {view.hazardPrompt.kind === 'lightning' && view.hazardPrompt.targets.length === 0 && <span>No connected opponent</span>}
-          {!['wind','lightning'].includes(view.hazardPrompt.kind) && <button type="button" className={ghost} onClick={() => send(UiCommands.CONFIRM_HAZARD, { kind: view.hazardPrompt.kind, index: view.hazardPrompt.index })}>Activate</button>}
+          {view.hazardPrompt.targets.length === 0 && <span>No connected opponent</span>}
           <button type="button" className={ghost} onClick={() => send(UiCommands.CANCEL_HAZARD)}>Cancel</button>
         </div>}
         <div className={hud.toast} role="status" aria-live="polite">{toast}</div>
-        <div className={hud.sb} data-ui="scoreboard">
+        <div className={hud.sb} data-ui="scoreboard" hidden={!scoreOpen}>
           <Row header variant="scoreboard" name="SCOREBOARD" a="Putt" b="Total" />
           {(view?.scoreboard || []).map(r => <Row key={r.id} variant="scoreboard" color={r.color} name={r.name} a={r.status} b={r.total} />)}
         </div>
