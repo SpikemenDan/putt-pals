@@ -14,7 +14,7 @@
     "preview":"vite preview --host 127.0.0.1 --open /",
     "check": "node tools/cli/main.mjs check",
     "test": "npm run check && npm run test:contracts && npm run test:simulation && npm run test:session && npm run test:network && npm run test:audio && npm run test:render && npm run test:input && npm run test:ui && npm run test:app && npm run test:courses && npm run test:cli && npm run test:physics && npm run test:integration && npm run test:overnight && npm run test:gemini",
-    "test:contracts": "node tests/contracts.test.cjs && node tests/server-room-contracts.test.cjs && node tests/gameplay.test.cjs && node tests/display.test.cjs && node tests/devtools.test.cjs && node tests/config-meta.test.cjs && node tests/config-reach.test.cjs",
+    "test:contracts": "node tests/contracts.test.cjs && node tests/server-room-contracts.test.cjs && node tests/gameplay.test.cjs && node tests/display.test.cjs && node tests/devtools.test.cjs && node tests/config-meta.test.cjs && node tests/config-reach.test.cjs && node tests/config-defaults.test.cjs",
     "test:course-mechanics:preview": "node tests/course-mechanics-preview.test.cjs",
     "test:gameplay": "node tests/gameplay.test.cjs",
     "test:rooms:local": "npm run build && node tests/rooms/local-runtime.test.mjs",

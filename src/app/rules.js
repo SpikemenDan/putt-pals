@@ -7,6 +7,7 @@ import { courseMechanicForce } from '../simulation/course-mechanics.js';
  */
 
 import { BALL_RADIUS } from '../shared/constants.js';
+import { SERVER_ROOM_LIMITS } from '../network/contracts/server-room.js';
 import { orbitalHolds } from '../simulation/deployables.js';
 import { inside, movingRect, surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 
@@ -17,8 +18,8 @@ export const SOLO_ID = 'solo';
 export const STALL_SECONDS = 25;
 /** Sunk players switch to waiting/free roam after this delay (legacy me.wait). */
 export const SINK_WAIT_MS = 1200;
-/** Presence publication interval (legacy pub() throttle). */
-export const PRESENCE_INTERVAL_MS = 70;
+/** Presence publication interval (legacy pub() throttle); the room contract's presence cadence is the one default. */
+export const PRESENCE_INTERVAL_MS = SERVER_ROOM_LIMITS.presenceIntervalMs;
 /** HUD/room refresh interval (legacy setInterval(syncRoom/tick, 100)). */
 export const TICK_MS = 100;
 export const EFFECT_FLASH_MS = 1800;
