@@ -136,7 +136,7 @@ function fakeClock() {
     assert.equal(t.within('[data-ui=loading]'), null, 'gone after the finish pause');
   }
 
-  await scenario('loading screen: Putt Pals title over the planet scene, three balls, a pause when ready', async () => {
+  await scenario('loading screen: Putt Planet title over the planet scene, three balls, a pause when ready', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false, connecting: true }));
     const loading = t.within('[data-ui=loading]');
