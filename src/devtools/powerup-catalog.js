@@ -16,10 +16,20 @@ const STYLE = `
 [data-ui=powerup-catalog] .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
 [data-ui=powerup-catalog] .card{margin:0;padding:3px;min-width:0;aspect-ratio:1;border:2px solid #14102a;border-radius:9px;background:#fff;box-shadow:2px 2px 0 #14102a;cursor:pointer}
 [data-ui=powerup-catalog] .card:hover{background:#ffd23f}
+[data-ui=powerup-catalog] .row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+[data-ui=powerup-catalog] .pill{margin:0;padding:4px 8px;border:2px solid #14102a;background:#fff;box-shadow:2px 2px 0 #14102a;font:900 10px "Arial Black",system-ui,sans-serif;text-transform:uppercase;cursor:pointer}
+[data-ui=powerup-catalog] .pill:hover,[data-ui=powerup-catalog] .pill[aria-pressed=true]{background:#ffd23f}
 [data-ui=powerup-catalog] .status{min-height:32px;margin:8px 0 0;line-height:1.3}
 `;
 
-const GROUPS = [['self-utility', 'Self'], ['aim-sabotage', 'Sabotage'], ['ball-aura', 'Auras'], ['deployable', 'Course'], ['global-hazard', 'Weather']];
+const BANNER_SAMPLES = [
+  ['Putt', 'PUTT 2 / 6', 'SWITCHBACK GARDEN', 'event'],
+  ['Power-up', 'Ana', 'TORNADO ACTIVATED', 'power'],
+  ['Hole in one', 'Ben', 'HOLE IN ONE', 'hio'],
+  ['Winner', 'Captain Longname', 'MAP WINNER · DUNE SERPENT', 'event'],
+];
+
+const GROUPS =[['self-utility', 'Self'], ['aim-sabotage', 'Sabotage'], ['ball-aura', 'Auras'], ['deployable', 'Course'], ['global-hazard', 'Weather']];
 
 export function mountPowerupCatalog(doc, app, catalog = POWERUP_CATALOG) {
   const style = doc.createElement('style'); style.textContent = STYLE;
@@ -40,7 +50,15 @@ export function mountPowerupCatalog(doc, app, catalog = POWERUP_CATALOG) {
     }
     drawer.append(heading, grid);
   }
-  drawer.append(status);
+  // Banner preview (#203): fire sample announcements over the course.
+  const bannerHeading = doc.createElement('h2'); bannerHeading.textContent = 'Banners';
+  const sampleRow = doc.createElement('div'); sampleRow.className = 'row';
+  for (const [label, text, sub, kind] of BANNER_SAMPLES) {
+    const b = doc.createElement('button'); b.type = 'button'; b.className = 'pill'; b.textContent = label;
+    b.addEventListener('click', () => app.store?.announce(text, sub, kind));
+    sampleRow.append(b);
+  }
+  drawer.append(bannerHeading, sampleRow, status);
   const tab = doc.createElement('button'); tab.type = 'button'; tab.className = 'tab'; tab.textContent = 'POWER-UPS'; tab.setAttribute('aria-expanded', 'false');
   tab.addEventListener('click', () => { drawer.hidden = !drawer.hidden; tab.setAttribute('aria-expanded', String(!drawer.hidden)); });
   box.append(drawer, tab);

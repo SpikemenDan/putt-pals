@@ -1,9 +1,17 @@
-/* Announcement banner (legacy #banner): a comic caption panel, tilted, with a hard shadow. */
-.banner{position:fixed;left:50%;top:15%;transform:translate(-50%,-26px) rotate(-2deg);opacity:0;pointer-events:none;z-index:50;padding:14px 48px;text-align:center;border-radius:8px;background:var(--yellow);color:var(--ink);border:4px solid var(--ink);box-shadow:8px 8px 0 var(--ink);transition:opacity .35s,transform .35s}
+/* Announcement banner (legacy #banner) in the caption-box comic style of the HUD (#203): flat colour, thick ink,
+   hard offset shadows, a slight tilt; no gradients or glows. Kinds: event (putt / map results), power, hio.
+   Owner-chosen "tab" look: a headline box in the kind colour with a cream caption tab, mirroring the HUD title card. */
+.banner{--kind:var(--yellow);position:fixed;left:50%;top:14%;z-index:50;display:flex;flex-direction:column;align-items:center;max-width:min(92vw,720px);
+  opacity:0;pointer-events:none;color:var(--ink);text-align:center;transform:translate(-50%,-24px) rotate(-2deg);transition:opacity .3s,transform .3s cubic-bezier(.2,1.6,.4,1)}
 .banner.show{opacity:1;transform:translate(-50%,0) rotate(-2deg)}
-.banner b{display:block;font:900 36px/1.1 var(--font);letter-spacing:5px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 #fff}
-.banner i{display:block;font:900 13px var(--font);font-style:normal;letter-spacing:3px;margin-top:6px;color:var(--ink)}
-.banner.hio{background:var(--pink)}
-.banner.power{background:var(--cyan)}
-@media (prefers-reduced-motion:reduce){.banner{transition:opacity .01s;transform:translate(-50%,0) rotate(-2deg)}}
-@media (max-width:640px){.banner{max-width:92vw;padding:12px 20px}.banner b{font-size:22px;letter-spacing:3px}}
+.banner.hio{--kind:var(--pink)}
+.banner.power{--kind:var(--cyan)}
+.banner b,.banner i{display:block;font-style:normal;text-transform:uppercase;color:var(--ink)}
+.banner i:empty{display:none}
+
+.banner b{padding:10px 34px 12px;background:var(--kind);border:4px solid var(--ink);box-shadow:7px 7px 0 var(--ink);font:900 38px/1.05 var(--font);letter-spacing:3px}
+.banner i{align-self:flex-end;margin:-6px 14px 0 0;padding:4px 12px;background:var(--paper);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);font:900 13px var(--font);letter-spacing:2px;transform:rotate(3deg)}
+.banner.hio b{color:#fff;text-shadow:3px 3px 0 var(--ink)}
+
+@media (prefers-reduced-motion:reduce){.banner{transition:opacity .01s}}
+@media (max-width:640px){.banner b{padding:8px 18px 10px;font-size:22px;letter-spacing:2px}}
