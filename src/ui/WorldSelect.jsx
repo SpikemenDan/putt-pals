@@ -27,7 +27,7 @@ export function spreadPins(sites, width, height, top = 96) {
  */
 export function WorldSelect({ cards, onPick, onUnavailable, children }) {
   const { createAtlasScene } = useUiContext();
-  const canvasRef = useRef(null), sceneRef = useRef(null), regionRefs = useRef({}), courseRefs = useRef({}), lineRefs = useRef({}), backRef = useRef(null), spotsRef = useRef({}), openRef = useRef(null), comeBack = useRef(null);
+  const canvasRef = useRef(null), sceneRef = useRef(null), regionRefs = useRef({}), courseRefs = useRef({}), lineRefs = useRef({}), backRef = useRef(null), followRef = useRef(null), spotsRef = useRef({}), openRef = useRef(null), comeBack = useRef(null);
   const [open, setOpen] = useState(null), [settled, setSettled] = useState(false), [hover, setHover] = useState(null), [ready, setReady] = useState(false);
   openRef.current = open;
   const pinsOf = useMemo(() => Object.fromEntries(GAIA_REGIONS.map(r => [r.id, (REGION_COURSES[r.id] ?? []).map((index, k) => ({ index, site: r.maps[k], card: cards.find(c => c.index === index) })).filter(p => p.card)])), [cards]);
@@ -63,6 +63,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
       }
       sceneRef.current = scene;
       if (win.__PP_APP_HOOK) win.__ppAtlas = scene; // browser checks only
+      followRef.current = follow;
       scene.onFrame(follow);
       scene.start();
       setReady(true);
@@ -80,6 +81,21 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     return [...stage.children].filter(el => el !== canvas && !el.classList.contains(styles.layer))
       .reduce((low, el) => Math.max(low, el.getBoundingClientRect().bottom - top), 74);
   };
+  /** Lays out the open region's course tags below the header. */
+  const placeCourses = id => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const { width, height } = scene.size;
+    spotsRef.current[id] = spreadPins(pinsRef.current[id].map(p => scene.project(p.site.u, p.site.lat)), width, height, headerBottom() + 22); // a tag's top sits 14px above its spot
+    followRef.current?.();
+  };
+  useEffect(() => { // the header grows and shrinks as votes and status lines change: keep the tags clear of it
+    const canvas = canvasRef.current, stage = canvas?.parentElement, Observer = canvas?.ownerDocument.defaultView.ResizeObserver;
+    if (!open || !settled || !stage || !Observer) return undefined;
+    const watch = new Observer(() => placeCourses(open));
+    for (const el of stage.children) if (el !== canvas && !el.classList.contains(styles.layer)) watch.observe(el);
+    return () => watch.disconnect();
+  }, [open, settled]); // eslint-disable-line react-hooks/exhaustive-deps
   const light = id => { setHover(id); sceneRef.current?.highlight(id); };
   const openRegion = async id => {
     const scene = sceneRef.current;
@@ -89,8 +105,7 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     setSettled(false); setOpen(id);
     await scene.openRegion(id);
     if (openRef.current !== id) return;
-    const { width, height } = scene.size;
-    spotsRef.current[id] = spreadPins(pinsOf[id].map(p => scene.project(p.site.u, p.site.lat)), width, height, headerBottom() + 22); // a tag's top sits 14px above its spot
+    placeCourses(id);
     scene.step(0);
     setSettled(true);
     scene.highlight(id);

@@ -306,7 +306,7 @@ export function createAtlasScene({ THREE, canvas, random, reducedMotion = false,
   function frame(now) {
     frameId = null;
     if (disposed) return;
-    const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
+    const dt = last === null ? 0 : Math.min(0.5, (now - last) / 1000); // camera moves keep to the clock, so a slow machine still arrives in about a second
     last = now;
     step(dt);
     if (moveT < 1 || dirty) wake();
