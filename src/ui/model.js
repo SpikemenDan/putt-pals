@@ -96,9 +96,19 @@ export function lobbyView(room, local, now, courses) {
   const players = connectedPlayers(room);
   const n = players.length;
   let status;
+  const tie = inCountdown(room, now) && room.tie ? {
+    options: room.tie.options.map(i => ({
+      index: i,
+      name: courses[i]?.name || 'Course ' + (i + 1),
+      par: courses[i]?.par,
+      preview: courses[i]?.preview,
+    })),
+    winner: room.tie.winner,
+    winnerName: courses[room.tie.winner]?.name || 'Course ' + (room.tie.winner + 1),
+  } : null;
   if (inCountdown(room, now)) {
     const course = courses[room.mapIndex];
-    status = course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
+    status = (tie ? 'Vote tied! Random pick: ' : '') + course.name + (course.putts.length > 1 ? ' · putt ' + ((room.puttIndex | 0) + 1) + '/' + course.putts.length : '') + ' starts in ' + Math.ceil((room.roundStartTime - now) / 1000) + '…';
   } else {
     status = local.isHost ? 'Pick a game mode, then start to open map voting.' : (local.serverOwned ? 'The room controller will pick the mode and start map voting.' : 'The host will pick the mode and start map voting.');
     if (room.powerups === false) status += ' Power-ups are off.';
@@ -115,6 +125,7 @@ export function lobbyView(room, local, now, courses) {
     modes: MODE_OPTIONS.map(o => ({ value: o.value, label: o.label, disabled: o.soloOnly && n > 1 })),
     multiplayer: n > 1,
     status,
+    tie,
   };
 }
 
@@ -274,14 +285,14 @@ export function scorecardView(room, local, courses) {
     const scores = p?.scores || [];
     const cells = [];
     for (let k = 0; k < n; k++) {
-      if (k < scores.length) cells.push(scores[k] == null ? null : { v: scores[k].score, to: !!scores[k].timedOut });
-      else if (live && p && p.connected && k === room.puttIndex) cells.push(p.done ? { v: p.score, to: !!p.timedOut } : { v: id === local.id ? local.strokes : p.strokes, live: true });
+      if (k < scores.length) cells.push(scores[k] == null ? null : { v: scores[k].score, to: !!scores[k].timedOut, missed: !!scores[k].missed });
+      else if (live && p && p.connected && k === room.puttIndex) cells.push(p.done ? { v: p.score, to: !!p.timedOut, missed: !!p.missed } : { v: id === local.id ? local.strokes : p.strokes, live: true });
       else cells.push(null);
     }
     if (!cells.some(Boolean) && !(p && p.connected)) continue;
-    let total = 0, parSum = 0, hio = 0, to = 0;
-    cells.forEach((x, k) => { if (!x) return; total += x.v; parSum += pars[k]; if (!x.live) { if (x.v === 1) hio++; if (x.to) to++; } });
-    rows.push({ id, name: p?.name || room.totals?.[id]?.name || 'Player', color: colorOf(room, local, id), me: id === local.id, cells, total, diff: total - parSum, counted: cells.some(Boolean), hio, to });
+    let total = 0, parSum = 0, hio = 0, to = 0, missed = 0;
+    cells.forEach((x, k) => { if (!x) return; total += x.v; parSum += pars[k]; if (!x.live) { if (x.v === 1 && !x.missed) hio++; if (x.missed) missed++; else if (x.to) to++; } });
+    rows.push({ id, name: p?.name || room.totals?.[id]?.name || 'Player', color: colorOf(room, local, id), me: id === local.id, cells, total, diff: total - parSum, counted: cells.some(Boolean), hio, to, missed });
   }
   rows.sort((a, b) => a.total - b.total || String(a.name).localeCompare(String(b.name)));
   const series = isTournament(room.mode) ? seriesOf(room.mode) : 0;
@@ -298,8 +309,8 @@ export function scorecardView(room, local, courses) {
         lead: rank === 1 && x.counted,
         label: rank + '. ' + x.name + (x.me ? ' (you)' : ''),
         cells: x.cells.map((cell, k) => cell && {
-          text: cell.v + (cell.to ? '*' : ''),
-          kind: cell.live ? 'live' : cell.v === 1 ? 'hio' : cell.v < pars[k] ? 'under' : cell.v > pars[k] ? 'over' : 'par',
+          text: cell.v + (cell.missed ? '!' : (cell.to ? '*' : '')),
+          kind: cell.live ? 'live' : cell.missed ? 'over' : cell.v === 1 ? 'hio' : cell.v < pars[k] ? 'under' : cell.v > pars[k] ? 'over' : 'par',
         }),
         total: x.counted ? String(x.total) : '',
         diff: x.counted ? (x.diff === 0 ? 'E' : (x.diff > 0 ? '+' : '') + x.diff) : '',

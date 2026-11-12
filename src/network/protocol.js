@@ -78,19 +78,22 @@ export function validSnapshot(s) {
   // Disconnected historical participants can remain in L1; wire storage stays bounded.
   if (entries.length > 128 || entries.filter(([, p]) => p?.connected).length > MAX_PLAYERS) return false;
   for (const [id, p] of entries) {
-    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'color', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores']) || p.id !== id || !name(p.name) || !isColorIndex(p.color) || typeof p.connected !== 'boolean'
+    if (!validId(id) || !record(p) || !keys(p, ['id', 'name', 'color', 'connected', 'strokes', 'done', 'timedOut', 'score', 'scores', 'missed', 'token']) || p.id !== id || !name(p.name) || !isColorIndex(p.color) || typeof p.connected !== 'boolean'
       || !count(p.strokes) || typeof p.done !== 'boolean' || typeof p.timedOut !== 'boolean'
+      || (p.missed !== undefined && typeof p.missed !== 'boolean')
+      || (p.token !== undefined && typeof p.token !== 'string')
       || !(p.score === null || count(p.score)) || !Array.isArray(p.scores) || p.scores.length > 6
-      || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty']) && count(h.score) && typeof h.timedOut === 'boolean'
-        && index(h.par, 11) && h.par > 0 && index(h.penalty, 11)))) return false;
+      || !p.scores.every(h => h === null || (record(h) && keys(h, ['score', 'timedOut', 'par', 'penalty', 'missed']) && count(h.score) && typeof h.timedOut === 'boolean'
+        && index(h.par, 11) && h.par > 0 && index(h.penalty, 11) && (h.missed === undefined || typeof h.missed === 'boolean')))) return false;
   }
   if (!keys(s, ['phase', 'mode', 'powerups', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
-    'roundStartTime', 'votingDeadline', 'votes', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards'])
+    'roundStartTime', 'votingDeadline', 'votes', 'tie', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards'])
     || !(s.powerups === undefined || typeof s.powerups === 'boolean')
     || !Number.isFinite(s.roundLimitSeconds) || s.roundLimitSeconds < 120 || s.roundLimitSeconds > 600
     || typeof s.isHost !== 'boolean' || !validState(s.state)
     || (typeof s.state === 'string' ? s.state !== s.phase : !Object.hasOwn(s.state, s.phase)) || !record(s.votes) || Object.keys(s.votes).length > MAX_PLAYERS
     || !Object.entries(s.votes).every(([id, vote]) => Object.hasOwn(s.players, id) && index(vote, 22))
+    || (s.tie !== undefined && s.tie !== null && (!record(s.tie) || !keys(s.tie, ['options', 'winner']) || !Array.isArray(s.tie.options) || s.tie.options.length < 2 || !s.tie.options.every(n => index(n, 22)) || !index(s.tie.winner, 22) || !s.tie.options.includes(s.tie.winner)))
     || !Array.isArray(s.completedMaps) || s.completedMaps.length > 9 || !s.completedMaps.every(n => index(n, 22))
     || !record(s.totals) || Object.keys(s.totals).length > 128
     || !Object.entries(s.totals).every(([id, t]) => validId(id) && record(t) && keys(t, ['name', 'total', 'par', 'wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;

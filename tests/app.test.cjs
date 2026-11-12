@@ -355,7 +355,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   });
 
   // ---------------------------------------------------------------------------------------------
-  await scenario('four clients: a three-map tournament with an attack, a guest leaving and rejoining as a spectator, and host loss', async () => {
+  await scenario('four clients: a three-map tournament with an attack, a guest leaving and rejoining into an open hole, and host loss', async () => {
     const W = world();
     const ana = await W.client('Ana');
     await ana.join('party');
@@ -405,14 +405,13 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     for (const c of [ana, ben, cy]) await vote(c, 1);
     await W.until(() => [ana, ben, cy].every(c => c.ready() && c.snapshot.mapIndex === 8), 10000, 'map 2 start');
     assert.equal(ana.snapshot.roster.length, 3, 'Dee is no longer in the roster');
-    // Dee rejoins mid-map and spectates.
+    // Dee rejoins mid-map into the open hole (VIS-D #162).
     await dee.join('party');
-    await W.until(() => dee.shown('[data-ui=game]'), 10000, 'Dee watches');
-    assert.equal(dee.putt.player.mode, 'spectator');
-    assert.match(dee.text('[data-ui=hud-info]'), /SPECTATING$/);
-    for (let k = 0; k < 6; k++) { await W.playPutt([ana, ben, cy]); await W.until(() => ana.snapshot.puttIndex === k + 1 || ana.snapshot.phase === 'results', 60000, 'advance'); }
+    await W.until(() => dee.shown('[data-ui=game]'), 10000, 'Dee joins open hole');
+    assert.equal(dee.putt.player.mode, 'play');
+    for (let k = 0; k < 6; k++) { await W.playPutt(all); await W.until(() => ana.snapshot.puttIndex === k + 1 || ana.snapshot.phase === 'results', 60000, 'advance'); }
     await W.until(() => ana.shown('[data-ui=results]'), 10000, 'map 2 results');
-    assert.equal(dee.text('[data-ui=results] p'), 'Round finished. You joined as a spectator; join the next map to play. Waiting for the host to return to the lobby.');
+    assert.match(dee.text('[data-ui=results] p'), /^Dune Serpent: .*Standings after map 2\/3: .*\. Waiting for the host to return to the lobby\.$/);
     // Map 3 with all four, then the champion.
     await ana.click('Next map vote');
     for (const c of all) await vote(c, 2);

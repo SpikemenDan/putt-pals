@@ -20,8 +20,10 @@ test('server rooms: tournament, late spectator and controller departure preserve
   await until(() => ben.ready(), { label: 'first map starts' });
   const cy = await openPlayer(browser, info, '<b>Cy</b>', { contexts }); await cy.join(code);
   const cyId = await cy.peerId();
-  expect(await cy.page.evaluate(() => window.__ppApp.room.snapshot.roster)).not.toContain(cyId);
-  await expect(cy.ui('hud-info')).toContainText('SPECTATING');
+  // VIS-D (#162): mid-round late arrivals enter the open hole in play mode
+  expect(await cy.page.evaluate(() => window.__ppApp.room.snapshot.roster)).toContain(cyId);
+  await until(() => cy.ready(), { label: 'Cy enters open hole in play mode' });
+  await expect(cy.ui('hud-info')).not.toContainText('SPECTATING');
   expect(await cy.page.locator('[data-ui=scoreboard] b b, [data-ui=scoreboard] img').count()).toBe(0);
   // Explicit departure during play preserves the current map and transfers controls.
   await ana.page.evaluate(() => window.__ppApp.dispatch({ type: 'leave' }));

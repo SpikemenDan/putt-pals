@@ -91,19 +91,29 @@ export function validClientFrame(m) {
     && (m.type === 'command' ? validServerCommand(m.payload) : validServerPresence(m.payload));
 }
 
-const score = s => exact(s, ['score','timedOut','par','penalty']) && count(s.score) && typeof s.timedOut === 'boolean' && index(s.par,11) && s.par > 0 && index(s.penalty,11);
-const player = p => exact(p, ['id','name','color','connected','strokes','done','timedOut','score','scores']) && validRoomId(p.id) && name(p.name) && isColorIndex(p.color)
+const score = s => object(s) && ['score','timedOut','par','penalty'].every(k => Object.hasOwn(s, k)) && allowed(s, ['score','timedOut','par','penalty','missed']) && count(s.score) && typeof s.timedOut === 'boolean' && index(s.par,11) && s.par > 0 && index(s.penalty,11) && (s.missed === undefined || typeof s.missed === 'boolean');
+const player = p => object(p) && ['id','name','color','connected','strokes','done','timedOut','score','scores'].every(k => Object.hasOwn(p, k)) && allowed(p, ['id','name','color','connected','strokes','done','timedOut','score','scores','token','missed']) && validRoomId(p.id) && name(p.name) && isColorIndex(p.color)
   && typeof p.connected === 'boolean' && count(p.strokes) && typeof p.done === 'boolean' && typeof p.timedOut === 'boolean'
-  && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score));
+  && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score))
+  && (p.token === undefined || typeof p.token === 'string') && (p.missed === undefined || typeof p.missed === 'boolean');
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));
 const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'];
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
 export function validSessionContext(c) {
   const hasPong = object(c) && Object.hasOwn(c, 'pong');
+  const hasTie = object(c) && Object.hasOwn(c, 'tie');
+  const extraKeys = [];
+  if (hasPong) extraKeys.push('pong');
+  if (hasTie) extraKeys.push('tie');
   if (hasPong) {
-    if (!exact(c, [...CONTEXT_KEYS, 'pong']) || c.mode !== GameModes.PONG || (c.pong !== null && !object(c.pong))) return false;
+    if (!exact(c, [...CONTEXT_KEYS, ...extraKeys]) || c.mode !== GameModes.PONG || (c.pong !== null && !object(c.pong))) return false;
   } else {
-    if (!exact(c, CONTEXT_KEYS)) return false;
+    if (!exact(c, [...CONTEXT_KEYS, ...extraKeys])) return false;
+  }
+  if (hasTie && c.tie !== null) {
+    if (!object(c.tie) || !exact(c.tie, ['options', 'winner'])) return false;
+    if (!Array.isArray(c.tie.options) || c.tie.options.length < 2 || !c.tie.options.every(n => index(n, 22))) return false;
+    if (!index(c.tie.winner, 22) || !c.tie.options.includes(c.tie.winner)) return false;
   }
   if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < 120 || c.roundLimitSeconds > 600 || !time(c.roundStartTime) || !time(c.votingDeadline)
