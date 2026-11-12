@@ -9,6 +9,8 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
 (async () => {
   const { buildCourseCatalog, normalizeLegacyCourse, slugify, detectStaleCourses, detectStaleHashes, createCourseDocument, validateCourseDocument, parseCourseDocument, toSimulationCourses, createCourseData, validateCourseDefinitions } = await load('src/courses/index.js');
   const { STARTER_COURSE_INDICES } = await load('src/shared/constants.js');
+  const { MAP_COUNT } = await load('src/shared/map-count.js');
+  const { REGION_COURSES } = await load('src/shared/gaia-map.js');
   let failed = 0;
   const run = (name, fn) => {
     try { fn(); console.log('PASS:', name); }
@@ -22,6 +24,12 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
     assert.equal(raw.length, 22);
     assert.deepEqual(catalog.errors, []);
     assert.equal(catalog.courses.length, 22);
+  });
+  run('MAP_COUNT (the wire bound for map indices) equals the shipped courses, and every course sits in exactly one Gaia region', () => {
+    const data = createCourseData();
+    assert.equal(data.definitions.length, MAP_COUNT, 'network validators accept exactly the shipped map indices');
+    const homed = Object.values(REGION_COURSES).flat().sort((a, b) => a - b);
+    assert.deepEqual(homed, Array.from({ length: MAP_COUNT }, (_, i) => i), 'each map index appears in one region, once');
   });
   run('legacy STARTERS list equals the shared constant', () => {
     assert.deepEqual(reference.starters(), [...STARTER_COURSE_INDICES]);

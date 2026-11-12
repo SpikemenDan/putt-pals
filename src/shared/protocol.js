@@ -8,6 +8,7 @@ import {
   MAX_PLAYER_NAME_LENGTH,
   MAX_PLAYERS,
 } from './constants.js';
+import { MAP_COUNT } from './map-count.js';
 
 export const MessageTypes = Object.freeze({
   SNAPSHOT: 'snapshot',
@@ -20,10 +21,10 @@ export const MessageTypes = Object.freeze({
  * Validates a presence message payload from a player.
  *
  * @param {object} d
- * @param {number} [maxMaps=22]
+ * @param {number} [maxMaps=MAP_COUNT]
  * @returns {boolean}
  */
-export function validatePresence(d, maxMaps = 22) {
+export function validatePresence(d, maxMaps = MAP_COUNT) {
   if (!d || typeof d !== 'object') return false;
   if (typeof d.n !== 'string' || d.n.length === 0 || d.n.length > MAX_PLAYER_NAME_LENGTH) return false;
   if (!Number.isInteger(d.h) || d.h < 0 || d.h >= maxMaps) return false;
@@ -49,10 +50,10 @@ export function validatePresence(d, maxMaps = 22) {
  * Validates a room snapshot message broadcast by the host.
  *
  * @param {object} r
- * @param {number} [maxMaps=22]
+ * @param {number} [maxMaps=MAP_COUNT]
  * @returns {boolean}
  */
-export function validateRoomSnapshot(r, maxMaps = 22) {
+export function validateRoomSnapshot(r, maxMaps = MAP_COUNT) {
   if (!r || typeof r !== 'object') return false;
 
   const validPhases = ['lobby', 'select', 'play', 'results'];
@@ -73,10 +74,10 @@ export function validateRoomSnapshot(r, maxMaps = 22) {
  * Validates a vote message from a guest client.
  *
  * @param {object} v
- * @param {number} [maxMaps=22]
+ * @param {number} [maxMaps=MAP_COUNT]
  * @returns {boolean}
  */
-export function validateVote(v, maxMaps = 22) {
+export function validateVote(v, maxMaps = MAP_COUNT) {
   if (!v || typeof v !== 'object') return false;
   return Number.isInteger(v.map) && v.map >= 0 && v.map < maxMaps;
 }
