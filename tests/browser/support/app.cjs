@@ -59,6 +59,14 @@ async function openApp(page, name) {
       await visible('landing').getByLabel('Your name').fill(name);
       await p.button('Play solo').click();
       await expect(visible('room-lobby')).toBeVisible();
+      await p.loaded();
+    },
+    /**
+     * Waits for the loading screen to close. Opening a room from the menu shows it over the lobby while the planet renders;
+     * on slow (software) WebGL that keeps the page too busy for Playwright's actionability checks until it closes.
+     */
+    async loaded() {
+      await expect(page.locator('[data-ui=loading]')).toHaveCount(0, { timeout: 60_000 });
     },
     async join(code) {
       await p.menu('party');
@@ -66,6 +74,7 @@ async function openApp(page, name) {
       await visible('landing').getByLabel(/room code/i).fill(code);
       await p.button('Join room').click();
       await explained(log, name + ' join', () => expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
+      await p.loaded();
     },
     /** Room snapshot fields the specs compare, read from the running app. */
     snapshot: () => page.evaluate(() => {
