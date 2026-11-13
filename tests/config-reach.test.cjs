@@ -48,6 +48,27 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     dom.window.close();
     return out;
   };
+  // VIS-E: the world atmosphere on a course tagged Ares or Luna, measured over a stretch of frames (gusts and flares vary with time).
+  const atmosphereMeasure = (display, world) => {
+    const dom = new JSDOM('<canvas></canvas>');
+    const canvas = dom.window.document.querySelector('canvas');
+    const ctx = new Proxy({}, { get: (_, key) => key === 'measureText' ? () => ({ width: 10 }) : key === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}, set: () => true });
+    dom.window.HTMLCanvasElement.prototype.getContext = () => ctx;
+    const backend = { capabilities: { getMaxAnisotropy: () => 4 }, shadowMap: {}, info: { memory: { geometries: 0, textures: 0 }, programs: [], render: { calls: 0, triangles: 0 } }, setSize() {}, setPixelRatio() {}, render() {}, dispose() {} };
+    const renderer = createGameRenderer({ THREE, canvas, random: () => 0.37, createWebGLRenderer: () => backend, display });
+    const view = createGameView({ renderer });
+    view.setCourse({ ...definitions[0], world }, 0);
+    const out = { aresStreaks: 0, aresDust: 0, lunaDust: 0, lunaSolar: 0, wash: 0 };
+    for (let t = 0; t < 30; t += 0.25) {
+      view.frame({ now: t * 1000, dt: 0.25, local: { x: 10, y: 20, z: 0, vx: 0, vy: 0, moving: false, mode: 'play', color: 0 } });
+      const a = renderer.atmosphere;
+      for (const k of ['aresStreaks', 'aresDust', 'lunaDust', 'lunaSolar']) out[k] = Math.max(out[k], a.drawn[k]);
+      out.wash = Math.max(out.wash, a.wash);
+    }
+    view.dispose();
+    dom.window.close();
+    return out;
+  };
 
   await scenario('DISPLAY: each setting changes exactly its own measurement on the aim guide and the renderer', async () => {
     const base = guideMeasure(DEFAULT_DISPLAY);
@@ -112,10 +133,21 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(changed('satellites', 6).traffic.satellites, 6, 'loading.satellites sets the number of satellites');
     const reach = m => Math.hypot(...m.camera) - 100;
     assert.ok(Math.abs(reach(lbase) - 40) < 1e-6 && Math.abs(reach(changed('cameraAltitude', 1.2)) - 120) < 1e-6, 'loading.cameraAltitude sets how high the camera flies (40 units by default, inside the air)');
+    // environment (VIS-E #166): strength and density reach the Ares and Luna scenery, and only their own world's.
+    const env = (values, world) => atmosphereMeasure(createDisplay({ environment: values }), world);
+    const ares = env({}, 'ares'), luna = env({}, 'luna');
+    assert.ok(ares.aresStreaks === 260 && ares.aresDust === 520 && ares.wash > 0 && ares.lunaDust === 0, 'an Ares course draws wind by default');
+    assert.ok(luna.lunaDust === 600 && luna.lunaSolar === 160 && luna.wash > 0 && luna.aresStreaks === 0, 'a Luna course draws dust and solar activity by default');
+    assert.ok(env({ aresWind: 2 }, 'ares').wash > ares.wash && env({ aresWind: 0 }, 'ares').aresStreaks === 0, 'environment.aresWind sets the wind strength');
+    assert.ok(env({ aresWindDensity: 0.5 }, 'ares').aresStreaks === 130 && env({ aresWindDensity: 0.5 }, 'ares').aresDust === 260, 'environment.aresWindDensity sets the streak and grain count');
+    assert.ok(env({ lunaDust: 0 }, 'luna').lunaDust === 0 && env({ lunaDust: 0 }, 'luna').lunaSolar === 160, 'environment.lunaDust hides the motes and leaves the sun particles');
+    assert.ok(env({ lunaDustDensity: 2 }, 'luna').lunaDust === 1200 && env({ lunaDustDensity: 2 }, 'luna').lunaSolar === 320, 'environment.lunaDustDensity sets the mote and particle count');
+    assert.ok(env({ lunaSolar: 0 }, 'luna').wash === 0 && env({ lunaSolar: 2 }, 'luna').wash > luna.wash, 'environment.lunaSolar sets the solar flare strength');
+    assert.deepEqual(env({ aresWind: 2, lunaDust: 0 }, 'gaia'), { aresStreaks: 0, aresDust: 0, lunaDust: 0, lunaSolar: 0, wash: 0 }, 'Gaia courses draw none of it');
     // loading.finishTime is checked in tests/ui.test.cjs, where the screen really closes after it, and so is the menu group
     // (VIS-M2), where each value lands on its own CSS variable on the real main menu.
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cameraAltitude', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k), ...['buttonScale', 'stagger', 'bob', 'tilt'].map(k => 'menu.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cameraAltitude', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k), ...['buttonScale', 'stagger', 'bob', 'tilt'].map(k => 'menu.' + k), ...['aresWind', 'aresWindDensity', 'lunaDust', 'lunaDustDensity', 'lunaSolar'].map(k => 'environment.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

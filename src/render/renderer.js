@@ -21,6 +21,8 @@ import { createWallFade } from './wall-fade.js';
 import { sizeInk } from './outline.js';
 import { createSkyWorld } from './sky-world.js';
 import { createWeather } from './weather.js';
+import { createAtmosphere } from './atmosphere.js';
+import { courseWorld, isWorldId } from '../shared/worlds.js';
 import { paletteForCourse } from '../courses/palettes.js';
 
 const R = BALL_RADIUS;
@@ -93,6 +95,16 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
   const weather = toon ? createWeather({ THREE, resolution: library.inkUniforms.res }) : null;
   if (weather) scene.add(weather.group);
   let weatherEnabled = true, currentWeather = null;
+  // World atmosphere (VIS-E #166): Ares wind, Luna dust and solar activity. Visual only; follows the course's world,
+  // or a development preview world (setSceneryWorld). Gaia palette weather is hidden off Gaia (no rain on Ares).
+  const atmosphere = toon ? createAtmosphere({ THREE, resolution: library.inkUniforms.res }) : null;
+  if (atmosphere) scene.add(atmosphere.group);
+  let courseScenery = 'gaia', previewScenery = null;
+  const sceneryWorld = () => previewScenery ?? courseScenery;
+  const applyScenery = () => {
+    weather?.setKind(weatherEnabled && sceneryWorld() === 'gaia' ? currentWeather : null);
+    atmosphere?.setWorld(sceneryWorld());
+  };
   let environment = null;
   let generator, envGeometry;
   // Flat toon materials take no reflections, so only the legacy style needs an environment map.
@@ -230,7 +242,21 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
     /** Turns the ambient weather (snow, rain, lightning) on or off. On by default; the choice survives course swaps. */
     setWeather(enabled) {
       weatherEnabled = !!enabled;
-      weather?.setKind(weatherEnabled ? currentWeather : null);
+      applyScenery();
+    },
+
+    /** World whose scenery is drawn: the course's world (src/shared/worlds.js `courseWorld`) unless a preview overrides it. */
+    get sceneryWorld() { return sceneryWorld(); },
+    /** Read-only atmosphere numbers (world, gust, flare, wash, drawn counts) for tests and the dev preview; null in the legacy style. */
+    get atmosphere() { return atmosphere ? atmosphere.state : null; },
+    /**
+     * Development preview (src/devtools/world-preview.js): draw another world's scenery on this course, or null for the
+     * course's own. Visual only, local only; survives course swaps. Throws on an unknown world id.
+     */
+    setSceneryWorld(id) {
+      if (id !== null && !isWorldId(id)) throw new Error('Unknown world: ' + String(id));
+      previewScenery = id;
+      applyScenery();
     },
 
     /**
@@ -249,8 +275,9 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         skyWorld.setMood(palette.sky);
         scene.fog.color.set(palette.sky.up[0]);
         currentWeather = palette.weather;
-        weather.setKind(weatherEnabled ? currentWeather : null);
       }
+      courseScenery = courseWorld(course);
+      applyScenery();
       return build;
     },
 
@@ -387,6 +414,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       sky.position.copy(camera.position);
       skyWorld?.update(t, camera.position);
       if (weather) skyWorld.setFlash(weather.update(t, camera.position));
+      atmosphere?.update(t, camera.position, display.environment);
       sun.target.position.set(...pose.sunTarget);
       sun.position.set(pose.sunTarget[0] + 250, pose.sunTarget[1] + 700, pose.sunTarget[2] + 350);
       updateWallFade(build.wallFade, dt, camera.position, pose.fadeTarget ? new V(...pose.fadeTarget) : null);
@@ -396,7 +424,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
         if (renderer.getDrawingBufferSize) { renderer.getDrawingBufferSize(bufferSize); sizeInk(library.inkUniforms, bufferSize.x, bufferSize.y); }
       }
       deployableLayer.update(deployables, placing, build.transform, build.course, t, camera);
-      globalHazardLayer.update(globalHazards, targeting, hazardTime, build.transform, build.course, t, local);
+      globalHazardLayer.update(globalHazards, targeting, hazardTime, build.transform, build.course, t, local, sceneryWorld());
       renderer.render(scene, camera);
     },
 
@@ -414,6 +442,7 @@ export function createGameRenderer({ THREE, canvas, createCanvas, random = Math.
       deployableLayer.dispose();
       globalHazardLayer.dispose();
       weather?.dispose();
+      atmosphere?.dispose();
       skyWorld?.dispose();
       sun.shadow.dispose?.();
       library.dispose();

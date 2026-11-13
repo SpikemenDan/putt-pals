@@ -7,6 +7,10 @@
  * every player in a party must simulate the same gravity, so src/app/app.js ignores it when the roster has more
  * than one player. Shipped values stay in src/shared/tuning.js (`gravity`, `worlds.ares.gravity`,
  * `worlds.luna.gravity`); this module never changes them. Export gives JSON to have chosen values made defaults.
+ *
+ * The selected world's scenery (VIS-E #166: Ares wind, Luna dust and solar activity, src/render/atmosphere.js) is drawn
+ * at once, in any room, because it is visual only; its strength and density are the `environment.*` sliders in the
+ * Display tuning panel.
  */
 
 import { TUNING, TUNING_FIELDS } from '../shared/tuning.js';
@@ -144,7 +148,7 @@ export function mountWorldPreview(doc, preview, app = null, { tuning = TUNING } 
     for (const [wid, button] of buttons) button.setAttribute('aria-pressed', String(wid === id));
     slider.value = String(g);
     value.textContent = String(g) + (g === shipped ? '' : ' (shipped ' + shipped + ')');
-    info.textContent = worldOf(id).name + ': shipped ' + shipped + ' units/s² · Chip In airtime ' + airtime(g, tuning).toFixed(2) + ' s (Gaia ' + airtime(preview.shipped('gaia'), tuning).toFixed(2) + ' s). Solo rooms only; applies when the putt restarts.';
+    info.textContent = worldOf(id).name + ': shipped ' + shipped + ' units/s² · Chip In airtime ' + airtime(g, tuning).toFixed(2) + ' s (Gaia ' + airtime(preview.shipped('gaia'), tuning).toFixed(2) + ' s). Gravity: solo rooms only, applies when the putt restarts. Scenery switches now; tune it under Display tuning → environment.';
     badge.hidden = !preview.active;
   };
   const guard = fn => () => { try { fn(); } catch (error) { say(error.message); } };

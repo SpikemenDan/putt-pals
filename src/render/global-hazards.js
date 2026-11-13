@@ -6,12 +6,16 @@
  * (src/gameplay/global-hazards.js) and the hazard time passed in, so every player sees the same weather; nothing here reads or
  * writes simulation state. This is gameplay weather and stays separate from the ambient map weather (weather.js).
  *
+ * Per world (VIS-E #166) the same Rain effect looks like a Dust Storm on Ares (rust grains blown sideways, a dusty floor) and
+ * the Solar Wind on Luna (fast gold streaks, a shimmering charged floor); Lightning is a cyan Solar Bolt on Luna.
+ *
  * Particles are camera-facing quads built in the vertex shader from a time uniform (no per-frame allocation) and kept few
  * and small so the weather never covers the screen. The layer is attached to the scene only while something is shown.
  */
 import { TUNING } from '../shared/tuning.js';
 import { surfaceHeight, WALL_HEIGHT } from '../simulation/physics.js';
 import { courseBounds, globalHazardCenter, gustStrength, rayToWall } from '../gameplay/global-hazards.js';
+import { hazardVariant } from '../gameplay/world-weather.js';
 
 const FADE = 0.8; // seconds to fade a hazard in and out
 const RAIN_COUNT = 170, SNOW_COUNT = 110, WIND_COUNT = 10, BALL_LINES = 4;
@@ -69,6 +73,13 @@ const FLAKE_FRAGMENT = `
     float m = min(d, spark);
     if (m > 0.2) discard;
     gl_FragColor = vec4(m > 0.0 ? ${INK} : uColor, uAlpha);
+  }`;
+const GRAIN_FRAGMENT = `
+  uniform vec3 uColor; uniform float uAlpha; varying vec2 vUv; varying float vSeed;
+  void main() {
+    float r = length(vUv);
+    if (r > 1.0) discard;
+    gl_FragColor = vec4(r > 0.62 ? ${INK} : mix(uColor, vec3(1.0), step(r, 0.25) * 0.35), uAlpha);
   }`;
 const RIBBON_VERTEX = `
   attribute vec3 tangent; attribute float edge, width, alpha;
@@ -159,13 +170,20 @@ export function createGlobalHazardLayer({ THREE, scene }) {
   }
   const meshOf = (geometry, material) => { const m = new THREE.Mesh(geometry, material); m.frustumCulled = false; return m; };
 
-  function precipitation(kind) {
-    const rain = kind === 'rain', n = rain ? RAIN_COUNT : SNOW_COUNT, rand = seededRandom(rain ? 11 : 23);
+  /** Particle looks: [count, seed, fragment, fall (units/s), size, stretch, slant, sway, colour]. */
+  const LOOKS = {
+    rain: [RAIN_COUNT, 11, DROP_FRAGMENT, 420, 1.9, 7, SLANT, 0, 0x4aa3ff],
+    snow: [SNOW_COUNT, 23, FLAKE_FRAGMENT, 34, 2.6, 1, SLANT * 0.6, 5, 0xffffff],
+    dust: [RAIN_COUNT, 31, GRAIN_FRAGMENT, 60, 1.5, 1, 2.4, 9, 0xc9774e], // blown almost flat across the course
+    solar: [RAIN_COUNT, 47, DROP_FRAGMENT, 700, 1.2, 9, 0.9, 0, 0xffe39a], // fast slanting gold streaks from the sun
+  };
+  function precipitation(look) {
+    const [n, seed, fragmentShader, fall, size, stretch, slant, sway, color] = LOOKS[look] || LOOKS.rain, rand = seededRandom(seed);
     const material = own(new THREE.ShaderMaterial({
-      vertexShader: QUAD_VERTEX, fragmentShader: rain ? DROP_FRAGMENT : FLAKE_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      vertexShader: QUAD_VERTEX, fragmentShader, transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: {
-        uTime: { value: 0 }, uFall: { value: rain ? 420 : 34 }, uHeight: { value: CEILING }, uSize: { value: rain ? 1.9 : 2.6 }, uStretch: { value: rain ? 7 : 1 }, uSlant: { value: rain ? SLANT : SLANT * 0.6 },
-        uSway: { value: rain ? 0 : 5 }, uBox: { value: new THREE.Vector4() }, uColor: { value: new THREE.Color(rain ? 0x4aa3ff : 0xffffff) }, uAlpha: { value: 0 },
+        uTime: { value: 0 }, uFall: { value: fall }, uHeight: { value: CEILING }, uSize: { value: size }, uStretch: { value: stretch }, uSlant: { value: slant },
+        uSway: { value: sway }, uBox: { value: new THREE.Vector4() }, uColor: { value: new THREE.Color(color) }, uAlpha: { value: 0 },
       },
     }));
     const object = meshOf(quads(n, () => [rand(), rand(), rand()]), material);
@@ -260,8 +278,8 @@ export function createGlobalHazardLayer({ THREE, scene }) {
     return new THREE.Vector3(a[0] - b[0], 0, a[2] - b[2]).normalize();
   }
 
-  /** Wet (rain) or frosted (snow) sheen over every floor tile. Rebuilt when the course changes. */
-  function sheenFor(kind, course, transform, hazardTime, h) {
+  /** Wet (rain), frosted (snow), dusty (dust) or charged (solar) sheen over every floor tile. Rebuilt when the course changes. */
+  function sheenFor(look, course, transform, hazardTime, h) {
     const key = course.tiles;
     if (!sheen || sheen.key !== key) {
       if (sheen) { for (const m of sheen.meshes) group.remove(m); }
@@ -281,8 +299,9 @@ export function createGlobalHazardLayer({ THREE, scene }) {
       sheen = { key, meshes, material };
     }
     const u = sheen.material.uniforms;
-    u.uTime.value = hazardTime; u.uSnow.value = kind === 'snow' ? 1 : 0; u.uAlpha.value = fade(h, hazardTime);
-    u.uColor.value.setHex(kind === 'snow' ? 0xcfeeff : 0x9fd2ff);
+    const sparkle = look === 'snow' || look === 'solar'; // frost glints, or charged dust shimmering
+    u.uTime.value = hazardTime; u.uSnow.value = sparkle ? 1 : 0; u.uAlpha.value = fade(h, hazardTime) * (look === 'dust' ? 1.3 : 1);
+    u.uColor.value.setHex({ snow: 0xcfeeff, dust: 0xd98a5a, solar: 0xfff0b0 }[look] ?? 0x9fd2ff);
     for (const m of sheen.meshes) m.visible = true;
   }
 
@@ -336,17 +355,18 @@ export function createGlobalHazardLayer({ THREE, scene }) {
   }
 
   /** Lightning: a thick yellow zigzag bolt with a dark outline and a star burst where it lands; seeded, so every client draws the same one. */
-  function boltMesh(h, tip) {
+  function boltMesh(h, tip, look = 'lightning') {
+    const solar = look === 'solar-bolt', glow = solar ? 0x9be8ff : 0xfff36b, flare = solar ? 0xff9f1c : 0xfff36b;
     const rand = seededRandom(h.seed ^ 0x9e3779b9), pts = [], steps = 7;
     for (let i = 0; i <= steps; i++) {
       const u = i / steps, j = i === 0 || i === steps ? 0 : 1, side = i % 2 ? 1 : -1;
       pts.push(new THREE.Vector3(tip.x + side * (6 + rand() * 12) * j, 210 * (1 - u) + tip.y * u, tip.z + (rand() - 0.5) * 12 * j));
     }
-    const outline = ribbon(pts, 6.5, ink()), core = ribbon(pts, 3.8, solid(0xfff36b, 1));
+    const outline = ribbon(pts, 6.5, ink()), core = ribbon(pts, solar ? 4.4 : 3.8, solid(glow, 1));
     outline.renderOrder = 6; core.renderOrder = 7;
     const star = new THREE.Shape();
     for (let i = 0; i < 16; i++) { const r = i % 2 ? 11 : 26, a = (i / 16) * Math.PI * 2; star[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
-    const burstOut = new THREE.Mesh(own(new THREE.ShapeGeometry(star)), ink()), burst = new THREE.Mesh(own(new THREE.ShapeGeometry(star)), solid(0xfff36b, 1));
+    const burstOut = new THREE.Mesh(own(new THREE.ShapeGeometry(star)), ink()), burst = new THREE.Mesh(own(new THREE.ShapeGeometry(star)), solid(flare, 1));
     burst.scale.setScalar(0.8); burstOut.scale.setScalar(1);
     for (const m of [burstOut, burst]) { m.rotation.x = -Math.PI / 2; m.position.set(tip.x, tip.y + 1.2, tip.z); }
     burstOut.renderOrder = 6; burst.renderOrder = 7;
@@ -371,11 +391,11 @@ export function createGlobalHazardLayer({ THREE, scene }) {
   })();
   group.add(cue.root);
 
-  function ensure(kind) {
-    if (layers[kind]) return layers[kind];
-    const layer = kind === 'rain' || kind === 'snow' ? precipitation(kind) : windRibbons();
+  function ensure(look) {
+    if (layers[look]) return layers[look];
+    const layer = look === 'wind' ? windRibbons() : precipitation(look);
     group.add(layer.object);
-    layers[kind] = layer;
+    layers[look] = layer;
     return layer;
   }
 
@@ -389,8 +409,9 @@ export function createGlobalHazardLayer({ THREE, scene }) {
      * @param {object} course
      * @param {number} t Animation clock, seconds
      * @param {{x:number,y:number,z:number}|null} [ball] The local ball (the wind flows around it)
+     * @param {string} [world='gaia'] World whose look the weather takes (VIS-E #166)
      */
-    update(list, targeting, hazardTime, transform, course, t, ball = null) {
+    update(list, targeting, hazardTime, transform, course, t, ball = null, world = 'gaia') {
       const limits = courseBounds(course) || [0, 0, 800, 500], bounds = { x: limits[0], y: limits[1], w: limits[2] - limits[0], h: limits[3] - limits[1] };
       const box = worldBox(transform, bounds), center = [bounds.x + bounds.w / 2, bounds.y + bounds.h / 2];
       const focus = ball && Number.isFinite(ball.x) ? [ball.x, ball.y] : center;
@@ -401,12 +422,13 @@ export function createGlobalHazardLayer({ THREE, scene }) {
       for (const h of list || []) {
         if (!hazardActive(h, hazardTime)) continue;
         const k = fade(h, hazardTime);
-        if (h.kind === 'rain' || h.kind === 'snow') sheenFor(h.kind, course, transform, hazardTime, h);
+        const look = hazardVariant(h.kind, { world }).look;
+        if (h.kind === 'rain' || h.kind === 'snow') sheenFor(look, course, transform, hazardTime, h);
         if (h.kind === 'rain' || h.kind === 'snow' || h.kind === 'wind') {
-          const layer = ensure(h.kind); layer.object.visible = true; layer.update(h, ctx);
+          const layer = ensure(look); layer.object.visible = true; layer.update(h, ctx);
           continue;
         }
-        const key = `${h.id}:${h.kind}`;
+        const key = `${h.id}:${h.kind}:${look}`;
         shown.add(key);
         let entry = dynamic.get(key);
         if (!entry) {
@@ -414,7 +436,7 @@ export function createGlobalHazardLayer({ THREE, scene }) {
           if (h.kind === 'lightning') {
             if (!h.at) continue;
             const g = transform.ground(h.at.x, h.at.y, h.at.z);
-            entry = boltMesh(h, { x: g[0], y: g[1], z: g[2] });
+            entry = boltMesh(h, { x: g[0], y: g[1], z: g[2] }, look);
           } else entry = h.kind === 'tornado' ? tornadoMesh() : hurricaneMesh();
           entry.owned = owned.splice(before); // released with the mesh when the hazard ends
           group.add(entry.root); dynamic.set(key, entry);

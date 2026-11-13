@@ -9,6 +9,7 @@
  */
 
 import { getPowerup, isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
+import { hazardVariant, isPrecipitationItem, itemName, precipitationVariant } from '../gameplay/world-weather.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
@@ -247,7 +248,10 @@ export function hudView(room, local, now, courses) {
   }));
   const inventory = [0, 1, 2].map(i => {
     const item = (local.inventory || [])[i];
-    return { index: i, id: item || '', name: item ? powerupName(item) : '', ability: item ? getPowerup(item)?.toast || '' : '', label: item ? (i + 1) + '. ' + powerupName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
+    // VIS-E #166: either weather item is "Precipitation"; its ability names what it becomes here (Rain, Snow, Dust Storm or Solar Wind).
+    const weather = !item ? null : isPrecipitationItem(item) ? precipitationVariant(local.place) : item === 'lightning' ? hazardVariant(item, local.place) : null;
+    const ability = !item ? '' : isPrecipitationItem(item) ? weather.name + ' here: ' + weather.toast : weather ? weather.toast : getPowerup(item)?.toast || '';
+    return { index: i, id: item || '', look: weather?.look || item || '', name: item ? itemName(item) : '', ability, label: item ? (i + 1) + '. ' + itemName(item) : (i + 1) + '. empty', kind: !item ? 'empty' : isOpponentPowerup(item) ? 'attack' : 'item' };
   });
   return {
     info,
@@ -268,7 +272,7 @@ export function hudView(room, local, now, courses) {
         .map(id => ({ id, name: room.players[id].name })),
     } : null,
     activeHazards: (room.globalHazards || []).map(h => ({
-      id: h.id, kind: h.kind,
+      id: h.id, kind: h.kind, label: hazardVariant(h.kind, local.place).banner, look: hazardVariant(h.kind, local.place).look,
       seconds: Math.max(0, Math.ceil(h.endTime - Math.max(0, (hazardTime - room.roundStartTime) / 1000))),
       direction: h.kind === 'wind' ? ['→','↘','↓','↙','←','↖','↑','↗'][Math.round(((h.direction + 2 * Math.PI) % (2 * Math.PI)) / (Math.PI / 4)) % 8] : '',
       targetName: h.kind === 'lightning' ? room.players?.[h.targetId]?.name || 'opponent' : '',

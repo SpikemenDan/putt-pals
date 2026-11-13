@@ -85,7 +85,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
         <canvas className={hud.canvas} width="800" height="500" ref={onCanvas} aria-label="Course. Drag back from the ball and release to putt." />
         {!!view?.pong && <PongHud pong={view.pong} />}
         {!!view?.activeHazards?.length && <div className={hud.hazardIndicators} aria-label="Active gameplay hazards">
-          {view.activeHazards.map(h => <span key={h.id}><Svg markup={powerupIcon(h.kind)} className={hud.chipIcon} />{h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
+          {view.activeHazards.map(h => <span key={h.id}><Svg markup={powerupIcon(h.look || h.kind)} className={hud.chipIcon} />{h.label || h.kind.toUpperCase()}{h.direction ? ` ${h.direction}` : ''}{h.targetName ? ` → ${h.targetName}` : ''} · {h.seconds}s</span>)}
         </div>}
         <PowerMeter />
         <div className={hud.guide} data-ui="guide">{'Short pull = precision · Long pull = power + sway · Esc = cancel · Right-drag / ← → = rotate · C = camera'}</div>
@@ -95,7 +95,7 @@ export function GameScreen({ hidden, backdrop = false, onCanvas }) {
               onClick={() => send(UiCommands.USE_ITEM, { index: slot.index })}>
               <span className={hud.sr}>{slot.label}</span>
               <span className={hud.slotKey} aria-hidden="true">{slot.index + 1}</span>
-              {slot.id && <Svg key={slot.id} markup={powerupIcon(slot.id)} className={hud.slotIcon} />}
+              {slot.id && <Svg key={slot.look || slot.id} markup={powerupIcon(slot.look || slot.id)} className={hud.slotIcon} />}
               {slot.id && <span className={hud.slotTip} aria-hidden="true"><b>{slot.name}</b>{slot.ability}</span>}
             </button>
           ))}

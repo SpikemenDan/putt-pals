@@ -7,7 +7,8 @@
  *
  * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier. The `loading` group
  * (loading screen, src/render/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field;
- * the `menu` group (main menu, src/ui/Landing.jsx) uses a multiplier, seconds, CSS px and degrees.
+ * the `menu` group (main menu, src/ui/Landing.jsx) uses a multiplier, seconds, CSS px and degrees. The `environment` group (VIS-E
+ * world atmosphere, src/render/atmosphere.js) holds multipliers for the Ares and Luna scenery.
  */
 
 /** Field spec: [dotted path, min, max, description]. Drives validation and docs/DISPLAY.md. */
@@ -37,6 +38,11 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['menu.stagger', 0, 0.3, 'Main menu: delay between each button dropping in, in seconds (0 brings them in together).'],
   ['menu.bob', 0, 8, 'Main menu: how far the big buttons bob up and down while idle, in CSS px (0 holds them still). Off under reduced motion.'],
   ['menu.tilt', 0, 8, 'Main menu: how far the buttons lean, alternating left and right, in degrees (0 keeps them straight).'],
+  ['environment.aresWind', 0, 2, 'Ares courses: strength of the wind scenery: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). Visual only.'],
+  ['environment.aresWindDensity', 0, 2, 'Ares courses: how many wind streaks and dust grains fill the air, as a multiplier of 260 streaks and 520 grains. Visual only.'],
+  ['environment.lunaDust', 0, 2, 'Luna courses: brightness of the floating dust motes (0 hides them). Visual only.'],
+  ['environment.lunaDustDensity', 0, 2, 'Luna courses: how many dust motes and sun particles fill the air, as a multiplier of 600 motes and 160 particles. Visual only.'],
+  ['environment.lunaSolar', 0, 2, 'Luna courses: strength of solar activity: the sun particles and the gold wash of each solar flare (0 hides them). Visual only.'],
 ]);
 
 /** Values the renderer used before they were parameterized. */
@@ -45,6 +51,7 @@ export const DEFAULT_DISPLAY = {
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
   loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2 },
   menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5 },
+  environment: { aresWind: 1, aresWindDensity: 1, lunaDust: 1, lunaDustDensity: 1, lunaSolar: 1 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

@@ -6,9 +6,10 @@
  * worlds and resolves their gravity from a validated tuning object, so the browser,
  * simulation callers, CLI and solver agree on the same numbers.
  *
- * `precipitation` says whether the rain/snow power-up may appear there (owner, 2026-11-11:
- * Ares and Luna leave it out of their pools; their wind, dust and solar activity are scenery).
- * Pools do not read this flag yet; VIS-E #166 wires it up.
+ * `precipitation` says whether rain and snow really fall there. Owner, 2026-11-12 (replacing 2026-11-11): every world offers
+ * the Precipitation power-up with the same slippery effect; where nothing falls it shows as that world's own weather, a Dust
+ * Storm on Ares and the Solar Wind on Luna (src/gameplay/world-weather.js, VIS-E #166). Ambient Ares wind and Luna dust and
+ * solar activity are scenery only (src/render/atmosphere.js).
  */
 
 import { TUNING } from './tuning.js';
@@ -22,6 +23,15 @@ export const WORLDS = Object.freeze([
 ]);
 
 export const WORLD_IDS = Object.freeze(WORLDS.map(world => world.id));
+
+/**
+ * The world a course is on (VIS-M4 mix and match): its `world` field when it names one, else Gaia, where every course ships today.
+ * A map's world sets its gravity, so choosing the next map in a tournament also chooses the planet, and every player derives the same
+ * gravity from the shared course data without any new network message.
+ */
+export function courseWorld(course) {
+  return isWorldId(course?.world) ? course.world : DEFAULT_WORLD;
+}
 
 /** True for a known world id. */
 export function isWorldId(id) {
