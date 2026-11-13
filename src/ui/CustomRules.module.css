@@ -22,8 +22,9 @@
 .label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--ink)}
 .row[data-changed] .label::after{content:'★';margin-left:5px;color:var(--pink-d)}
 .control{min-width:0}
-/* Value chip: semi-white with an ink outline (owner, 2026-11-13), right-aligned in its column so it never meets the slider. */
-.value{justify-self:end;max-width:100%;box-sizing:border-box;padding:3px 7px 2px;font:400 16px/1 var(--font);letter-spacing:.5px;white-space:nowrap;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px}
+/* Value chip: semi-white with an ink outline (owner, 2026-11-13), as wide as its column with the text centred, so every
+   chip lines up and the widest value (+0 strokes) fits without clipping or meeting the slider. */
+.value{justify-self:stretch;box-sizing:border-box;padding:4px 4px 3px;font:400 15px/1 var(--font);letter-spacing:.3px;text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px}
 .row[data-kind=select] .control,.row[data-kind=toggle] .control,.row[data-kind=number] .control{grid-column:2 / 4}
 .row[data-kind=select] .value,.row[data-kind=toggle] .value,.row[data-kind=number] .value{display:none}
 
