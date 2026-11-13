@@ -18,7 +18,7 @@ import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, p
 import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
-import { worldGravity } from '../shared/worlds.js';
+import { worldGravity, courseWorld } from '../shared/worlds.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -27,6 +27,9 @@ import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
 
 
+
+/** Modes the Solo steps may start directly (VIS-M4 #176); Putt Pong needs two players, so it is not one of them. */
+const SOLO_START_MODES = Object.freeze([GameModes.STANDARD, GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7, GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
 /** Per-tab room identity for each code, so a reload can resume the same seat. */
 const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
@@ -84,7 +87,8 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   };
 
   // ---------------------------------------------------------------- rooms
-  async function join({ multi, name, roomCode }) {
+  /** `start`: a solo mode from the Solo steps (VIS-M4); the room opens straight onto the level select in that mode. */
+  async function join({ multi, name, roomCode, start = null }) {
     const request = parseJoinRequest({ multi, name, roomCode });
     if (!request.ok) { alert(request.message); return; }
     if (room) leave(true);
@@ -105,6 +109,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, serverOwned: !!room.serverOwned, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
       roomStops.push(room.onSnapshot(onSnapshot), room.onPresence(onPresence), room.onStatus(onStatus));
       if (room.isHost) publish(true);
+      if (start && !multi) { room.command({ type: 'SET_MODE', mode: start }); room.command({ type: 'START_VOTING' }); }
     } catch (error) {
       if (disposed || controller.signal.aborted || generation !== joinGeneration) return;
       joining = null;
@@ -210,7 +215,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
       inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
-      gravity: previewGravity ?? worldGravity(),
+      gravity: previewGravity ?? worldGravity(courseWorld(definition)), // each map's planet sets its gravity (VIS-M4 mix and match)
     });
     if (room.serverOwned) {
       putt.player.strokes = ownState?.strokes ?? 0;
@@ -461,7 +466,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   function handle(command) {
     switch (command.type) {
       case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText }); break;
-      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name }); break;
+      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT:

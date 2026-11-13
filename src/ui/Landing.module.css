@@ -41,3 +41,31 @@
 
 @media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
 @media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
+
+/* Solo steps (VIS-M4 #176): one question per screen, with step dots; options are big comic buttons, Practice a smaller one. */
+.steps{display:flex;gap:6px;margin:6px 0 4px;padding:0;list-style:none}
+.steps li{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:#fff}
+.steps li[data-on]{background:var(--pink)}
+.question{margin:8px 0 6px;font:900 15px var(--font);letter-spacing:.4px;color:var(--ink)}
+.option{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin:0 0 8px;padding:calc(8px*var(--menu-scale)) 14px;text-align:left;background:#fff}
+.option span{font:400 calc(26px*var(--menu-scale))/1 var(--font);letter-spacing:1px;text-transform:uppercase}
+.option small{margin-top:2px;font:700 12px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
+.option:not(:disabled):hover{background:var(--yellow)}
+.option:disabled{opacity:.55}
+.lengths{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lengths .option{align-items:center;margin:0}
+.lengths .option span{font-size:calc(34px*var(--menu-scale))}
+.minor{margin:2px 0 0;padding:6px 14px;font-size:14px;background:var(--paper)}
+.hint{margin:8px 0 0;font-size:12px;color:var(--mut)}
+.summary{margin:6px 0 2px;padding:6px 10px;border:3px solid var(--ink);border-radius:10px;background:var(--yellow);font:900 14px var(--font);letter-spacing:.3px}
+
+/* Destination view (VIS-M4): the planet's name and the arrows sit at the bottom centre, over space; the panel keeps the Choose button. */
+.carousel{position:fixed;left:50%;bottom:clamp(18px,5vh,48px);translate:-50% 0;display:flex;align-items:center;gap:clamp(12px,3vw,36px);pointer-events:auto;animation:rise .45s ease-out both}
+.arrow{width:clamp(52px,6vw,68px);height:clamp(52px,6vw,68px);margin:0;padding:0;border-radius:50%;border-width:4px;font:400 clamp(38px,4.6vw,52px)/1 var(--font);background:var(--yellow);box-shadow:5px 5px 0 var(--ink)}
+.planetName{min-width:clamp(180px,22vw,280px);text-align:center;color:#fff}
+.planetName b{display:block;font:400 clamp(40px,5.4vw,72px)/1 var(--font);letter-spacing:3px;text-transform:uppercase;color:var(--yellow);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:5px 5px 0 var(--ink)}
+.planetName small{display:block;margin-top:6px;font:800 14px var(--pp-body,'Nunito',sans-serif);text-shadow:1px 1px 0 var(--ink),0 0 6px rgba(20,16,42,.8)}
+@keyframes rise{from{opacity:0;translate:-50% 30px}to{opacity:1;translate:-50% 0}}
+@media (prefers-reduced-motion:reduce){.carousel{animation:none}}
+.brand{transition:opacity .5s,translate .5s}
+.menu[data-space] .brand{opacity:0;translate:0 -24px}

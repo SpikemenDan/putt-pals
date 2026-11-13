@@ -112,10 +112,52 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(changed('satellites', 6).traffic.satellites, 6, 'loading.satellites sets the number of satellites');
     const reach = m => Math.hypot(...m.camera) - 100;
     assert.ok(Math.abs(reach(lbase) - 40) < 1e-6 && Math.abs(reach(changed('cameraAltitude', 1.2)) - 120) < 1e-6, 'loading.cameraAltitude sets how high the camera flies (40 units by default, inside the air)');
+    // Destination view (VIS-M4, the same scene in space): each `space` setting changes exactly its own measurement. One scene reads a
+    // live display object, as the dev tuner's does, so the settings change between measurements without rebuilding the planet.
+    {
+      const live = structuredClone(DEFAULT_DISPLAY), reset = () => Object.assign(live.space, DEFAULT_DISPLAY.space);
+      const dom = new JSDOM('<canvas></canvas>', { pretendToBeVisual: true });
+      dom.window.HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: (_, k) => (k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}), set: () => true });
+      const canvas = dom.window.document.querySelector('canvas');
+      canvas.getBoundingClientRect = () => ({ width: 1280, height: 720 });
+      const createWebGLRenderer = () => ({ render() {}, setPixelRatio() {}, getPixelRatio: () => 1, setSize() {}, setClearColor() {}, dispose() {}, capabilities: { getMaxAnisotropy: () => 1 } });
+      const scene = createPlanetScene({ THREE, canvas, display: live, random: mulberry32(9), planet: sharedPlanet, win: dom.window, createWebGLRenderer });
+      const run = seconds => { for (let i = 0; i < Math.round(seconds * 30); i++) scene.step(1 / 30); return scene.space; };
+      const fly = (target, seconds) => { scene.setView({ space: true, target }); return run(seconds); };
+      const fromGaia = s => Math.hypot(...s.camera);
+      scene.step(0.1);
+      assert.equal(scene.space.t, 0, 'the horizon view stays put until the menu asks for space');
+      const base = fly('gaia', 3);
+      assert.equal(base.t, 1, 'the camera reaches space');
+      live.space.distance = 2;
+      assert.ok(fromGaia(run(0.1)) > fromGaia(base) * 1.6, 'space.distance moves the camera further out');
+      reset(); run(0.1);
+      const orbitDelta = () => { const a = scene.space.orbit; return (run(2).orbit - a + 1) % 1; };
+      const slowOrbit = orbitDelta();
+      live.space.orbitSeconds = 20;
+      assert.ok(orbitDelta() > slowOrbit * 4, 'space.orbitSeconds sets how fast Luna orbits');
+      reset();
+      live.space.travelSeconds = 0.5;
+      assert.equal(fly('luna', 0.6).travel, 1, 'a short travelSeconds finishes the flight sooner');
+      reset(); fly('gaia', 4);
+      const half = fly('luna', 0.6);
+      assert.ok(half.travel < 1, 'space.travelSeconds sets the flight time');
+      assert.equal(half.fov, 32, 'the short Gaia-Luna trip keeps the lens');
+      fly('gaia', 4);
+      assert.ok(fly('ares', 1).fov > 36, 'space.aresZoom widens the lens on the long trip to Ares');
+      fly('gaia', 6);
+      live.space.aresZoom = 0;
+      assert.equal(fly('ares', 1).fov, 32, 'with space.aresZoom 0 the long trip is a plain glide');
+      reset();
+      assert.ok(run(0.1).nebula > 0, 'the nebula shows in space');
+      live.space.nebula = 0;
+      assert.equal(run(0.1).nebula, 0, 'space.nebula sets the nebula brightness');
+      scene.dispose(); dom.window.close();
+    }
     // loading.finishTime is checked in tests/ui.test.cjs, where the screen really closes after it, and so is the menu group
     // (VIS-M2), where each value lands on its own CSS variable on the real main menu.
     // The table covers every DISPLAY setting, so a new setting cannot be added without a reach check.
-    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cameraAltitude', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k), ...['buttonScale', 'stagger', 'bob', 'tilt'].map(k => 'menu.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
+    assert.deepEqual([...Object.keys(expectations), 'ball.visualScale', ...['spinSpeed', 'axisTilt', 'horizonHeight', 'cameraAltitude', 'cloudCover', 'cloudDrift', 'finishTime', 'atmosphere', 'atmosphereHeight', 'citySize', 'lunaSize', 'outlineWidth', 'planes', 'boats', 'satellites'].map(k => 'loading.' + k), ...['orbitSeconds', 'travelSeconds', 'aresZoom', 'nebula', 'distance'].map(k => 'space.' + k), ...['buttonScale', 'stagger', 'bob', 'tilt'].map(k => 'menu.' + k)].sort(), DISPLAY_FIELDS.map(f => f[0]).sort());
   });
 
   // ---- TUNING probes: [name, setting, value, code printing one number, expected default, expected with the override]

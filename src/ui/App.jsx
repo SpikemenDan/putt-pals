@@ -1,4 +1,5 @@
-import { UiContext, useView } from './context.js';
+import { useState } from 'react';
+import { createStageHandle, UiContext, useView } from './context.js';
 import { Banner } from './Banner.jsx';
 import { GameScreen } from './GameScreen.jsx';
 import { Landing } from './Landing.jsx';
@@ -48,8 +49,9 @@ function Screens({ onCanvas, initialName, initialRoomCode, initialView }) {
  * @param {Function} [props.createLoadingScene] Builds the 3D planet behind the menu and loading screen; without it only the CSS sky shows
  */
 export function PuttPalsUi({ store, dispatch, aim = null, onCanvas, initialName = '', initialRoomCode = '', initialView = 'home', display = DISPLAY, createLoadingScene = null, createAtlasScene = null }) {
+  const [stage] = useState(createStageHandle);
   return (
-    <UiContext.Provider value={{ store, dispatch, aim, display, createLoadingScene, createAtlasScene }}>
+    <UiContext.Provider value={{ store, dispatch, aim, display, createLoadingScene, createAtlasScene, stage }}>
       <Screens onCanvas={onCanvas} initialName={initialName} initialRoomCode={initialRoomCode} initialView={initialView} />
     </UiContext.Provider>
   );

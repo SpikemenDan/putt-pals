@@ -11,7 +11,7 @@ export const UiCommands = Object.freeze({
   ...InputCommands,
   /** { type, name, roomCode } — Join room (validate with parseJoinRequest). */
   JOIN: 'join',
-  /** { type, name } — Play solo. */
+  /** { type, name, mode?, world? } — Play solo. With a mode (from the Solo steps) the room opens straight onto the level select. */
   PLAY_SOLO: 'play-solo',
   /** { type } — Leave room (legacy closes the room and reloads). */
   LEAVE: 'leave',
