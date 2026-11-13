@@ -18,6 +18,7 @@ import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, p
 import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
+import { worldGravity } from '../shared/worlds.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -40,8 +41,9 @@ const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
  * @param {() => object} [options.createAudio] Audio seam (tests)
  * @param {typeof DISPLAY} [options.display] Presentation settings; development builds pass a live, tunable object
  * @param {(options: object) => object} [options.createTransport] Online transport seam (tests use the in-memory hub)
+ * @param {{active: boolean, gravity: number}|null} [options.worldPreview] Development only (src/devtools/world-preview.js): world gravity used in solo rooms; parties always use Gaia's shipped gravity
  */
-export function createApp({ soloHazards = false, root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket, display = DISPLAY }) {
+export function createApp({ worldPreview = null, soloHazards = false, root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket, display = DISPLAY }) {
   const clock = { now: () => win.performance.now(), setTimeout: (f, d) => win.setTimeout(f, d), clearTimeout: id => win.clearTimeout(id) };
   const data = createCourseData();
   const courses = createCourseInfo(data);
@@ -201,10 +203,14 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
     puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
+    // Every player must simulate the same gravity, so the development world preview applies to solo rooms only.
+    const previewGravity = worldPreview?.active && s.roster.length <= 1 ? worldPreview.gravity : null;
+    if (worldPreview?.active && previewGravity === null) toast('World gravity preview is off in party rooms: everyone plays Gaia gravity.');
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
       inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
+      gravity: previewGravity ?? worldGravity(),
     });
     if (room.serverOwned) {
       putt.player.strokes = ownState?.strokes ?? 0;
@@ -613,6 +619,13 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     grantItem(kind) {
       if (!putt || !room?.connected || putt.player.mode !== 'play' || !addToInventory(putt.player.inventory, kind)) return false;
       setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+      return true;
+    },
+    /** Development preview only (src/devtools/world-preview.js): rebuilds the current putt from its tee so a staged gravity applies. Returns whether a putt restarted. */
+    restartPutt() {
+      const s = room?.snapshot;
+      if (!putt || !s || s.phase !== SessionPhases.PLAY || activeRound !== s.roundNumber) return false;
+      startRound(s);
       return true;
     },
     get view() { return view; },

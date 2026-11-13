@@ -6,10 +6,14 @@ Units: distances in world units (ball radius 5), time in seconds, friction in 1/
 
 Traceability: every setting's units, how a change takes effect and the source files that read it are available with `npm run config:report -- tuning` (consumers are derived from the source, not listed by hand; see docs/DISPLAY.md, "Traceability"). All `TUNING` settings are read when the modules load, so a change needs a reload and a new match, and editing `src/shared/tuning.js` changes the simulation fingerprint (docs/GITHUB_WORKFLOW.md). The development panel shows these values read-only; it cannot edit them.
 
+Worlds (VIS-W #164): `src/shared/worlds.js` names Gaia, Ares and Luna and resolves each world's gravity from this file (`worldGravity(id)`): Gaia uses `gravity`, Ares and Luna use `worlds.<id>.gravity`. `SimulationEngine` takes a `gravity` option (default Gaia), the par solver solves at any world's gravity (`node tools/cli/main.mjs solve <map> <putt> --world luna`) and records it, and rolling friction does not depend on gravity, so flat putts roll the same on every world. The Ares and Luna values were chosen on 2026-11-11 and accepted by the owner after a playtest on 2026-11-12. For further tuning, on the dev server `?world` shows a world gravity box that stages a world and a gravity slider, validated, and applies it only when the putt restarts and only in solo rooms (parties always use Gaia's shipped gravity). It never changes these defaults; export its JSON to have chosen values made defaults. Matches do not yet carry a world, so normal play stays on Gaia until worlds have their own courses (VIS-G #165).
+
 | Field | Default | Allowed range | Effect |
 | --- | --- | --- | --- |
 | `ball.radius` | 5 | 1 to 50 | Ball radius. Collision and cup-fit geometry. |
-| `gravity` | 700 | 0 to 5000 | Vertical gravity, units/s^2; also drives slope acceleration. |
+| `gravity` | 700 | 0 to 5000 | Gaia (default world) vertical gravity, units/s^2; also drives slope acceleration. Ares and Luna use worlds.*.gravity. |
+| `worlds.ares.gravity` | 490 | 0 to 5000 | Ares vertical gravity, units/s^2 (VIS-W). Owner-accepted after playtest, 2026-11-12. |
+| `worlds.luna.gravity` | 315 | 0 to 5000 | Luna vertical gravity, units/s^2 (VIS-W). Owner-accepted after playtest, 2026-11-12. |
 | `shotPower` | 600 | 1 to 10000 | Launch speed at full charge (speed = charge * shotPower). |
 | `wallHeight` | 28 | 1 to 500 | Wall height; the ball clears walls above this z. |
 | `cup.defaultRadius` | 15 | 1 to 100 | Largest cup radius (also the default). |

@@ -47,22 +47,21 @@ const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const round = (n, d = 1) => +n.toFixed(d);
 
 /**
- * Gravity is a solver parameter so per-world runs (Gaia/Ares/Luna, #164) need no solver
- * rewrite. The shared simulation currently binds gravity once from src/shared/tuning.js, so only
- * the loaded value can be simulated; any other value is refused instead of silently solving the
- * wrong world. Injecting gravity into SimulationEngine is tracked with #164.
+ * Gravity is a solver parameter so per-world runs (Gaia/Ares/Luna, VIS-W #164) solve each world
+ * at its own value: every trial engine receives it through SimulationEngine's `gravity` option.
+ * Use worldGravity() from src/shared/worlds.js for a world's value.
  */
 export function assertWorldGravity(gravity) {
-  if (gravity !== TUNING.gravity) {
-    throw new Error(`Solver requested gravity ${gravity} but the loaded simulation uses ${TUNING.gravity}; per-world gravity injection is pending (#164)`);
+  if (typeof gravity !== 'number' || !Number.isFinite(gravity) || gravity <= 0) {
+    throw new Error(`Solver gravity must be a finite number > 0, got ${gravity}`);
   }
 }
 
 /** One stroke from a rest state; returns the resting position or the sink. */
-function createRunner(course, puttIndex, config, counter) {
+function createRunner(course, puttIndex, config, counter, gravity) {
   return (state, angle, power) => {
     if (++counter.trials > counter.budget) throw new BudgetExhausted('trial budget exhausted');
-    const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime });
+    const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime, gravity });
     try {
       const player = engine.addPlayer('s', 'Solver', 0, { x: state.x, y: state.y, z: state.z });
       engine.launch('s', angle, 1, Math.min(1, power) * SHOT_POWER);
@@ -121,7 +120,7 @@ export function distanceField(course, hole, cell = 10) {
 export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, full = false, config = PAR_SOLVER_CONFIG, budget } = {}) {
   assertWorldGravity(gravity);
   const counter = { trials: 0, budget: budget ?? (full ? config.fullBudgetTrials : config.budgetTrials) };
-  const run = createRunner(course, puttIndex, config, counter);
+  const run = createRunner(course, puttIndex, config, counter, gravity);
   const cup = [course.putts?.[puttIndex]?.hole ?? course.hole][0] ?? course.hole;
   const hole = Array.isArray(cup) ? cup : course.hole;
   const wpStep = full ? config.fullWaypointAngleStepDeg : config.waypointAngleStepDeg;
@@ -263,7 +262,7 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
   /** Independent replay: every stroke lands where recorded and the last one sinks, at each margin scale. */
   const verifyRoute = route => {
     let state = { x: route[0].from.x, y: route[0].from.y, z: 0 };
-    state = { ...state, z: createRunnerStartZ(course, puttIndex, config, state) };
+    state = { ...state, z: createRunnerStartZ(course, puttIndex, config, state, gravity) };
     for (let i = 0; i < route.length; i++) {
       const out = run(state, route[i].angle, route[i].power);
       if (i === route.length - 1) return out.sunk && robustSink(state, route[i].angle, route[i].power);
@@ -291,8 +290,8 @@ export function createParSolver(course, puttIndex, { gravity = TUNING.gravity, f
   return { plan, verifyRoute, marginOf, counter, hole };
 }
 
-function createRunnerStartZ(course, puttIndex, config, state) {
-  const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime });
+function createRunnerStartZ(course, puttIndex, config, state, gravity) {
+  const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime, gravity });
   try { return engine.addPlayer('s', 'Solver', 0, { x: state.x, y: state.y }).z; } finally { engine.dispose(); }
 }
 
@@ -303,7 +302,7 @@ function createRunnerStartZ(course, puttIndex, config, state) {
 export function solvePar(course, puttIndex, { gravity = TUNING.gravity, full = false, config = PAR_SOLVER_CONFIG, budget } = {}) {
   const solver = createParSolver(course, puttIndex, { gravity, full, config, budget });
   const start = (() => {
-    const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime });
+    const engine = new SimulationEngine(course, puttIndex, { hazardTime: config.hazardTime, gravity });
     try { const p = engine.addPlayer('s', 'Solver', 0); return { x: p.x, y: p.y, z: p.z }; } finally { engine.dispose(); }
   })();
   let status = 'none';
