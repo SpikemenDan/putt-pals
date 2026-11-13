@@ -3,7 +3,7 @@ import { CUSTOM_RULES, DEFAULT_RULES, RULE_CATEGORIES, changedRules, ruleValueTe
 import css from './CustomRules.module.css';
 
 /**
- * Typed whole-number entry (Maps to play). Blank means the rule's 0 ("use the lobby"). Text that is not a whole number
+ * Typed whole-number entry (Game length). Blank means the rule's 0 ("use the lobby"). Text that is not a whole number
  * in range stays in the box with a hint and is never passed on; a valid number is committed as it is typed.
  */
 function NumberEntry({ rule, value, onCommit }) {

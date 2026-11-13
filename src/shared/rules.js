@@ -47,7 +47,7 @@ export const CUSTOM_RULES = Object.freeze([
   toggle('powerups', 'match', 'Power-ups', 'Item boxes and power-ups. Off is pure mini golf.', true),
   select('holeTimer', 'match', 'Hole timer', 'Time allowed for each hole.',
     HOLE_TIMERS.map(s => ({ value: s, label: s === 0 ? 'Course' : s / 60 + ' min' })), 0),
-  number('maps', 'match', 'Maps to play', 'How many maps one game lasts. Leave it blank to use the lobby mode (1, 3, 5 or 7).', 0, MAX_SERIES_MAPS, 0,
+  number('maps', 'match', 'Game length', 'How many maps one game lasts. Leave it blank to use the lobby mode (1, 3, 5 or 7).', 0, MAX_SERIES_MAPS, 0,
     LONG_SERIES_MAPS, 'That many maps might make the game too long.'),
   slider('missedHolePenalty', 'match', 'Missed hole', 'Extra strokes on top of the maximum for a hole you miss.', 0, 5, 1, DEFAULT_TUNING.scoring.missedHolePenalty, 'strokes'),
 ]);
@@ -134,7 +134,7 @@ export const ruleGravity = (rules, worldId) => worldGravity(worldId, rulesTuning
 const MODE_MAPS = Object.freeze({ standard: 1, tournament_3: 3, tournament_5: 5, tournament_7: 7 });
 
 /**
- * Maps in one game for a lobby mode under a rule set: the Maps to play rule when it is set (standard and tournament
+ * Maps in one game for a lobby mode under a rule set: the Game length rule when it is set (standard and tournament
  * modes only), otherwise the mode's own length. Practice and Putt Pong are always one map.
  */
 export function seriesMaps(mode, rules) {

@@ -21,7 +21,7 @@ export const ITEM_NAMES = Object.freeze(Object.fromEntries(POWERUP_CATALOG.map(e
 const isTournament = mode => typeof mode === 'string' && mode.startsWith('tournament_');
 /** Maps in the series: 3/5/7 for tournaments, otherwise 1. */
 export const seriesOf = mode => (isTournament(mode) ? Number(mode.slice('tournament_'.length)) : 1);
-/** Maps in the room's game: the mode's length, or the Custom rules' Maps to play (VIS-U). More than one is a series. */
+/** Maps in the room's game: the mode's length, or the Custom rules' Game length (VIS-U). More than one is a series. */
 const roomSeries = room => seriesMaps(room.mode, room.rules);
 const pad2 = n => String(n).padStart(2, '0');
 

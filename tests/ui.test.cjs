@@ -219,7 +219,7 @@ function fakeClock() {
     await click([...row('holeTimer').querySelectorAll('[role=radio]')].find(b => b.textContent === '5 min'));
     assert.equal(summary(), '4 rules changed');
     assert.deepEqual(JSON.parse(dom.window.localStorage.getItem('puttplanet.customRules')), { ...DEFAULT_RULES, lunaGravity: 60, aimWobble: 'off', powerups: false, holeTimer: 300 }, 'the draft is remembered locally');
-    // Maps to play: a typed entry; blank is the lobby mode, above 10 warns, out of range is refused
+    // Game length: a typed entry; blank is the lobby mode, above 10 warns, out of range is refused
     const mapsBox = row('maps').querySelector('input');
     const note = () => row('maps').querySelector('[data-ui=rule-maps-note]').textContent;
     assert.equal(mapsBox.value, '');
@@ -240,7 +240,7 @@ function fakeClock() {
     assert.equal(row('maps').querySelector('output').textContent, 'Lobby', 'blank goes back to the lobby mode');
     assert.equal(note(), '');
     await slide(mapsBox, '11');
-    await click(row('maps').querySelector('button[aria-label="Reset Maps to play"]'));
+    await click(row('maps').querySelector('button[aria-label="Reset Game length"]'));
     assert.equal(mapsBox.value, '', 'reset clears the entry');
     await click(row('holeTimer').querySelector('button[aria-label="Reset Hole timer"]'));
     assert.equal(row('holeTimer').querySelector('[aria-checked=true]').textContent, 'Course', 'per-rule reset restores the standard value');

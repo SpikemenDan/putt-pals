@@ -15,7 +15,7 @@ const SOLO_MODES = Object.freeze([GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
 /**
  * Power-up rules for a session.
  * @param {{mode: string, rosterSize?: number, powerups?: boolean, maps?: number}} session
- *   maps: maps in the game (Custom rules Maps to play, VIS-U); a multi-map game carries its inventory like a tournament.
+ *   maps: maps in the game (Custom rules Game length, VIS-U); a multi-map game carries its inventory like a tournament.
  *   powerups=false is the No Power-Ups mode (GM1 supplies the flag): no boxes spawn.
  * @returns {{spawn: boolean, boxes: boolean, solo: boolean, carryover: boolean, pool: object[]}}
  *   boxes: whether `?` blocks exist at all; false in the No Power-Ups mode, where they are hidden.

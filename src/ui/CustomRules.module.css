@@ -20,7 +20,7 @@
 .slider::-moz-range-thumb{width:16px;height:16px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
 .slider:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
 
-/* Typed number entry (Maps to play) with a hint or long-game warning under it. */
+/* Typed number entry (Game length) with a hint or long-game warning under it. */
 .row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
 .entry{width:72px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;border-width:3px;border-radius:8px;text-align:center}
 .entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}

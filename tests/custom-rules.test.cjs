@@ -70,14 +70,14 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(rules.ruleValueText('maps', 1), '1 map');
   assert.equal(rules.ruleValueText('maps', 12), '12 maps');
 
-  // ---- Maps to play: blank (0) keeps the lobby mode's length; a number overrides standard and tournament modes
+  // ---- Game length: blank (0) keeps the lobby mode's length; a number overrides standard and tournament modes
   assert.equal(rules.MAX_SERIES_MAPS, 20);
   assert.equal(rules.LONG_SERIES_MAPS, 10);
   assert.equal(rules.validRules({ ...STD, maps: 20 }), true);
   assert.deepEqual(['standard', 'tournament_3', 'tournament_5', 'tournament_7', 'practice', 'putt_practice', 'pong'].map(m => rules.seriesMaps(m, STD)), [1, 3, 5, 7, 1, 1, 1]);
   assert.deepEqual(['standard', 'tournament_3', 'practice', 'pong'].map(m => rules.seriesMaps(m, { ...STD, maps: 12 })), [12, 12, 1, 1]);
   assert.equal(rules.seriesMaps('standard', { ...STD, maps: 99 }), 1, 'invalid rules fall back to the mode length');
-  assert.equal(rules.rulesTuning({ ...STD, maps: 4 }).gravity, 700, 'Maps to play changes no physics');
+  assert.equal(rules.rulesTuning({ ...STD, maps: 4 }).gravity, 700, 'Game length changes no physics');
 
   // ---- rules become tuning: shipped Gaia 700, Ares 490, Luna 315, shot power 600, spread 0.002 + 0.14 p^2.6
   const custom = { ...STD, gaiaGravity: 150, aresGravity: 50, lunaGravity: 200, shotPower: 50, aimWobble: 'off', missedHolePenalty: 5 };
@@ -155,7 +155,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(lobby.send('SET_POWERUPS', { enabled: true }, 'host'), true);
   assert.equal(lobby.state().rules.powerups, true);
 
-  // a Maps to play game runs that many maps, then ends (Standard mode alone is one map)
+  // a Game length game runs that many maps, then ends (Standard mode alone is one map)
   const series = open({ rules: { ...STD, maps: 2 } });
   assert.equal(series.send('START_VOTING'), true);
   for (let map = 0; map < 2; map++) {
