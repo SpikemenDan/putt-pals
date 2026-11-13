@@ -2,7 +2,7 @@
 import { GameModes } from '../../shared/session.js';
 import { MAX_PLAYERS, MAX_DEPLOYABLES, MAX_TIMEOUT_SECONDS, MIN_TIMEOUT_SECONDS, RECONNECT_GRACE_PERIOD_MS, STARTER_COURSE_INDICES } from '../../shared/constants.js';
 import { isColorIndex } from '../../shared/colors.js';
-import { DEFAULT_RULES, validRules } from '../../shared/rules.js';
+import { DEFAULT_RULES, MAX_SERIES_MAPS, validRules } from '../../shared/rules.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 import { validDeployable, validDeployCommand } from '../../gameplay/deployables.js';
@@ -123,7 +123,7 @@ export function validSessionContext(c) {
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
     || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && STARTER_COURSE_INDICES.includes(v))
-    || !Array.isArray(c.completedMaps) || c.completedMaps.length > 9 || !c.completedMaps.every(n => index(n,22))
+    || !Array.isArray(c.completedMaps) || c.completedMaps.length > MAX_SERIES_MAPS || !c.completedMaps.every(n => index(n,22))
     || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
   return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
     && Array.isArray(c.last.winners) && c.last.winners.length <= MAX_PLAYERS && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));

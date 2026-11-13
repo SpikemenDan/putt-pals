@@ -120,6 +120,7 @@ validated tuning from a rule set:
 | Aim wobble | Off, Low, Normal, High | Normal | `aim.spreadBase` and `aim.spreadGain` times 0, 0.5, 1 or 1.6 |
 | Power-ups | On or Off | On | the room's `powerups` flag (No Power-Ups) |
 | Hole timer | Course, 2, 3, 5 or 10 min | Course | each putt's time limit (Course keeps the course's own limit) |
+| Maps to play | blank (lobby mode) or 1 to 20, typed; the editor warns above 10 | blank | maps in one game for Standard and Tournament modes (`seriesMaps`); a multi-map game carries its inventory like a tournament |
 | Missed hole | 0 to 5 strokes | 2 | `scoring.missedHolePenalty` |
 
 A room fixes its rules when it is created (Play solo, or the first player into a Party room code); they are

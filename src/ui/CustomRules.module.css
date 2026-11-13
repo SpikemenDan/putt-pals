@@ -20,6 +20,13 @@
 .slider::-moz-range-thumb{width:16px;height:16px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
 .slider:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
 
+/* Typed number entry (Maps to play) with a hint or long-game warning under it. */
+.row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.entry{width:72px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;border-width:3px;border-radius:8px;text-align:center}
+.entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}
+.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:var(--pink-d)}
+.note:empty{display:none}
+
 /* Selectors: a row of small chips; the chosen one is filled. */
 .choices{display:flex;flex-wrap:wrap;gap:4px}
 .choice{margin:0;padding:3px 8px;font-size:13px;border-width:2px;border-radius:8px;background:#fff;box-shadow:2px 2px 0 var(--ink)}

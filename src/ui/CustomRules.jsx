@@ -1,5 +1,29 @@
+import { useEffect, useState } from 'react';
 import { CUSTOM_RULES, DEFAULT_RULES, RULE_CATEGORIES, changedRules, ruleValueText, validRuleValue } from '../shared/rules.js';
 import css from './CustomRules.module.css';
+
+/**
+ * Typed whole-number entry (Maps to play). Blank means the rule's 0 ("use the lobby"). Text that is not a whole number
+ * in range stays in the box with a hint and is never passed on; a valid number is committed as it is typed.
+ */
+function NumberEntry({ rule, value, onCommit }) {
+  const shown = value === 0 ? '' : String(value);
+  const [text, setText] = useState(shown);
+  useEffect(() => { setText(t => (t.trim() === '' ? 0 : Number(t)) === value ? t : shown); }, [value, shown]);
+  const parsed = text.trim() === '' ? 0 : /^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
+  const bad = !validRuleValue(rule.id, parsed);
+  return (
+    <>
+      <input id={'rule-' + rule.id} className={css.entry} type="text" inputMode="numeric" autoComplete="off" maxLength={3} placeholder="Lobby"
+        value={text} aria-invalid={bad || undefined} aria-describedby={'rule-' + rule.id + '-note'}
+        onChange={e => { setText(e.target.value); const t = e.target.value.trim(); const n = t === '' ? 0 : /^\d+$/.test(t) ? Number(t) : NaN; if (validRuleValue(rule.id, n)) onCommit(n); }}
+        onBlur={() => { if (bad) setText(shown); }} />
+      <p id={'rule-' + rule.id + '-note'} className={css.note} role="status" data-ui={'rule-' + rule.id + '-note'}>
+        {bad ? 'Enter a whole number from 1 to ' + rule.max + ', or leave it blank.' : value > rule.warnAbove ? '⚠ ' + rule.warning : ''}
+      </p>
+    </>
+  );
+}
 
 /**
  * Custom rules editor (VIS-U #168), layout A: every rule in one list, grouped by category, with its value shown,
@@ -17,6 +41,7 @@ export function CustomRules({ rules, onChange, onPlaySolo, onHostParty, busy = f
       <input id={name} type="range" className={css.slider} min={rule.min} max={rule.max} step={rule.step} value={value}
         aria-valuetext={ruleValueText(rule.id, value)} onChange={e => set(rule.id, Number(e.target.value))} />
     );
+    if (rule.kind === 'number') return <NumberEntry rule={rule} value={value} onCommit={v => set(rule.id, v)} />;
     if (rule.kind === 'select') return (
       <div className={css.choices} role="radiogroup" aria-labelledby={name + '-label'}>
         {rule.options.map(o => (

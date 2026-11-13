@@ -19,11 +19,12 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const { createCourseDocument } = await load('src/courses/index.js');
   const { GameModes } = await load('src/shared/session.js');
   const { validClientFrame } = await load('src/network/contracts/server-room.js');
-  const { lobbyView } = await load('src/ui/model.js');
+  const { lobbyView, votingView, createCourseInfo } = await load('src/ui/model.js');
+  const { createCourseData } = await load('src/courses/index.js');
   const { DEFAULT_RULES: STD } = rules;
 
   // ---- the rule set and its standard values
-  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, missedHolePenalty: 2 });
+  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 0, missedHolePenalty: 2 });
   assert.ok(Object.isFrozen(STD));
   assert.deepEqual(rules.RULE_CATEGORIES.map(c => c.id), ['worlds', 'shots', 'match']);
   assert.ok(rules.CUSTOM_RULES.every(r => rules.RULE_CATEGORIES.some(c => c.id === r.category)), 'every rule has a category (for a tabbed layout later)');
@@ -44,6 +45,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
     { ...STD, gaiaGravity: Infinity }, { ...STD, lunaGravity: NaN },
     { ...STD, aimWobble: 'wild' }, { ...STD, powerups: 1 }, { ...STD, holeTimer: 60 }, { ...STD, holeTimer: '120' },
     { ...STD, missedHolePenalty: -1 }, { ...STD, missedHolePenalty: 6 },
+    { ...STD, maps: 21 }, { ...STD, maps: -1 }, { ...STD, maps: 2.5 }, { ...STD, maps: '12' },
     { ...STD, __proto__: null, toString: 1 },
   ];
   for (const value of bad) assert.equal(rules.validRules(value), false, 'rejects ' + JSON.stringify(value));
@@ -64,6 +66,18 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(rules.ruleValueText('holeTimer', 180), '3 min');
   assert.equal(rules.ruleValueText('powerups', false), 'Off');
   assert.equal(rules.ruleValueText('aimWobble', 'high'), 'High');
+  assert.equal(rules.ruleValueText('maps', 0), 'Lobby');
+  assert.equal(rules.ruleValueText('maps', 1), '1 map');
+  assert.equal(rules.ruleValueText('maps', 12), '12 maps');
+
+  // ---- Maps to play: blank (0) keeps the lobby mode's length; a number overrides standard and tournament modes
+  assert.equal(rules.MAX_SERIES_MAPS, 20);
+  assert.equal(rules.LONG_SERIES_MAPS, 10);
+  assert.equal(rules.validRules({ ...STD, maps: 20 }), true);
+  assert.deepEqual(['standard', 'tournament_3', 'tournament_5', 'tournament_7', 'practice', 'putt_practice', 'pong'].map(m => rules.seriesMaps(m, STD)), [1, 3, 5, 7, 1, 1, 1]);
+  assert.deepEqual(['standard', 'tournament_3', 'practice', 'pong'].map(m => rules.seriesMaps(m, { ...STD, maps: 12 })), [12, 12, 1, 1]);
+  assert.equal(rules.seriesMaps('standard', { ...STD, maps: 99 }), 1, 'invalid rules fall back to the mode length');
+  assert.equal(rules.rulesTuning({ ...STD, maps: 4 }).gravity, 700, 'Maps to play changes no physics');
 
   // ---- rules become tuning: shipped Gaia 700, Ares 490, Luna 315, shot power 600, spread 0.002 + 0.14 p^2.6
   const custom = { ...STD, gaiaGravity: 150, aresGravity: 50, lunaGravity: 200, shotPower: 50, aimWobble: 'off', missedHolePenalty: 5 };
@@ -141,6 +155,23 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(lobby.send('SET_POWERUPS', { enabled: true }, 'host'), true);
   assert.equal(lobby.state().rules.powerups, true);
 
+  // a Maps to play game runs that many maps, then ends (Standard mode alone is one map)
+  const series = open({ rules: { ...STD, maps: 2 } });
+  assert.equal(series.send('START_VOTING'), true);
+  for (let map = 0; map < 2; map++) {
+    assert.equal(series.state().phase, 'select', 'map ' + (map + 1) + ' is chosen');
+    series.send('CAST_VOTE', { mapIndex: [0, 8][map] });
+    for (let guard = 0; guard < 40 && series.state().phase !== 'results'; guard++) {
+      series.clock.increment(16000);
+      const s = series.state();
+      if (s.phase === 'play' && !s.players.host.done) series.send('REPORT_SCORE', { roundNumber: s.roundNumber, puttIndex: s.puttIndex, strokes: 2, timedOut: false });
+    }
+    assert.equal(series.state().phase, 'results');
+    assert.equal(series.state().completedMaps.length, map + 1);
+    series.send('RETURN_TO_LOBBY');
+  }
+  assert.equal(series.state().phase, 'lobby', 'after two maps the game is over');
+
   // ---- server hello carries rules (validated)
   const hello = r => ({ version: 7, type: 'hello', roomCode: 'abc', name: 'Ann', color: null, resume: null, rules: r });
   assert.equal(validClientFrame(hello(null)), true);
@@ -151,6 +182,12 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const lobbyState = open({ rules: { ...STD, lunaGravity: 60, aimWobble: 'off', powerups: false } }).state();
   const text = lobbyView(lobbyState, { isHost: true, id: 'host' }, 0, []).status;
   assert.match(text, /Power-ups are off\. Custom rules: Luna gravity 60%, Aim wobble Off\.$/);
+  const info = createCourseInfo(createCourseData());
+  const twelve = open({ rules: { ...STD, maps: 12 } });
+  twelve.send('START_VOTING');
+  assert.match(votingView(twelve.state(), { isHost: true, id: 'host' }, 0, info).status, /^Map 1\/12 · /, 'voting counts the custom number of maps');
+  const one = open(); one.send('START_VOTING');
+  assert.doesNotMatch(votingView(one.state(), { isHost: true, id: 'host' }, 0, info).status, /^Map /, 'a standard single map shows no count');
   assert.doesNotMatch(lobbyView(open().state(), { isHost: true, id: 'host' }, 0, []).status, /Custom rules/, 'standard rooms say nothing extra');
 
   console.log('custom rules tests passed (validation, tuning, aim, launch, session, hello, lobby status)');

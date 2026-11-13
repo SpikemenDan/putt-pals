@@ -5,7 +5,7 @@ import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COU
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { calculateTimeoutScore, calculateMissedHoleScore } from '../shared/scoring.js';
 import { TUNING } from '../shared/tuning.js';
-import { DEFAULT_RULES, holeLimitSeconds, validateRules } from '../shared/rules.js';
+import { DEFAULT_RULES, holeLimitSeconds, seriesMaps, validateRules } from '../shared/rules.js';
 import { createCourseDocument, validateCourseDocument } from '../courses/document.js';
 import { createPongSession } from './pong.js';
 
@@ -21,7 +21,6 @@ const validCount = n => Number.isSafeInteger(n) && n >= 0;
 const validIdentity = e => typeof e.playerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(e.playerId);
 const validName = n => typeof n === 'string' && n.trim().length > 0 && n.length <= MAX_PLAYER_NAME_LENGTH;
 const validToken = t => typeof t === 'string' && /^[a-zA-Z0-9_-]{8,128}$/.test(t);
-const seriesLength = mode => ({ tournament_3: 3, tournament_5: 5, tournament_7: 7 })[mode] ?? 1;
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
@@ -174,7 +173,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
         return participant(c, e) && (e.playerId === c.pong.activePlayerId || ids(c).length === 1);
       },
       donePong: ({ context: c }) => c.mode === GameModes.PONG && c.pong?.isGameOver === true,
-      moreMaps: ({ context: c, event: e }) => host(c, e) && c.completedMaps.length < seriesLength(c.mode),
+      moreMaps: ({ context: c, event: e }) => host(c, e) && c.completedMaps.length < seriesMaps(c.mode, c.rules),
       practiceHost: ({ context: c, event: e }) => host(c, e) && practice(c),
       canExpirePlayer: ({ context: c, event: e }) => serverOwned && typeof e.playerId === 'string' && own(c.players, e.playerId) && !c.players[e.playerId].connected,
       canAbandonRoom: ({ context: c }) => serverOwned && active(c).length === 0,

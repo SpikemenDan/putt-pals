@@ -25,7 +25,13 @@ export const AIM_WOBBLE = Object.freeze({ off: 0, low: 0.5, normal: 1, high: 1.6
 
 const slider = (id, category, label, help, min, max, step, value, unit) => Object.freeze({ id, category, kind: 'slider', label, help, min, max, step, default: value, unit });
 const select = (id, category, label, help, options, value) => Object.freeze({ id, category, kind: 'select', label, help, options: Object.freeze(options.map(o => Object.freeze(o))), default: value });
+const number = (id, category, label, help, min, max, value, warnAbove, warning) => Object.freeze({ id, category, kind: 'number', label, help, min, max, step: 1, default: value, warnAbove, warning });
 const toggle = (id, category, label, help, value) => Object.freeze({ id, category, kind: 'toggle', label, help, default: value });
+
+/** Most maps one game may last (the room contracts bound completed maps by this). */
+export const MAX_SERIES_MAPS = 20;
+/** Above this many maps the editor warns that the game may run long (owner, 2026-11-13). */
+export const LONG_SERIES_MAPS = 10;
 
 /** Hole timer choices: 0 keeps each putt's own course limit; the rest are fixed limits inside the room contract's range. */
 const HOLE_TIMERS = [0, 120, 180, 300, 600].filter(s => s === 0 || (s >= MIN_TIMEOUT_SECONDS && s <= MAX_TIMEOUT_SECONDS));
@@ -41,6 +47,8 @@ export const CUSTOM_RULES = Object.freeze([
   toggle('powerups', 'match', 'Power-ups', 'Item boxes and power-ups. Off is pure mini golf.', true),
   select('holeTimer', 'match', 'Hole timer', 'Time allowed for each hole.',
     HOLE_TIMERS.map(s => ({ value: s, label: s === 0 ? 'Course' : s / 60 + ' min' })), 0),
+  number('maps', 'match', 'Maps to play', 'How many maps one game lasts. Leave it blank to use the lobby mode (1, 3, 5 or 7).', 0, MAX_SERIES_MAPS, 0,
+    LONG_SERIES_MAPS, 'That many maps might make the game too long.'),
   slider('missedHolePenalty', 'match', 'Missed hole', 'Extra strokes on top of the maximum for a hole you miss.', 0, 5, 1, DEFAULT_TUNING.scoring.missedHolePenalty, 'strokes'),
 ]);
 
@@ -97,6 +105,7 @@ export function ruleValueText(id, value) {
   const r = spec[id];
   if (r.kind === 'toggle') return value ? 'On' : 'Off';
   if (r.kind === 'select') return r.options.find(o => o.value === value)?.label ?? String(value);
+  if (r.kind === 'number') return value === 0 ? 'Lobby' : value + (value === 1 ? ' map' : ' maps');
   return r.unit === '%' ? value + '%' : '+' + value + ' ' + (value === 1 ? 'stroke' : 'strokes');
 }
 
@@ -121,6 +130,17 @@ export function rulesTuning(rules) {
 
 /** Gravity (units/s^2) for a world under a rule set. */
 export const ruleGravity = (rules, worldId) => worldGravity(worldId, rulesTuning(rules));
+
+const MODE_MAPS = Object.freeze({ standard: 1, tournament_3: 3, tournament_5: 5, tournament_7: 7 });
+
+/**
+ * Maps in one game for a lobby mode under a rule set: the Maps to play rule when it is set (standard and tournament
+ * modes only), otherwise the mode's own length. Practice and Putt Pong are always one map.
+ */
+export function seriesMaps(mode, rules) {
+  if (!Object.hasOwn(MODE_MAPS, mode)) return 1;
+  return validRules(rules) && rules.maps > 0 ? rules.maps : MODE_MAPS[mode];
+}
 
 /** Time limit (seconds) for a putt under a rule set: the fixed hole timer, or the putt's own course limit. */
 export const holeLimitSeconds = (rules, courseLimitSeconds) => rules.holeTimer || courseLimitSeconds;

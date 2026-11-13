@@ -19,7 +19,7 @@ import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { worldGravity } from '../shared/worlds.js';
-import { AIM_WOBBLE, DEFAULT_RULES, rulesTuning, validateRules, validRules } from '../shared/rules.js';
+import { AIM_WOBBLE, DEFAULT_RULES, rulesTuning, seriesMaps, validateRules, validRules } from '../shared/rules.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -206,7 +206,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
     const definition = data.definitions[s.mapIndex];
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false, maps: seriesMaps(s.mode, s.rules) });
     // The room's Custom rules (VIS-U): fixed at room creation and the same for every participant.
     const ruleTuning = rulesTuning(validRules(s.rules) ? s.rules : DEFAULT_RULES);
     aimWobble = AIM_WOBBLE[validRules(s.rules) ? s.rules.aimWobble : 'normal'];
