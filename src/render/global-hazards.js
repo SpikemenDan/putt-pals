@@ -81,6 +81,14 @@ const GRAIN_FRAGMENT = `
     if (r > 1.0) discard;
     gl_FragColor = vec4(r > 0.62 ? ${INK} : mix(uColor, vec3(1.0), step(r, 0.25) * 0.35), uAlpha);
   }`;
+const GLOW_FRAGMENT = `
+  uniform vec3 uColor; uniform float uAlpha; varying vec2 vUv; varying float vSeed;
+  void main() {
+    float y = vUv.y * 0.5 + 0.5, x = abs(vUv.x);
+    float core = (1.0 - smoothstep(0.0, 1.0, x)) * smoothstep(0.0, 0.25, y) * (1.0 - y * 0.6); // bright head, fading tail, no ink: charged particles glow
+    if (core < 0.02) discard;
+    gl_FragColor = vec4(mix(uColor, vec3(1.0), core * 0.6), uAlpha * core);
+  }`;
 const RIBBON_VERTEX = `
   attribute vec3 tangent; attribute float edge, width, alpha;
   varying float vEdge, vAlpha;
@@ -181,7 +189,7 @@ export function createGlobalHazardLayer({ THREE, scene }) {
     rain: [RAIN_COUNT, 11, DROP_FRAGMENT, 420, 1.9, 7, SLANT, 0, 0x4aa3ff],
     snow: [SNOW_COUNT, 23, FLAKE_FRAGMENT, 34, 2.6, 1, SLANT * 0.6, 5, 0xffffff],
     dust: [480, 31, GRAIN_FRAGMENT, 60, 2.6, 1, 2.4, 9, 0xc9774e], // many grains blown almost flat across the course
-    solar: [RAIN_COUNT, 47, DROP_FRAGMENT, 700, 1.2, 9, 0.9, 0, 0xffe39a], // fast slanting gold streaks from the sun
+    solar: [260, 47, GLOW_FRAGMENT, 700, 2.2, 10, 0.9, 0, 0xffd35a], // fast slanting glowing gold streaks from the sun
   };
   function precipitation(look) {
     const [n, seed, fragmentShader, fall, size, stretch, slant, sway, color] = LOOKS[look] || LOOKS.rain, rand = seededRandom(seed);

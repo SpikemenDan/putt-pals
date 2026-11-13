@@ -165,7 +165,7 @@ const { JSDOM } = require('jsdom');
   const rainRecord = { id: 'h1', kind: 'rain', owner: 'p1', startTime: 0, endTime: 30, seed: 7 };
   const hazardFrame = () => view.frame({ now: 5000, dt: 1 / 60, hazardTime: 5, local, globalHazards: [rainRecord] });
   view.setCourse(course, 0);
-  for (const [world, color] of [[null, 0x4aa3ff], ['ares', 0xc9774e], ['luna', 0xffe39a]]) {
+  for (const [world, color] of [[null, 0x4aa3ff], ['ares', 0xc9774e], ['luna', 0xffd35a]]) {
     r.setSceneryWorld(world); hazardFrame();
     const colors = shownColors();
     assert.ok(colors.has(color) && colors.size === 1, `${world || 'gaia'} draws its own precipitation look (${[...colors].map(c => c.toString(16))})`);
