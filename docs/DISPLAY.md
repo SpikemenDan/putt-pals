@@ -63,7 +63,7 @@ npm run config:report -- display --overrides exported-overrides.json   # validat
 
 Units and the restart rule are the only things written by hand (`config-meta.js`); `tests/config-meta.test.cjs` fails if a setting has none, if a setting is read by nothing (the one known exception is the superseded `TUNING.aim.arrowMaxLength`), or if the derivation stops following a supported pattern. `tests/config-reach.test.cjs` checks that every DISPLAY setting changes its real consumers and that representative TUNING settings reach the simulation, input and effects code.
 
-The Ares and Luna atmosphere (VIS-E #166) at the `environment.*` defaults above was tried in the local `?world` preview and approved by the owner on 2026-11-13 ("Looks good").
+The Ares and Luna atmosphere (VIS-E #166) at the `environment.*` defaults above was tried in the local `?world` preview and approved by the owner on 2026-11-13 ("Looks good"). The Dust Storm (Ares) and Snow (Frost Hollow) power-up looks were approved the same day.
 
 The traceability view (units, live notes, readers, the differences list and the read-only simulation section) was tried in the local preview and approved by the owner on 2026-11-03.
 
