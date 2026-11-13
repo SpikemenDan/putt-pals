@@ -234,7 +234,7 @@ async function main() {
   assert.equal(roomOne.id, sameRoom.id, 'same environment and room code must map to the same Durable Object');
   assert.notEqual(roomOne.id, otherRoom.id, 'different room codes must use isolated Durable Objects');
 
-  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v6:room123');
+  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v7:room123');
   assert.notEqual(roomObjectName('development', 'room123'), roomObjectName('preview', 'room123'));
   assert.notEqual(roomObjectName('preview', 'room123'), roomObjectName('production', 'room123'));
   assert.throws(() => roomObjectName('staging', 'room123'), /Unknown room environment/);
