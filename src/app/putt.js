@@ -32,10 +32,11 @@ import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECON
  * @param {string[]} [options.inventory=[]] Power-ups carried into this putt (see gameplay powerupPolicy / startingInventory)
  * @param {{spawn:boolean, pool:object[]}} [options.powerups] Box rules from gameplay powerupPolicy; omitted: boxes award nothing
  * @param {() => number} [options.now] Local monotonic ms (effect flashes, sunk → waiting)
+ * @param {number} [options.gravity] World gravity in units/s^2 (VIS-W); omitted: Gaia's TUNING.gravity
  */
-export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now() }) {
+export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now(), gravity = TUNING.gravity }) {
   const hazardTime = () => Math.max(0, (roomNow() - roundStartTime) / 1000);
-  const engine = new SimulationEngine(definition, puttIndex, { hazardTime });
+  const engine = new SimulationEngine(definition, puttIndex, { hazardTime, gravity });
   const course = engine.course;
   const player = engine.addPlayer(id, name);
   player.mode = playing ? 'play' : 'spectator';

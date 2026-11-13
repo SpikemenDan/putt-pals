@@ -58,8 +58,16 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
           await act(async () => { setter.call(input, value); input.dispatchEvent(new win.w.Event('input', { bubbles: true })); });
         },
         async select(value) { const s = doc.querySelector('[data-ui=room-lobby] select'); await act(async () => { s.value = value; s.dispatchEvent(new win.w.Event('change', { bubbles: true })); }); },
-        async solo() { await c.fill(doc.querySelector('[data-ui=landing] input'), name); await c.click('Play solo'); await until(() => c.shown('[data-ui=room-lobby]'), 2000, name + ' lobby'); },
+        /** Main menu (VIS-M2): open Solo, Party, Custom or Settings, stepping back first from another sub-menu. */
+        async menu(id) {
+          const view = doc.querySelector('[data-ui=landing]')?.dataset.view;
+          if (view === id) return;
+          if (view && view !== 'home') await c.click(doc.querySelector('[data-ui=menu-back]'));
+          await c.click(doc.querySelector(`[data-menu=${id}]`));
+        },
+        async solo() { await c.menu('solo'); await c.fill(doc.querySelector('[data-ui=landing] input'), name); await c.click('Play solo'); await until(() => c.shown('[data-ui=room-lobby]'), 2000, name + ' lobby'); },
         async join(code) {
+          await c.menu('party');
           const [n, r] = doc.querySelectorAll('[data-ui=landing] input');
           await c.fill(n, name); await c.fill(r, code); await c.click('Join room');
           await until(() => c.shown('[data-ui=room-lobby]') || c.shown('[data-ui=map-select]') || c.shown('[data-ui=game]'), 3000, name + ' joined');
@@ -95,6 +103,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   await scenario('cosmetics (F1): the picked style is saved locally, restored on reload and junk storage falls back to defaults', async () => {
     const W = world();
     const first = await W.client('Pat');
+    await first.menu('settings');
     const selects = [...first.doc.querySelectorAll('[data-ui=landing] [data-ui=cosmetics] select')];
     assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti']);
     await act(async () => { selects[0].value = 'frost'; selects[0].dispatchEvent(new first.win.w.Event('change', { bubbles: true })); });
@@ -102,8 +111,10 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const saved = first.win.w.localStorage.getItem('pp_cosmetics');
     assert.deepEqual(JSON.parse(saved), { ball: 'frost', trail: 'classic', celebration: 'gold' });
     const reloaded = await W.client('Pat2', { local: { pp_cosmetics: saved } });
+    await reloaded.menu('settings');
     assert.deepEqual([...reloaded.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['frost', 'classic', 'gold']);
     const junk = await W.client('Pat3', { local: { pp_cosmetics: '{"ball":"<img src=x>","trail":"comet"}' } });
+    await junk.menu('settings');
     assert.deepEqual([...junk.doc.querySelectorAll('[data-ui=cosmetics] select')].map(s => s.value), ['classic', 'comet', 'confetti'], 'unknown ids fall back, valid ones are kept');
     await first.dispose(); await reloaded.dispose(); await junk.dispose();
   });
@@ -132,6 +143,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(!types(state({ moving: true }), state({ x: 200 })).includes('ring'), 'a teleport or reset is not a rest');
     const W = world();
     const ana = await W.client('Ana');
+    await ana.menu('party');
     const before = ana.audio.log.length;
     ana.button('Join room').disabled = true;
     await ana.click(ana.button('Join room'));
@@ -596,6 +608,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.run(100);
     assert.equal(ana.snapshot.players[benId].connected, false);
     const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=resume', storage: { 'putt-pals:server-resume:resume': stored } });
+    assert.equal(reloaded.$('[data-ui=landing]').dataset.view, 'party', 'a #room= link opens the menu on Party');
     const [n, r] = reloaded.doc.querySelectorAll('[data-ui=landing] input');
     assert.equal(n.value, 'Ben', 'the name is prefilled after reload'); assert.equal(r.value, 'resume');
     await reloaded.click('Join room');
@@ -617,6 +630,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(all[0].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · You are the host');
     assert.equal(all[7].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · Waiting for host');
     const late = await W.client('Ivy');
+    await late.menu('party');
     const [n, r] = late.doc.querySelectorAll('[data-ui=landing] input');
     await late.fill(n, 'Ivy'); await late.fill(r, 'crowd'); await late.click('Join room');
     await W.run(200);
@@ -632,6 +646,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal([...all[3].$('[data-ui=scoreboard]').children].length, 9, 'eight players on the scoreboard');
     assert.ok(all[0].app.renderer.remoteCount >= 7, 'the host renders seven guests');
     const offline = await W.client('Joe', { memoryTransport: false });
+    await offline.menu('party');
     const [n2, r2] = offline.doc.querySelectorAll('[data-ui=landing] input');
     await offline.fill(n2, 'Joe'); await offline.fill(r2, 'crowd'); await offline.click('Join room');
     assert.match(offline.text('[data-ui=connect-error]'), /Could not reach the room service/);

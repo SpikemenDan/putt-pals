@@ -33,6 +33,7 @@ test('preview maintenance: backend failure is actionable and solo remains availa
     page.on('websocket', ws => sockets.push(ws.url()));
     page.on('pageerror', error => runtimeErrors.push(error.message));
     const player = await openApp(page, 'Ana');
+    await player.menu('party');
     await player.ui('landing').getByLabel('Your name').fill('Ana');
     await player.ui('landing').getByLabel(/room code/i).fill('maintenance');
     await player.button('Join room').click();
@@ -43,6 +44,7 @@ test('preview maintenance: backend failure is actionable and solo remains availa
     const roomSocketUrl = worker.origin.replace('http:', 'ws:') + '/api/rooms/maintenance/socket';
     expect(sockets.length).toBeGreaterThan(0);
     expect(sockets.every(url => url === roomSocketUrl)).toBe(true);
+    await player.menu('solo');
     await player.button('Play solo').click();
     await expect(player.ui('room-lobby')).toBeVisible();
     expect(await page.evaluate(() => window.__roomSocketAttempts)).toBe(1);

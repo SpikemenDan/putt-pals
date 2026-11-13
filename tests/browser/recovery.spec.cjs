@@ -37,6 +37,7 @@ test('recovery: a player reloading mid-map resumes the same seat and scores', as
   expect((await ana.snapshot()).players[id].scores).toEqual([1]);
 
   await ben.page.reload();
+  await ben.menu('party');
   await expect(ben.ui('landing').getByLabel('Your name')).toHaveValue('Ben');
   await expect(ben.ui('landing').getByLabel(/room code/i)).toHaveValue(code.toLowerCase());
   await ben.button('Join room').click();

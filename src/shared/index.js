@@ -7,6 +7,7 @@
 export * from './constants.js';
 export * from './colors.js';
 export * from './tuning.js';
+export * from './worlds.js';
 export * from './display.js';
 export * from './coords.js';
 export * from './scoring.js';

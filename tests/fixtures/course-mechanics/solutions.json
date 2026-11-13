@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "method": "SV1 verification of explicit mechanic proof shots; nine perturbations; stripped counterfactual",
-  "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
+  "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
   "results": [
     {
       "kind": "wedge",
@@ -22,8 +22,8 @@
         "puttId": "g1g-wedge-putt",
         "gravity": 700,
         "courseSha256": "1178ea4bef3f23b8f18b2496dafbf2f631b3b3c745ad2227d55ca0907b93e22b",
-        "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
-        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
+        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
@@ -46,8 +46,8 @@
         "puttId": "g1g-bouncer-putt",
         "gravity": 700,
         "courseSha256": "8c9f5bbc7dddb9b3e611b8178f9a069c282f3702c8052ecf35a3097f0d0a9cf3",
-        "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
-        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
+        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
@@ -70,8 +70,8 @@
         "puttId": "g1g-fan-putt",
         "gravity": 700,
         "courseSha256": "e99df9f3ea3cd5810f4936b2a768821f7c111f9c382843f94da264da5c19e3e1",
-        "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
-        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
+        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
@@ -94,8 +94,8 @@
         "puttId": "g1g-vortex-putt",
         "gravity": 700,
         "courseSha256": "e9f54cc6705c9277664ba0b9131cce3cb9c961d80d679478a583a61333204c48",
-        "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
-        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
+        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
@@ -118,8 +118,8 @@
         "puttId": "g1g-portal-putt",
         "gravity": 700,
         "courseSha256": "d36eb2e75a99a11b1d79f8def1405e6887f21a98f3defc266980e70da3d7dcbe",
-        "simulationSha256": "280b2bd1656e1debf5df632337e4db70f3f45bb94c57814cb534e512531e1971",
-        "configurationSha256": "959c0061ed0472fce7dda9b4063db3f9714b51fcf1b40ca5161d1f6ce25af07b",
+        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     }

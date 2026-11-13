@@ -2,7 +2,7 @@
 
 Sizes and looks that change what a player sees live in `src/shared/display.js` (`DISPLAY`, frozen, validated at load). Nothing here is read by the simulation, so a client may override these without desyncing a room or invalidating recorded difficulty. Anything that changes how the ball moves belongs in `TUNING` (docs/TUNING.md) instead. `createDisplay(overrides)` builds a validated variant; invalid values and unknown keys (typos) throw and are never partially applied.
 
-Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). The `loading` group is read by the planet behind the main menu and loading screen (`src/ui/Loading.jsx`, `src/render/planet-scene.js`); `mountUi(root, { display })` passes the live object, and the dev panel's "Loading screen preview" button (bottom left) shows that screen without a room. Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
+Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). The `loading` group is read by the planet behind the main menu and loading screen (`src/ui/Loading.jsx`, `src/render/planet-scene.js`); `mountUi(root, { display })` passes the live object, and the dev panel's "Loading screen preview" button (top left) shows that screen without a room. The `menu` group is read by the main menu (`src/ui/Landing.jsx`, VIS-M2), which copies it onto CSS variables, every frame while a live display object is in use. Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
 
 `aim.arrowMaxLength` here is the authoritative arrow length. The older TUNING `aim.arrowMaxLength` (300) is read by nothing; removing it changes the simulation fingerprint and is a separate follow-up.
 
@@ -31,6 +31,10 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.planes` | 3 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
 | `loading.boats` | 9 | 0 to 20 | Loading screen: boats on the sea (whole boats; 0 hides them). |
 | `loading.satellites` | 2 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |
+| `menu.buttonScale` | 1 | 0.7 to 1.5 | Main menu: size of the Solo, Party, Custom and Settings buttons, multiplier. |
+| `menu.stagger` | 0.07 | 0 to 0.3 | Main menu: seconds between each button dropping in (0 brings them in together). |
+| `menu.bob` | 2 | 0 to 8 | Main menu: idle bob of the big buttons, CSS px (0 holds them still; off under reduced motion). |
+| `menu.tilt` | 1.5 | 0 to 8 | Main menu: alternating lean of the buttons, degrees (0 keeps them straight). |
 
 ## Development tuning panel
 
