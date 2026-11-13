@@ -42,4 +42,4 @@
 @media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
 @media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
 .inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);background:#fff}
-.panel[data-menu-view=custom]{width:min(92vw,540px)}
+.panel[data-menu-view=custom]{width:min(92vw,580px)}

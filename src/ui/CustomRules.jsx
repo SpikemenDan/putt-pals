@@ -41,6 +41,7 @@ export function CustomRules({ rules, onChange, onPlaySolo, onHostParty, busy = f
     const name = 'rule-' + rule.id;
     if (rule.kind === 'slider') return (
       <input id={name} type="range" className={css.slider} min={rule.min} max={rule.max} step={rule.step} value={value}
+        style={{ '--fill': ((value - rule.min) / (rule.max - rule.min)) * 100 + '%' }}
         aria-valuetext={ruleValueText(rule.id, value)} onChange={e => set(rule.id, Number(e.target.value))} />
     );
     if (rule.kind === 'number') return <NumberEntry rule={rule} value={value} onCommit={v => set(rule.id, v)} />;
@@ -60,9 +61,9 @@ export function CustomRules({ rules, onChange, onPlaySolo, onHostParty, busy = f
 
   return (
     <div className={css.editor} data-ui="custom-rules">
-      <p className={css.summary} data-ui="rules-changed">{changed.length ? changed.length + (changed.length === 1 ? ' rule changed' : ' rules changed') : 'Standard rules'}</p>
+      <p className={css.summary} data-ui="rules-changed" data-count={changed.length}>{changed.length ? changed.length + (changed.length === 1 ? ' rule changed' : ' rules changed') : 'Standard rules'}</p>
       {RULE_CATEGORIES.map(category => (
-        <section key={category.id} className={css.group} aria-label={category.label}>
+        <section key={category.id} className={css.group} data-category={category.id} aria-label={category.label}>
           <h3 className={css.groupTitle}>{category.label}</h3>
           {CUSTOM_RULES.filter(r => r.category === category.id).map(rule => {
             const isChanged = rules[rule.id] !== DEFAULT_RULES[rule.id];
