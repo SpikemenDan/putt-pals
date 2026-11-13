@@ -88,7 +88,7 @@ void main(){
   vec2 along=tail.xy-head.xy;
   vec2 side=normalize(vec2(-along.y,along.x)+vec2(1e-5,0.));
   vec4 mv=mix(head,tail,corner.x);
-  mv.xy+=side*corner.y*width*max(1.,-head.z/260.)*(1.-corner.x*.7); // wider far away, so streaks still read from the overhead views
+  mv.xy+=side*corner.y*width*clamp(-head.z/260.,1.,2.2)*(1.-corner.x*.7); // wider far away, so streaks still read from the overhead views
   gl_Position=projectionMatrix*mv;
   vec3 e=abs(rel)/volume;
   alpha=alphaScale*(1.-smoothstep(.28,.5,max(e.x,max(e.y*.8,e.z))))*(1.-corner.x)*smoothstep(30.,90.,-head.z); // no giant bands right at the lens

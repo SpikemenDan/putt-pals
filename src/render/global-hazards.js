@@ -132,6 +132,12 @@ const SHEEN_FRAGMENT = `
     float sp = 0.0;
     if (uSnow > 0.5) { vec2 g = floor(vWorld * 0.12); float r = fract(sin(dot(g, vec2(12.9898, 78.233))) * 43758.5453); vec2 cell = fract(vWorld * 0.12) - 0.5; sp = step(0.82, r) * step(length(cell), 0.16) * (0.5 + 0.5 * sin(uTime * 3.0 + r * 40.0)); }
     float a = uAlpha * (0.16 + gloss * 0.34 + sp * 0.45);
+    if (uSnow > 1.5) { // dust (Ares): a matte coat in drifting ripples, no shine
+      float ripple = 0.5 + 0.5 * sin(vWorld.x * 0.05 + sin(vWorld.y * 0.02) * 3.0 - uTime * 1.4);
+      float grain = fract(sin(dot(floor(vWorld * 0.5), vec2(12.9898, 78.233))) * 43758.5453);
+      gl_FragColor = vec4(uColor * (0.85 + 0.25 * grain), uAlpha * (0.34 + 0.22 * ripple));
+      return;
+    }
     gl_FragColor = vec4(mix(uColor, vec3(1.0), gloss * 0.8 + sp), a);
   }`;
 
@@ -174,7 +180,7 @@ export function createGlobalHazardLayer({ THREE, scene }) {
   const LOOKS = {
     rain: [RAIN_COUNT, 11, DROP_FRAGMENT, 420, 1.9, 7, SLANT, 0, 0x4aa3ff],
     snow: [SNOW_COUNT, 23, FLAKE_FRAGMENT, 34, 2.6, 1, SLANT * 0.6, 5, 0xffffff],
-    dust: [RAIN_COUNT, 31, GRAIN_FRAGMENT, 60, 1.5, 1, 2.4, 9, 0xc9774e], // blown almost flat across the course
+    dust: [480, 31, GRAIN_FRAGMENT, 60, 2.6, 1, 2.4, 9, 0xc9774e], // many grains blown almost flat across the course
     solar: [RAIN_COUNT, 47, DROP_FRAGMENT, 700, 1.2, 9, 0.9, 0, 0xffe39a], // fast slanting gold streaks from the sun
   };
   function precipitation(look) {
@@ -300,7 +306,7 @@ export function createGlobalHazardLayer({ THREE, scene }) {
     }
     const u = sheen.material.uniforms;
     const sparkle = look === 'snow' || look === 'solar'; // frost glints, or charged dust shimmering
-    u.uTime.value = hazardTime; u.uSnow.value = sparkle ? 1 : 0; u.uAlpha.value = fade(h, hazardTime) * (look === 'dust' ? 1.3 : 1);
+    u.uTime.value = hazardTime; u.uSnow.value = look === 'dust' ? 2 : sparkle ? 1 : 0; u.uAlpha.value = fade(h, hazardTime);
     u.uColor.value.setHex({ snow: 0xcfeeff, dust: 0xd98a5a, solar: 0xfff0b0 }[look] ?? 0x9fd2ff);
     for (const m of sheen.meshes) m.visible = true;
   }
