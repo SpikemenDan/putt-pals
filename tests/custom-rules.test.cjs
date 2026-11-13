@@ -24,7 +24,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const { DEFAULT_RULES: STD } = rules;
 
   // ---- the rule set and its standard values
-  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 0, missedHolePenalty: 2 });
+  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 1, missedHolePenalty: 2 });
   assert.ok(Object.isFrozen(STD));
   assert.deepEqual(rules.RULE_CATEGORIES.map(c => c.id), ['worlds', 'shots', 'match']);
   assert.ok(rules.CUSTOM_RULES.every(r => rules.RULE_CATEGORIES.some(c => c.id === r.category)), 'every rule has a category (for a tabbed layout later)');
@@ -45,7 +45,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
     { ...STD, gaiaGravity: Infinity }, { ...STD, lunaGravity: NaN },
     { ...STD, aimWobble: 'wild' }, { ...STD, powerups: 1 }, { ...STD, holeTimer: 60 }, { ...STD, holeTimer: '120' },
     { ...STD, missedHolePenalty: -1 }, { ...STD, missedHolePenalty: 6 },
-    { ...STD, maps: 21 }, { ...STD, maps: -1 }, { ...STD, maps: 2.5 }, { ...STD, maps: '12' },
+    { ...STD, maps: 21 }, { ...STD, maps: 0 }, { ...STD, maps: -1 }, { ...STD, maps: 2.5 }, { ...STD, maps: '12' },
     { ...STD, __proto__: null, toString: 1 },
   ];
   for (const value of bad) assert.equal(rules.validRules(value), false, 'rejects ' + JSON.stringify(value));
@@ -66,16 +66,17 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(rules.ruleValueText('holeTimer', 180), '3 min');
   assert.equal(rules.ruleValueText('powerups', false), 'Off');
   assert.equal(rules.ruleValueText('aimWobble', 'high'), 'High');
-  assert.equal(rules.ruleValueText('maps', 0), 'Lobby');
-  assert.equal(rules.ruleValueText('maps', 1), '1 map');
-  assert.equal(rules.ruleValueText('maps', 12), '12 maps');
+  assert.equal(rules.ruleValueText('maps', 1), '1 Map');
+  assert.equal(rules.ruleValueText('maps', 2), '2 Maps');
+  assert.equal(rules.ruleValueText('maps', 12), '12 Maps');
 
-  // ---- Game length: blank (0) keeps the lobby mode's length; a number overrides standard and tournament modes
+  // ---- Game length: 1 (standard) keeps the lobby mode's length; more overrides standard and tournament modes
   assert.equal(rules.MAX_SERIES_MAPS, 20);
   assert.equal(rules.LONG_SERIES_MAPS, 10);
   assert.equal(rules.validRules({ ...STD, maps: 20 }), true);
   assert.deepEqual(['standard', 'tournament_3', 'tournament_5', 'tournament_7', 'practice', 'putt_practice', 'pong'].map(m => rules.seriesMaps(m, STD)), [1, 3, 5, 7, 1, 1, 1]);
   assert.deepEqual(['standard', 'tournament_3', 'practice', 'pong'].map(m => rules.seriesMaps(m, { ...STD, maps: 12 })), [12, 12, 1, 1]);
+  assert.deepEqual(['standard', 'tournament_5'].map(m => rules.seriesMaps(m, { ...STD, maps: 1 })), [1, 5], 'the standard 1 leaves a lobby tournament alone');
   assert.equal(rules.seriesMaps('standard', { ...STD, maps: 99 }), 1, 'invalid rules fall back to the mode length');
   assert.equal(rules.rulesTuning({ ...STD, maps: 4 }).gravity, 700, 'Game length changes no physics');
 

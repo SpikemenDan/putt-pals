@@ -219,29 +219,33 @@ function fakeClock() {
     await click([...row('holeTimer').querySelectorAll('[role=radio]')].find(b => b.textContent === '5 min'));
     assert.equal(summary(), '4 rules changed');
     assert.deepEqual(JSON.parse(dom.window.localStorage.getItem('puttplanet.customRules')), { ...DEFAULT_RULES, lunaGravity: 60, aimWobble: 'off', powerups: false, holeTimer: 300 }, 'the draft is remembered locally');
-    // Game length: a typed entry; blank is the lobby mode, above 10 warns, out of range is refused
+    // Game length: a typed entry starting at 1 Map; above 10 warns, out of range or blank is refused
     const mapsBox = row('maps').querySelector('input');
     const note = () => row('maps').querySelector('[data-ui=rule-maps-note]').textContent;
-    assert.equal(mapsBox.value, '');
-    assert.equal(row('maps').querySelector('output').textContent, 'Lobby');
+    assert.equal(mapsBox.value, '1');
+    assert.equal(row('maps').querySelector('output').textContent, '1 Map');
+    await slide(mapsBox, '2');
+    assert.equal(row('maps').querySelector('output').textContent, '2 Maps');
     await slide(mapsBox, '6');
-    assert.equal(row('maps').querySelector('output').textContent, '6 maps');
+    assert.equal(row('maps').querySelector('output').textContent, '6 Maps');
     assert.equal(note(), '', 'no warning up to 10 maps');
     await slide(mapsBox, '12');
-    assert.equal(row('maps').querySelector('output').textContent, '12 maps');
+    assert.equal(row('maps').querySelector('output').textContent, '12 Maps');
     assert.match(note(), /might make the game too long/, 'more than 10 maps warns');
     await slide(mapsBox, '25');
     assert.match(note(), /whole number from 1 to 20/);
     assert.equal(mapsBox.getAttribute('aria-invalid'), 'true');
-    assert.equal(row('maps').querySelector('output').textContent, '12 maps', 'an out-of-range entry is not applied');
-    await slide(mapsBox, 'x');
-    assert.equal(row('maps').querySelector('output').textContent, '12 maps');
-    await slide(mapsBox, '');
-    assert.equal(row('maps').querySelector('output').textContent, 'Lobby', 'blank goes back to the lobby mode');
-    assert.equal(note(), '');
-    await slide(mapsBox, '11');
+    assert.equal(row('maps').querySelector('output').textContent, '12 Maps', 'an out-of-range entry is not applied');
+    for (const junk of ['x', '', '0']) {
+      await slide(mapsBox, junk);
+      assert.equal(row('maps').querySelector('output').textContent, '12 Maps', JSON.stringify(junk) + ' is not applied');
+    }
+    await act(async () => { mapsBox.dispatchEvent(new dom.window.FocusEvent('blur')); mapsBox.dispatchEvent(new dom.window.FocusEvent('focusout', { bubbles: true })); });
+    assert.equal(mapsBox.value, '12', 'leaving the box restores the current value');
     await click(row('maps').querySelector('button[aria-label="Reset Game length"]'));
-    assert.equal(mapsBox.value, '', 'reset clears the entry');
+    assert.equal(mapsBox.value, '1', 'reset goes back to 1');
+    assert.equal(row('maps').querySelector('output').textContent, '1 Map');
+    assert.equal(note(), '');
     await click(row('holeTimer').querySelector('button[aria-label="Reset Hole timer"]'));
     assert.equal(row('holeTimer').querySelector('[aria-checked=true]').textContent, 'Course', 'per-rule reset restores the standard value');
     assert.equal(summary(), '3 rules changed');

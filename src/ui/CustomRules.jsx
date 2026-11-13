@@ -3,23 +3,24 @@ import { CUSTOM_RULES, DEFAULT_RULES, RULE_CATEGORIES, changedRules, ruleValueTe
 import css from './CustomRules.module.css';
 
 /**
- * Typed whole-number entry (Game length). Blank means the rule's 0 ("use the lobby"). Text that is not a whole number
- * in range stays in the box with a hint and is never passed on; a valid number is committed as it is typed.
+ * Typed whole-number entry (Game length). Text that is not a whole number in range (including blank) stays in the box
+ * with a hint and is never passed on, and goes back to the current value on blur; a valid number is committed as typed.
  */
 function NumberEntry({ rule, value, onCommit }) {
-  const shown = value === 0 ? '' : String(value);
+  const shown = String(value);
   const [text, setText] = useState(shown);
-  useEffect(() => { setText(t => (t.trim() === '' ? 0 : Number(t)) === value ? t : shown); }, [value, shown]);
-  const parsed = text.trim() === '' ? 0 : /^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
+  const toNumber = t => (/^\d+$/.test(t.trim()) ? Number(t.trim()) : NaN);
+  useEffect(() => { setText(t => (toNumber(t) === value ? t : shown)); }, [value, shown]);
+  const parsed = toNumber(text);
   const bad = !validRuleValue(rule.id, parsed);
   return (
     <>
-      <input id={'rule-' + rule.id} className={css.entry} type="text" inputMode="numeric" autoComplete="off" maxLength={3} placeholder="Lobby"
+      <input id={'rule-' + rule.id} className={css.entry} type="text" inputMode="numeric" autoComplete="off" maxLength={3}
         value={text} aria-invalid={bad || undefined} aria-describedby={'rule-' + rule.id + '-note'}
-        onChange={e => { setText(e.target.value); const t = e.target.value.trim(); const n = t === '' ? 0 : /^\d+$/.test(t) ? Number(t) : NaN; if (validRuleValue(rule.id, n)) onCommit(n); }}
+        onChange={e => { setText(e.target.value); const n = toNumber(e.target.value); if (validRuleValue(rule.id, n)) onCommit(n); }}
         onBlur={() => { if (bad) setText(shown); }} />
       <p id={'rule-' + rule.id + '-note'} className={css.note} role="status" data-ui={'rule-' + rule.id + '-note'}>
-        {bad ? 'Enter a whole number from 1 to ' + rule.max + ', or leave it blank.' : value > rule.warnAbove ? '⚠ ' + rule.warning : ''}
+        {bad ? 'Enter a whole number from ' + rule.min + ' to ' + rule.max + '.' : value > rule.warnAbove ? '⚠ ' + rule.warning : ''}
       </p>
     </>
   );
