@@ -227,7 +227,7 @@ function fakeClock() {
     // Practice kinds
     await click(inSteps('Practice'));
     assert.equal(step(), 'mode:practice');
-    assert.deepEqual(labels(), ['Whole map', 'One putt']);
+    assert.deepEqual(labels(), ['Whole map', 'One putt', 'Putt Pong'], 'Pong practice lives under Solo > Practice (owner, 2026-11-11)');
     await click(steps().querySelector('[data-ui=menu-back]'));
     assert.equal(step(), 'mode');
 
@@ -290,6 +290,7 @@ function fakeClock() {
       [['Tournament', '7 maps'], 'tournament_7', 'Tournament · 7 maps on Gaia'],
       [['Practice', 'Whole map'], 'practice', 'Practice · whole map on Gaia'],
       [['Practice', 'One putt'], 'putt_practice', 'Practice · one putt on Gaia'],
+      [['Practice', 'Putt Pong'], 'pong', 'Practice · Putt Pong on Gaia'],
     ];
     for (const [path, mode, summary] of expected) {
       for (const label of path) await click(inSteps(label));

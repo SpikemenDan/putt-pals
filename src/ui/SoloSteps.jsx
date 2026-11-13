@@ -17,6 +17,7 @@ export const SOLO_MODES = Object.freeze({
   [GameModes.TOURNAMENT_7]: 'Tournament · 7 maps',
   [GameModes.PRACTICE]: 'Practice · whole map',
   [GameModes.PUTT_PRACTICE]: 'Practice · one putt',
+  [GameModes.PONG]: 'Practice · Putt Pong',
 });
 
 const STEPS = ['mode', 'world', 'ready'];
@@ -89,6 +90,7 @@ export function SoloSteps({ name, onName, colorField, connecting, send, onExit, 
         <p className={menu.question}>What do you want to practise?</p>
         {option('Whole map', 'Play a map with no timer or score', () => choose(GameModes.PRACTICE))}
         {option('One putt', 'Replay a single hole as often as you like', () => choose(GameModes.PUTT_PRACTICE))}
+        {option('Putt Pong', 'Practise the 1v1 cup game on your own', () => choose(GameModes.PONG))}
       </>}
 
       {step === 'world' && (() => {

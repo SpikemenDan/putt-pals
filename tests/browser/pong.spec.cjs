@@ -5,16 +5,8 @@ const { pickMap } = require('./support/maps.cjs');
 
 test('putt pong solo flow: select Putt Pong mode, start match, verify 3D racks and HUD tracker', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
-  // Solo's steps have no Putt Pong choice (it is a 1v1 mode), so a one-player party room reaches the lobby selector.
-  await ana.join('PS' + Date.now().toString(36).slice(-4).toUpperCase());
-  await expect(ana.ui('room-lobby')).toBeVisible({ timeout: 30_000 });
-
-  // Select Putt Pong mode from the dropdown
-  await ana.ui('room-lobby').locator('select').selectOption('pong');
-
-  // Start the game
-  await ana.button('Start Game').click();
-  await expect(ana.ui('map-select')).toBeVisible({ timeout: 15_000 });
+  // Solo > Practice > Putt Pong (owner, 2026-11-11), in the local solo room
+  await ana.solo('pong');
   await pickMap(ana.page);
 
   // Wait for game view

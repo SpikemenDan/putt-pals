@@ -28,8 +28,8 @@ import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
 
 
 
-/** Modes the Solo steps may start directly (VIS-M4 #176); Putt Pong needs two players, so it is not one of them. */
-const SOLO_START_MODES = Object.freeze([GameModes.STANDARD, GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7, GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
+/** Modes the Solo steps may start directly (VIS-M4 #176). Putt Pong here is solo practice (owner, 2026-11-11: Pong practice under Solo > Practice). */
+const SOLO_START_MODES = Object.freeze([GameModes.STANDARD, GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7, GameModes.PRACTICE, GameModes.PUTT_PRACTICE, GameModes.PONG]);
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
 /** Per-tab room identity for each code, so a reload can resume the same seat. */
 const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
