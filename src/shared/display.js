@@ -39,9 +39,9 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['menu.bob', 0, 8, 'Main menu: how far the big buttons bob up and down while idle, in CSS px (0 holds them still). Off under reduced motion.'],
   ['menu.tilt', 0, 8, 'Main menu: how far the buttons lean, alternating left and right, in degrees (0 keeps them straight).'],
   ['environment.aresWind', 0, 2, 'Ares courses: strength of the wind scenery: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). Visual only.'],
-  ['environment.aresWindDensity', 0, 2, 'Ares courses: how many wind streaks and dust grains fill the air, as a multiplier of 260 streaks and 520 grains. Visual only.'],
+  ['environment.aresWindDensity', 0, 2, 'Ares courses: how many wind streaks and dust grains fill the air, as a multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). Visual only.'],
   ['environment.lunaDust', 0, 2, 'Luna courses: brightness of the floating dust motes (0 hides them). Visual only.'],
-  ['environment.lunaDustDensity', 0, 2, 'Luna courses: how many dust motes and sun particles fill the air, as a multiplier of 600 motes and 160 particles. Visual only.'],
+  ['environment.lunaDustDensity', 0, 2, 'Luna courses: how many dust motes and sun particles fill the air, as a multiplier of 2400 motes and 600 particles (plus 420 and 60 close around the camera). Visual only.'],
   ['environment.lunaSolar', 0, 2, 'Luna courses: strength of solar activity: the sun particles and the gold wash of each solar flare (0 hides them). Visual only.'],
 ]);
 

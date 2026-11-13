@@ -136,12 +136,12 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     // environment (VIS-E #166): strength and density reach the Ares and Luna scenery, and only their own world's.
     const env = (values, world) => atmosphereMeasure(createDisplay({ environment: values }), world);
     const ares = env({}, 'ares'), luna = env({}, 'luna');
-    assert.ok(ares.aresStreaks === 260 && ares.aresDust === 520 && ares.wash > 0 && ares.lunaDust === 0, 'an Ares course draws wind by default');
-    assert.ok(luna.lunaDust === 600 && luna.lunaSolar === 160 && luna.wash > 0 && luna.aresStreaks === 0, 'a Luna course draws dust and solar activity by default');
+    assert.ok(ares.aresStreaks === 1100 && ares.aresDust === 2400 && ares.wash > 0 && ares.lunaDust === 0, 'an Ares course draws wind by default');
+    assert.ok(luna.lunaDust === 2400 && luna.lunaSolar === 600 && luna.wash > 0 && luna.aresStreaks === 0, 'a Luna course draws dust and solar activity by default');
     assert.ok(env({ aresWind: 2 }, 'ares').wash > ares.wash && env({ aresWind: 0 }, 'ares').aresStreaks === 0, 'environment.aresWind sets the wind strength');
-    assert.ok(env({ aresWindDensity: 0.5 }, 'ares').aresStreaks === 130 && env({ aresWindDensity: 0.5 }, 'ares').aresDust === 260, 'environment.aresWindDensity sets the streak and grain count');
-    assert.ok(env({ lunaDust: 0 }, 'luna').lunaDust === 0 && env({ lunaDust: 0 }, 'luna').lunaSolar === 160, 'environment.lunaDust hides the motes and leaves the sun particles');
-    assert.ok(env({ lunaDustDensity: 2 }, 'luna').lunaDust === 1200 && env({ lunaDustDensity: 2 }, 'luna').lunaSolar === 320, 'environment.lunaDustDensity sets the mote and particle count');
+    assert.ok(env({ aresWindDensity: 0.5 }, 'ares').aresStreaks === 550 && env({ aresWindDensity: 0.5 }, 'ares').aresDust === 1200, 'environment.aresWindDensity sets the streak and grain count');
+    assert.ok(env({ lunaDust: 0 }, 'luna').lunaDust === 0 && env({ lunaDust: 0 }, 'luna').lunaSolar === 600, 'environment.lunaDust hides the motes and leaves the sun particles');
+    assert.ok(env({ lunaDustDensity: 2 }, 'luna').lunaDust === 4800 && env({ lunaDustDensity: 2 }, 'luna').lunaSolar === 1200, 'environment.lunaDustDensity sets the mote and particle count');
     assert.ok(env({ lunaSolar: 0 }, 'luna').wash === 0 && env({ lunaSolar: 2 }, 'luna').wash > luna.wash, 'environment.lunaSolar sets the solar flare strength');
     assert.deepEqual(env({ aresWind: 2, lunaDust: 0 }, 'gaia'), { aresStreaks: 0, aresDust: 0, lunaDust: 0, lunaSolar: 0, wash: 0 }, 'Gaia courses draw none of it');
     // loading.finishTime is checked in tests/ui.test.cjs, where the screen really closes after it, and so is the menu group

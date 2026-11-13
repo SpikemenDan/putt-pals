@@ -24,7 +24,10 @@ const VOLUME = [1800, 360, 1800];
 /** Bottom of the particle band (world y): the band follows the camera across the course but stays at course level, so the scenery shows from the ball camera and from the overhead views alike. */
 const BAND_FLOOR = -40;
 /** Base counts at density 1; buffers hold MAX_DENSITY times as many. */
-export const ATMOSPHERE_COUNTS = Object.freeze({ aresStreaks: 260, aresDust: 520, lunaDust: 600, lunaSolar: 160 });
+export const ATMOSPHERE_COUNTS = Object.freeze({ aresStreaks: 1100, aresDust: 2400, lunaDust: 2400, lunaSolar: 600 });
+/** Extra near-field particles at density 1, in a box that follows the camera (see NEAR_VOLUME). */
+export const NEAR_COUNTS = Object.freeze({ aresStreaks: 140, aresDust: 360, lunaDust: 420, lunaSolar: 60 });
+const NEAR_VOLUME = [420, 160, 420];
 const MAX_DENSITY = 2;
 /** Ares wind heading in the horizontal plane (world x, z), normalised in the shader. */
 const ARES_WIND = [1, 0.32];
@@ -35,7 +38,7 @@ const SOLAR_DIR = [-0.55, -0.5, 0.67];
 const SOLAR_SPEED = 900;
 export const SOLAR_PERIOD = 11;
 const FLARE_RISE = 1.2, FLARE_DECAY = 3.2;
-const WASH = { ares: 0.1, luna: 0.24 };
+const WASH = { ares: 0.2, luna: 0.3 };
 
 function hash(n, salt) {
   let h = Math.imul((n | 0) ^ Math.imul(salt, 0x9e3779b1), 0x85ebca6b);
@@ -88,7 +91,7 @@ void main(){
   mv.xy+=side*corner.y*width*max(1.,-head.z/260.)*(1.-corner.x*.7); // wider far away, so streaks still read from the overhead views
   gl_Position=projectionMatrix*mv;
   vec3 e=abs(rel)/volume;
-  alpha=alphaScale*(1.-smoothstep(.28,.5,max(e.x,max(e.y*.8,e.z))))*(1.-corner.x);
+  alpha=alphaScale*(1.-smoothstep(.28,.5,max(e.x,max(e.y*.8,e.z))))*(1.-corner.x)*smoothstep(30.,90.,-head.z); // no giant bands right at the lens
 }`;
 const STREAK_FRAGMENT = 'uniform vec3 color;varying float alpha;void main(){gl_FragColor=vec4(color,alpha);}';
 
@@ -116,7 +119,7 @@ void main(){
   gl_Position=projectionMatrix*mv;
   gl_PointSize=clamp(projectionMatrix[1][1]*res.y*.5*size*(.7+seed.w*.9)/max(1.,-mv.z),1.5,9.);
   vec3 e=abs(rel)/volume;
-  alpha=alphaScale*(1.-smoothstep(.3,.5,max(e.x,max(e.y*.8,e.z))))*(1.-twinkle*.6*(.5+.5*sin(t*2.3+seed.w*61.)));
+  alpha=alphaScale*smoothstep(12.,40.,-mv.z)*(1.-smoothstep(.3,.5,max(e.x,max(e.y*.8,e.z))))*(1.-twinkle*.6*(.5+.5*sin(t*2.3+seed.w*61.)));
 }`;
 const MOTE_FRAGMENT = 'uniform vec3 color;varying float alpha;void main(){float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;gl_FragColor=vec4(color,alpha*(1.-r*r));}';
 
@@ -173,13 +176,16 @@ export function createAtmosphere({ THREE, resolution }) {
     return geometry;
   }
   const blend = { transparent: true, depthWrite: false };
-  function streaks(count, color, dir, len, width) {
-    const uniforms = { travel: { value: 0 }, cam, volume, floorY, dir: { value: new THREE.Vector3(...dir) }, len: { value: len }, width: { value: width }, alphaScale: { value: 0 }, color: { value: displayColor(new THREE.Color(), color) } };
+  // Near field: a small box that follows the camera up and down too, so the air right around the ball moves even inside a
+  // walled chamber, where the walls hide most of the wide band.
+  const nearVolume = { value: new THREE.Vector3(...NEAR_VOLUME) }, nearFloor = { value: BAND_FLOOR };
+  function streaks(count, color, dir, len, width, near = false) {
+    const uniforms = { travel: { value: 0 }, cam, volume: near ? nearVolume : volume, floorY: near ? nearFloor : floorY, dir: { value: new THREE.Vector3(...dir) }, len: { value: len }, width: { value: width }, alphaScale: { value: 0 }, color: { value: displayColor(new THREE.Color(), color) } };
     const mesh = new THREE.Mesh(streakGeometry(count * MAX_DENSITY), own(new THREE.ShaderMaterial({ uniforms, vertexShader: STREAK_VERTEX, fragmentShader: STREAK_FRAGMENT, side: THREE.DoubleSide, ...blend })));
     return { mesh, uniforms, count, perItem: 6 };
   }
-  function motes(count, color, dir, bob, size, twinkle) {
-    const uniforms = { travel: { value: 0 }, t: time, cam, volume, floorY, dir: { value: new THREE.Vector3(...dir) }, res: resolution, bob: { value: bob }, size: { value: size }, alphaScale: { value: 0 }, twinkle: { value: twinkle }, color: { value: displayColor(new THREE.Color(), color) } };
+  function motes(count, color, dir, bob, size, twinkle, near = false) {
+    const uniforms = { travel: { value: 0 }, t: time, cam, volume: near ? nearVolume : volume, floorY: near ? nearFloor : floorY, dir: { value: new THREE.Vector3(...dir) }, res: resolution, bob: { value: bob }, size: { value: size }, alphaScale: { value: 0 }, twinkle: { value: twinkle }, color: { value: displayColor(new THREE.Color(), color) } };
     const mesh = new THREE.Points(moteGeometry(count * MAX_DENSITY), own(new THREE.ShaderMaterial({ uniforms, vertexShader: MOTE_VERTEX, fragmentShader: MOTE_FRAGMENT, ...blend })));
     return { mesh, uniforms, count, perItem: 1 };
   }
@@ -187,12 +193,16 @@ export function createAtmosphere({ THREE, resolution }) {
   const ares = {
     streaks: streaks(ATMOSPHERE_COUNTS.aresStreaks, 0xf2b48a, [ARES_WIND[0], 0, ARES_WIND[1]], 110, 2.2),
     dust: motes(ATMOSPHERE_COUNTS.aresDust, 0xc9774e, [ARES_WIND[0], 0.04, ARES_WIND[1]], 10, 2.4, 0),
+    nearStreaks: streaks(NEAR_COUNTS.aresStreaks, 0xf2b48a, [ARES_WIND[0], 0, ARES_WIND[1]], 60, 1.1, true),
+    nearDust: motes(NEAR_COUNTS.aresDust, 0xc9774e, [ARES_WIND[0], 0.04, ARES_WIND[1]], 6, 1.8, 0, true),
   };
   const luna = {
     dust: motes(ATMOSPHERE_COUNTS.lunaDust, 0xe9e7f2, [0.2, 0.05, 0.1], 22, 2.2, 1),
     solar: streaks(ATMOSPHERE_COUNTS.lunaSolar, 0xffe39a, SOLAR_DIR, 160, 1.4),
+    nearDust: motes(NEAR_COUNTS.lunaDust, 0xe9e7f2, [0.2, 0.05, 0.1], 10, 1.6, 1, true),
+    nearSolar: streaks(NEAR_COUNTS.lunaSolar, 0xffe39a, SOLAR_DIR, 70, 0.7, true),
   };
-  const layers = [ares.streaks, ares.dust, luna.dust, luna.solar];
+  const layers = [ares.streaks, ares.dust, luna.dust, luna.solar, ares.nearStreaks, ares.nearDust, luna.nearDust, luna.nearSolar];
   for (const layer of layers) { layer.mesh.frustumCulled = false; layer.mesh.visible = false; layer.mesh.renderOrder = 5; }
 
   // Screen wash: Ares rust haze (heavier low on the screen), Luna solar flare (from the top). Drawn last, never blocks input.
@@ -245,20 +255,26 @@ export function createAtmosphere({ THREE, resolution }) {
       lastT = t;
       time.value = t;
       cam.value.copy(camera);
+      nearFloor.value = Math.max(BAND_FLOOR, camera.y - NEAR_VOLUME[1] * 0.6);
       const isAres = world === 'ares', isLuna = world === 'luna';
       const gust = isAres ? aresGust(t) : 0, flare = isLuna ? solarFlare(t) : 0;
       // Travel is integrated, so a slider change or a gust changes speed without the particles jumping.
       aresTravel += dt * ARES_SPEED * env.aresWind * (0.45 + 0.9 * gust);
       lunaTravel += dt * 6 * Math.min(1, env.lunaDust);
       solarTravel += dt * SOLAR_SPEED * (0.5 + flare);
-      ares.streaks.uniforms.travel.value = ares.dust.uniforms.travel.value = aresTravel;
+      ares.streaks.uniforms.travel.value = ares.dust.uniforms.travel.value = ares.nearStreaks.uniforms.travel.value = ares.nearDust.uniforms.travel.value = aresTravel;
       ares.streaks.uniforms.len.value = 70 + 110 * gust;
-      luna.dust.uniforms.travel.value = lunaTravel;
-      luna.solar.uniforms.travel.value = solarTravel;
+      ares.nearStreaks.uniforms.len.value = 30 + 60 * gust;
+      luna.dust.uniforms.travel.value = luna.nearDust.uniforms.travel.value = lunaTravel;
+      luna.solar.uniforms.travel.value = luna.nearSolar.uniforms.travel.value = solarTravel;
       state.drawn.aresStreaks = show(ares.streaks, isAres, env.aresWind, env.aresWindDensity, Math.min(1, env.aresWind * (0.25 + 0.55 * gust)));
       state.drawn.aresDust = show(ares.dust, isAres, env.aresWind, env.aresWindDensity, Math.min(1, env.aresWind * (0.35 + 0.4 * gust)));
       state.drawn.lunaDust = show(luna.dust, isLuna, env.lunaDust, env.lunaDustDensity, Math.min(1, env.lunaDust * 0.75));
       state.drawn.lunaSolar = show(luna.solar, isLuna, env.lunaSolar, env.lunaDustDensity, Math.min(1, env.lunaSolar * (0.12 + 0.75 * flare)));
+      show(ares.nearStreaks, isAres, env.aresWind, env.aresWindDensity, Math.min(1, env.aresWind * (0.3 + 0.55 * gust)));
+      show(ares.nearDust, isAres, env.aresWind, env.aresWindDensity, Math.min(1, env.aresWind * (0.4 + 0.4 * gust)));
+      show(luna.nearDust, isLuna, env.lunaDust, env.lunaDustDensity, Math.min(1, env.lunaDust * 0.8));
+      show(luna.nearSolar, isLuna, env.lunaSolar, env.lunaDustDensity, Math.min(1, env.lunaSolar * (0.12 + 0.75 * flare)));
       const washAmount = isAres ? WASH.ares * env.aresWind * (0.5 + 0.5 * gust) : isLuna ? WASH.luna * env.lunaSolar * flare : 0;
       wash.amount.value = Math.min(0.6, washAmount);
       if (isAres) { displayColor(wash.color.value, 0xd9784a); wash.fromTop.value = 0; }

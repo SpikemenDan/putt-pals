@@ -36,9 +36,9 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `menu.bob` | 2 | 0 to 8 | Main menu: idle bob of the big buttons, CSS px (0 holds them still; off under reduced motion). |
 | `menu.tilt` | 1.5 | 0 to 8 | Main menu: alternating lean of the buttons, degrees (0 keeps them straight). |
 | `environment.aresWind` | 1 | 0 to 2 | Ares courses: wind scenery strength, multiplier: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). |
-| `environment.aresWindDensity` | 1 | 0 to 2 | Ares courses: wind streaks and dust grains, multiplier of 260 streaks and 520 grains. |
+| `environment.aresWindDensity` | 1 | 0 to 2 | Ares courses: wind streaks and dust grains, multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). |
 | `environment.lunaDust` | 1 | 0 to 2 | Luna courses: brightness of the floating dust motes, multiplier (0 hides them). |
-| `environment.lunaDustDensity` | 1 | 0 to 2 | Luna courses: dust motes and sun particles, multiplier of 600 motes and 160 particles. |
+| `environment.lunaDustDensity` | 1 | 0 to 2 | Luna courses: dust motes and sun particles, multiplier of 2400 motes and 600 particles (plus 420 and 60 close around the camera). |
 | `environment.lunaSolar` | 1 | 0 to 2 | Luna courses: solar activity strength, multiplier: the sun particles and the gold wash of each solar flare (0 hides them). |
 
 ## Development tuning panel
