@@ -1,6 +1,6 @@
 /* Custom rules editor (VIS-U #168), layout A, in the menu's comic paper panel (Landing.module.css; owner, 2026-11-13).
    Each category is an inked card with a coloured header tab (Match pink, Shots blue, Worlds green); the colour also
-   fills its slider tracks and chosen chips. Values sit in dark scoreboard chips. Rows are label | control | value |
+   fills its slider tracks and chosen chips. Values sit in semi-white inked chips. Rows are label | control | value |
    reset and share their card's columns (subgrid), so every label stays on one line. A changed rule is highlighted
    with a star and its reset button appears. The Play buttons stay pinned to the bottom of the panel while it scrolls.
    Button text has no drop shadow: the pixel font stays readable on the solid fills. */
@@ -11,7 +11,7 @@
 .summary:not([data-count="0"]){padding:3px 12px;font:400 15px/1.2 var(--font);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);background:var(--yellow);border:var(--line) solid var(--ink);border-radius:999px;box-shadow:3px 3px 0 var(--ink);rotate:-2deg}
 
 /* Category cards. */
-.group{--cat:var(--pink);display:grid;grid-template-columns:max-content minmax(0,1fr) 78px 30px;align-items:center;margin:0;padding:0 8px 6px;background:#fff;border:var(--line) solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink)}
+.group{--cat:var(--pink);display:grid;grid-template-columns:max-content minmax(0,1fr) 100px 30px;align-items:center;margin:0;padding:0 8px 6px;background:#fff;border:var(--line) solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink)}
 .group[data-category=shots]{--cat:var(--sky)}
 .group[data-category=worlds]{--cat:var(--green)}
 .groupTitle{grid-column:1 / -1;margin:0 -8px 4px;padding:5px 12px 4px;font:400 17px/1.1 var(--font);letter-spacing:2px;text-transform:uppercase;color:#fff;background:var(--cat);border-bottom:var(--line) solid var(--ink);border-radius:10px 10px 0 0}
@@ -22,8 +22,8 @@
 .label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--ink)}
 .row[data-changed] .label::after{content:'★';margin-left:5px;color:var(--pink-d)}
 .control{min-width:0}
-/* Scoreboard chip for the value. */
-.value{justify-self:end;padding:3px 7px 2px;font:400 16px/1 var(--font);letter-spacing:.5px;white-space:nowrap;color:var(--yellow);background:var(--ink);border-radius:6px}
+/* Value chip: semi-white with an ink outline (owner, 2026-11-13), right-aligned in its column so it never meets the slider. */
+.value{justify-self:end;max-width:100%;box-sizing:border-box;padding:3px 7px 2px;font:400 16px/1 var(--font);letter-spacing:.5px;white-space:nowrap;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px}
 .row[data-kind=select] .control,.row[data-kind=toggle] .control,.row[data-kind=number] .control{grid-column:2 / 4}
 .row[data-kind=select] .value,.row[data-kind=toggle] .value,.row[data-kind=number] .value{display:none}
 
@@ -38,9 +38,9 @@
 
 /* Typed number entry (Game Length): the unit sits right after the box, a hint or long-game warning goes under it. */
 .row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
-.entry{width:56px;margin:0;padding:3px 6px;font:400 18px/1.1 var(--font);letter-spacing:.5px;color:var(--yellow);background:var(--ink);border:2px solid var(--ink);border-radius:6px;box-shadow:2px 2px 0 var(--cat);text-align:center}
+.entry{width:56px;margin:0;padding:3px 6px;font:400 18px/1.1 var(--font);letter-spacing:.5px;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px;box-shadow:2px 2px 0 var(--cat);text-align:center}
 .entry:focus{outline:3px solid var(--cat);outline-offset:1px}
-.entry[aria-invalid=true]{color:#fff;background:var(--red)}
+.entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}
 .unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--ink)}
 .note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:var(--pink-d)}
 .note:empty{display:none}
