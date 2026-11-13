@@ -1,57 +1,58 @@
-/* Custom rules editor (VIS-U #168), layout A, in the Arcade panel look (owner, 2026-11-13; Landing.module.css .panel).
+/* Custom rules editor (VIS-U #168), layout A, in the menu's comic paper panel (Landing.module.css; owner, 2026-11-13).
    Rows are label | control | value | reset. Each group is a grid whose rows share its columns (subgrid), so the label
    column is as wide as the longest label and every label stays on one line. A changed rule gets a yellow marker and
    its reset button appears. Button text has no drop shadow: the pixel font stays readable on the solid fills. */
-.editor{--arc-line:#4cc9ff;--arc-field:#1f2556;--arc-deep:#0c0f2a;--arc-text:#eef1ff;--arc-mute:#9fb3ff;display:flex;flex-direction:column;gap:6px}
-.summary{margin:0 0 2px;font:700 13px var(--pp-body,'Nunito',sans-serif);color:var(--arc-mute)}
+.editor{display:flex;flex-direction:column;gap:6px}
+.summary{margin:0 0 2px;font:700 13px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
 .group{display:grid;grid-template-columns:max-content minmax(0,1fr) 86px 30px;align-items:center;row-gap:2px;margin:0;padding:0}
-.groupTitle{grid-column:1 / -1;margin:8px 0 2px;font:400 14px/1.2 var(--font);letter-spacing:3px;text-transform:uppercase;color:var(--arc-line)}
-.row{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:10px;padding:4px 6px;border-left:4px solid transparent;border-radius:10px}
-.row[data-changed]{background:rgba(255,210,63,.12);border-left-color:var(--yellow)}
-.label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--arc-text)}
+.groupTitle{grid-column:1 / -1;justify-self:start;margin:8px 0 4px;padding:2px 10px;font:400 16px/1.2 var(--font);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);background:var(--yellow);border:var(--line) solid var(--ink);box-shadow:3px 3px 0 var(--ink);rotate:-1.5deg}
+.group:nth-child(odd) .groupTitle{rotate:1deg}
+.row{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:10px;padding:4px 6px;border-left:5px solid transparent;border-radius:0}
+.row[data-changed]{border-left-color:var(--yellow);background:rgba(255,210,63,.2)}
+.label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--ink)}
 .control{min-width:0}
-.value{font:400 17px/1 var(--font);letter-spacing:.5px;text-align:right;color:var(--arc-text);white-space:nowrap}
+.value{font:400 17px/1 var(--font);letter-spacing:.5px;text-align:right;color:var(--ink);white-space:nowrap}
 .row[data-kind=select] .control,.row[data-kind=toggle] .control,.row[data-kind=number] .control{grid-column:2 / 4}
 .row[data-kind=select] .value,.row[data-kind=toggle] .value,.row[data-kind=number] .value{display:none}
 
-/* Sliders: a slim navy track with a glowing pink thumb. The global input rule gives inputs padding and a frame; undo that here. */
+/* Sliders: a thick ink track with a yellow comic thumb. The global input rule gives inputs padding and a frame; undo that here. */
 .slider{-webkit-appearance:none;appearance:none;width:100%;height:22px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer}
-.slider::-webkit-slider-runnable-track{height:6px;border:0;border-radius:6px;background:#2a3170}
-.slider::-moz-range-track{height:6px;border:0;border-radius:6px;background:#2a3170}
-.slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:var(--pink);box-shadow:0 0 10px var(--pink)}
-.slider::-moz-range-thumb{width:14px;height:14px;border:2px solid #fff;border-radius:50%;background:var(--pink);box-shadow:0 0 10px var(--pink)}
-.slider:focus-visible{outline:2px solid var(--arc-line);outline-offset:3px}
+.slider::-webkit-slider-runnable-track{height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff}
+.slider::-moz-range-track{height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-8px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.slider::-moz-range-thumb{width:16px;height:16px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.slider:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
 
 /* Typed number entry (Game Length): the unit sits right after the box, a hint or long-game warning goes under it. */
 .row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
-.entry{width:64px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;color:#fff;background:var(--arc-deep);border:2px solid var(--arc-line);border-radius:8px;box-shadow:none;text-align:center}
-.entry[aria-invalid=true]{border-color:#ff6b6b;background:#3a1020}
-.unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--arc-text)}
-.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:#ffb4cf}
+.entry{width:64px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;border-width:3px;border-radius:8px;text-align:center}
+.entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}
+.unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--ink)}
+.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:var(--pink-d)}
 .note:empty{display:none}
 
-/* Buttons inside the editor share one flat arcade style: cyan rim, no drop shadow, no text shadow. */
-.choice,.switch,.reset,.resetAll,.solo,.party{border:2px solid var(--arc-line);box-shadow:none;text-shadow:none}
+/* Buttons keep the comic ink outline and offset shadow, but their text has no shadow so the pixel font reads cleanly. */
+.choice,.switch,.reset,.resetAll,.solo,.party{text-shadow:none}
 
-/* Selectors: a row of small chips; the chosen one is filled yellow. */
+/* Selectors: a row of small chips; the chosen one is filled. */
 .choices{display:flex;flex-wrap:wrap;gap:4px}
-.choice{margin:0;padding:3px 7px;font-size:14px;letter-spacing:.5px;border-radius:10px;background:var(--arc-field);color:#cfd8ff}
-.choice[aria-checked=true]{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
+.choice{margin:0;padding:3px 7px;font-size:14px;letter-spacing:.5px;border-width:2px;border-radius:8px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
+.choice[aria-checked=true]{background:var(--sky);color:#fff}
 
-/* Toggle: a switch with a white knob. */
-.switch{position:relative;width:52px;height:28px;margin:0;padding:0;border-radius:16px;background:var(--arc-field)}
+/* Toggle: a chunky switch. */
+.switch{position:relative;width:52px;height:28px;margin:0;padding:0;border-width:3px;border-radius:16px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
 .switch[aria-checked=true]{background:var(--green)}
-.knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border:0;border-radius:50%;background:#fff;transition:left .12s}
-.switch[aria-checked=true] .knob{left:27px}
+.knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border:2px solid var(--ink);border-radius:50%;background:var(--yellow);transition:left .12s}
+.switch[aria-checked=true] .knob{left:26px}
 
-.reset{margin:0;padding:0;width:28px;height:28px;font:900 16px/1 var(--pp-body,'Nunito',sans-serif);border-radius:50%;background:var(--arc-field);color:#fff}
+.reset{margin:0;padding:0;width:28px;height:28px;font:900 16px/1 var(--pp-body,'Nunito',sans-serif);border-width:2px;border-radius:50%;background:#fff;box-shadow:2px 2px 0 var(--ink)}
 .reset[aria-hidden=true]{visibility:hidden}
 
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.actions button{margin:0;border-radius:12px}
-.resetAll{background:transparent;color:#cfe9ff;font-size:15px;letter-spacing:1px}
+.actions button{margin:0}
+.resetAll{background:#fff;font-size:15px;letter-spacing:1px}
 .solo,.party{flex:1;font-size:20px;letter-spacing:1.5px;color:#fff}
-.solo{background:var(--pink);border-color:#ff8fb8}
-.party{background:var(--sky);border-color:#8fd3ff}
+.solo{background:var(--pink)}
+.party{background:var(--sky)}
 
 @media (prefers-reduced-motion:reduce){.knob{transition:none}}
