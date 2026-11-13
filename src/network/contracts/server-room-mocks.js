@@ -1,12 +1,13 @@
 /** Contract fixtures/test double only. No WebSocket, durable storage or game-rule implementation. */
 import { authorizeRoomFrame, createRoomPolicy, decodeRoomCheckpoint, decodeRoomFrame, encodeRoomFrame, SERVER_ROOM_VERSION, CHECKPOINT_VERSION, ROOM_RULES_VERSION } from './server-room.js';
+import { DEFAULT_RULES } from '../../shared/rules.js';
 
 export function createServerRoomFixture({ now = 1700000000000, policy = {} } = {}) {
   const player = (id,name,color) => ({id,name,color,connected:true,strokes:0,done:false,timedOut:false,score:null,scores:[]});
   return {
     roomCode:'friends', sessionId:'session_fixture', rulesVersion:ROOM_RULES_VERSION, courseHash:'a'.repeat(64), revision:1, serverTime:now, controllerId:'p1', policy:createRoomPolicy(policy),
     seats:[{playerId:'p1',joinOrder:1,connectedSince:now,resumeUntil:null},{playerId:'p2',joinOrder:2,connectedSince:now,resumeUntil:null}],
-    session:{node:'lobby',context:{ mode:'standard',powerups:true,mapIndex:0,puttIndex:0,roundNumber:0,roundLimitSeconds:120,roundStartTime:0,votingDeadline:0,
+    session:{node:'lobby',context:{ mode:'standard',powerups:true,rules:{...DEFAULT_RULES,powerups:true},mapIndex:0,puttIndex:0,roundNumber:0,roundLimitSeconds:120,roundStartTime:0,votingDeadline:0,
       votes:{},roster:[],players:{p1:player('p1','Controller',0),p2:player('p2','Guest',1)},completedMaps:[],totals:{},last:null }},
   };
 }

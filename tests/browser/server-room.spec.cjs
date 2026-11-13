@@ -77,9 +77,9 @@ test('server rooms: duplicate resume and incompatible frames are rejected withou
       });
     }
     const resume = window.__ppApp.room.identity;
-    return [await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Duplicate', resume }),
+    return [await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Duplicate', resume, rules: null }),
       await rejected({ version: 1, type: 'hello', color: null, roomCode: code, name: 'Old', resume: null }),
-      await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Extra', resume: null, playerId: 'forged' })];
+      await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Extra', resume: null, rules: null, playerId: 'forged' })];
   }, { code: code.toLowerCase(), version: SERVER_ROOM_VERSION });
   expect(results).toEqual(['identity-rejected', 'incompatible-version', 'invalid-message']);
   expect(await player.roomConnected()).toBe(true);

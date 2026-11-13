@@ -9,9 +9,9 @@ import { GameModes } from '../shared/session.js';
 
 export const UiCommands = Object.freeze({
   ...InputCommands,
-  /** { type, name, roomCode } — Join room (validate with parseJoinRequest). */
+  /** { type, name, roomCode, rules? } — Join room (validate with parseJoinRequest). `rules`: Custom rules (VIS-U) a new room is created with; null or omitted is standard. */
   JOIN: 'join',
-  /** { type, name } — Play solo. */
+  /** { type, name, rules? } — Play solo, optionally with Custom rules (VIS-U). */
   PLAY_SOLO: 'play-solo',
   /** { type } — Leave room (legacy closes the room and reloads). */
   LEAVE: 'leave',
