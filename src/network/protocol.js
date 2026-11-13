@@ -1,5 +1,6 @@
 import { PROTOCOL_VERSION, MAX_PLAYER_NAME_LENGTH, MAX_PLAYERS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
+import { validRules } from '../shared/rules.js';
 import { GameModes } from '../shared/session.js';
 import { auraIds } from '../gameplay/catalog.js';
 import { validEffectMessage } from '../gameplay/effects.js';
@@ -87,8 +88,9 @@ export function validSnapshot(s) {
         && index(h.par, 11) && h.par > 0 && index(h.penalty, 11) && (h.missed === undefined || typeof h.missed === 'boolean')))) return false;
   }
   if (!keys(s, ['phase', 'mode', 'powerups', 'hostId', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds',
-    'roundStartTime', 'votingDeadline', 'votes', 'tie', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards'])
+    'roundStartTime', 'votingDeadline', 'votes', 'tie', 'roster', 'players', 'isHost', 'completedMaps', 'totals', 'last', 'state', 'presence', 'deployables', 'globalHazards', 'rules'])
     || !(s.powerups === undefined || typeof s.powerups === 'boolean')
+    || !(s.rules === undefined || validRules(s.rules))
     || !Number.isFinite(s.roundLimitSeconds) || s.roundLimitSeconds < 120 || s.roundLimitSeconds > 600
     || typeof s.isHost !== 'boolean' || !validState(s.state)
     || (typeof s.state === 'string' ? s.state !== s.phase : !Object.hasOwn(s.state, s.phase)) || !record(s.votes) || Object.keys(s.votes).length > MAX_PLAYERS

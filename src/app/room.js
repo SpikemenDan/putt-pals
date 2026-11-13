@@ -29,6 +29,7 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {string} options.name Display name (already sanitized)
  * @param {number|null} [options.color] Preferred ball colour index; the room gives the nearest free one if taken
  * @param {string} [options.roomCode] Sanitized room code (multi only)
+ * @param {object|null} [options.rules] Validated Custom rules (VIS-U) a new room is created with; omitted or null: standard. Joining an existing room adopts its rules.
  * @param {{now: () => number, setTimeout: Function, clearTimeout: Function}} options.clock Local monotonic clock
  * @param {() => number} [options.random]
  * @param {(options: object) => object} [options.createTransport] Legacy unit-test transport seam
@@ -36,7 +37,7 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {(map: number, putt: number, x: number, y: number) => (number|null)} [options.floorAt] Host course check for Bumper / Orbital Bumper placement (G1e): the floor height to stand on, or null
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt, soloHazards = false }) {
+async function openLocalRoom({ multi, name, color = null, roomCode = '', rules = undefined, clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt, soloHazards = false }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
@@ -81,7 +82,7 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
   let last = null, closed = false;
 
   if (transport.isHost) {
-    session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout }, random: Math.random });
+    session = createRoomSession({ hostId: transport.peerId, hostName: name, hostColor: color ?? undefined, ...(rules ? { rules } : {}), clock: { now, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout }, random: Math.random });
     unbind = bindRoomSession(transport, session, { clock, graceMs, heartbeatMs: HEARTBEAT_MS, linkTimeoutMs: LINK_TIMEOUT_MS, floorAt, soloHazards });
     stops.push(session.subscribe(s => {
       last = s;
@@ -202,7 +203,7 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', clock, 
 /** Online production rooms use the v2 service; injected transports retain the legacy unit-test seam. */
 export async function openRoom(options) {
   if (!options.multi || options.createTransport) return openLocalRoom(options);
-  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name, color: options.color ?? null,
+  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name, color: options.color ?? null, rules: options.rules ?? null,
     resume: options.identity, endpoint: options.endpoint, location: options.location,
     clock: options.clock, WebSocket: options.WebSocket, random: options.random, signal: options.signal,
     expectedCourseHash: options.expectedCourseHash, crypto: options.crypto,

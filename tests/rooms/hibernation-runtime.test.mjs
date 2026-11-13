@@ -6,6 +6,7 @@ import path from 'node:path';
 import { Miniflare, Log, LogLevel } from 'miniflare';
 import { SERVER_ROOM_VERSION } from '../../src/network/contracts/server-room.js';
 import { roomObjectName } from '../../services/rooms/room-name.mjs';
+import { DEFAULT_RULES } from '../../src/shared/rules.js';
 
 // These runtime tools are already pinned transitively by Wrangler in package-lock.json.
 const bundled = await build({
@@ -55,12 +56,12 @@ function next(client, test, timeout = 8000) {
     client.waiters.push(waiter);
   });
 }
-async function open(resume = null) {
+async function open(resume = null, rules = null) {
   const response = await mf.dispatchFetch(`http://localhost/api/rooms/${code}/socket`, { headers: { Upgrade: 'websocket' } });
   assert.equal(response.status, 101);
   const client = observe(response.webSocket);
   const welcome = next(client, frame => frame.type === 'welcome' || frame.type === 'error');
-  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: code, name: 'Player', resume }));
+  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: code, name: 'Player', resume, rules }));
   const frame = await welcome;
   assert.equal(frame.type, 'welcome', JSON.stringify(frame));
   return client;
@@ -79,8 +80,12 @@ const evict = mode => mf.unsafeEvictDurableObject('recovery-test', 'RoomDurableO
   name: roomObjectName('development', code), webSockets: mode,
 });
 try {
-  const host = await open();
-  const guest = await open();
+  // VIS-U: the hello that creates the room fixes its Custom rules; a later hello's rules are ignored.
+  const custom = { ...DEFAULT_RULES, lunaGravity: 60, shotPower: 120, holeTimer: 300 };
+  const host = await open(null, custom);
+  const guest = await open(null, { ...DEFAULT_RULES, shotPower: 50 });
+  assert.deepEqual(host.snapshot.session.context.rules, custom, 'the creating hello sets the room rules');
+  assert.deepEqual(guest.snapshot.session.context.rules, custom, 'a joining player gets the room rules, not their own');
   assert.equal((await command(host, { type: 'START_VOTING' })).type, 'ack');
   assert.equal((await command(host, { type: 'CAST_VOTE', mapIndex: 0 })).type, 'ack');
   const deadline = host.snapshot.session.context.votingDeadline;
@@ -98,6 +103,8 @@ try {
   await evict('hibernate');
   const running = await next(host, frame => frame.type === 'snapshot' && frame.snapshot.session.node === 'play.active.running');
   assert.equal(running.snapshot.session.context.roundStartTime, startAt, 'durable alarm preserves original start through eviction');
+  assert.deepEqual(running.snapshot.session.context.rules, custom, 'rules survive eviction');
+  assert.equal(running.snapshot.session.context.roundLimitSeconds, 300, 'the room hole timer applies to the putt');
   assert.equal((await command(host, { type: 'REPORT_SCORE', strokes: 2, timedOut: false })).type, 'ack');
   const sessionId = host.snapshot.sessionId;
   await evict('close');

@@ -5,6 +5,7 @@ import { STARTER_COURSE_INDICES, MAX_PLAYERS, MAX_PLAYER_NAME_LENGTH, VOTING_COU
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { calculateTimeoutScore, calculateMissedHoleScore } from '../shared/scoring.js';
 import { TUNING } from '../shared/tuning.js';
+import { DEFAULT_RULES, holeLimitSeconds, validateRules } from '../shared/rules.js';
 import { createCourseDocument, validateCourseDocument } from '../courses/document.js';
 import { createPongSession } from './pong.js';
 
@@ -24,7 +25,11 @@ const seriesLength = mode => ({ tournament_3: 3, tournament_5: 5, tournament_7: 
 const maxSafeTotal = BigInt(Number.MAX_SAFE_INTEGER);
 
 /** Lifecycle actor. Transport adapters must bind playerId to authenticated senders. */
-export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', hostColor, hostToken, serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses, random = null } = {}) {
+export function createRoomSession({ hostId, controllerId = hostId, hostName = 'Host', hostColor, hostToken, serverOwned = false, durable = false, restore = null, isReserved = () => false, clock, courses = createCourseDocument().courses, random = null, rules = DEFAULT_RULES } = {}) {
+  // Custom rules (VIS-U #168) are fixed for the room's lifetime; a restored room keeps its own (checkpoints saved before VIS-U have none: standard).
+  const roomRules = restore !== null
+    ? (restore.context?.rules === undefined ? { ...DEFAULT_RULES, powerups: restore.context?.powerups !== false } : validateRules(restore.context.rules))
+    : validateRules(rules);
   const initialControllerId = (serverOwned ? controllerId : hostId) ?? (restore ? Object.keys(restore.context?.players ?? {})[0] : undefined);
   if (!validIdentity({ playerId: initialControllerId }) || !validName(hostName)) throw new Error('Valid room controller identity and name required');
   if (typeof isReserved !== 'function') throw new Error('A reservation lookup is required');
@@ -48,7 +53,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   const hasVotes = c => ids(c).some(id => Number.isInteger(c.votes[id]));
   const everyoneVoted = c => ids(c).length > 0 && ids(c).every(id => Number.isInteger(c.votes[id]));
   const timeoutScore = (c, p) => Math.max(p.strokes, calculateTimeoutScore(p.strokes, rule(c).par, rule(c).penalty));
-  const missedScore = () => calculateMissedHoleScore(TUNING.scoring.maxHoleScore, TUNING.scoring.missedHolePenalty);
+  const missedScore = c => calculateMissedHoleScore(TUNING.scoring.maxHoleScore, c.rules.missedHolePenalty);
   const isHoleTimerExpired = c => Number.isFinite(c.roundStartTime) && c.roundLimitSeconds > 0 && clock.now() >= c.roundStartTime + c.roundLimitSeconds * 1000;
   const scoreTotal = (c, id) => BigInt(c.totals[id]?.total ?? 0)
     + c.players[id].scores.reduce((total, entry) => total + BigInt(entry?.score ?? 0), 0n);
@@ -75,7 +80,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   const round = (c, mapIndex, puttIndex, newMap) => {
     const nextRound = {
       mapIndex, puttIndex, roundNumber: c.roundNumber + 1,
-      roundLimitSeconds: courseData[mapIndex].putts[puttIndex].limitSeconds,
+      roundLimitSeconds: holeLimitSeconds(c.rules, courseData[mapIndex].putts[puttIndex].limitSeconds),
       roundStartTime: clock.now() + (replay(c) ? 0 : SESSION_TIMING.start),
       roster: newMap ? newMapRoster(c) : c.roster,
       players: resetPlayers(c, newMap), votes: {}, votingDeadline: 0,
@@ -96,7 +101,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       ...p.scores,
       (p.done || p.connected || (serverOwned && isReserved(id)))
         ? { score: p.score ?? timeoutScore(c, p), timedOut: p.timedOut || !p.done, par: rule(c).par, penalty: rule(c).penalty, ...(p.missed ? { missed: true } : {}) }
-        : { score: missedScore(), timedOut: true, par: rule(c).par, penalty: TUNING.scoring.missedHolePenalty, missed: true }
+        : { score: missedScore(c), timedOut: true, par: rule(c).par, penalty: c.rules.missedHolePenalty, missed: true }
     ] : p.scores,
   }])) };
   const finishMap = c => {
@@ -190,7 +195,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
                 name: e.name,
                 connected: true,
                 ...(token && !existing.token ? { token } : {}),
-                ...(missedCurrent ? { done: true, timedOut: true, missed: true, score: missedScore() } : {}),
+                ...(missedCurrent ? { done: true, timedOut: true, missed: true, score: missedScore(c) } : {}),
               },
             },
           };
@@ -200,14 +205,14 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
           const timerExpired = isHoleTimerExpired(c);
           const scores = [];
           for (let k = 0; k < c.puttIndex; k++) {
-            scores.push({ score: missedScore(), timedOut: true, missed: true, par: courseData[c.mapIndex].putts[k].par, penalty: TUNING.scoring.missedHolePenalty });
+            scores.push({ score: missedScore(c), timedOut: true, missed: true, par: courseData[c.mapIndex].putts[k].par, penalty: c.rules.missedHolePenalty });
           }
           let newPlayer;
           if (timerExpired) {
-            scores.push({ score: missedScore(), timedOut: true, missed: true, par: courseData[c.mapIndex].putts[c.puttIndex].par, penalty: TUNING.scoring.missedHolePenalty });
+            scores.push({ score: missedScore(c), timedOut: true, missed: true, par: courseData[c.mapIndex].putts[c.puttIndex].par, penalty: c.rules.missedHolePenalty });
             newPlayer = {
               id: e.playerId, name: e.name, color, ...(token ? { token } : {}), connected: true,
-              strokes: 0, done: true, timedOut: true, missed: true, score: missedScore(), scores,
+              strokes: 0, done: true, timedOut: true, missed: true, score: missedScore(c), scores,
             };
           } else {
             newPlayer = {
@@ -220,7 +225,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
             let missedTotal = 0, missedPar = 0;
             for (const mapIdx of c.completedMaps) {
               for (const p of courseData[mapIdx].putts) {
-                missedTotal += missedScore();
+                missedTotal += missedScore(c);
                 missedPar += p.par;
               }
             }
@@ -239,7 +244,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       setColor: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], color: e.color } } })),
       leave: assign(({ context: c, event: e }) => ({ players: { ...c.players, [e.playerId]: { ...c.players[e.playerId], connected: false } }, votes: Object.fromEntries(Object.entries(c.votes).filter(([id]) => id !== e.playerId)) })),
       mode: assign(({ event: e }) => ({ mode: e.mode })),
-      powerups: assign(({ event: e }) => ({ powerups: e.enabled })),
+      powerups: assign(({ context: c, event: e }) => ({ powerups: e.enabled, rules: { ...c.rules, powerups: e.enabled } })),
       clearSeries: assign(({ context: c }) => clearSeries(c)),
       clearVotes: assign({ votes: () => ({}), votingDeadline: 0, tie: null }),
       clearTie: assign({ tie: null }),
@@ -290,7 +295,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
   }).createMachine({
     id: 'session', initial: 'lobby',
     context: {
-      ...createInitialSessionState(),
+      ...createInitialSessionState({ rules: roomRules }),
       ...(serverOwned ? { controllerId: initialControllerId } : { hostId: initialControllerId }),
       players: { [initialControllerId]: fresh(initialControllerId, hostName, isColorIndex(hostColor) ? hostColor : 0, hostToken) }, totals: {}, last: null, tie: restore?.context?.tie ?? null,
     },
@@ -363,7 +368,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       || !Array.isArray(c.roster) || !c.players || !validCount(c.roundNumber)) {
       throw new Error('Invalid session recovery context');
     }
-    restoredState = machine.resolveState({ value: sessionValue(restore.node), context: { ...c, controllerId } });
+    restoredState = machine.resolveState({ value: sessionValue(restore.node), context: { ...c, rules: { ...roomRules }, controllerId } });
   }
   const actor = createActor(machine, { clock, ...(restoredState ? { snapshot: restoredState } : {}) });
   const snapshot = value => {

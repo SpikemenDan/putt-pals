@@ -10,6 +10,7 @@
 
 import { getPowerup, isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { CUSTOM_RULES, changedRules, ruleValueText, validRules } from '../shared/rules.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
@@ -112,6 +113,9 @@ export function lobbyView(room, local, now, courses) {
   } else {
     status = local.isHost ? 'Pick a game mode, then start to open map voting.' : (local.serverOwned ? 'The room controller will pick the mode and start map voting.' : 'The host will pick the mode and start map voting.');
     if (room.powerups === false) status += ' Power-ups are off.';
+    // The room's Custom rules (VIS-U), fixed when it was created; power-ups are already reported above.
+    const custom = validRules(room.rules) ? changedRules(room.rules).filter(id => id !== 'powerups') : [];
+    if (custom.length) status += ' Custom rules: ' + custom.map(id => CUSTOM_RULES.find(r => r.id === id).label + ' ' + ruleValueText(id, room.rules[id])).join(', ') + '.';
   }
   return {
     label: roomLabel(room, local),
