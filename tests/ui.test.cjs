@@ -51,7 +51,7 @@ function fakeClock() {
   const click = async el => { assert.ok(el, 'element to click'); await act(async () => { el.click(); }); };
 
   /** Mounts the UI with a host L1 session; session events from the UI are bound to the local player. */
-  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null } = {}) {
+  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null, mountProps = {} } = {}) {
     const clock = fakeClock();
     const store = ui.createUiStore({ courses, clock });
     let listeners = 0;
@@ -65,7 +65,7 @@ function fakeClock() {
     const root = doc.createElement('div');
     doc.body.appendChild(root);
     let unmount;
-    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene }); });
+    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene, ...mountProps }); });
     await act(async () => { store.setLocal({ active: true, id: localId, isHost, roomCode, mode: 'lobby' }); store.setRoom(session.getSnapshot(), clock.now()); });
     const step = async ms => { await act(async () => { clock.advance(ms); store.tick(clock.now()); }); };
     const send = async event => { let r; await act(async () => { r = session.send(event); }); return r; };
@@ -152,6 +152,45 @@ function fakeClock() {
     assert.ok(t.within('[data-ui=loading]'), 'still up partway through the default 0.8 s');
     await waitGone(t, 1500);
     await t.teardown();
+  });
+
+  await scenario('main menu (VIS-M2): Solo, Party, Custom and Settings, Escape steps back, version label, display.menu look', async () => {
+    const { createDisplay } = await import('../src/shared/display.js');
+    const live = structuredClone(createDisplay());
+    live.menu.buttonScale = 1.3; live.menu.tilt = 4; live.menu.stagger = 0.2; live.menu.bob = 5;
+    const t = await setup({ mountProps: { display: live } });
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    const landing = t.within('[data-ui=landing]');
+    assert.equal(landing.dataset.view, 'home');
+    const nav = landing.querySelector('nav[aria-label="Main menu"]');
+    assert.deepEqual([...nav.querySelectorAll('button')].map(b => b.getAttribute('aria-label') || b.textContent), ['Solo', 'Party', 'Custom', 'Settings'], 'three main buttons, then Settings');
+    assert.ok([...nav.querySelectorAll('button')].every(b => !b.disabled && b.tabIndex === 0), 'every button is reachable by keyboard');
+    assert.equal(landing.querySelectorAll('input').length, 0, 'the home view asks nothing yet');
+    assert.match(t.within('[data-ui=version]').textContent, /^v\S/, 'the version shows bottom-left');
+    assert.equal(landing.style.getPropertyValue('--menu-scale'), '1.3', 'display.menu reaches the buttons');
+    assert.equal(landing.style.getPropertyValue('--menu-tilt'), '4deg');
+    assert.equal(landing.style.getPropertyValue('--menu-stagger'), '0.2s');
+    assert.equal(landing.style.getPropertyValue('--menu-bob'), '5px');
+    live.menu.buttonScale = 0.8; // the dev tuner edits the live object in place: the menu follows on the next frame
+    await act(async () => { await new Promise(r => setTimeout(r, 40)); });
+    assert.equal(landing.style.getPropertyValue('--menu-scale'), '0.8', 'a live display object updates the menu without a re-render');
+    await click(nav.querySelector('[data-menu=custom]'));
+    assert.equal(landing.dataset.view, 'custom');
+    assert.match(landing.textContent, /coming soon/i, 'Custom is not available yet and says so');
+    assert.equal(doc.activeElement?.closest('[data-menu-view]')?.dataset.menuView, 'custom', 'focus moves into the sub-menu');
+    await act(async () => { doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    assert.equal(landing.dataset.view, 'home', 'Escape steps back');
+    await act(async () => { await new Promise(r => setTimeout(r, 5)); });
+    assert.equal(doc.activeElement?.dataset.menu, 'custom', 'focus returns to the button that opened it');
+    await click(landing.querySelector('[data-menu=solo]'));
+    assert.ok(button('Play solo'), 'Solo keeps the solo flow');
+    assert.ok(!button('Join room'), 'and not the party one');
+    await t.teardown();
+    const invited = await setup({ mountProps: { initialView: 'party' } });
+    await act(async () => invited.store.setLocal({ active: false, connecting: false }));
+    assert.equal(invited.within('[data-ui=landing]').dataset.view, 'party', 'an invite link opens on Party');
+    assert.ok(button('Join room'));
+    await invited.teardown();
   });
 
   await scenario('main menu: the planet stays up from the menu through the loading screen', async () => {
@@ -520,6 +559,7 @@ function fakeClock() {
   await scenario('landing: the style picker lists the cosmetics catalog and dispatches validated ids', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));
+    await click(t.within('[data-menu=settings]'));
     const selects = [...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')];
     assert.equal(selects.length, 3, 'ball, trail and celebration');
     assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti'], 'defaults selected');
@@ -551,10 +591,10 @@ function fakeClock() {
     await act(async () => t.store.setLocal({ active: false }));
     const landing = t.within('[data-ui=landing]');
     assert.ok(shown(landing));
+    await click(landing.querySelector('[data-menu=party]'));
     const [nameInput, codeInput] = landing.querySelectorAll('input');
     assert.equal(nameInput.maxLength, 14); assert.equal(codeInput.maxLength, 12);
     const join = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Join room');
-    const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     assert.equal(join.disabled, false, 'prefilled room code enables Join');
     const setValue = async (el, value) => {
       const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
@@ -566,10 +606,14 @@ function fakeClock() {
     await setValue(nameInput, '  Zed  ');
     t.commands.length = 0;
     await click(join);
+    await click(landing.querySelector('[data-ui=menu-back]'));
+    await click(landing.querySelector('[data-menu=solo]'));
+    assert.equal(landing.querySelector('input').value, '  Zed  ', 'the name carries from Party to Solo');
+    const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     await click(solo);
     assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' }, { type: 'play-solo', name: '  Zed  ' }]);
     await act(async () => t.store.setLocal({ connecting: true }));
-    assert.equal(join.disabled, true); assert.equal(solo.disabled, true);
+    assert.equal(solo.disabled, true);
     assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
     assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Enter a room code.' });
     assert.equal(ui.parseJoinRequest({ multi: false, name: '' }).name, 'Player');

@@ -18,7 +18,8 @@ if (tuner) {
   window.__ppTuner = tuner;
   if (new URLSearchParams(window.location.search).has('map')) setTimeout(() => { // ?map: straight to the level select, through the real solo flow
     const press = text => [...document.querySelectorAll('button')].find(b => b.textContent === text)?.click();
-    press('Play solo');
+    document.querySelector('[data-menu=solo]')?.click();
+    setTimeout(() => press('Play solo'), 50);
     const poll = setInterval(() => { if (document.querySelector('[data-ui=map-select]')?.offsetParent !== undefined && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start Game')) { press('Start Game'); clearInterval(poll); } }, 200);
   }, 300);
   if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)).catch(error => console.error('Dev tool failed to load (?art)', error)); // ?art: the flat master map on its own

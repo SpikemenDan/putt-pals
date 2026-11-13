@@ -80,6 +80,10 @@ export const DISPLAY_UNITS = Object.freeze({
   'loading.planes': 'count',
   'loading.boats': 'count',
   'loading.satellites': 'count',
+  'menu.buttonScale': 'multiplier',
+  'menu.stagger': 'seconds',
+  'menu.bob': 'CSS px',
+  'menu.tilt': 'degrees',
 });
 
 /** How a change takes effect. */

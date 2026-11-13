@@ -37,7 +37,7 @@ const BODY_FONTS = {
 export function mountLoadingPreview(doc, app) {
   const box = doc.createElement('div');
   box.dataset.ui = 'loading-preview';
-  box.style.cssText = 'position:fixed;left:12px;bottom:56px;z-index:2147483000;font:12px system-ui,sans-serif;background:#1b1b1f;color:#fff;border-radius:8px;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:360px';
+  box.style.cssText = 'position:fixed;left:12px;top:12px;z-index:2147483000;font:12px system-ui,sans-serif;background:#1b1b1f;color:#fff;border-radius:8px;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:360px';
   const button = doc.createElement('button');
   button.type = 'button';
   const sync = () => { button.textContent = app.store.getSnapshot().landing.connecting ? 'Hide loading screen' : 'Loading screen preview'; };

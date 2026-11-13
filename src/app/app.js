@@ -601,6 +601,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   }
 
   const startCode = initialRoomCode(win.location?.hash || '', random);
+  const inviteLink = /(^#|&)room=[^&]/.test(win.location?.hash || ''); // a #room= link opens the menu on Party
   // Menu feedback (M1d): a soft tick when the pointer enters an enabled button and a click cue when one is pressed.
   let hovered = null;
   const buttonOf = event => { const b = event.target?.closest?.('button'); return b && !b.disabled ? b : null; };
@@ -609,7 +610,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
   setLocal({ volume: audio.getStatus?.().volume ?? 1 });
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }), createAtlasScene: options => createAtlasScene({ THREE, ...options }) });
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialView: inviteLink ? 'party' : 'home', initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }), createAtlasScene: options => createAtlasScene({ THREE, ...options }) });
 
   return {
     store,
