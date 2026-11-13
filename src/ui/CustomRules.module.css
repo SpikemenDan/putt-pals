@@ -1,115 +1,57 @@
-/* Custom rules editor (VIS-U #168), layout A: grouped caption-box rows inside the menu's paper panel (Landing.module.css).
-   Rows are label | control | value | reset. A changed rule gets a yellow marker and its reset button appears. */
-.editor{display:flex;flex-direction:column;gap:6px}
-.summary{margin:0 0 2px;font:700 13px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
-.group{margin:0;padding:0}
-.groupTitle{display:inline-block;margin:6px 0 4px;padding:2px 10px;font:400 16px/1.2 var(--font);letter-spacing:1px;text-transform:uppercase;color:var(--ink);background:var(--yellow);border:var(--line) solid var(--ink);box-shadow:3px 3px 0 var(--ink);rotate:-1deg}
-.row{display:grid;grid-template-columns:132px minmax(0,1fr) 62px 30px;align-items:center;gap:8px;padding:4px 6px;border-left:5px solid transparent;border-radius:0}
-.row[data-changed]{border-left-color:var(--yellow);background:rgba(255,210,63,.18)}
-.label{margin:0;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--ink)}
+/* Custom rules editor (VIS-U #168), layout A, in the Arcade panel look (owner, 2026-11-13; Landing.module.css .panel).
+   Rows are label | control | value | reset. Each group is a grid whose rows share its columns (subgrid), so the label
+   column is as wide as the longest label and every label stays on one line. A changed rule gets a yellow marker and
+   its reset button appears. Button text has no drop shadow: the pixel font stays readable on the solid fills. */
+.editor{--arc-line:#4cc9ff;--arc-field:#1f2556;--arc-deep:#0c0f2a;--arc-text:#eef1ff;--arc-mute:#9fb3ff;display:flex;flex-direction:column;gap:6px}
+.summary{margin:0 0 2px;font:700 13px var(--pp-body,'Nunito',sans-serif);color:var(--arc-mute)}
+.group{display:grid;grid-template-columns:max-content minmax(0,1fr) 86px 30px;align-items:center;row-gap:2px;margin:0;padding:0}
+.groupTitle{grid-column:1 / -1;margin:8px 0 2px;font:400 14px/1.2 var(--font);letter-spacing:3px;text-transform:uppercase;color:var(--arc-line)}
+.row{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:10px;padding:4px 6px;border-left:4px solid transparent;border-radius:10px}
+.row[data-changed]{background:rgba(255,210,63,.12);border-left-color:var(--yellow)}
+.label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--arc-text)}
 .control{min-width:0}
-.value{font:400 17px/1 var(--font);letter-spacing:.5px;text-align:right;color:var(--ink);white-space:nowrap}
+.value{font:400 17px/1 var(--font);letter-spacing:.5px;text-align:right;color:var(--arc-text);white-space:nowrap}
 .row[data-kind=select] .control,.row[data-kind=toggle] .control,.row[data-kind=number] .control{grid-column:2 / 4}
 .row[data-kind=select] .value,.row[data-kind=toggle] .value,.row[data-kind=number] .value{display:none}
 
-/* Sliders: a thick ink track with a yellow comic thumb. The global input rule gives inputs padding and a frame; undo that here. */
+/* Sliders: a slim navy track with a glowing pink thumb. The global input rule gives inputs padding and a frame; undo that here. */
 .slider{-webkit-appearance:none;appearance:none;width:100%;height:22px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer}
-.slider::-webkit-slider-runnable-track{height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff}
-.slider::-moz-range-track{height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff}
-.slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-8px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
-.slider::-moz-range-thumb{width:16px;height:16px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
-.slider:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.slider::-webkit-slider-runnable-track{height:6px;border:0;border-radius:6px;background:#2a3170}
+.slider::-moz-range-track{height:6px;border:0;border-radius:6px;background:#2a3170}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:var(--pink);box-shadow:0 0 10px var(--pink)}
+.slider::-moz-range-thumb{width:14px;height:14px;border:2px solid #fff;border-radius:50%;background:var(--pink);box-shadow:0 0 10px var(--pink)}
+.slider:focus-visible{outline:2px solid var(--arc-line);outline-offset:3px}
 
-/* Typed number entry (Game length) with a hint or long-game warning under it. */
+/* Typed number entry (Game Length): the unit sits right after the box, a hint or long-game warning goes under it. */
 .row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
-.entry{width:72px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;border-width:3px;border-radius:8px;text-align:center}
-.entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}
-.unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--ink)}
-.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:var(--pink-d)}
+.entry{width:64px;margin:0;padding:4px 8px;font:400 18px/1.1 var(--font);letter-spacing:.5px;color:#fff;background:var(--arc-deep);border:2px solid var(--arc-line);border-radius:8px;box-shadow:none;text-align:center}
+.entry[aria-invalid=true]{border-color:#ff6b6b;background:#3a1020}
+.unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--arc-text)}
+.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:#ffb4cf}
 .note:empty{display:none}
 
-/* Selectors: a row of small chips; the chosen one is filled. */
+/* Buttons inside the editor share one flat arcade style: cyan rim, no drop shadow, no text shadow. */
+.choice,.switch,.reset,.resetAll,.solo,.party{border:2px solid var(--arc-line);box-shadow:none;text-shadow:none}
+
+/* Selectors: a row of small chips; the chosen one is filled yellow. */
 .choices{display:flex;flex-wrap:wrap;gap:4px}
-.choice{margin:0;padding:3px 8px;font-size:13px;border-width:2px;border-radius:8px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
-.choice[aria-checked=true]{background:var(--sky);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.choice{margin:0;padding:3px 7px;font-size:14px;letter-spacing:.5px;border-radius:10px;background:var(--arc-field);color:#cfd8ff}
+.choice[aria-checked=true]{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
 
-/* Toggle: a chunky switch. */
-.switch{position:relative;width:52px;height:28px;margin:0;padding:0;border-width:3px;border-radius:16px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
+/* Toggle: a switch with a white knob. */
+.switch{position:relative;width:52px;height:28px;margin:0;padding:0;border-radius:16px;background:var(--arc-field)}
 .switch[aria-checked=true]{background:var(--green)}
-.knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border:2px solid var(--ink);border-radius:50%;background:var(--yellow);transition:left .12s}
-.switch[aria-checked=true] .knob{left:26px}
+.knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border:0;border-radius:50%;background:#fff;transition:left .12s}
+.switch[aria-checked=true] .knob{left:27px}
 
-.reset{margin:0;padding:0;width:28px;height:28px;font:900 16px/1 var(--pp-body,'Nunito',sans-serif);border-width:2px;border-radius:50%;background:#fff;box-shadow:2px 2px 0 var(--ink)}
+.reset{margin:0;padding:0;width:28px;height:28px;font:900 16px/1 var(--pp-body,'Nunito',sans-serif);border-radius:50%;background:var(--arc-field);color:#fff}
 .reset[aria-hidden=true]{visibility:hidden}
 
-.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.actions button{margin:0}
-.resetAll{background:#fff}
-.solo,.party{flex:1;font-size:18px;color:#fff;text-shadow:2px 2px 0 var(--ink)}
-.solo{background:var(--pink)}
-.party{background:var(--sky)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.actions button{margin:0;border-radius:12px}
+.resetAll{background:transparent;color:#cfe9ff;font-size:15px;letter-spacing:1px}
+.solo,.party{flex:1;font-size:20px;letter-spacing:1.5px;color:#fff}
+.solo{background:var(--pink);border-color:#ff8fb8}
+.party{background:var(--sky);border-color:#8fd3ff}
 
 @media (prefers-reduced-motion:reduce){.knob{transition:none}}
-@media (max-width:420px){.row{grid-template-columns:80px minmax(0,1fr) 54px 28px;gap:6px}}
-
-/* Panel looks under review (see Landing.module.css): html[data-panel-look] restyles the editor. */
-:global(html[data-panel-look=arcade]) .summary{color:#9fb3ff}
-:global(html[data-panel-look=arcade]) .groupTitle{rotate:0deg;background:none;border:0;box-shadow:none;padding:0;color:#4cc9ff;font-size:14px;letter-spacing:3px}
-:global(html[data-panel-look=arcade]) .row{border-left-color:transparent;border-radius:10px}
-:global(html[data-panel-look=arcade]) .row[data-changed]{background:rgba(255,210,63,.12);border-left-color:#ffd23f}
-:global(html[data-panel-look=arcade]) .unit,:global(html[data-panel-look=arcade]) .label,:global(html[data-panel-look=arcade]) .value{color:#eef1ff}
-:global(html[data-panel-look=arcade]) .slider::-webkit-slider-runnable-track{background:#2a3170;border:0;height:6px}
-:global(html[data-panel-look=arcade]) .slider::-moz-range-track{background:#2a3170;border:0;height:6px}
-:global(html[data-panel-look=arcade]) .slider::-webkit-slider-thumb{border:2px solid #fff;background:#ff3d8b;box-shadow:0 0 10px #ff3d8b;margin-top:-7px}
-:global(html[data-panel-look=arcade]) .slider::-moz-range-thumb{border:2px solid #fff;background:#ff3d8b;box-shadow:0 0 10px #ff3d8b}
-:global(html[data-panel-look=arcade]) .choice{background:#1f2556;color:#cfd8ff}
-:global(html[data-panel-look=arcade]) .choice[aria-checked=true]{background:#ffd23f;color:#14102a;text-shadow:none;border-color:#ffd23f}
-:global(html[data-panel-look=arcade]) .switch{background:#1f2556}
-:global(html[data-panel-look=arcade]) .switch[aria-checked=true]{background:#2fbf5b}
-:global(html[data-panel-look=arcade]) .knob{border:0;background:#fff}
-:global(html[data-panel-look=arcade]) .reset{background:#1f2556;color:#fff}
-:global(html[data-panel-look=arcade]) .entry{background:#0c0f2a;color:#fff;border:2px solid #4cc9ff;box-shadow:none}
-:global(html[data-panel-look=arcade]) .note{color:#ffb4cf}
-:global(html[data-panel-look=arcade]) .resetAll{background:transparent;color:#cfe9ff}
-
-:global(html[data-panel-look=clean]) .summary{color:#6b7189}
-:global(html[data-panel-look=clean]) .groupTitle{rotate:0deg;background:none;border:0;box-shadow:none;padding:0;margin-top:10px;color:#8a90a8;font:900 12px var(--pp-body,'Nunito',sans-serif);letter-spacing:1.5px}
-:global(html[data-panel-look=clean]) .row{border-left:0;border-radius:12px;padding:6px 8px}
-:global(html[data-panel-look=clean]) .row[data-changed]{background:#f1f5ff}
-:global(html[data-panel-look=clean]) .unit{font:800 15px var(--pp-body,'Nunito',sans-serif);color:#1d2233}
-:global(html[data-panel-look=clean]) .label{color:#1d2233;font-weight:700}
-:global(html[data-panel-look=clean]) .value{font:800 15px var(--pp-body,'Nunito',sans-serif);color:#2f7cf0}
-:global(html[data-panel-look=clean]) .slider::-webkit-slider-runnable-track{background:#e3e7f2;border:0;height:6px}
-:global(html[data-panel-look=clean]) .slider::-moz-range-track{background:#e3e7f2;border:0;height:6px}
-:global(html[data-panel-look=clean]) .slider::-webkit-slider-thumb{border:0;background:#2f7cf0;box-shadow:0 2px 6px rgba(47,124,240,.45);margin-top:-7px}
-:global(html[data-panel-look=clean]) .slider::-moz-range-thumb{border:0;background:#2f7cf0;box-shadow:0 2px 6px rgba(47,124,240,.45)}
-:global(html[data-panel-look=clean]) .choice{background:#eef0f6;color:#3b4260}
-:global(html[data-panel-look=clean]) .choice[aria-checked=true]{background:#2f7cf0;color:#fff;text-shadow:none}
-:global(html[data-panel-look=clean]) .switch{background:#dfe3ee;border:0}
-:global(html[data-panel-look=clean]) .switch[aria-checked=true]{background:#2fbf5b}
-:global(html[data-panel-look=clean]) .knob{border:0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);top:5px;left:5px}
-:global(html[data-panel-look=clean]) .switch[aria-checked=true] .knob{left:29px}
-:global(html[data-panel-look=clean]) .reset{background:#eef0f6;color:#3b4260}
-:global(html[data-panel-look=clean]) .entry{border:2px solid #dfe3ee;box-shadow:none;font:800 16px var(--pp-body,'Nunito',sans-serif)}
-:global(html[data-panel-look=clean]) .note{color:#d7263d}
-:global(html[data-panel-look=clean]) .resetAll{background:#eef0f6;color:#3b4260}
-:global(html[data-panel-look=clean]) .solo,:global(html[data-panel-look=clean]) .party{text-shadow:none;font-size:16px}
-
-:global(html[data-panel-look=glass]) .summary{color:rgba(255,255,255,.8)}
-:global(html[data-panel-look=glass]) .groupTitle{rotate:0deg;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5);box-shadow:none;border-radius:999px;color:#fff;font-size:13px}
-:global(html[data-panel-look=glass]) .row{border-left:0;border-radius:12px}
-:global(html[data-panel-look=glass]) .row[data-changed]{background:rgba(255,210,63,.22)}
-:global(html[data-panel-look=glass]) .unit,:global(html[data-panel-look=glass]) .label,:global(html[data-panel-look=glass]) .value{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4)}
-:global(html[data-panel-look=glass]) .slider::-webkit-slider-runnable-track{background:rgba(255,255,255,.35);border:0;height:6px}
-:global(html[data-panel-look=glass]) .slider::-moz-range-track{background:rgba(255,255,255,.35);border:0;height:6px}
-:global(html[data-panel-look=glass]) .slider::-webkit-slider-thumb{border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35);margin-top:-7px}
-:global(html[data-panel-look=glass]) .slider::-moz-range-thumb{border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35)}
-:global(html[data-panel-look=glass]) .choice{background:rgba(255,255,255,.15);color:#fff}
-:global(html[data-panel-look=glass]) .choice[aria-checked=true]{background:#fff;color:#14102a;text-shadow:none}
-:global(html[data-panel-look=glass]) .switch{background:rgba(255,255,255,.2)}
-:global(html[data-panel-look=glass]) .switch[aria-checked=true]{background:rgba(47,191,91,.85)}
-:global(html[data-panel-look=glass]) .knob{border:0;background:#fff}
-:global(html[data-panel-look=glass]) .reset{background:rgba(255,255,255,.2);color:#fff}
-:global(html[data-panel-look=glass]) .entry{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);box-shadow:none}
-:global(html[data-panel-look=glass]) .note{color:#ffe08a;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-:global(html[data-panel-look=glass]) .resetAll{background:rgba(255,255,255,.2);color:#fff}

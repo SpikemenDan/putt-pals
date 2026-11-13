@@ -24,7 +24,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const { DEFAULT_RULES: STD } = rules;
 
   // ---- the rule set and its standard values
-  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 1, missedHolePenalty: 2 });
+  assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 70, lunaGravity: 45, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 1, missedHolePenalty: 2 });
   assert.ok(Object.isFrozen(STD));
   assert.deepEqual(rules.RULE_CATEGORIES.map(c => c.id), ['match', 'shots', 'worlds'], 'most-changed category first');
   assert.deepEqual(rules.CUSTOM_RULES.map(r => r.label), ['Power-Ups', 'Game Length', 'Time Per Hole', 'Missed Hole Penalty', 'Shot Power', 'Aim Sway', 'Gaia Gravity', 'Ares Gravity', 'Luna Gravity'], 'Title Case labels in display order');
@@ -34,6 +34,10 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
     assert.ok(!rules.RULE_IDS.some(id => banned.test(id)), 'no security, policy or quota setting is a rule: ' + banned);
   }
   assert.equal(rules.rulesTuning(STD), TUNING, 'standard rules are the shipped tuning object itself');
+  // Gravity is relative to Gaia: Ares 490 and Luna 315 against Gaia's 700 are 70 % and 45 %.
+  assert.equal(rules.validRules({ ...STD, lunaGravity: 20 }), true);
+  assert.equal(rules.validRules({ ...STD, lunaGravity: 15 }), false);
+  assert.deepEqual(['gaia', 'ares', 'luna'].map(id => rules.ruleGravity({ ...STD, shotPower: 105 }, id)), [700, 490, 315], 'standard percentages reproduce the shipped gravity');
   assert.equal(rules.isStandardRules(STD), true);
 
   // ---- validation at the boundary
@@ -61,6 +65,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
 
   // ---- player-facing values
   assert.equal(rules.ruleValueText('gaiaGravity', 150), '150%');
+  assert.equal(rules.ruleValueText('lunaGravity', STD.lunaGravity), '45%');
   assert.equal(rules.ruleValueText('missedHolePenalty', 1), '+1 stroke');
   assert.equal(rules.ruleValueText('missedHolePenalty', 3), '+3 strokes');
   assert.equal(rules.ruleValueText('holeTimer', 0), 'Course');
@@ -85,10 +90,10 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const custom = { ...STD, gaiaGravity: 150, aresGravity: 50, lunaGravity: 200, shotPower: 50, aimWobble: 'off', missedHolePenalty: 5 };
   const t = rules.rulesTuning(custom);
   assert.equal(t.gravity, 1050);
-  assert.equal(t.worlds.ares.gravity, 245);
-  assert.equal(t.worlds.luna.gravity, 630);
-  assert.deepEqual(['gaia', 'ares', 'luna'].map(id => rules.ruleGravity(custom, id)), [1050, 245, 630]);
-  assert.deepEqual(['gaia', 'ares', 'luna'].map(id => worldGravity(id, t)), [1050, 245, 630]);
+  assert.equal(t.worlds.ares.gravity, 350, 'Ares at 50 % of Gaia');
+  assert.equal(t.worlds.luna.gravity, 1400, 'Luna at 200 % of Gaia');
+  assert.deepEqual(['gaia', 'ares', 'luna'].map(id => rules.ruleGravity(custom, id)), [1050, 350, 1400]);
+  assert.deepEqual(['gaia', 'ares', 'luna'].map(id => worldGravity(id, t)), [1050, 350, 1400]);
   assert.equal(t.shotPower, 300);
   assert.equal(t.aim.spreadBase, 0);
   assert.equal(t.aim.spreadGain, 0);

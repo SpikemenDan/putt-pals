@@ -115,7 +115,7 @@ validated tuning from a rule set:
 
 | Rule | Range | Standard | Becomes |
 | --- | --- | --- | --- |
-| Gaia, Ares and Luna Gravity | 50 to 200 %, step 5 | 100 % | `gravity`, `worlds.ares.gravity`, `worlds.luna.gravity` scaled from the shipped values |
+| Gaia, Ares and Luna Gravity | 20 to 200 % of Gaia's shipped gravity, step 5 | Gaia 100 %, Ares 70 %, Luna 45 % | `gravity`, `worlds.ares.gravity`, `worlds.luna.gravity` = 700 x percentage / 100 |
 | Shot Power | 50 to 150 %, step 5 | 100 % | `shotPower` scaled from 600 |
 | Aim Sway | Off, Low, Normal, High | Normal | `aim.spreadBase` and `aim.spreadGain` times 0, 0.5, 1 or 1.6 |
 | Power-Ups | On or Off | On | the room's `powerups` flag (No Power-Ups) |

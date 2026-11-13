@@ -28,6 +28,9 @@ const select = (id, category, label, help, options, value) => Object.freeze({ id
 const number = (id, category, label, help, min, max, value, units, warnAbove, warning) => Object.freeze({ id, category, kind: 'number', label, help, min, max, step: 1, default: value, units: Object.freeze(units), warnAbove, warning });
 const toggle = (id, category, label, help, value) => Object.freeze({ id, category, kind: 'toggle', label, help, default: value });
 
+/** A world's shipped gravity as a percentage of Gaia's (Ares 70, Luna 45). */
+const ofGaia = gravity => Math.round(gravity / DEFAULT_TUNING.gravity * 100);
+
 /** Most maps one game may last (the room contracts bound completed maps by this). */
 export const MAX_SERIES_MAPS = 20;
 /** Above this many maps the editor warns that the game may run long (owner, 2026-11-13). */
@@ -48,9 +51,11 @@ export const CUSTOM_RULES = Object.freeze([
   slider('shotPower', 'shots', 'Shot Power', 'How fast a full-power putt leaves.', 50, 150, 5, 100, '%'),
   select('aimWobble', 'shots', 'Aim Sway', 'How far the aim arrow sways on hard shots.',
     [{ value: 'off', label: 'Off' }, { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }], 'normal'),
-  slider('gaiaGravity', 'worlds', 'Gaia Gravity', 'Pull on Gaia, as a share of standard.', 50, 200, 5, 100, '%'),
-  slider('aresGravity', 'worlds', 'Ares Gravity', 'Pull on Ares, as a share of its standard.', 50, 200, 5, 100, '%'),
-  slider('lunaGravity', 'worlds', 'Luna Gravity', 'Pull on Luna, as a share of its standard.', 50, 200, 5, 100, '%'),
+  // Every world's gravity is a percentage of Gaia's shipped gravity (owner, 2026-11-13), so the standard values show how
+  // the worlds compare: Ares 490 / 700 = 70 %, Luna 315 / 700 = 45 %.
+  slider('gaiaGravity', 'worlds', 'Gaia Gravity', 'Pull on Gaia, as a percentage of standard Gaia gravity.', 20, 200, 5, 100, '%'),
+  slider('aresGravity', 'worlds', 'Ares Gravity', 'Pull on Ares, as a percentage of standard Gaia gravity.', 20, 200, 5, ofGaia(DEFAULT_TUNING.worlds.ares.gravity), '%'),
+  slider('lunaGravity', 'worlds', 'Luna Gravity', 'Pull on Luna, as a percentage of standard Gaia gravity.', 20, 200, 5, ofGaia(DEFAULT_TUNING.worlds.luna.gravity), '%'),
 ]);
 
 export const RULE_IDS = Object.freeze(CUSTOM_RULES.map(r => r.id));
@@ -114,7 +119,8 @@ const scale = (value, percent) => Math.round(value * percent) / 100;
 
 /**
  * Validated, frozen tuning for a rule set. Standard rules return the shipped TUNING object itself, so a standard
- * game is the same game, bit for bit. Gravity scales each world's shipped value; aim wobble scales the sway spread.
+ * game is the same game, bit for bit. Every world's gravity is a percentage of Gaia's shipped gravity; aim sway
+ * scales the sway spread.
  */
 export function rulesTuning(rules) {
   const r = validateRules(rules);
@@ -122,7 +128,7 @@ export function rulesTuning(rules) {
   const wobble = AIM_WOBBLE[r.aimWobble];
   return createTuning({
     gravity: scale(DEFAULT_TUNING.gravity, r.gaiaGravity),
-    worlds: { ares: { gravity: scale(DEFAULT_TUNING.worlds.ares.gravity, r.aresGravity) }, luna: { gravity: scale(DEFAULT_TUNING.worlds.luna.gravity, r.lunaGravity) } },
+    worlds: { ares: { gravity: scale(DEFAULT_TUNING.gravity, r.aresGravity) }, luna: { gravity: scale(DEFAULT_TUNING.gravity, r.lunaGravity) } },
     shotPower: scale(DEFAULT_TUNING.shotPower, r.shotPower),
     aim: { spreadBase: DEFAULT_TUNING.aim.spreadBase * wobble, spreadGain: DEFAULT_TUNING.aim.spreadGain * wobble },
     scoring: { missedHolePenalty: r.missedHolePenalty },

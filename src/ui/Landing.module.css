@@ -27,36 +27,24 @@
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(calc(var(--menu-bob)*-1))}}
 .big:active:not(:disabled){animation-play-state:paused}
 
-/* Sub-menus (Solo, Party, Custom, Settings) open in a paper panel in the same corner. */
-.panel{position:fixed;left:clamp(12px,2.4vw,32px);bottom:clamp(44px,9vh,96px);width:min(92vw,430px);max-height:calc(100vh - clamp(180px,32vh,270px));overflow:auto;box-sizing:border-box;background:rgba(255,248,228,.95);color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:14px 18px 16px;box-shadow:6px 6px 0 var(--ink);text-align:left;animation:drop .3s ease-out both}
-.heading{margin:0 0 4px;font:400 30px/1 var(--font);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
-.field{margin:8px 0;font-size:14px;font-weight:700;color:var(--mut)}
-.panel label{margin:8px 0}
+/* Sub-menus (Solo, Party, Custom, Settings) open in the Arcade panel (owner's pick, 2026-11-13): a dark navy console
+   panel with a cyan rim, in the same corner. Button and field text has no drop shadow so the pixel font stays readable. */
+.panel{position:fixed;left:clamp(12px,2.4vw,32px);bottom:clamp(44px,9vh,96px);width:min(92vw,430px);max-height:calc(100vh - clamp(180px,32vh,270px));overflow:auto;box-sizing:border-box;padding:14px 18px 16px;text-align:left;animation:drop .3s ease-out both;--arc-line:#4cc9ff;--arc-field:#1f2556;--arc-deep:#0c0f2a;background:rgba(16,20,48,.94);color:#eef1ff;border:2px solid var(--arc-line);border-radius:22px;box-shadow:0 0 0 4px rgba(76,201,255,.18),0 18px 40px rgba(0,0,0,.45)}
+.heading{margin:0 0 4px;font:400 30px/1 var(--font);letter-spacing:3px;text-transform:uppercase;color:#fff;text-shadow:0 2px 0 var(--pink)}
+.field{margin:8px 0;font-size:14px;font-weight:700;color:#cfd8ff}
+.panel label{margin:8px 0;color:#eef1ff}
+.panel p{color:#b9c3f0}
+.panel [role=status]{color:#ff8fb8}
+.panel details,.panel summary{color:#eef1ff}
+.panel input:not([type=range]),.panel select{background:var(--arc-deep);color:#fff;border:2px solid var(--arc-line);box-shadow:none}
 /* Smaller swatches here so all 30 colours fit in three rows and Join stays on screen without scrolling. */
 .panel [data-ui=color-picker]{grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:6px}
-.go{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;background:var(--pink);color:#fff;text-shadow:2px 2px 0 var(--ink)}
-.back{margin:12px 0 0;background:#fff}
+.go{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;letter-spacing:1.5px;background:var(--pink);color:#fff;border:2px solid #ff8fb8;border-radius:12px;box-shadow:none;text-shadow:none}
+.back{margin:12px 0 0;background:transparent;color:#cfe9ff;border:2px solid var(--arc-line);border-radius:12px;box-shadow:none;text-shadow:none;letter-spacing:1px}
 .style{display:grid;gap:8px;margin-top:8px}
 .version{position:fixed;left:clamp(12px,2.4vw,32px);bottom:8px;margin:0;pointer-events:none;font:700 12px var(--pp-body,'Nunito',sans-serif);letter-spacing:.4px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
 
-@media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
+@media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:0 0 0 3px rgba(76,201,255,.18),0 12px 30px rgba(0,0,0,.45)}.brand{-webkit-text-stroke-width:3px}}
 @media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
-.inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);background:#fff}
+.inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border:2px solid var(--arc-line);border-radius:8px;box-shadow:none;background:var(--arc-field);color:#fff}
 .panel[data-menu-view=custom]{width:min(92vw,540px)}
-
-/* Panel looks under review (VIS-U, owner 2026-11-13): the development "Panel look" picker sets html[data-panel-look].
-   Without the attribute the shipped comic look above applies. The chosen look will replace it everywhere. */
-:global(html[data-panel-look=arcade]) .panel{background:rgba(16,20,48,.94);color:#eef1ff;border:2px solid #4cc9ff;border-radius:22px;box-shadow:0 0 0 4px rgba(76,201,255,.18),0 18px 40px rgba(0,0,0,.45)}
-:global(html[data-panel-look=arcade]) .heading{color:#fff;text-shadow:0 2px 0 #ff3d8b;letter-spacing:3px}
-:global(html[data-panel-look=arcade]) .panel button{border:2px solid #4cc9ff;box-shadow:none;border-radius:12px}
-:global(html[data-panel-look=arcade]) .back{background:transparent;color:#cfe9ff}
-
-:global(html[data-panel-look=clean]) .panel{background:#fff;color:#1d2233;border:0;border-radius:20px;box-shadow:0 10px 30px rgba(20,16,42,.22);padding:18px 20px}
-:global(html[data-panel-look=clean]) .heading{font-family:var(--pp-body,'Nunito',sans-serif);font-weight:900;font-size:24px;letter-spacing:.5px;text-transform:none;color:#1d2233;text-shadow:none}
-:global(html[data-panel-look=clean]) .panel button{border:0;box-shadow:none;border-radius:999px;font-family:var(--pp-body,'Nunito',sans-serif);font-weight:800}
-:global(html[data-panel-look=clean]) .back{background:#eef0f6;color:#1d2233}
-
-:global(html[data-panel-look=glass]) .panel{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.55);border-radius:24px;box-shadow:0 12px 40px rgba(10,20,60,.35);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3)}
-:global(html[data-panel-look=glass]) .heading{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35)}
-:global(html[data-panel-look=glass]) .panel button{border:1px solid rgba(255,255,255,.6);box-shadow:none;border-radius:14px}
-:global(html[data-panel-look=glass]) .back{background:rgba(255,255,255,.2);color:#fff}
