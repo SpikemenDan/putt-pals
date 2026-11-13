@@ -15,9 +15,9 @@ import { createTuning, DEFAULT_TUNING, TUNING } from './tuning.js';
 import { worldGravity } from './worlds.js';
 
 export const RULE_CATEGORIES = Object.freeze([
-  Object.freeze({ id: 'worlds', label: 'Worlds', help: 'How hard each planet pulls your ball. Lower is floatier.' }),
+  Object.freeze({ id: 'match', label: 'Match', help: 'Power-ups, game length, the clock and scoring.' }),
   Object.freeze({ id: 'shots', label: 'Shots', help: 'How hard and how straight you hit.' }),
-  Object.freeze({ id: 'match', label: 'Match', help: 'Power-ups, the clock and scoring.' }),
+  Object.freeze({ id: 'worlds', label: 'Worlds', help: 'How hard each planet pulls your ball. Lower is floatier.' }),
 ]);
 
 /** Aim sway as a multiple of the shipped spread; 'normal' is today's game. */
@@ -25,7 +25,7 @@ export const AIM_WOBBLE = Object.freeze({ off: 0, low: 0.5, normal: 1, high: 1.6
 
 const slider = (id, category, label, help, min, max, step, value, unit) => Object.freeze({ id, category, kind: 'slider', label, help, min, max, step, default: value, unit });
 const select = (id, category, label, help, options, value) => Object.freeze({ id, category, kind: 'select', label, help, options: Object.freeze(options.map(o => Object.freeze(o))), default: value });
-const number = (id, category, label, help, min, max, value, warnAbove, warning) => Object.freeze({ id, category, kind: 'number', label, help, min, max, step: 1, default: value, warnAbove, warning });
+const number = (id, category, label, help, min, max, value, units, warnAbove, warning) => Object.freeze({ id, category, kind: 'number', label, help, min, max, step: 1, default: value, units: Object.freeze(units), warnAbove, warning });
 const toggle = (id, category, label, help, value) => Object.freeze({ id, category, kind: 'toggle', label, help, default: value });
 
 /** Most maps one game may last (the room contracts bound completed maps by this). */
@@ -38,18 +38,19 @@ const HOLE_TIMERS = [0, 120, 180, 300, 600].filter(s => s === 0 || (s >= MIN_TIM
 
 /** Rule specs, in display order. Units: '%' is a percentage of the shipped value; 'strokes' are whole strokes. */
 export const CUSTOM_RULES = Object.freeze([
-  slider('gaiaGravity', 'worlds', 'Gaia gravity', 'Pull on Gaia, as a share of standard.', 50, 200, 5, 100, '%'),
-  slider('aresGravity', 'worlds', 'Ares gravity', 'Pull on Ares, as a share of its standard.', 50, 200, 5, 100, '%'),
-  slider('lunaGravity', 'worlds', 'Luna gravity', 'Pull on Luna, as a share of its standard.', 50, 200, 5, 100, '%'),
-  slider('shotPower', 'shots', 'Shot power', 'How fast a full-power putt leaves.', 50, 150, 5, 100, '%'),
-  select('aimWobble', 'shots', 'Aim wobble', 'How far the aim arrow sways on hard shots.',
-    [{ value: 'off', label: 'Off' }, { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }], 'normal'),
-  toggle('powerups', 'match', 'Power-ups', 'Item boxes and power-ups. Off is pure mini golf.', true),
-  select('holeTimer', 'match', 'Hole timer', 'Time allowed for each hole.',
+  // Display order (owner, 2026-11-13): the rules people change most come first.
+  toggle('powerups', 'match', 'Power-Ups', 'Item boxes and power-ups. Off is pure mini golf.', true),
+  number('maps', 'match', 'Game Length', 'How many maps one game lasts. 1 keeps the lobby mode (1 map, or a 3, 5 or 7 map tournament).', 1, MAX_SERIES_MAPS, 1,
+    ['Map', 'Maps'], LONG_SERIES_MAPS, 'That many maps might make the game too long.'),
+  select('holeTimer', 'match', 'Time Per Hole', 'Time allowed for each hole.',
     HOLE_TIMERS.map(s => ({ value: s, label: s === 0 ? 'Course' : s / 60 + ' min' })), 0),
-  number('maps', 'match', 'Game length', 'How many maps one game lasts. 1 keeps the lobby mode (1 map, or a 3, 5 or 7 map tournament).', 1, MAX_SERIES_MAPS, 1,
-    LONG_SERIES_MAPS, 'That many maps might make the game too long.'),
-  slider('missedHolePenalty', 'match', 'Missed hole', 'Extra strokes on top of the maximum for a hole you miss.', 0, 5, 1, DEFAULT_TUNING.scoring.missedHolePenalty, 'strokes'),
+  slider('missedHolePenalty', 'match', 'Missed Hole Penalty', 'Extra strokes on top of the maximum for a hole you miss.', 0, 5, 1, DEFAULT_TUNING.scoring.missedHolePenalty, 'strokes'),
+  slider('shotPower', 'shots', 'Shot Power', 'How fast a full-power putt leaves.', 50, 150, 5, 100, '%'),
+  select('aimWobble', 'shots', 'Aim Sway', 'How far the aim arrow sways on hard shots.',
+    [{ value: 'off', label: 'Off' }, { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }], 'normal'),
+  slider('gaiaGravity', 'worlds', 'Gaia Gravity', 'Pull on Gaia, as a share of standard.', 50, 200, 5, 100, '%'),
+  slider('aresGravity', 'worlds', 'Ares Gravity', 'Pull on Ares, as a share of its standard.', 50, 200, 5, 100, '%'),
+  slider('lunaGravity', 'worlds', 'Luna Gravity', 'Pull on Luna, as a share of its standard.', 50, 200, 5, 100, '%'),
 ]);
 
 export const RULE_IDS = Object.freeze(CUSTOM_RULES.map(r => r.id));
@@ -105,7 +106,7 @@ export function ruleValueText(id, value) {
   const r = spec[id];
   if (r.kind === 'toggle') return value ? 'On' : 'Off';
   if (r.kind === 'select') return r.options.find(o => o.value === value)?.label ?? String(value);
-  if (r.kind === 'number') return value + (value === 1 ? ' Map' : ' Maps');
+  if (r.kind === 'number') return value + ' ' + r.units[value === 1 ? 0 : 1];
   return r.unit === '%' ? value + '%' : '+' + value + ' ' + (value === 1 ? 'stroke' : 'strokes');
 }
 

@@ -26,7 +26,8 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   // ---- the rule set and its standard values
   assert.deepEqual(STD, { gaiaGravity: 100, aresGravity: 100, lunaGravity: 100, shotPower: 100, aimWobble: 'normal', powerups: true, holeTimer: 0, maps: 1, missedHolePenalty: 2 });
   assert.ok(Object.isFrozen(STD));
-  assert.deepEqual(rules.RULE_CATEGORIES.map(c => c.id), ['worlds', 'shots', 'match']);
+  assert.deepEqual(rules.RULE_CATEGORIES.map(c => c.id), ['match', 'shots', 'worlds'], 'most-changed category first');
+  assert.deepEqual(rules.CUSTOM_RULES.map(r => r.label), ['Power-Ups', 'Game Length', 'Time Per Hole', 'Missed Hole Penalty', 'Shot Power', 'Aim Sway', 'Gaia Gravity', 'Ares Gravity', 'Luna Gravity'], 'Title Case labels in display order');
   assert.ok(rules.CUSTOM_RULES.every(r => rules.RULE_CATEGORIES.some(c => c.id === r.category)), 'every rule has a category (for a tabbed layout later)');
   assert.ok(rules.CUSTOM_RULES.every(r => typeof r.label === 'string' && r.label && typeof r.help === 'string' && r.help), 'every rule has player-facing text');
   for (const banned of [/secret/i, /token/i, /auth/i, /quota/i, /policy/i, /grace/i, /ttl/i, /limit/i]) {
@@ -56,7 +57,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   // Stored editor drafts: keep valid entries, drop bad or unknown ones.
   assert.deepEqual(rules.rulesFromPartial({ shotPower: 120, lunaGravity: 7, hack: 1 }), { ...STD, shotPower: 120 });
   assert.deepEqual(rules.rulesFromPartial('nope'), STD);
-  assert.deepEqual(rules.changedRules({ ...STD, powerups: false, lunaGravity: 50 }), ['lunaGravity', 'powerups'], 'changed rules in display order');
+  assert.deepEqual(rules.changedRules({ ...STD, powerups: false, lunaGravity: 50 }), ['powerups', 'lunaGravity'], 'changed rules in display order');
 
   // ---- player-facing values
   assert.equal(rules.ruleValueText('gaiaGravity', 150), '150%');
@@ -182,7 +183,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   // ---- lobby status names the room's custom rules for everyone
   const lobbyState = open({ rules: { ...STD, lunaGravity: 60, aimWobble: 'off', powerups: false } }).state();
   const text = lobbyView(lobbyState, { isHost: true, id: 'host' }, 0, []).status;
-  assert.match(text, /Power-ups are off\. Custom rules: Luna gravity 60%, Aim wobble Off\.$/);
+  assert.match(text, /Power-ups are off\. Custom rules: Aim Sway Off, Luna Gravity 60%\.$/);
   const info = createCourseInfo(createCourseData());
   const twelve = open({ rules: { ...STD, maps: 12 } });
   twelve.send('START_VOTING');

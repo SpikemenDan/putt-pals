@@ -115,13 +115,13 @@ validated tuning from a rule set:
 
 | Rule | Range | Standard | Becomes |
 | --- | --- | --- | --- |
-| Gaia, Ares and Luna gravity | 50 to 200 %, step 5 | 100 % | `gravity`, `worlds.ares.gravity`, `worlds.luna.gravity` scaled from the shipped values |
-| Shot power | 50 to 150 %, step 5 | 100 % | `shotPower` scaled from 600 |
-| Aim wobble | Off, Low, Normal, High | Normal | `aim.spreadBase` and `aim.spreadGain` times 0, 0.5, 1 or 1.6 |
-| Power-ups | On or Off | On | the room's `powerups` flag (No Power-Ups) |
-| Hole timer | Course, 2, 3, 5 or 10 min | Course | each putt's time limit (Course keeps the course's own limit) |
-| Game length | 1 to 20 maps, typed; the editor warns above 10 | 1 (keeps the lobby mode) | maps in one game for Standard and Tournament modes (`seriesMaps`); a multi-map game carries its inventory like a tournament |
-| Missed hole | 0 to 5 strokes | 2 | `scoring.missedHolePenalty` |
+| Gaia, Ares and Luna Gravity | 50 to 200 %, step 5 | 100 % | `gravity`, `worlds.ares.gravity`, `worlds.luna.gravity` scaled from the shipped values |
+| Shot Power | 50 to 150 %, step 5 | 100 % | `shotPower` scaled from 600 |
+| Aim Sway | Off, Low, Normal, High | Normal | `aim.spreadBase` and `aim.spreadGain` times 0, 0.5, 1 or 1.6 |
+| Power-Ups | On or Off | On | the room's `powerups` flag (No Power-Ups) |
+| Time Per Hole | Course, 2, 3, 5 or 10 min | Course | each putt's time limit (Course keeps the course's own limit) |
+| Game Length | 1 to 20 maps, typed; the editor warns above 10 | 1 (keeps the lobby mode) | maps in one game for Standard and Tournament modes (`seriesMaps`); a multi-map game carries its inventory like a tournament |
+| Missed Hole Penalty | 0 to 5 strokes | 2 | `scoring.missedHolePenalty` |
 
 A room fixes its rules when it is created (Play solo, or the first player into a Party room code); they are
 carried in the session and the same for every participant, and never change mid-match. The editor remembers

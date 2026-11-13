@@ -202,7 +202,7 @@ function fakeClock() {
     const editor = landing.querySelector('[data-ui=custom-rules]');
     const row = id => editor.querySelector('[data-rule=' + id + ']');
     const summary = () => editor.querySelector('[data-ui=rules-changed]').textContent;
-    assert.deepEqual([...editor.querySelectorAll('h3')].map(h => h.textContent), ['Worlds', 'Shots', 'Match']);
+    assert.deepEqual([...editor.querySelectorAll('h3')].map(h => h.textContent), ['Match', 'Shots', 'Worlds']);
     assert.equal(editor.querySelectorAll('[data-rule]').length, 9);
     assert.equal(summary(), 'Standard rules');
     assert.equal(row('gaiaGravity').querySelector('output').textContent, '100%', 'sliders show their value');
@@ -224,8 +224,11 @@ function fakeClock() {
     const note = () => row('maps').querySelector('[data-ui=rule-maps-note]').textContent;
     assert.equal(mapsBox.value, '1');
     assert.equal(row('maps').querySelector('output').textContent, '1 Map');
+    const unit = () => mapsBox.nextElementSibling.textContent;
+    assert.equal(unit(), 'Map', 'the unit sits right after the box');
     await slide(mapsBox, '2');
     assert.equal(row('maps').querySelector('output').textContent, '2 Maps');
+    assert.equal(unit(), 'Maps');
     await slide(mapsBox, '6');
     assert.equal(row('maps').querySelector('output').textContent, '6 Maps');
     assert.equal(note(), '', 'no warning up to 10 maps');
@@ -242,11 +245,11 @@ function fakeClock() {
     }
     await act(async () => { mapsBox.dispatchEvent(new dom.window.FocusEvent('blur')); mapsBox.dispatchEvent(new dom.window.FocusEvent('focusout', { bubbles: true })); });
     assert.equal(mapsBox.value, '12', 'leaving the box restores the current value');
-    await click(row('maps').querySelector('button[aria-label="Reset Game length"]'));
+    await click(row('maps').querySelector('button[aria-label="Reset Game Length"]'));
     assert.equal(mapsBox.value, '1', 'reset goes back to 1');
     assert.equal(row('maps').querySelector('output').textContent, '1 Map');
     assert.equal(note(), '');
-    await click(row('holeTimer').querySelector('button[aria-label="Reset Hole timer"]'));
+    await click(row('holeTimer').querySelector('button[aria-label="Reset Time Per Hole"]'));
     assert.equal(row('holeTimer').querySelector('[aria-checked=true]').textContent, 'Course', 'per-rule reset restores the standard value');
     assert.equal(summary(), '3 rules changed');
     t.commands.length = 0;

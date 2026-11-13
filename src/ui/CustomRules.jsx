@@ -19,6 +19,7 @@ function NumberEntry({ rule, value, onCommit }) {
         value={text} aria-invalid={bad || undefined} aria-describedby={'rule-' + rule.id + '-note'}
         onChange={e => { setText(e.target.value); const n = toNumber(e.target.value); if (validRuleValue(rule.id, n)) onCommit(n); }}
         onBlur={() => { if (bad) setText(shown); }} />
+      <span className={css.unit} aria-hidden="true">{rule.units[value === 1 ? 0 : 1]}</span>
       <p id={'rule-' + rule.id + '-note'} className={css.note} role="status" data-ui={'rule-' + rule.id + '-note'}>
         {bad ? 'Enter a whole number from ' + rule.min + ' to ' + rule.max + '.' : value > rule.warnAbove ? '⚠ ' + rule.warning : ''}
       </p>

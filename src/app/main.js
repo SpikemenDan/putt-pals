@@ -25,6 +25,7 @@ if (tuner) {
   if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)).catch(error => console.error('Dev tool failed to load (?art)', error)); // ?art: the flat master map on its own
   if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)).catch(error => console.error('Dev tool failed to load (?gallery)', error)); // ?gallery: live close-ups of the loading-screen city, ship and plane
   Promise.all([import('../devtools/panel.js'), import('../devtools/sources.js'), import('../devtools/powerup-catalog.js'), import('../devtools/loading-preview.js')]).then(([{ mountTuningPanel }, { sources, tuning }, { mountPowerupCatalog }, { mountLoadingPreview }]) => { mountTuningPanel(document, tuner, { sources, tuning }); mountPowerupCatalog(document, app); mountLoadingPreview(document, app); }).catch(error => console.error('Dev tools failed to load', error));
+  import('../devtools/panel-look.js').then(({ mountPanelLook }) => mountPanelLook(document, devStorage())).catch(error => console.error('Dev tool failed to load (panel look)', error)); // VIS-U look review
   if (worldPreview) import('../devtools/world-preview.js').then(({ mountWorldPreview }) => mountWorldPreview(document, worldPreview, app)).catch(error => console.error('Dev tool failed to load (?world)', error));
 }
 // Development/test hook, inert in normal play: lets browser checks inspect the running app.
