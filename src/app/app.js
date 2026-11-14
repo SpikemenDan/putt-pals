@@ -19,6 +19,7 @@ import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { worldGravity, courseWorld } from '../shared/worlds.js';
+import { AIM_WOBBLE, DEFAULT_RULES, rulesTuning, seriesMaps, validateRules, validRules } from '../shared/rules.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -59,6 +60,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   store.setLocal({ cosmetics, colorPref });
   const audio = createAudio();
   const unbindGestures = audio.bindGestures(win);
+  let aimWobble = 1; // aim sway multiple from the current room's Custom rules (VIS-U)
   let room = null, putt = null, puttPolicy = null, carriedInventory = [], activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
   let quality = true, leaving = false, disposed = false, frameId = null, lastFrame = 0, lastPresence = -Infinity, lastSound = null, lastLocal = '';
   const remoteSeen = new Map(); // id -> {strokes, done, fx}
@@ -88,9 +90,11 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
 
   // ---------------------------------------------------------------- rooms
   /** `start`: a solo mode from the Solo steps (VIS-M4); the room opens straight onto the level select in that mode. */
-  async function join({ multi, name, roomCode, start = null }) {
+  async function join({ multi, name, roomCode, start = null, rules = null }) {
     const request = parseJoinRequest({ multi, name, roomCode });
     if (!request.ok) { alert(request.message); return; }
+    // Custom rules (VIS-U) from the menu are validated here, at the UI boundary; null plays standard rules.
+    if (rules !== null && !validRules(rules)) { alert('Those custom rules are not valid. Reset them and try again.'); return; }
     if (room) leave(true);
     joining?.abort();
     const generation = ++joinGeneration;
@@ -99,7 +103,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, clock, random, createTransport, identity: stored, soloHazards, floorAt: (map, puttIndex, x, y) => placementFloor(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, rules: rules === null ? null : validateRules(rules), clock, random, createTransport, identity: stored, soloHazards, floorAt: (map, puttIndex, x, y) => placementFloor(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
       if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
       joining = null;
       reloadRecovery = !!opened.resumed;
@@ -207,7 +211,10 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
     const definition = data.definitions[s.mapIndex];
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false, maps: seriesMaps(s.mode, s.rules) });
+    // The room's Custom rules (VIS-U): fixed at room creation and the same for every participant.
+    const ruleTuning = rulesTuning(validRules(s.rules) ? s.rules : DEFAULT_RULES);
+    aimWobble = AIM_WOBBLE[validRules(s.rules) ? s.rules.aimWobble : 'normal'];
     // Every player must simulate the same gravity, so the development world preview applies to solo rooms only.
     const previewGravity = worldPreview?.active && s.roster.length <= 1 ? worldPreview.gravity : null;
     if (worldPreview?.active && previewGravity === null) toast('World gravity preview is off in party rooms: everyone plays Gaia gravity.');
@@ -215,7 +222,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
       inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
-      gravity: previewGravity ?? worldGravity(courseWorld(definition)), // each map's planet sets its gravity (VIS-M4 mix and match)
+      gravity: previewGravity ?? worldGravity(courseWorld(definition), ruleTuning), shotPower: ruleTuning.shotPower, // each map's planet sets its gravity (VIS-M4), scaled by the room's Custom rules (VIS-U)
     });
     if (room.serverOwned) {
       putt.player.strokes = ownState?.strokes ?? 0;
@@ -465,8 +472,8 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   // ---------------------------------------------------------------- commands
   function handle(command) {
     switch (command.type) {
-      case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText }); break;
-      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null }); break;
+      case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText, rules: command.rules ?? null }); break;
+      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null, rules: command.rules ?? null }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT:
@@ -573,7 +580,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       },
       getState: () => ({
         active: !!room, mode: putt ? putt.mode : 'lobby', moving: !!putt?.player.moving, connected: !!room?.connected,
-        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '',
+        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '', wobble: aimWobble,
       }),
     });
     // Placement mode takes the pointer before the shot handlers see it (capture phase).

@@ -4,6 +4,8 @@ import { UiCommands } from './commands.js';
 import { useCommands, useUiContext, useView } from './context.js';
 import { ColorPicker } from './ColorPicker.jsx';
 import { SoloSteps } from './SoloSteps.jsx';
+import { CustomRules } from './CustomRules.jsx';
+import { changedRules, rulesFromPartial } from '../shared/rules.js';
 import app from './App.module.css';
 import menu from './Landing.module.css';
 
@@ -11,6 +13,11 @@ const COSMETIC_FIELDS = [['ball', 'Ball', BALL_SKINS], ['trail', 'Trail', TRAIL_
 
 /** Build label: `vite.config.mjs` defines __APP_VERSION__ (package version plus commit); tests and other loaders show "dev". */
 export const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'; // eslint-disable-line no-undef
+
+/** Local storage key for the Custom rules editor's draft (a per-player convenience; rooms never read it). */
+export const CUSTOM_RULES_KEY = 'puttplanet.customRules';
+const readDraft = () => { try { return rulesFromPartial(JSON.parse(globalThis.window?.localStorage?.getItem(CUSTOM_RULES_KEY) || 'null')); } catch { return rulesFromPartial(null); } };
+const writeDraft = rules => { try { globalThis.window?.localStorage?.setItem(CUSTOM_RULES_KEY, JSON.stringify(rules)); } catch { /* not remembered */ } };
 
 /** Main menu views (VIS-M2 #174). Solo and Party hold today's flows until VIS-M4 #176 and VIS-M3 #175 replace them. */
 export const MENU_VIEWS = Object.freeze(['home', 'solo', 'party', 'custom', 'settings']);
@@ -51,6 +58,9 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
   const [name, setName] = useState(initialName);
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   const [view, setView] = useState(MENU_VIEWS.includes(initialView) ? initialView : 'home');
+  const [rules, setRules] = useState(readDraft); // Custom editor draft (VIS-U #168)
+  const [hostRules, setHostRules] = useState(null); // rules a Party opened from Custom creates its room with; null = standard
+  const editRules = next => { setRules(next); writeDraft(next); };
   const root = useRef(null);
   const homeButtons = useRef({});
   useMenuLook(root, display, hidden);
@@ -60,7 +70,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
     wasShown.current = !hidden;
   }, [hidden]);
 
-  const open = next => setView(next);
+  const open = next => { if (next === 'party') setHostRules(null); setView(next); };
   const back = () => {
     const from = view;
     setView('home');
@@ -97,11 +107,14 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
             {nameField}
             {colorField}
             <label>Room code (friends type the same one)<input maxLength={12} autoComplete="off" value={roomCode} onChange={e => setRoomCode(e.target.value)} /></label>
-            <button type="button" className={menu.go} disabled={connecting || !roomCode.trim()} onClick={() => send(UiCommands.JOIN, { name, roomCode })}>Join room</button>
+            <button type="button" className={menu.go} disabled={connecting || !roomCode.trim()} onClick={() => send(UiCommands.JOIN, { name, roomCode, rules: hostRules })}>Join room</button>
+            {hostRules && <p className={app.small} data-ui="party-custom-rules">Custom rules ({changedRules(hostRules).length} changed) apply if you are first into the room; friends who join play them too. <button type="button" className={menu.inline} onClick={() => setHostRules(null)}>Use standard</button></p>}
           </>}
           {view === 'custom' && <>
             <h2 className={menu.heading}>Custom</h2>
-            <p>Custom rules are coming soon: tune gravity, power-ups and timers, then play solo or host a party with them.</p>
+            <CustomRules rules={rules} onChange={editRules} busy={connecting}
+              onPlaySolo={() => send(UiCommands.PLAY_SOLO, { name, rules })}
+              onHostParty={() => { setHostRules(rules); setView('party'); }} />
           </>}
           {view === 'settings' && <>
             <h2 className={menu.heading}>Settings</h2>

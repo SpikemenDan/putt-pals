@@ -1,7 +1,7 @@
 // Explicit domain form used by the server adapter; no XState internals are persisted.
 export const SESSION_CONTEXT_FIELDS = Object.freeze([
   'mode', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
-  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last',
+  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last', 'rules',
 ]);
 const nodes = Object.freeze({
   lobby: 'lobby',

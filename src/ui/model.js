@@ -10,6 +10,7 @@
 
 import { getPowerup, isOpponentPowerup, POWERUP_CATALOG, powerupName } from '../gameplay/catalog.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { CUSTOM_RULES, changedRules, ruleValueText, seriesMaps, validRules } from '../shared/rules.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
 import { courseWorld } from '../shared/worlds.js';
@@ -21,6 +22,8 @@ export const ITEM_NAMES = Object.freeze(Object.fromEntries(POWERUP_CATALOG.map(e
 const isTournament = mode => typeof mode === 'string' && mode.startsWith('tournament_');
 /** Maps in the series: 3/5/7 for tournaments, otherwise 1. */
 export const seriesOf = mode => (isTournament(mode) ? Number(mode.slice('tournament_'.length)) : 1);
+/** Maps in the room's game: the mode's length, or the Custom rules' Game length (VIS-U). More than one is a series. */
+const roomSeries = room => seriesMaps(room.mode, room.rules);
 const pad2 = n => String(n).padStart(2, '0');
 
 /**
@@ -114,6 +117,9 @@ export function lobbyView(room, local, now, courses) {
   } else {
     status = local.isHost ? 'Pick a game mode, then start to open map voting.' : (local.serverOwned ? 'The room controller will pick the mode and start map voting.' : 'The host will pick the mode and start map voting.');
     if (room.powerups === false) status += ' Power-ups are off.';
+    // The room's Custom rules (VIS-U), fixed when it was created; power-ups are already reported above.
+    const custom = validRules(room.rules) ? changedRules(room.rules).filter(id => id !== 'powerups') : [];
+    if (custom.length) status += ' Custom rules: ' + custom.map(id => CUSTOM_RULES.find(r => r.id === id).label + ' ' + ruleValueText(id, room.rules[id])).join(', ') + '.';
   }
   return {
     label: roomLabel(room, local),
@@ -142,7 +148,7 @@ export function votingView(room, local, now, courses) {
   if (room.mode === GameModes.PUTT_PRACTICE) status = 'Practice · pick a map, then the putt to replay. No scoring, no timer.';
   else if (room.mode === GameModes.PRACTICE) status = 'Practice · pick any map to start. No voting, no opponents.';
   else {
-    status = (isTournament(room.mode) ? 'Map ' + ((room.completedMaps?.length | 0) + 1) + '/' + seriesOf(room.mode) + ' · ' : '')
+    status = (roomSeries(room) > 1 ? 'Map ' + ((room.completedMaps?.length | 0) + 1) + '/' + roomSeries(room) + ' · ' : '')
       + (votes.length ? 'Voting ends in ' + left + 's · ' + votes.length + '/' + ids.length + ' voted' : 'Vote for a map. The first vote starts a ' + VOTE_SECONDS + 's countdown.');
   }
   const mine = (room.votes || {})[local.id];
@@ -303,7 +309,7 @@ export function scorecardView(room, local, courses) {
     rows.push({ id, name: p?.name || room.totals?.[id]?.name || 'Player', color: colorOf(room, local, id), me: id === local.id, cells, total, diff: total - parSum, counted: cells.some(Boolean), hio, to, missed });
   }
   rows.sort((a, b) => a.total - b.total || String(a.name).localeCompare(String(b.name)));
-  const series = isTournament(room.mode) ? seriesOf(room.mode) : 0;
+  const series = roomSeries(room) > 1 ? roomSeries(room) : 0;
   const mapNo = room.completedMaps?.length | 0;
   return {
     title: course.name + (series ? ' · Map ' + Math.min(series, room.phase === SessionPhases.RESULTS ? mapNo : mapNo + 1) + '/' + series : ''),
@@ -339,8 +345,8 @@ const toPar = n => n > 0 ? '+' + n : n < 0 ? String(n) : 'E';
 
 export function resultsView(room, local, courses) {
   const practice = room.mode === GameModes.PRACTICE;
-  const tournament = isTournament(room.mode);
-  const series = seriesOf(room.mode);
+  const series = roomSeries(room);
+  const tournament = series > 1;
   const mapNo = room.completedMaps?.length | 0;
   const more = tournament && mapNo < series;
   const last = room.last;

@@ -13,12 +13,12 @@ export function PowerMeter() {
   const bar = useRef(null), caption = useRef(null);
   useEffect(() => {
     if (!aim) return undefined;
-    return aim.subscribeAim((charging, charge) => {
+    return aim.subscribeAim((charging, charge, wobble = 1) => {
       if (bar.current) {
         bar.current.style.width = (charge * 100) + '%';
         bar.current.parentElement.setAttribute('aria-valuenow', String(Math.round(charge * 100)));
       }
-      if (caption.current) caption.current.textContent = accuracyText(charging, charge);
+      if (caption.current) caption.current.textContent = accuracyText(charging, charge, wobble);
     });
   }, [aim]);
   return (

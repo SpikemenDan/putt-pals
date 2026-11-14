@@ -30,8 +30,8 @@ export const AIM_ARROW_MAX_LENGTH = DISPLAY.aim.arrowMaxLength;
 export const AIM_STEP = AIM.keyStep;
 export const DRAG_RADIANS_PER_PX = AIM.dragRadiansPerPx;
 
-/** Angular spread (radians) at a power 0..1. */
-export function spread(power) { return AIM.spreadBase + AIM.spreadGain * Math.pow(power, AIM.spreadExponent); }
+/** Angular spread (radians) at a power 0..1. `wobble` scales it (Custom rules aim wobble, VIS-U); 1 is the shipped spread. */
+export function spread(power, wobble = 1) { return wobble * (AIM.spreadBase + AIM.spreadGain * Math.pow(power, AIM.spreadExponent)); }
 
 /** Seconds for one full turn of the 360° Aim indicator, and for one back-and-forth of the 180° Aim sweep. */
 export const SPIN_PERIOD = AIM.spinPeriod;
@@ -48,15 +48,15 @@ export function aimModeOffset(mode, time) {
 }
 
 /** Sway offset (radians) at a power and a time in seconds. */
-export function sway(power, time) { return spread(power) * Math.sin(time * SWAY_W); }
+export function sway(power, time, wobble = 1) { return spread(power, wobble) * Math.sin(time * SWAY_W); }
 
 /**
  * Direction the ball actually leaves in.
- * @param {{aimAngle:number, charge:number, time:number, steady?:boolean, aimMode?:string}} input
+ * @param {{aimAngle:number, charge:number, time:number, steady?:boolean, aimMode?:string, wobble?:number}} input
  *   time is the sway time last shown on screen, so what you see is what you shoot.
  */
-export function shotAngle({ aimAngle, charge, time, steady = false, aimMode = '' }) {
-  return aimAngle + aimModeOffset(aimMode, time) + (steady ? 0 : sway(charge, time));
+export function shotAngle({ aimAngle, charge, time, steady = false, aimMode = '', wobble = 1 }) {
+  return aimAngle + aimModeOffset(aimMode, time) + (steady ? 0 : sway(charge, time, wobble));
 }
 
 /** Charge 0..1 from a pointer drag distance in CSS pixels. Optional settings are validated preview overrides; defaults come from TUNING. */
@@ -65,6 +65,6 @@ export function chargeFromDrag(dx, dy, canvasWidth, settings = AIM) {
 }
 
 /** The power meter caption. */
-export function accuracyText(charging, charge) {
-  return charging ? Math.round(charge * 100) + '% power · ±' + (spread(charge) * 180 / Math.PI).toFixed(1) + '° spread' : 'Pull to set power';
+export function accuracyText(charging, charge, wobble = 1) {
+  return charging ? Math.round(charge * 100) + '% power · ±' + (spread(charge, wobble) * 180 / Math.PI).toFixed(1) + '° spread' : 'Pull to set power';
 }
