@@ -2,6 +2,7 @@
 import { createCourseData, createCourseDocument, parseCourseDocument, toSimulationCourses } from '../../src/courses/index.js';
 import fs from 'node:fs';
 import { createDifficultyProvenance } from './provenance.mjs';
+import { courseWorld } from '../../src/shared/worlds.js';
 import { parseCliArguments } from './arguments.mjs';
 import { runConfig } from './config-report.mjs';
 import { runChecks } from './checks.mjs';
@@ -40,7 +41,9 @@ function main(argv) {
 
   const courses = toSimulationCourses(document);
   if (command === 'shot') return finish(runShot(courses, ...args));
-  const output = runSolve(courses, args[0], args[1], args[2], world === undefined ? {} : { world });
+  // Without --world, solve a course at its own world's gravity (Gaia unless its data names another world).
+  const ownWorld = courseWorld(document.courses[Number(args[0])]);
+  const output = runSolve(courses, args[0], args[1], args[2], { world: world ?? ownWorld });
   if (output.result) {
     const map = Number(args[0]);
     const putt = Number(args[1]);

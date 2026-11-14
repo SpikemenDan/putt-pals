@@ -153,6 +153,6 @@ export const USAGE = [
   '  checks [--since <ref>] [--json] [paths...]  recommend which verification commands to run for the changed paths, and why',
   '  arena <name>                  print generated arena JSON; quote names containing spaces',
   '  validate                      schema + stale-metadata check (exit 1 on any problem)',
-  '  solve <map> <putt> [--full] [--world <id>]  shortest robust route within par 2..6 (putt is 0-based; --full = finer waypoint grid, larger budget; --world gaia|ares|luna solves at that world gravity, default gaia)',
+  '  solve <map> <putt> [--full] [--world <id>]  shortest robust route within par 2..6 (putt is 0-based; --full = finer waypoint grid, larger budget; --world gaia|ares|luna solves at that world gravity, default the course world, Gaia unless its data names one)',
   '  shot <map> <putt> <deg> <pwr> run one headless shot (putt is 0-based, power 0..1)',
 ];
