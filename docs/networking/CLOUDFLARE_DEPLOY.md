@@ -87,6 +87,24 @@ npx wrangler rollback APPROVED_MAINTENANCE_VERSION_ID --config .wrangler/deploy/
 
 Confirm new admissions fail safely and retained state is not deleted. Redeploy the approved compatible game config, then resume a reserved seat within grace. Record the new deployment ID, unchanged session/score/deadline, and any socket reconnect. For later game-to-game rollback, verify checkpoint field compatibility, schema/rules versions and course hash; matching version numbers alone are insufficient. Incompatible checkpoints intentionally fail closed and must not be deleted to make a rollout look successful. Use a forward fix or a separately approved data-migration plan.
 
+### Release rollback procedure (Q1 #18)
+
+One Worker serves both the hosted build (`dist/` static assets) and the room Durable Objects, so a Worker version is the unit of release and of rollback: rolling back restores that version's page, scripts and room code together. Rollback is an owner-authorized action like a deploy; this section authorizes nothing.
+
+Before every publication, record the rollback target in the deployment record:
+
+1. The currently serving game version ID and the maintenance version ID (`npx wrangler deployments list --config .wrangler/deploy/preview.json`).
+2. For both the serving and the new version: git commit, `PROTOCOL_VERSION` (`src/shared/constants.js`), `SERVER_ROOM_VERSION` and `CHECKPOINT_VERSION` (`src/network/contracts/server-room.js`), and course data hash. The new version is **checkpoint-compatible** with the old one only if the old code can read every checkpoint the new code writes: same room/checkpoint versions and course hash, confirmed by `npm run test:rooms:local` on the old commit, not by version numbers alone.
+
+To roll back after a bad release:
+
+1. **Stop new admissions first** if the fault is in rooms or data: `npx wrangler rollback <MAINTENANCE_VERSION_ID> --config .wrangler/deploy/preview.json`. New sockets get `503`; retained checkpoints stay. Connected sockets may persist until they close.
+2. **Compatible target**: deploy it at 100% with `npx wrangler versions deploy <GAME_VERSION_ID>@100 --durable-objects-code-update-mode immediate --config .wrangler/deploy/preview.json` (the commands exercised in N4g). Static assets switch with it; open tabs must reload (HTML revalidates; older hashed assets are not served by the new version).
+3. **Incompatible target** (any of the versions or the course hash differ): do not roll back game code under live rooms. Either keep maintenance until active rooms end and empty-room retention (15 minutes) passes, then deploy the old version and accept that retained newer checkpoints fail closed with a visible incompatible-checkpoint error; or ship a forward fix. Never delete checkpoints, rename/remove `RoomDurableObject` or add `migrations` to make a rollback succeed.
+4. **Verify**: `deployments list` shows the target at 100%; `/` returns 200 with the expected build; `/api/rooms/<test-code>/socket` returns `101` for a game version (`503` for maintenance); a fresh two-tab room completes a putt; a reserved seat resumes within grace on a compatible rollback. Record the IDs, times and results in the deployment record below.
+
+The recorded preview versions below predate current main (`PROTOCOL_VERSION` 6, `SERVER_ROOM_VERSION` 8, 24 maps). After main is deployed, version `57061c95…` is therefore an **incompatible** rollback target; use the maintenance version and step 3, or record a new compatible game version as the target.
+
 Preserve version IDs and redacted logs, never raw resume tokens, hashes, WebSocket frames, client IPs or player content in issues. Basic provider metrics should measure DO request units, active duration, SQLite rows/bytes and failures over an active game and idle retention. Compare against the dated Free estimate in N4F. There is no automatic paid upgrade, TURN fallback or automatic switch of an active game to solo. Account-wide quota exhaustion may prevent code from running at all.
 
 ## Deployment record
