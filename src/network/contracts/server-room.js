@@ -13,7 +13,8 @@ import { MAP_COUNT } from '../../shared/map-count.js';
 // 6: Tornado and Hurricane are placed: ACTIVATE_HAZARD and their records carry x and y.
 // 7: hello carries the Custom rules a new room is created with (VIS-U); the session context carries the room's rules.
 // 8: map indices run to MAP_COUNT (24) with the VIS-G maps.
-export const SERVER_ROOM_VERSION = 8;
+// 9: MAP_COUNT is 40 with the Ares and Luna maps (VIS-G #165).
+export const SERVER_ROOM_VERSION = 9;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({

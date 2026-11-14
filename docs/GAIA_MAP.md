@@ -9,16 +9,16 @@ Gaia is the owner's own world, made in Azgaar's Fantasy Map Generator and import
 
 ## Regions and courses
 
-Each region's caption point and course sites are hand-placed on the map in `src/shared/gaia-reference-regions.js` (map pixels); `src/shared/gaia-map.js` turns them into globe positions. `REGION_COURSES` places the 22 real courses, one site each, and picking one casts the normal vote. Site names are proposals.
+Each region's caption point and course sites are hand-placed on the map in `src/shared/gaia-reference-regions.js` (map pixels); `src/shared/gaia-map.js` turns them into globe positions. `REGION_COURSES` places Gaia's 24 courses, one site each, and picking one casts the normal vote. Site names are proposals, except Sandstorm Spire and Obsidian Spiral, the two maps made for their sites (VIS-G #165). Ares and Luna regions are in `src/shared/world-regions.js` and show as a region-grouped course list (there is no atlas of those worlds yet).
 
 | Region | Biome | Where | Sites |
 | --- | --- | --- | --- |
 | Frostreach | Polar and alpine | Snow and rock of the great eastern range | Frostbite Falls, Glacier Glide, Aurora Ridge, Summit Drift |
 | Evergreen Vale | Temperate forest | The forest belt across the north of the western continent | Maple Hollow, Mossy Mill, Fernwood Bend, Bramble Bridge |
-| Sunspire Sands | Desert | The dry savanna heart of the western continent | Dune Crossing, Mirage Mesa, Oasis Run |
+| Sunspire Sands | Desert | The dry savanna heart of the western continent | Dune Crossing, Mirage Mesa, Oasis Run, Sandstorm Spire |
 | Palm Reef | Tropical | The forested island in the central sea | Coral Cove, Lagoon Loop, Jungle Vines, Mango Falls |
 | Mirewater | Wetlands | The marsh peninsula at the far east | Lily Pad Lane, Mangrove Maze, Foggy Bayou, Reed Rapids |
-| Emberfall Isles | Volcanic | The southern island chain, three volcanoes | Cinder Steps, Magma Run, Ashen Caldera |
+| Emberfall Isles | Volcanic | The southern island chain, three volcanoes | Cinder Steps, Magma Run, Ashen Caldera, Obsidian Spiral |
 
 Cultures follow the land (`cultureAt` in `src/shared/gaia-map.js`): canal towns in the marshes, northern towns in the cold, desert and savanna styles in the dry lands, the old world and the Mediterranean in the west, carnival colour on the middle islands, and palaces, the silk road and eastern towns in the east.
 

@@ -25,3 +25,6 @@
 .planets small{color:var(--mut);font-weight:700}
 .planets button{margin:0;padding:2px 14px;font-size:22px;line-height:1.2}
 .empty{margin:16px 0;padding:14px;border:3px dashed var(--ink);border-radius:12px;font-weight:700;color:var(--mut)}
+/* Ares and Luna regions (VIS-G #165): a caption over each region's courses in the plain list. */
+.region{margin:22px 0 0;font:400 24px/1.1 var(--font);letter-spacing:1px;color:var(--ink)}
+.region small{display:block;margin-top:4px;font-family:var(--pp-body,"Nunito","Trebuchet MS","Segoe UI",Roboto,system-ui,sans-serif);font-size:14px;font-weight:700;letter-spacing:0;color:var(--mut)}

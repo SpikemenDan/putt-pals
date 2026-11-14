@@ -90,6 +90,10 @@ The list lives in the room snapshot, so every checkpoint contains it and a recon
 
 `SERVER_ROOM_VERSION` is 8 (`PROTOCOL_VERSION` 6 for peer rooms). Map indices in votes, ties, `mapIndex`, `completedMaps` and `last.mapIndex` run to `MAP_COUNT` (24, `src/shared/map-count.js`) instead of 22, so clients older than the VIS-G maps are rejected at the version check rather than failing validation on a new map index. The room-object name carries the version (`putt-pals:<environment>:v8:<code>`).
 
+## Ares and Luna maps (VIS-G, wire version 9)
+
+`SERVER_ROOM_VERSION` is 9 (`PROTOCOL_VERSION` 7 for peer rooms). `MAP_COUNT` is 40: indices 24-31 are the Ares maps and 32-39 the Luna maps, all playable (`STARTER_COURSE_INDICES`). A map's world sets its gravity from the shared course data, so no new message field is needed. Older clients are rejected at the version check; the room-object name is `putt-pals:<environment>:v9:<code>`.
+
 ## Identity and connection handling
 
 Backend uses Web Crypto to generate player/session/socket IDs and 32 random bytes encoded as 43 base64url characters for resume tokens. Persist only a SHA-256 token hash bound to environment/code/session/player. Compare hashes without leaking them; never broadcast or log raw tokens or hashes. Name or claimed player ID alone is never proof of identity. Tokens remain stable until explicit leave or grace expiry so ack/welcome loss cannot strand the previously issued token. Hash issuance and seat reservation are committed before welcome. No unacknowledged welcome token retry is guaranteed on first-ever admission; abandoned pending joins release their seat after liveness/grace bounds.

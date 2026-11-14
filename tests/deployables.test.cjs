@@ -41,7 +41,7 @@ const assert = require('node:assert/strict');
   assert.equal(D.validDeployable(rec('bumper', 10, 20)), true);
   assert.equal(D.validDeployable(rec('orbital', 10, 20, { impacts: P.maxImpacts - 1 })), true);
   for (const bad of [null, [], {}, rec('mag', 1, 1), rec('bumper', NaN, 1), rec('bumper', 1, 2e6), rec('bumper', 1, 1, { impacts: P.maxImpacts }),
-    rec('bumper', 1, 1, { impacts: -1 }), rec('bumper', 1, 1, { id: 'bad id' }), rec('bumper', 1, 1, { owner: '' }), rec('bumper', 1, 1, { map: 24 }),
+    rec('bumper', 1, 1, { impacts: -1 }), rec('bumper', 1, 1, { id: 'bad id' }), rec('bumper', 1, 1, { owner: '' }), rec('bumper', 1, 1, { map: 40 }),
     rec('bumper', 1, 1, { putt: 6 }), { ...rec('bumper', 1, 1), extra: 1 }, rec('bumper', 1, 1, { placedAt: Infinity })]) {
     assert.equal(D.validDeployable(bad), false, JSON.stringify(bad));
   }

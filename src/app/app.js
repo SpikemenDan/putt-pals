@@ -18,7 +18,7 @@ import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, p
 import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
-import { worldGravity, courseWorld } from '../shared/worlds.js';
+import { DEFAULT_WORLD, worldGravity, courseWorld, isWorldId } from '../shared/worlds.js';
 import { AIM_WOBBLE, DEFAULT_RULES, rulesTuning, seriesMaps, validateRules, validRules } from '../shared/rules.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
@@ -475,8 +475,8 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   // ---------------------------------------------------------------- commands
   function handle(command) {
     switch (command.type) {
-      case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText, rules: command.rules ?? null }); break;
-      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null, rules: command.rules ?? null }); break;
+      case UiCommands.JOIN: setLocal({ destination: DEFAULT_WORLD }); join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText, rules: command.rules ?? null }); break;
+      case UiCommands.PLAY_SOLO: setLocal({ destination: isWorldId(command.world) ? command.world : DEFAULT_WORLD }); join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null, rules: command.rules ?? null }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT:

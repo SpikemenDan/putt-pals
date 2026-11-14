@@ -38,11 +38,11 @@ export const DEFAULT_PAR = 2;
 export const DEFAULT_PENALTY = 3;
 
 // Starter courses in official tournament order
-export const STARTER_COURSE_INDICES = Object.freeze([0, 8, 20, 21, 5, 19, 22, 23]); // the playable maps; 22 and 23 are VIS-G's Sandstorm Spire and Obsidian Spiral (owner, 2026-11-12)
+export const STARTER_COURSE_INDICES = Object.freeze([0, 8, 20, 21, 5, 19, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]); // the playable maps: 22 and 23 are Gaia's Sandstorm Spire and Obsidian Spiral (owner, 2026-11-12), 24-31 Ares and 32-39 Luna (VIS-G #165)
 export const STARTERS = STARTER_COURSE_INDICES;
 
 // --- Multiplayer & Protocol Constants ---
-export const PROTOCOL_VERSION = 6; // 6: map indices run to MAP_COUNT (24) with the VIS-G maps
+export const PROTOCOL_VERSION = 7; // 6: map indices run to MAP_COUNT (24) with the VIS-G maps; 7: MAP_COUNT 40 with the Ares and Luna maps
 export const MAX_PLAYERS = 8;
 export const MAX_DEPLOYABLES = 200; // wire safety bound only (G1e): keeps a snapshot far under MAX_MESSAGE_BYTES; no game limit applies below it
 export const SNAPSHOT_INTERVAL_MS = 70;

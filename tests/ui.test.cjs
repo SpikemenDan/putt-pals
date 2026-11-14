@@ -253,15 +253,18 @@ function fakeClock() {
     assert.deepEqual(seen, ['ares', 'luna', 'gaia'], 'right goes the other way');
     await click(arrow('left'));
     assert.equal(choose().dataset.world, 'luna');
-    assert.equal(choose().textContent, 'Luna: coming soon');
-    assert.equal(choose().disabled, true, 'Luna cannot be chosen');
+    assert.equal(choose().textContent, 'Choose Luna', 'Luna has courses (VIS-G)');
+    assert.equal(choose().disabled, false);
     assert.deepEqual(views.at(-1), { space: true, target: 'luna' }, 'the stage follows the focused planet');
-    await click(choose());
-    assert.equal(step(), 'world', 'a disabled planet does not advance');
     await click(arrow('left'));
-    assert.equal(choose().textContent, 'Ares: coming soon');
-    assert.equal(choose().disabled, true);
+    assert.equal(choose().textContent, 'Choose Ares');
+    assert.equal(choose().disabled, false);
     assert.deepEqual(views.at(-1), { space: true, target: 'ares' });
+    await click(choose());
+    assert.equal(step(), 'ready', 'Ares can be chosen');
+    assert.equal($('[data-ui=solo-summary]').textContent, 'Tournament · 5 maps on Ares');
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(step(), 'world');
     await act(async () => { choose().focus(); });
     await key('ArrowRight');
     assert.equal(carousel().dataset.world, 'luna', 'ArrowRight turns right');
@@ -449,7 +452,7 @@ function fakeClock() {
 
   await scenario('level select: world, region, course and back, with the real vote', async () => {
     const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
-    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 24 }, (_, i) => i), 'all 24 course ids appear once');
+    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 24 }, (_, i) => i), 'all 24 Gaia course ids appear once (Ares and Luna maps are in src/shared/world-regions.js)');
     const foot = data.gaiaRegions();
     for (const r of GAIA_REGIONS) {
       assert.ok(foot.byId[r.id].area > 40, `${r.name} has terrain`);
@@ -1024,7 +1027,7 @@ function fakeClock() {
     await t.teardown();
   });
 
-  await scenario('level select planet switcher: left/right order, an empty message on Luna and Ares, and Gaia restores the cards', async () => {
+  await scenario('level select planet switcher: left/right order, two regions of four maps on Luna and Ares, and Gaia restores the cards', async () => {
     const t = await setup({ roomCode: '' });
     await t.send({ type: 'SET_MODE', playerId: 'host', mode: 'practice' });
     await t.send({ type: 'START_VOTING', playerId: 'host' });
@@ -1040,16 +1043,30 @@ function fakeClock() {
     seen.length = 0;
     for (const id of ['right', 'right', 'right']) { await click(sw().querySelector(`[data-ui=planet-${id}]`)); seen.push(sw().dataset.world); }
     assert.deepEqual(seen, ['ares', 'luna', 'gaia'], 'right goes the other way');
-    for (const [dir, id] of [['left', 'luna'], ['left', 'ares']]) {
+    const regionsShown = () => [...select().querySelectorAll('section[data-region]')].map(s => [s.dataset.region, [...s.querySelectorAll('button[data-map]')].map(b => +b.dataset.map)]);
+    for (const [dir, id, regions] of [['left', 'luna', [['hushed-mare', [32, 33, 34, 35]], ['craterpeak', [36, 37, 38, 39]]]], ['left', 'ares', [['rustfall', [24, 25, 26, 27]], ['ironcrown', [28, 29, 30, 31]]]]]) {
       await click(sw().querySelector(`[data-ui=planet-${dir}]`));
       assert.equal(sw().dataset.world, id);
-      assert.equal(cards(), 0, id + ' has no course cards');
-      assert.match(select().querySelector('[data-ui=planet-empty]').textContent, /No courses on/, id + ' says so');
+      assert.equal(cards(), 8, id + ' has eight course cards');
+      assert.deepEqual(regionsShown(), regions, id + ' shows its two regions of four maps');
+      assert.equal(select().querySelector('[data-ui=planet-empty]'), null);
+      assert.match(sw().textContent, /8 courses/);
     }
     await click(sw().querySelector('[data-ui=planet-left]'));
     assert.equal(sw().dataset.world, 'gaia');
     assert.equal(cards(), gaiaCards, 'back on Gaia the cards return');
     assert.equal(select().querySelector('[data-ui=planet-empty]'), null);
+    await t.teardown();
+  });
+
+  await scenario('level select opens on the Solo destination (VIS-G): Luna chosen in Solo shows Luna\'s maps first', async () => {
+    const t = await setup({ roomCode: '' });
+    await act(async () => t.store.setLocal({ destination: 'luna' }));
+    await t.send({ type: 'SET_MODE', playerId: 'host', mode: 'practice' });
+    await t.send({ type: 'START_VOTING', playerId: 'host' });
+    const select = () => t.within('[data-ui=map-select]');
+    assert.equal(select().querySelector('[data-ui=planet-switcher]').dataset.world, 'luna');
+    assert.deepEqual([...select().querySelectorAll('button[data-map]')].map(b => +b.dataset.map), [32, 33, 34, 35, 36, 37, 38, 39]);
     await t.teardown();
   });
 

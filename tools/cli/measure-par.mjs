@@ -4,6 +4,7 @@
  * course, in parallel worker threads. Usage:
  *   node tools/cli/measure-par.mjs [--out <file>] [--jobs <n>] [--full] [--only map/putt,...]
  * Deterministic: results depend only on the courses, the simulation sources and the solver config.
+ * Each course is solved at its own world's gravity (VIS-G: Ares and Luna maps), recorded per result.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -12,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { createCourseDocument, toSimulationCourses } from '../../src/courses/index.js';
 import { TUNING } from '../../src/shared/tuning.js';
+import { courseWorld, worldGravity } from '../../src/shared/worlds.js';
 import { solvePar, PAR_SOLVER_CONFIG } from './par-solver.mjs';
 import { createDifficultyProvenance, hashSimulationSources } from './provenance.mjs';
 
@@ -23,7 +25,7 @@ if (!isMainThread) {
   const courses = toSimulationCourses(document);
   parentPort.on('message', ({ map, putt, full }) => {
     const started = Date.now();
-    const result = solvePar(courses[map], putt, { full });
+    const result = solvePar(courses[map], putt, { full, gravity: worldGravity(courseWorld(courses[map])) });
     parentPort.postMessage({ map, putt, seconds: +((Date.now() - started) / 1000).toFixed(1), result });
   });
 } else {
@@ -51,7 +53,7 @@ if (!isMainThread) {
       solverConfig: PAR_SOLVER_CONFIG,
       results: results.map(({ map, putt, result }) => ({
         schemaVersion: 2, map, putt, name: document.courses[map].name, ...result,
-        provenance: createDifficultyProvenance(document.courses[map], putt, { full, simulationHash }),
+        provenance: createDifficultyProvenance(document.courses[map], putt, { full, simulationHash, gravity: result.gravity }),
       })),
     };
     fs.writeFileSync(out, `${JSON.stringify(fixture, null, 2)}\n`);

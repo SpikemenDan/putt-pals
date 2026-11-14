@@ -180,7 +180,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(series.state().phase, 'lobby', 'after two maps the game is over');
 
   // ---- server hello carries rules (validated)
-  const hello = r => ({ version: 8, type: 'hello', roomCode: 'abc', name: 'Ann', color: null, resume: null, rules: r });
+  const hello = r => ({ version: 9, type: 'hello', roomCode: 'abc', name: 'Ann', color: null, resume: null, rules: r });
   assert.equal(validClientFrame(hello(null)), true);
   assert.equal(validClientFrame(hello({ ...STD, lunaGravity: 60 })), true);
   assert.equal(validClientFrame(hello({ ...STD, lunaGravity: 61 })), false);

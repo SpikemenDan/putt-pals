@@ -3,6 +3,7 @@ import { validatePuttPositions } from './validation.js';
 import { checkGeometryIntegrity, formatIntegrityViolation } from './integrity.js';
 import { validateCourse } from '../shared/courses.js';
 import { STARTER_COURSE_INDICES } from '../shared/constants.js';
+import { DEFAULT_WORLD, isWorldId } from '../shared/worlds.js';
 
 export const COURSE_SCHEMA_VERSION = 1;
 const geometryKeys = ['tiles', 'w', 'sand', 'ice', 'slime', 'pit', 'q', 'pl', 'rp', 'pd', 'tp', 'fan', 'tornado', 'movers'];
@@ -15,6 +16,8 @@ export function createCourseDocument() {
   const document = { schemaVersion: COURSE_SCHEMA_VERSION, courses: data.catalog.map((course, index) => ({
     ...course,
     description: data.definitions[index].desc ?? '',
+    // VIS-G: the world (and so the gravity) a course is played on; omitted for Gaia so Gaia course hashes stay unchanged.
+    ...(data.definitions[index].world && data.definitions[index].world !== DEFAULT_WORLD ? { world: data.definitions[index].world } : {}),
     geometry: { ...Object.fromEntries(geometryKeys.map(key => [key, structuredClone(data.definitions[index][key])])),
       ...(data.definitions[index].mechanics ? {mechanics:structuredClone(data.definitions[index].mechanics)} : {}),
       ...(data.definitions[index].structures ? {structures:structuredClone(data.definitions[index].structures)} : {}),
@@ -50,6 +53,7 @@ export function validateCourseDocument(document) {
     ids.add(course.id);
     if (typeof course.starter !== 'boolean') errors.push(`Course ${index}: starter must be boolean`);
     if (typeof course.description !== 'string') errors.push(`Course ${index}: description must be text`);
+    if (course.world !== undefined && (!isWorldId(course.world) || course.world === DEFAULT_WORLD)) errors.push(`Course ${index}: world must be a known world other than ${DEFAULT_WORLD}, or omitted`);
     try { errors.push(...validateCourse(course).errors.map(error => `Course ${index}: ${error}`)); }
     catch { errors.push(`Course ${index}: malformed rule values`); }
     const shape = validateCourseGeometry(course.geometry).errors;
@@ -99,5 +103,5 @@ export function toSimulationCourses(document) {
   const checked = validateCourseDocument(document);
   if (!checked.valid) throw new Error(`Invalid course document:\n${checked.errors.join('\n')}`);
   return document.courses.map(course => ({ ...structuredClone(course.geometry), id: course.id,
-    name: course.name, desc: course.description, putts: structuredClone(course.putts) }));
+    name: course.name, desc: course.description, ...(course.world ? { world: course.world } : {}), putts: structuredClone(course.putts) }));
 }

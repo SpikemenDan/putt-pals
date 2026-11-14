@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "method": "SV1 verification of explicit mechanic proof shots; nine perturbations; stripped counterfactual",
-  "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+  "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
   "results": [
     {
       "kind": "wedge",
-      "map": 24,
+      "map": 40,
       "putt": 0,
       "par": 3,
       "strokes": 1,
@@ -21,15 +21,15 @@
         "courseId": "g1g-wedge",
         "puttId": "g1g-wedge-putt",
         "gravity": 700,
-        "courseSha256": "1178ea4bef3f23b8f18b2496dafbf2f631b3b3c745ad2227d55ca0907b93e22b",
-        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "courseSha256": "4c7727402b4c4b563e70597bd8725003d8b33a7a0cf145f21bb8c9e09286a496",
+        "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
         "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
     {
       "kind": "bouncer",
-      "map": 25,
+      "map": 41,
       "putt": 0,
       "par": 3,
       "strokes": 1,
@@ -45,15 +45,15 @@
         "courseId": "g1g-bouncer",
         "puttId": "g1g-bouncer-putt",
         "gravity": 700,
-        "courseSha256": "8c9f5bbc7dddb9b3e611b8178f9a069c282f3702c8052ecf35a3097f0d0a9cf3",
-        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "courseSha256": "5155ca71274471e315cec62fb9ba7b2a15e6b240e46704234f9db7127547883c",
+        "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
         "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
     {
       "kind": "fan",
-      "map": 26,
+      "map": 42,
       "putt": 0,
       "par": 3,
       "strokes": 1,
@@ -69,15 +69,15 @@
         "courseId": "g1g-fan",
         "puttId": "g1g-fan-putt",
         "gravity": 700,
-        "courseSha256": "e99df9f3ea3cd5810f4936b2a768821f7c111f9c382843f94da264da5c19e3e1",
-        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "courseSha256": "4f63472d0b1b020a0bca94d841f9507fe8af319e9f40fcb9332cd939177fd330",
+        "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
         "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
     {
       "kind": "vortex",
-      "map": 27,
+      "map": 43,
       "putt": 0,
       "par": 3,
       "strokes": 1,
@@ -93,15 +93,15 @@
         "courseId": "g1g-vortex",
         "puttId": "g1g-vortex-putt",
         "gravity": 700,
-        "courseSha256": "e9f54cc6705c9277664ba0b9131cce3cb9c961d80d679478a583a61333204c48",
-        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "courseSha256": "51daba291fd8c421e25150ec60b91827b82ca5d6d317590104f0c1b39d986085",
+        "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
         "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }
     },
     {
       "kind": "portal",
-      "map": 28,
+      "map": 44,
       "putt": 0,
       "par": 3,
       "strokes": 1,
@@ -117,8 +117,8 @@
         "courseId": "g1g-portal",
         "puttId": "g1g-portal-putt",
         "gravity": 700,
-        "courseSha256": "d36eb2e75a99a11b1d79f8def1405e6887f21a98f3defc266980e70da3d7dcbe",
-        "simulationSha256": "460d138248db6f4aa20bcc8fd70bf37202bc8ee602387d8bc3d42fd3482b287c",
+        "courseSha256": "211c9c41b27f3085ea0ab07c9fe93aaa582efab95a450d81cc104c69e72cf0f2",
+        "simulationSha256": "7a53c6b628ac798ab2d782c47fb47e9df025ee6e68574bcca1529a20d93b38b1",
         "configurationSha256": "1110cf6d0cbdc4a650aace1ca5b464557ec341ba74fbc1c8e5c087fac86ab5e6",
         "searchMode": "fast"
       }

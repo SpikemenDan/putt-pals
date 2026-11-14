@@ -156,6 +156,7 @@ export function votingView(room, local, now, courses) {
   const pickable = room.mode === GameModes.PUTT_PRACTICE && Number.isInteger(mine) && STARTER_COURSE_INDICES.includes(mine);
   return {
     status,
+    destination: local.destination ?? 'gaia', // the planet the level select opens on: Solo's chosen destination (VIS-G), Gaia otherwise
     cards: STARTER_COURSE_INDICES.map((index, k) => {
       const c = courses[index];
       return { index, number: pad2(k + 1), name: c.name, desc: c.desc, par: c.par, world: c.world, votes: tally[index] || 0, selected: mine === index, preview: c.preview };

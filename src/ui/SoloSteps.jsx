@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { GameModes } from '../shared/session.js';
 import { WORLDS } from '../shared/worlds.js';
+import { OFFWORLD_REGIONS } from '../shared/world-regions.js';
 import { UiCommands } from './commands.js';
 import { useUiContext } from './context.js';
 import menu from './Landing.module.css';
 
-/** Worlds with playable courses. Ares and Luna have none yet (VIS-G), so they show as coming soon. */
-export const PLAYABLE_WORLDS = Object.freeze(['gaia']);
+/** Worlds with playable courses: Gaia, plus every world with a region of maps (VIS-G #165: Ares and Luna). Others show as coming soon. */
+export const PLAYABLE_WORLDS = Object.freeze(['gaia', ...Object.keys(OFFWORLD_REGIONS).filter(id => OFFWORLD_REGIONS[id].some(r => r.maps.length))]);
 
 /** The modes the Solo steps can start, and how each is described (VIS-M4 #176). */
 export const SOLO_MODES = Object.freeze({
@@ -24,7 +25,7 @@ const STEPS = ['mode', 'world', 'ready'];
 
 /** Arrow order in the destination view (owner, 2026-11-12): left goes Gaia → Luna → Ares → Gaia, right goes back the other way. */
 export const WORLD_ORDER = Object.freeze(['gaia', 'luna', 'ares']);
-const WORLD_BLURB = Object.freeze({ gaia: 'Home: six regions of courses', luna: 'Low gravity: long, floaty putts', ares: 'Lighter gravity, red dust and canyons' });
+const WORLD_BLURB = Object.freeze({ gaia: 'Home: six regions of courses', luna: 'Low gravity: long, floaty putts in two regions', ares: 'Lighter gravity: red canyons and highlands' });
 
 /**
  * Solo, one question per screen (owner, 2026-11-12, layout A): how to play (Casual, Tournament and its length, or the

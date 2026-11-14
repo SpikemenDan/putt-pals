@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { UiCommands } from './commands.js';
 import { useCommands, useUiContext, useView } from './context.js';
 import { WorldSelect } from './WorldSelect.jsx';
 import { WORLDS } from '../shared/worlds.js';
+import { OFFWORLD_REGIONS } from '../shared/world-regions.js';
 import { WORLD_ORDER } from './SoloSteps.jsx';
 import app from './App.module.css';
 import buttons from './buttons.module.css';
@@ -45,7 +46,9 @@ export function MapSelect({ hidden }) {
   const { createAtlasScene } = useUiContext();
   const voting = useView(v => v.voting);
   const [noAtlas, setNoAtlas] = useState(false);
-  const [world, setWorld] = useState('gaia');
+  const destination = voting?.destination ?? 'gaia';
+  const [world, setWorld] = useState(destination);
+  useEffect(() => setWorld(destination), [destination]); // a new Solo destination opens the level select on that planet
   const allCards = voting?.cards ?? [];
   const counts = Object.fromEntries(WORLD_ORDER.map(id => [id, allCards.filter(c => (c.world ?? 'gaia') === id).length]));
   const cards = allCards.filter(c => (c.world ?? 'gaia') === world);
@@ -75,15 +78,24 @@ export function MapSelect({ hidden }) {
       {putts}
       {switcher}
       {cards.length === 0 && empty}
-      <div className={styles.grid}>
-        {cards.map(card => (
-          <button type="button" key={card.index} className={`${styles.mapcard}${card.selected ? ' ' + styles.selected : ''}`} data-v={card.votes} aria-pressed={card.selected}
-            onClick={() => pick(card.index)}>
-            <CoursePreview preview={card.preview} />
-            <strong>{card.number + ' · ' + card.name}</strong><small>{card.desc}</small><small>{'Par ' + card.par}</small>
-          </button>
-        ))}
-      </div>
+      {(OFFWORLD_REGIONS[world] ?? [{ id: 'all', maps: cards.map(c => c.index) }]).map(region => {
+        const shown = region.maps.map(index => cards.find(c => c.index === index)).filter(Boolean);
+        if (!shown.length) return null;
+        return (
+          <section key={region.id} data-region={region.id}>
+            {region.name && <h2 className={styles.region}>{region.name}<small>{region.biome + ' · ' + region.blurb}</small></h2>}
+            <div className={styles.grid}>
+              {shown.map(card => (
+                <button type="button" key={card.index} className={`${styles.mapcard}${card.selected ? ' ' + styles.selected : ''}`} data-v={card.votes} data-map={card.index} aria-pressed={card.selected}
+                  onClick={() => pick(card.index)}>
+                  <CoursePreview preview={card.preview} />
+                  <strong>{card.number + ' · ' + card.name}</strong><small>{card.desc}</small><small>{'Par ' + card.par}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

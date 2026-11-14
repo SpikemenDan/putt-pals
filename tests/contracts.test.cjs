@@ -16,7 +16,7 @@ async function run() {
   assert.equal(shared.POWER, 600);
   assert.equal(shared.TURF_FRICTION, 0.5);
   assert.equal(shared.FIXED_TIMESTEP, 1 / 240);
-  assert.deepEqual(Array.from(shared.STARTER_COURSE_INDICES), [0, 8, 20, 21, 5, 19, 22, 23]);
+  assert.deepEqual(Array.from(shared.STARTER_COURSE_INDICES), [0, 8, 20, 21, 5, 19, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]);
   console.log('PASS: Constants match P32 baseline');
 
   // 2. Coordinate Transformations
@@ -136,7 +136,7 @@ async function run() {
   assert.equal(shared.validateVote({ map: 'str' }), false);
 
   const envelope = shared.createMessageEnvelope('vote', { map: 8 }, 'player1');
-  assert.equal(envelope.version, 6, 'protocol version 6 places Tornado and Hurricane; 4 added synchronized global hazard records');
+  assert.equal(envelope.version, 7, 'protocol version 7: map indices run to 40 with the Ares and Luna maps (6 had the Gaia VIS-G maps; 4 added synchronized global hazard records)');
   assert.equal(envelope.type, 'vote');
   assert.equal(envelope.senderId, 'player1');
   assert.equal(envelope.payload.map, 8);

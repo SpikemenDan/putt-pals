@@ -153,7 +153,83 @@ const FINALE = freezePalette({
   weather: null,
 });
 
-/** Palette per course name: the six starter maps and the VIS-G additions (Sandstorm Spire shares the desert palette). */
+/** Ares, Rustfall Canyons (VIS-G #165): rust turf, pale sandstone walls and a butterscotch dust sky. Ambient dust is drawn by the world atmosphere. */
+const RUST = freezePalette({
+  id: 'rust',
+  surfaces: {
+    turf: 0xc8552b, tile: 0x5a1e14, wall: 0xffd9a8, platform: 0x8f3a8f, ramp: 0xffb347,
+    sand: 0xe8a06a, ice: 0xbfe9ff, slime: 0xc4f53a,
+    padRing: 0x2ee6c9, fanRing: 0x4a2418, fanBlade: 0xfff0e0,
+    cupSleeve: 0x2a0d06, cupRim: 0xffffff, pole: 0xffffff, flag: 0x2ee6c9, wind: 0xffd2b0,
+  },
+  sky: {
+    up: [0xf6d2a4, 0xe9b07c, 0xd98f5f, 0xbf7050, 0x9c5545],
+    down: [0xeec39a, 0xd99f74, 0xc07f5c],
+    sun: 0.75,
+    cloudTint: 0xf0c8a8,
+    clouds: { seed: 31, ring: 8, deck: 5, scale: 0.85, drift: 0.006 },
+  },
+  weather: null,
+});
+
+/** Ares, Ironcrown Highlands (VIS-G #165): dark basalt turf, glowing orange rims and a dusky red sky. */
+const IRONCROWN = freezePalette({
+  id: 'ironcrown',
+  surfaces: {
+    turf: 0x6e3a33, tile: 0x2a1418, wall: 0xff8a3d, platform: 0x3fa7a0, ramp: 0xffc65c,
+    sand: 0xc98a62, ice: 0xd6f3ff, slime: 0xc4f53a,
+    padRing: 0x5cf0ff, fanRing: 0x3a2228, fanBlade: 0xffe8d6,
+    cupSleeve: 0x1c0a0c, cupRim: 0xffd27a, pole: 0xffffff, flag: 0x5cf0ff, wind: 0xffcfb8,
+  },
+  sky: {
+    up: [0xe8b08a, 0xc9806a, 0xa35a5a, 0x7a3f52, 0x4e2a45],
+    down: [0xd99a7a, 0xb8735f, 0x8f5550],
+    sun: 0.65,
+    cloudTint: 0xd8a890,
+    clouds: { seed: 37, ring: 7, deck: 4, scale: 0.8, drift: 0.005 },
+  },
+  weather: null,
+});
+
+/** Luna, Hushed Mare (VIS-G #165): grey moondust, white rims and a black sky. */
+const MARE = freezePalette({
+  id: 'mare',
+  surfaces: {
+    turf: 0x9a9aa8, tile: 0x34344a, wall: 0xf4f4ff, platform: 0x6c7bd9, ramp: 0xffe27a,
+    sand: 0xd8d4c8, ice: 0x9fe8ff, slime: 0xc4f53a,
+    padRing: 0xffd84a, fanRing: 0x3a3a52, fanBlade: 0xffffff,
+    cupSleeve: 0x0c0c18, cupRim: 0xffffff, pole: 0xffffff, flag: 0x3fa8ff, wind: 0xe8ecff,
+  },
+  sky: {
+    up: [0x2a2c44, 0x1c1d33, 0x131427, 0x0d0e1d, 0x080914],
+    down: [0x24263c, 0x1a1b30, 0x121326],
+    sun: 1,
+    cloudTint: 0x3a3c58,
+    clouds: { seed: 41, ring: 0, deck: 0, scale: 0.6, drift: 0.001 },
+  },
+  weather: null,
+});
+
+/** Luna, Craterpeak Highlands (VIS-G #165): bright highland rock, polar-ice blue and a deep indigo sky. */
+const CRATERPEAK = freezePalette({
+  id: 'craterpeak',
+  surfaces: {
+    turf: 0xc9c6d6, tile: 0x2c2a4a, wall: 0x7a6cff, platform: 0xff9f5a, ramp: 0xffe27a,
+    sand: 0xe6e0d0, ice: 0x6fd6ff, slime: 0xc4f53a,
+    padRing: 0xff6bd6, fanRing: 0x34325a, fanBlade: 0xffffff,
+    cupSleeve: 0x0e0c1e, cupRim: 0xffffff, pole: 0xffffff, flag: 0xff6bd6, wind: 0xe6e8ff,
+  },
+  sky: {
+    up: [0x34305a, 0x262347, 0x1b1936, 0x121128, 0x0a091a],
+    down: [0x2c2950, 0x211e40, 0x171530],
+    sun: 1,
+    cloudTint: 0x44406a,
+    clouds: { seed: 43, ring: 0, deck: 0, scale: 0.6, drift: 0.001 },
+  },
+  weather: null,
+});
+
+/** Palette per course name: the six starter maps, the Gaia VIS-G additions (Sandstorm Spire shares the desert palette) and one palette per Ares and Luna region. */
 export const COURSE_PALETTES = Object.freeze({
   'Switchback Garden': GARDEN,
   'Dune Serpent': DUNE,
@@ -163,6 +239,10 @@ export const COURSE_PALETTES = Object.freeze({
   'Grand Finale': FINALE,
   'Sandstorm Spire': DUNE,
   'Obsidian Spiral': EMBER,
+  'Redrock Rebound': RUST, 'Canyon Leap': RUST, 'Dust Devil Draw': RUST, 'Ochre Overlook': RUST,
+  'Basalt Bounce': IRONCROWN, 'Caldera Climb': IRONCROWN, 'Ironstone Ridge': IRONCROWN, 'Scarlet Summit': IRONCROWN,
+  'Moondust Mile': MARE, 'Regolith Rise': MARE, 'Starlight Skip': MARE, 'Gaiarise Run': MARE,
+  'Crater Hop': CRATERPEAK, 'Rimwalker Ridge': CRATERPEAK, 'Ghostlight Basin': CRATERPEAK, 'Polar Hollow': CRATERPEAK,
 });
 
 export const DEFAULT_PALETTE = GARDEN;
