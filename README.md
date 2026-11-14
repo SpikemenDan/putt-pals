@@ -103,7 +103,7 @@ jsdom suites stub WebGL, canvas and audio and use fake networks. They do not pro
 | --- | --- | --- |
 | Develop with hot reload | `npm run dev` | Solo play. The Display tuning panel is only here |
 | Check the production build | `npm run build`, then `npm run preview` | Preview serves `dist/` at `http://127.0.0.1:4173/` |
-| Online rooms on your machine | `npm run rooms:dev` | Builds, then runs the Worker and room objects at `http://127.0.0.1:8787`. Open two browser tabs with the same room code. No Cloudflare account or login needed |
+| Online rooms on your machine | `npm run rooms:dev` | Builds, then runs the Worker and room objects at `http://127.0.0.1:8787`. Create a party in one tab (Party, Create party), then type its code in the other tab's Join box. No Cloudflare account or login needed |
 | Verify the room runtime | `npm run test:rooms:local` | Runs a real local Worker. On the Windows machine used so far, Wrangler exited early; if it does the same for you, rely on CI for this check |
 | Real-browser checks | `npm run test:browser` | Playwright. `npx playwright test --project=chromium` runs Chromium only |
 | Everything else | `npm test` | Several minutes. Run focused suites (`npm run test:render`, and so on) while you work |

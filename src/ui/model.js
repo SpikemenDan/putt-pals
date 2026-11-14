@@ -124,14 +124,20 @@ export function lobbyView(room, local, now, courses) {
   }
   return {
     label: roomLabel(room, local),
-    roster: players.map(p => ({ id: p.id, name: p.name + (p.id === local.id ? ' (you)' : ''), color: colorOf(room, local, p.id) })),
+    roster: players.map(p => ({ id: p.id, name: p.name + (p.id === local.id ? ' (you)' : ''), color: colorOf(room, local, p.id), you: p.id === local.id })),
+    // VIS-M3: the party code (shown only once a party exists), and the colour step every player passes before the lobby.
+    code: local.roomCode ? local.roomCode.toUpperCase() : '',
+    created: !!local.createdParty,
+    colorStep: !!local.roomCode && !!local.colorStep && room.phase === SessionPhases.LOBBY,
     myColor: colorOf(room, local, local.id),
     takenColors: takenColors(room, local),
     showModes: !!local.isHost,
     powerups: room.powerups !== false,
     showStart: !!local.isHost && room.phase === SessionPhases.LOBBY,
     showInvite: !!local.roomCode,
-    modes: MODE_OPTIONS.map(o => ({ value: o.value, label: o.label, disabled: o.soloOnly && n > 1 })),
+    // Putt Pong is 1v1: a party offers it only with exactly two players (owner, 2026-11-11); solo keeps it as practice.
+    modes: MODE_OPTIONS.filter(o => o.value !== GameModes.PONG || !local.roomCode || n === 2)
+      .map(o => ({ value: o.value, label: o.label, disabled: o.soloOnly && n > 1 })),
     multiplayer: n > 1,
     status,
     tie,

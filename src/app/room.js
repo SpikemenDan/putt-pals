@@ -5,6 +5,7 @@
  */
 
 import { connectServerRoom } from '../network/server-room.js';
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '../network/contracts/server-room.js';
 import { bindRoomSession, createSoloTransport } from '../network/index.js';
 import { HEARTBEAT_MS, LINK_TIMEOUT_MS, validResumeToken } from '../network/protocol.js';
 import { createRoomSession } from '../session/index.js';
@@ -28,7 +29,8 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {boolean} options.multi
  * @param {string} options.name Display name (already sanitized)
  * @param {number|null} [options.color] Preferred ball colour index; the room gives the nearest free one if taken
- * @param {string} [options.roomCode] Sanitized room code (multi only)
+ * @param {boolean} [options.create] Multi only (VIS-M3): open a new party under a fresh code (the server picks it online); otherwise `roomCode` must name an existing party
+ * @param {string} [options.roomCode] Sanitized code of the party to join (multi, not create)
  * @param {object|null} [options.rules] Validated Custom rules (VIS-U) a new room is created with; omitted or null: standard. Joining an existing room adopts its rules.
  * @param {{now: () => number, setTimeout: Function, clearTimeout: Function}} options.clock Local monotonic clock
  * @param {() => number} [options.random]
@@ -37,12 +39,15 @@ export const createIdentity = random => ({ peerId: 'pp-' + randomId(random), tok
  * @param {(map: number, putt: number, x: number, y: number) => (number|null)} [options.floorAt] Host course check for Bumper / Orbital Bumper placement (G1e): the floor height to stand on, or null
  * @param {number} [options.graceMs] How long a guest keeps trying to reconnect after its link drops
  */
-async function openLocalRoom({ multi, name, color = null, roomCode = '', rules = undefined, clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt, soloHazards = false }) {
+async function openLocalRoom({ multi, create = false, name, color = null, roomCode = '', rules = undefined, clock, random = Math.random, createTransport, identity = null, graceMs = RECONNECT_GRACE_PERIOD_MS, floorAt, soloHazards = false }) {
   const now = () => clock.now();
   if (multi && !createTransport) throw new Error('test transport required');
   const makePeer = createTransport;
   const wait = ms => new Promise(resolve => clock.setTimeout(resolve, ms));
-  const hostId = multi ? hostIdFor(roomCode) : SOLO_ID;
+  // The test seam has no server: a Create picks its code here, with the injected randomness (the server does it online).
+  const localCode = () => Array.from({ length: ROOM_CODE_LENGTH }, () => ROOM_CODE_ALPHABET[Math.floor(random() * ROOM_CODE_ALPHABET.length)]).join('');
+  if (multi && create) roomCode = localCode();
+  let hostId = multi ? hostIdFor(roomCode) : SOLO_ID;
   const guest = validIdentity(identity) ? { peerId: identity.peerId, token: identity.token } : createIdentity(random);
   let transport, session = null, unbind = null;
 
@@ -62,14 +67,21 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', rules =
   if (!multi) {
     transport = createSoloTransport({ peerId: SOLO_ID, sessionId: randomId(random), now });
     await transport.connect();
+  } else if (create) {
+    // VIS-M3: only Create makes a party. A code already in use is skipped for another one, never joined.
+    for (let attempt = 0; ; attempt++) {
+      transport = makePeer({ peerId: hostId, hostId, sessionId: randomId(random), now });
+      try { await transport.connect(); break; } catch (error) {
+        transport.close();
+        if (!HOST_TAKEN.has(error?.message)) throw error;
+        if (attempt >= 2) throw new Error('room-exists');
+        roomCode = localCode(); hostId = hostIdFor(roomCode);
+      }
+    }
   } else {
-    transport = makePeer({ peerId: hostId, hostId, sessionId: randomId(random), now });
-    try {
-      await transport.connect();
-    } catch (error) {
-      transport.close();
-      if (!HOST_TAKEN.has(error?.message)) throw error;
-      transport = await connectGuest();
+    // Join never creates: a code with no party behind it fails clearly.
+    try { transport = await connectGuest(); } catch (error) {
+      throw new Error(['Room unavailable', 'room-unavailable'].includes(error?.message) ? 'room-not-found' : error?.message);
     }
   }
 
@@ -203,13 +215,21 @@ async function openLocalRoom({ multi, name, color = null, roomCode = '', rules =
 /** Online production rooms use the v2 service; injected transports retain the legacy unit-test seam. */
 export async function openRoom(options) {
   if (!options.multi || options.createTransport) return openLocalRoom(options);
-  const server = await connectServerRoom({ roomCode: options.roomCode, name: options.name, color: options.color ?? null, rules: options.rules ?? null,
-    resume: options.identity, endpoint: options.endpoint, location: options.location,
+  const create = !!options.create;
+  const connect = () => connectServerRoom({ create, roomCode: create ? null : options.roomCode, name: options.name, color: options.color ?? null, rules: options.rules ?? null,
+    resume: create ? null : options.identity, endpoint: options.endpoint, location: options.location,
     clock: options.clock, WebSocket: options.WebSocket, random: options.random, signal: options.signal,
     expectedCourseHash: options.expectedCourseHash, crypto: options.crypto,
   });
+  let server;
+  // A server-generated code that is already taken (room-exists) is vanishingly rare; ask for another one twice.
+  for (let attempt = 0; ; attempt++) {
+    try { server = await connect(); break; } catch (error) {
+      if (!create || error?.message !== 'room-exists' || attempt >= 2) throw error;
+    }
+  }
   return {
-    serverOwned: true, resumed: server.resumed, localId: server.localId, roomCode: server.roomCode,
+    serverOwned: true, resumed: server.resumed, localId: server.localId, get roomCode() { return server.roomCode; },
     get controllerId() { return server.controllerId; },
     get isHost() { return server.isController; }, // Compatibility permission flag for existing view models.
     get isController() { return server.isController; },

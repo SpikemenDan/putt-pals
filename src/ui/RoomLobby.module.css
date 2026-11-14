@@ -1,0 +1,10 @@
+/* Party colour step and lobby (VIS-M3 #175): the party code in a caption box, a big preview of the chosen ball and the Enter button. */
+.code{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px 0 4px;padding:8px 12px;background:var(--yellow);border:var(--line) solid var(--ink);border-radius:10px;box-shadow:var(--shadow)}
+.codeLabel{font:900 13px var(--font);letter-spacing:.6px;text-transform:uppercase;color:var(--ink)}
+.codeValue{flex:1;font:400 30px/1 var(--font);letter-spacing:4px;color:var(--ink);user-select:all}
+.code button{margin:0}
+.preview{display:flex;justify-content:center;margin:8px 0 0}
+.previewBall{width:72px;height:72px;border-radius:50%;border:4px solid var(--ink);box-shadow:4px 4px 0 var(--ink);
+  background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.85) 0 12%,transparent 13%),radial-gradient(circle at 60% 70%,rgba(0,0,0,.18),transparent 60%),var(--ball-color)}
+.enter{background:var(--pink);color:#fff;font-size:18px;text-shadow:1px 1px 0 var(--ink)}
+.recolor{margin-top:8px}

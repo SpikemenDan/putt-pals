@@ -2,7 +2,7 @@
 // follows the durable service policy.
 const { test, expect } = require('@playwright/test');
 const { until, playPutt } = require('./support/app.cjs');
-const { roomCode, openPlayer } = require('./support/rooms.cjs');
+const { openPlayer } = require('./support/rooms.cjs');
 const { startLocalRoomWorker } = require('./support/local-worker.cjs');
 const { pickMap } = require('./support/maps.cjs');
 
@@ -10,11 +10,13 @@ let contexts = [];
 test.beforeEach(async () => { contexts = []; });
 test.afterEach(async () => { await Promise.all(contexts.map(c => c.close().catch(() => {}))); });
 
-async function room(browser, testInfo, prefix, names, endpoint) {
-  const code = roomCode(prefix), players = [];
-  for (const name of names) {
+/** The first player creates the party (VIS-M3); the others open its invite link (so a reload keeps the code) and join. */
+async function room(browser, testInfo, names, endpoint) {
+  const host = await openPlayer(browser, testInfo, names[0], { contexts, endpoint });
+  const code = (await host.create()).toUpperCase(), players = [host];
+  for (const name of names.slice(1)) {
     const p = await openPlayer(browser, testInfo, name, { contexts, hash: '#room=' + code.toLowerCase(), endpoint });
-    await p.join(code);
+    await p.joinCode(code);
     players.push(p);
   }
   await expect(players[0].lobbyStatus()).toHaveText(`Room ${code} · ${names.length} players · You control the room`, { timeout: 30_000 });
@@ -23,7 +25,7 @@ async function room(browser, testInfo, prefix, names, endpoint) {
 
 test('recovery: a player reloading mid-map resumes the same seat and scores', async ({ browser }, testInfo) => {
   test.setTimeout(600_000);
-  const { code, players } = await room(browser, testInfo, 'N4R', ['Ana', 'Ben']);
+  const { code, players } = await room(browser, testInfo, ['Ana', 'Ben']);
   const [ana, ben] = players;
   await ana.button('Start Game').click();
   for (const p of players) {
@@ -39,8 +41,8 @@ test('recovery: a player reloading mid-map resumes the same seat and scores', as
   await ben.page.reload();
   await ben.menu('party');
   await expect(ben.ui('landing').getByLabel('Your name')).toHaveValue('Ben');
-  await expect(ben.ui('landing').getByLabel(/room code/i)).toHaveValue(code.toLowerCase());
-  await ben.button('Join room').click();
+  await expect(ben.ui('landing').getByLabel('Party code')).toHaveValue(code.toLowerCase());
+  await ben.button('Join').click();
   await expect(ben.ui('game')).toBeVisible({ timeout: 30_000 });
   expect(await ben.peerId(), 'same server player ID after reload').toBe(id);
   expect(await ben.isHost()).toBe(false);
@@ -54,7 +56,7 @@ test('recovery: a player reloading mid-map resumes the same seat and scores', as
 test('recovery: dropped WebSocket reconnects to the same seat', async ({ browser }, testInfo) => {
   const worker = await startLocalRoomWorker(testInfo.project.use.baseURL);
   try {
-    const { code, players } = await room(browser, testInfo, 'N4D', ['Ana', 'Ben', 'Cy'], worker.origin);
+    const { code, players } = await room(browser, testInfo, ['Ana', 'Ben', 'Cy'], worker.origin);
     const ids = await Promise.all(players.map(p => p.peerId()));
     const socketsBefore = await Promise.all(players.map(p => p.socketCount()));
     await worker.drop(code.toLowerCase());
@@ -75,7 +77,7 @@ test('recovery: dropped WebSocket reconnects to the same seat', async ({ browser
 });
 
 test('recovery: leaving controller elects the next connected player', async ({ browser }, testInfo) => {
-  const { players } = await room(browser, testInfo, 'N4C', ['Ana', 'Ben', 'Cy']);
+  const { players } = await room(browser, testInfo, ['Ana', 'Ben', 'Cy']);
   const [ana, ben, cy] = players;
   await ana.button('Leave room').click();
   await until(() => ben.isHost(), { timeout: 40_000, label: 'next connected member receives controller authority' });

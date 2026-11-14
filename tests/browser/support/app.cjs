@@ -17,6 +17,11 @@ async function explained(log, label, fn) {
 
 const ROOM_SOCKET_UNLOAD = /The connection to wss?:\/\/[^\s"]+\/api\/rooms\/[a-z0-9]+\/socket was interrupted while the page was loading/;
 
+/** Party codes by the label a spec gave its party (VIS-M3: the server picks codes; only Create makes a party). */
+const parties = new Map();
+/** The real code of a spec's named party, upper case as the lobby shows it. */
+const partyCode = label => parties.get(label)?.toUpperCase();
+
 /** Opens the app in a page and returns a player handle. Collects page errors for assertions. */
 async function openApp(page, name) {
   const errors = [], log = [];
@@ -79,13 +84,36 @@ async function openApp(page, name) {
     async loaded() {
       await expect(page.locator('[data-ui=loading]')).toHaveCount(0, { timeout: 60_000 });
     },
-    async join(code) {
+    /** Party menu (VIS-M3): Create, then pick nothing new on the colour step and enter the lobby. Returns the party code. */
+    async create() {
       await p.menu('party');
       await visible('landing').getByLabel('Your name').fill(name);
-      await visible('landing').getByLabel(/room code/i).fill(code);
-      await p.button('Join room').click();
-      await explained(log, name + ' join', () => expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
+      await p.button('Create party').click();
+      await p.enter();
+      return page.evaluate(() => window.__ppApp.room.roomCode);
+    },
+    /** Party menu (VIS-M3): type the code in the Join box, Join, then the colour step (while the party is in its lobby). */
+    async joinCode(code) {
+      await p.menu('party');
+      await visible('landing').getByLabel('Your name').fill(name);
+      await visible('landing').getByLabel('Party code').fill(code);
+      await p.button('Join').click();
+      await p.enter();
+    },
+    /** Waits for the colour step (or a party already past its lobby), then enters the lobby. */
+    async enter() {
+      await explained(log, name + ' join', () => expect(page.locator('[data-ui=party-colour], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
       await p.loaded();
+      if (await visible('party-colour').isVisible()) await p.button('Enter lobby').click();
+      await explained(log, name + ' lobby', () => expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
+    },
+    /**
+     * A named party (`label`, any text a spec chooses): the first player to ask creates it and later players join it by
+     * the code the room service generated. `partyCode(label)` gives that code.
+     */
+    async join(label) {
+      if (parties.has(label)) await p.joinCode(parties.get(label));
+      else parties.set(label, await p.create());
     },
     /** Room snapshot fields the specs compare, read from the running app. */
     snapshot: () => page.evaluate(() => {
@@ -132,4 +160,4 @@ async function playPutt(players) {
   return s;
 }
 
-module.exports = { best, openApp, until, playPutt };
+module.exports = { best, openApp, until, playPutt, partyCode };

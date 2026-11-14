@@ -57,16 +57,17 @@ async function fresh(ctx, roomCode = 'recover1', resume = null) {
   const room = new RoomDurableObject(ctx, ctx.env ?? env);
   await room.ready;
   const ws = socket(ctx);
-  const conn = { socket: ws, roomCode, identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null };
+  // VIS-M3: the first player arrives on a Create socket (the Worker marks it; here the test does).
+  const conn = { socket: ws, roomCode, create: resume === null, identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null };
   room.acceptConnection(ws, conn);
-  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode, name: 'Player', resume, rules: null }));
+  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', intent: resume === null ? 'create' : 'join', color: null, roomCode: resume === null ? null : roomCode, name: 'Player', resume, rules: null }));
   return { room, ws, welcome: ws.frames.find(frame => frame.type === 'welcome') };
 }
 async function join(room, ctx, resume = null) {
   const ws = socket(ctx);
   const conn = { socket: ws, roomCode: 'recover1', identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null };
   room.acceptConnection(ws, conn);
-  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'recover1', name: 'Guest', resume, rules: null }));
+  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', color: null, roomCode: 'recover1', name: 'Guest', resume, rules: null }));
   return ws;
 }
 async function command(room, ws, payload, sequence) {

@@ -31,6 +31,9 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const hub = new MemoryRoomHub();
     const renderers = createStubRenderers();
     const clients = [];
+    // VIS-M3: only a Create makes a party, under a code the room picks. Scenarios name their party ('duo', 'crowd'); the
+    // first client to join a name creates it, and later ones join it by the code it was given.
+    const codes = new Map();
     let seed = 7;
     const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     async function settle() { for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve(); }); }
@@ -78,11 +81,30 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
           await c.click('Play solo');
           await until(() => c.shown('[data-ui=map-select]'), 2000, name + ' map select');
         },
-        async join(code) {
+        /** Party menu: Create, then the colour step and Enter lobby. Returns the code the party was given. */
+        async create() {
+          await c.menu('party');
+          await c.fill(doc.querySelector('[data-ui=landing] input'), name);
+          await c.click('Create party');
+          await c.enter();
+          return app.room.roomCode;
+        },
+        /** Party menu: type the code in the Join box, Join, then the colour step (when the party is still in its lobby). */
+        async joinCode(code) {
           await c.menu('party');
           const [n, r] = doc.querySelectorAll('[data-ui=landing] input');
-          await c.fill(n, name); await c.fill(r, code); await c.click('Join room');
+          await c.fill(n, name); await c.fill(r, code); await c.click('Join');
+          await c.enter();
+        },
+        async enter() {
+          await until(() => c.shown('[data-ui=party-colour]') || c.shown('[data-ui=map-select]') || c.shown('[data-ui=game]'), 3000, name + ' in the party');
+          if (c.shown('[data-ui=party-colour]')) await c.click('Enter lobby');
           await until(() => c.shown('[data-ui=room-lobby]') || c.shown('[data-ui=map-select]') || c.shown('[data-ui=game]'), 3000, name + ' joined');
+        },
+        /** The named party: created by the first client to ask, joined by everyone after. */
+        async join(party) {
+          if (codes.has(party)) await c.joinCode(codes.get(party));
+          else codes.set(party, await c.create());
         },
         get snapshot() { return app.room?.snapshot; },
         get putt() { return app.putt; },
@@ -106,7 +128,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       }
       return { mapIndex, puttIndex, roundNumber };
     }
-    return { scheduler, hub, renderers, client, run, until, settle, clients, playPutt };
+    return { scheduler, hub, renderers, client, run, until, settle, clients, playPutt, code: party => codes.get(party) };
   }
 
   const tracked = c => c.audio.log.map(e => e.type + (e.kind ? ':' + e.kind : '') + (e.hazardType ? ':' + e.hazardType : '') + (e.remote ? ':remote' : ''));
@@ -172,22 +194,24 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const ana = await W.client('Ana');
     await ana.menu('party');
     const before = ana.audio.log.length;
-    ana.button('Join room').disabled = true;
-    await ana.click(ana.button('Join room'));
+    ana.button('Create party').disabled = true;
+    await ana.click(ana.button('Create party'));
     assert.ok(!tracked(ana).slice(before).includes('ui:click'), 'a disabled button is silent');
   });
 
-  await scenario('No Power-Ups (GM1): the host checks the lobby box, everyone plays without power-up boxes', async () => {
+  await scenario('No Power-Ups (GM1, a Custom rule since 2026-11-11): a party created with power-ups off plays without power-up boxes for everyone', async () => {
     const W = world();
-    const ana = await W.client('Ana'); await ana.join('pure');
-    const ben = await W.client('Ben'); await ben.join('pure');
+    const { DEFAULT_RULES } = await import('../src/shared/rules.js');
+    const ana = await W.client('Ana');
+    await act(async () => { ana.app.dispatch({ type: 'create-party', name: 'Ana', rules: { ...DEFAULT_RULES, powerups: false } }); });
+    await ana.enter();
+    const ben = await W.client('Ben'); await ben.joinCode(ana.app.room.roomCode);
     await W.run(300);
-    assert.equal(ben.$('[data-ui=no-powerups]').closest('label').hidden, true, 'guests cannot change it');
-    assert.equal(ana.snapshot.powerups, true, 'power-ups are on by default');
-    await act(async () => { ana.$('[data-ui=no-powerups]').click(); });
+    for (const c of [ana, ben]) assert.equal(c.$('[data-ui=no-powerups]'), null, c.name + ': no lobby toggle, the rule was fixed at Create');
+    assert.equal(ana.snapshot.powerups, false); assert.equal(ben.snapshot.powerups, false, 'the rule reaches the joiner');
+    assert.match(ben.text('[data-ui=room-lobby]'), /Power-ups are off/);
     await ana.click('Start Game');
     await W.until(() => ben.shown('[data-ui=map-select]'), 3000, 'voting');
-    assert.equal(ana.snapshot.powerups, false); assert.equal(ben.snapshot.powerups, false, 'the flag reaches guests');
     assert.match(ana.text('[data-ui=map-select] p'), /Vote/);
     for (const c of [ana, ben]) await c.click([...c.doc.querySelectorAll('[data-ui=map-select] button[data-v]')][0]);
     await W.until(() => [ana, ben].every(c => c.ready()), 10000, 'map start');
@@ -195,6 +219,56 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       const picked = c.app.putt.player.collectedPickups;
       assert.equal(Object.keys(picked).length, c.app.putt.course.q.length, c.name + ': every box counts as collected, none is drawn (the first putt of this map has no boxes; the box case is covered in gameplay.test)');
     }
+  });
+
+  await scenario('party flow (VIS-M3): Create shows a code only afterwards, Join by code, unknown codes fail clearly, colours stay unique', async () => {
+    const W = world();
+    const ana = await W.client('Ana');
+    await ana.menu('party');
+    assert.equal(W.hub.rooms.size, 0, 'opening the Party menu creates no room');
+    assert.equal(ana.$('[data-ui=party-code]'), null, 'and shows no code');
+    await ana.fill(ana.$('[data-ui=landing] input'), 'Ana');
+    await ana.click('Create party');
+    await W.until(() => ana.shown('[data-ui=party-colour]'), 3000, 'colour step');
+    const code = ana.app.room.roomCode;
+    assert.match(code, /^[a-hj-km-np-z2-9]{8}$/, 'a fresh eight-character code');
+    assert.equal(ana.text('[data-ui=party-colour] [data-ui=party-code] strong'), code.toUpperCase(), 'the host sees the code after Create');
+    assert.equal(ana.shown('[data-ui=room-lobby]'), false, 'the lobby waits for the colour pick');
+    const anaColor = ana.snapshot.players[ana.app.room.localId].color;
+    // A wrong code fails on the Party menu with a clear message, and creates nothing.
+    const cy = await W.client('Cy');
+    await cy.menu('party');
+    const [cn, cr] = cy.doc.querySelectorAll('[data-ui=landing] input');
+    await cy.fill(cn, 'Cy'); await cy.fill(cr, 'nosuchparty'); await cy.click('Join');
+    await W.run(200);
+    assert.equal(cy.app.room, null);
+    assert.equal(cy.text('[data-ui=connect-error]'), 'No party has that code. Check it with your host, or create a party.');
+    assert.equal(cy.shown('[data-ui=landing]'), true);
+    assert.equal(W.hub.rooms.size, 1, 'a Join never creates a party');
+    // Ben joins by code; Ana's colour is shown taken on his colour step, and his pick is sent before he enters.
+    const ben = await W.client('Ben');
+    await ben.menu('party');
+    const [bn, br] = ben.doc.querySelectorAll('[data-ui=landing] input');
+    await ben.fill(bn, 'Ben'); await ben.fill(br, code.toUpperCase()); await ben.click('Join');
+    await W.until(() => ben.shown('[data-ui=party-colour]'), 3000, 'Ben colour step');
+    assert.equal(ben.text('[data-ui=party-colour] h1'), 'Joined the party');
+    const swatch = i => ben.$(`[data-ui=party-colour] [data-ui=color-picker] button[data-color="${i}"]`);
+    assert.equal(swatch(anaColor).disabled, true, "Ana's colour is taken");
+    const pick = [...ben.doc.querySelectorAll('[data-ui=party-colour] [data-ui=color-picker] button')].findIndex((b, i) => !b.disabled && i !== anaColor && i !== ben.snapshot.players[ben.app.room.localId].color);
+    await ben.click(swatch(pick));
+    await W.until(() => ana.snapshot.players[ben.app.room.localId]?.color === pick, 3000, 'Ben colour reaches the room');
+    await ben.click('Enter lobby');
+    await ana.click('Enter lobby');
+    for (const c of [ana, ben]) {
+      const balls = [...c.doc.querySelectorAll('[data-ui=lobby-plane] [role=listitem]')].map(b => Number(b.dataset.color));
+      assert.deepEqual(balls.sort((a, b) => a - b), [anaColor, pick].sort((a, b) => a - b), c.name + ': both balls on the plane, in their colours');
+    }
+    assert.ok([...ana.doc.querySelectorAll('[data-ui=room-lobby] select option')].some(o => o.value === 'pong'), 'two players: Putt Pong is offered');
+    await cy.joinCode(code);
+    assert.ok(![...ana.doc.querySelectorAll('[data-ui=room-lobby] select option')].some(o => o.value === 'pong'), 'three players: it is not');
+    const colors = Object.values(ana.snapshot.players).map(p => p.color);
+    assert.equal(new Set(colors).size, 3, 'colours are unique in the party');
+    for (const c of [ana, ben, cy]) await c.dispose();
   });
 
   await scenario('solo: a full six-putt map through the real UI scores six holes in one with transitions, banners and audio', async () => {
@@ -397,8 +471,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     for (const n of ['Ben', 'Cy', 'Dee']) { const g = await W.client(n); await g.join('party'); guests.push(g); }
     const [ben, cy, dee] = guests;
     await W.run(300);
-    assert.equal(ana.text('[data-ui=room-lobby] p'), 'Room PARTY · 4 players · You are the host');
-    assert.equal(ben.text('[data-ui=room-lobby] p'), 'Room PARTY · 4 players · Waiting for host');
+    assert.equal(ana.text('[data-ui=room-lobby] p'), 'Room ' + W.code('party').toUpperCase() + ' · 4 players · You are the host');
+    assert.equal(ben.text('[data-ui=room-lobby] p'), 'Room ' + W.code('party').toUpperCase() + ' · 4 players · Waiting for host');
     assert.equal(ben.$('[data-ui=room-lobby] label').hidden, true, 'guests cannot choose the mode');
     await ana.select('tournament_3');
     await ana.click('Start Game');
@@ -621,22 +695,23 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     await W.until(() => ana.snapshot.players[benId].scores.length === 1, 30000, 'putt recorded for both');
     assert.equal(ana.snapshot.players[benId].scores[0].score, 1, "Ben's hole in one after reconnecting counts");
     // Reload: pagehide disposes the app (sending LEAVE), sessionStorage survives in the tab.
-    const stored = ben.win.w.sessionStorage.getItem('putt-pals:server-resume:resume');
+    const code = W.code('resume');
+    const stored = ben.win.w.sessionStorage.getItem('putt-pals:server-resume:' + code);
     assert.ok(stored && JSON.parse(stored).peerId === benId, 'identity stored per room code');
     await ben.dispose();
     await W.run(100);
     assert.equal(ana.snapshot.players[benId].connected, false);
-    const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=resume', storage: { 'putt-pals:server-resume:resume': stored } });
+    const reloaded = await W.client('Ben3', { url: 'http://localhost/#room=' + code, storage: { ['putt-pals:server-resume:' + code]: stored } });
     assert.equal(reloaded.$('[data-ui=landing]').dataset.view, 'party', 'a #room= link opens the menu on Party');
     const [n, r] = reloaded.doc.querySelectorAll('[data-ui=landing] input');
-    assert.equal(n.value, 'Ben', 'the name is prefilled after reload'); assert.equal(r.value, 'resume');
-    await reloaded.click('Join room');
+    assert.equal(n.value, 'Ben', 'the name is prefilled after reload'); assert.equal(r.value, code);
+    await reloaded.click('Join');
     await W.until(() => reloaded.app.room?.connected && reloaded.snapshot?.players[benId]?.connected, 5000, 'resumed seat');
     assert.equal(reloaded.app.room.localId, benId);
     assert.equal(reloaded.snapshot.players[benId].scores[0].score, 1, 'scores survive the reload');
     // An explicit Leave forgets the identity: the next join is a fresh seat.
     await act(async () => { reloaded.app.dispatch({ type: 'leave' }); });
-    assert.equal(reloaded.win.w.sessionStorage.getItem('putt-pals:server-resume:resume'), null);
+    assert.equal(reloaded.win.w.sessionStorage.getItem('putt-pals:server-resume:' + code), null);
     for (const c of [ana, reloaded]) await c.dispose();
   });
 
@@ -646,17 +721,18 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const all = [];
     for (const n of names) { const c = await W.client(n); await c.join('crowd'); all.push(c); }
     await W.run(300);
-    assert.equal(all[0].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · You are the host');
-    assert.equal(all[7].text('[data-ui=room-lobby] p'), 'Room CROWD · 8 players · Waiting for host');
+    const crowd = W.code('crowd');
+    assert.equal(all[0].text('[data-ui=room-lobby] p'), 'Room ' + crowd.toUpperCase() + ' · 8 players · You are the host');
+    assert.equal(all[7].text('[data-ui=room-lobby] p'), 'Room ' + crowd.toUpperCase() + ' · 8 players · Waiting for host');
     const late = await W.client('Ivy');
     await late.menu('party');
     const [n, r] = late.doc.querySelectorAll('[data-ui=landing] input');
-    await late.fill(n, 'Ivy'); await late.fill(r, 'crowd'); await late.click('Join room');
+    await late.fill(n, 'Ivy'); await late.fill(r, crowd); await late.click('Join');
     await W.run(200);
     assert.equal(late.shown('[data-ui=landing]'), true, 'the ninth player stays on the start screen');
     assert.equal(late.text('[data-ui=connect-error]'), 'That room is full. Ask someone to leave, or use a different room code.');
     assert.equal(late.app.room, null);
-    assert.equal(late.button('Join room').disabled, false, 'the player can try again');
+    assert.equal(late.button('Join').disabled, false, 'the player can try again');
     await all[0].click('Start Game');
     await W.until(() => all.slice(1).every(c => c.shown('[data-ui=map-select]')), 3000, 'guests voting');
     for (const c of all) await c.click(c.$('[data-ui=map-select] button[data-v]'));
@@ -667,7 +743,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const offline = await W.client('Joe', { memoryTransport: false });
     await offline.menu('party');
     const [n2, r2] = offline.doc.querySelectorAll('[data-ui=landing] input');
-    await offline.fill(n2, 'Joe'); await offline.fill(r2, 'crowd'); await offline.click('Join room');
+    await offline.fill(n2, 'Joe'); await offline.fill(r2, crowd); await offline.click('Join');
     assert.match(offline.text('[data-ui=connect-error]'), /Could not reach the room service/);
     assert.equal(offline.shown('[data-ui=landing]'), true);
     for (const c of [...all, late, offline]) await c.dispose();

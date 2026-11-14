@@ -1,7 +1,7 @@
 // N4F service lifecycle coverage. Score reports below are synthetic protocol inputs;
 // multiplayer.spec.cjs separately completes real simulated shots through a full map.
 const { test, expect } = require('@playwright/test');
-const { until, openApp } = require('./support/app.cjs');
+const { until, openApp, partyCode } = require('./support/app.cjs');
 const { roomCode, openPlayer } = require('./support/rooms.cjs');
 const { pickMap } = require('./support/maps.cjs');
 
@@ -68,20 +68,23 @@ test('server rooms: duplicate resume and incompatible frames are rejected withou
   const code = roomCode('N4V');
   const player = await openPlayer(browser, info, 'Player', { contexts }); await player.join(code);
   const results = await player.page.evaluate(async ({ code, version }) => {
-    async function rejected(hello) {
+    async function rejected(hello, room = code) {
       return new Promise((resolve, reject) => {
-        const ws = new WebSocket(`ws://${location.host}/api/rooms/${code}/socket`);
+        const ws = new WebSocket(`ws://${location.host}/api/rooms/${room}/socket`);
         const timer = setTimeout(() => { ws.close(); reject(new Error('No protocol rejection')); }, 8000);
         ws.onopen = () => ws.send(JSON.stringify(hello));
         ws.onmessage = event => { const f = JSON.parse(event.data); if (f.type === 'error') { clearTimeout(timer); ws.close(); resolve(f.code); } };
       });
     }
     const resume = window.__ppApp.room.identity;
-    return [await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Duplicate', resume, rules: null }),
+    return [await rejected({ version, type: 'hello', intent: 'join', color: null, roomCode: code, name: 'Duplicate', resume, rules: null }),
       await rejected({ version: 1, type: 'hello', color: null, roomCode: code, name: 'Old', resume: null }),
-      await rejected({ version, type: 'hello', color: null, roomCode: code, name: 'Extra', resume: null, rules: null, playerId: 'forged' })];
-  }, { code: code.toLowerCase(), version: SERVER_ROOM_VERSION });
-  expect(results).toEqual(['identity-rejected', 'incompatible-version', 'invalid-message']);
+      await rejected({ version, type: 'hello', intent: 'join', color: null, roomCode: code, name: 'Extra', resume: null, rules: null, playerId: 'forged' }),
+      // VIS-M3: Join never creates a room, and a join hello cannot set rules.
+      await rejected({ version, type: 'hello', intent: 'join', color: null, roomCode: 'nosuchparty', name: 'Early', resume: null, rules: null }, 'nosuchparty'),
+      await rejected({ version, type: 'hello', intent: 'create', color: null, roomCode: null, name: 'Sneak', resume: null, rules: null })];
+  }, { code: partyCode(code).toLowerCase(), version: SERVER_ROOM_VERSION });
+  expect(results).toEqual(['identity-rejected', 'incompatible-version', 'invalid-message', 'room-not-found', 'invalid-message']);
   expect(await player.roomConnected()).toBe(true);
   expect(Object.keys((await player.snapshot()).players)).toHaveLength(1);
 });

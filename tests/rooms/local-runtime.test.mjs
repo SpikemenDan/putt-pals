@@ -73,17 +73,24 @@ function nextFrame(client, predicate, timeoutMs = 10_000) {
   });
 }
 
-async function openRoom(baseUrl, name, resume = null, roomCode = testRoomCode) {
-  const socket = new WebSocket(`${baseUrl}/api/rooms/${roomCode}/socket`);
+// VIS-M3: rooms exist only once created through the Worker's Create path, under a code it generates. The test names its
+// rooms ('room123'); the first open of a name creates the room and records its real code, and later opens join it.
+const roomCodes = new Map();
+const realCode = name => roomCodes.get(name) ?? name;
+async function openRoom(baseUrl, name, resume = null, label = testRoomCode) {
+  const create = !roomCodes.has(label) && resume === null;
+  const roomCode = create ? null : realCode(label);
+  const socket = new WebSocket(`${baseUrl}/api/rooms/${create ? '_new' : roomCode}/socket`);
   const client = observe(socket);
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', reject, { once: true });
   });
   const response = nextFrame(client, frame => frame.type === 'welcome' || frame.type === 'error');
-  socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode, name, resume, rules: null }));
+  socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', intent: create ? 'create' : 'join', color: null, roomCode, name, resume, rules: null }));
   const frame = await response;
   assert.equal(frame.type, 'welcome', `room admission failed: ${frame.code}`);
+  if (create) roomCodes.set(label, frame.snapshot.roomCode);
   assert.ok(validRoomSnapshot(frame.snapshot), 'welcome includes a valid public room snapshot');
   return client;
 }
@@ -253,7 +260,7 @@ async function main() {
   assert.equal(roomOne.id, sameRoom.id, 'same environment and room code must map to the same Durable Object');
   assert.notEqual(roomOne.id, otherRoom.id, 'different room codes must use isolated Durable Objects');
 
-  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v8:room123');
+  assert.equal(roomObjectName('development', 'room123'), 'putt-pals:development:v9:room123');
   assert.notEqual(roomObjectName('development', 'room123'), roomObjectName('preview', 'room123'));
   assert.notEqual(roomObjectName('preview', 'room123'), roomObjectName('production', 'room123'));
   assert.throws(() => roomObjectName('staging', 'room123'), /Unknown room environment/);
@@ -262,10 +269,14 @@ async function main() {
   await expectHandshakeError(baseUrl, 'room124', JSON.stringify({
     version: 1, type: 'hello', color: null, roomCode: 'room124', name: 'Old client', resume: null,
   }), 'incompatible-version');
+  // VIS-M3: a Join never creates a room; an uncreated code fails clearly.
+  await expectHandshakeError(baseUrl, 'room132', JSON.stringify({
+    version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', color: null, roomCode: 'room132', name: 'Early', resume: null, rules: null,
+  }), 'room-not-found');
   await expectHandshakeError(baseUrl, 'room125', '{', 'invalid-message');
   await expectHandshakeError(baseUrl, 'room126', 'x'.repeat(65_537), 'invalid-message');
   await expectHandshakeError(baseUrl, 'room127', JSON.stringify({
-    version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'room127', name: '', resume: null, rules: null,
+    version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', color: null, roomCode: 'room127', name: '', resume: null, rules: null,
   }), 'invalid-message');
   assert.equal(await upgradeStatus(baseUrl, 'room128', 'https://evil.example'), 403);
   const boundaryClient = await openRoom(baseUrl, 'Boundary', null, 'room129');
@@ -291,7 +302,7 @@ async function main() {
     const capacityClients = [];
     for (let i = 1; i <= 8; i += 1) capacityClients.push(await openRoom(baseUrl, `Cap ${i}`, null, capacityRoom));
     assert.equal(capacityClients[7].snapshot.seats.length, 8);
-    const ninthSocket = new WebSocket(`${baseUrl}/api/rooms/${capacityRoom}/socket`);
+    const ninthSocket = new WebSocket(`${baseUrl}/api/rooms/${realCode(capacityRoom)}/socket`);
     const ninth = observe(ninthSocket);
     await new Promise((resolve, reject) => {
       ninthSocket.addEventListener('open', resolve, { once: true });
@@ -299,7 +310,7 @@ async function main() {
     });
     const fullResponse = nextFrame(ninth, frame => frame.type === 'error');
     ninthSocket.send(JSON.stringify({
-      version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: capacityRoom, name: 'Ninth', resume: null, rules: null,
+      version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', color: null, roomCode: realCode(capacityRoom), name: 'Ninth', resume: null, rules: null,
     }));
     assert.equal((await fullResponse).code, 'room-full');
     for (const client of capacityClients) client.socket.close();
@@ -328,8 +339,8 @@ async function main() {
     assert.equal(resumedHost.snapshot.session.node, 'select.timing', 'controller departure does not reset the session');
     assert.equal(resumedHost.snapshot.session.context.votingDeadline, votingDeadline, 'controller departure preserves the voting deadline');
     assert.equal((await command(resumedHost, { type: 'START_VOTING' }, { connectionId: host.connectionId })).code, 'stale-connection');
-    await expectHandshakeError(baseUrl, testRoomCode, JSON.stringify({
-      version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: testRoomCode, name: 'Host',
+    await expectHandshakeError(baseUrl, realCode(testRoomCode), JSON.stringify({
+      version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', color: null, roomCode: realCode(testRoomCode), name: 'Host',
       resume: { sessionId: host.snapshot.sessionId, playerId: host.playerId, token: host.resumeToken }, rules: null,
     }), 'identity-rejected');
 
@@ -386,7 +397,7 @@ async function main() {
     const results = await waitForSnapshot(controller, snapshot => snapshot.session.node === 'results');
     assert.equal(results.session.context.players[host.playerId].scores.length, 6);
     assert.equal(results.session.context.players[clients[1].playerId].scores.length, 6);
-    console.log('Local Wrangler runtime passed: routing/isolation, v8 admission, eight-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
+    console.log('Local Wrangler runtime passed: routing/isolation, v9 admission (create versus join), eight-member capacity, controller succession and resumed identity, and a four-player six-putt game.');
   } catch (error) {
     throw new Error(`${phase}: ${error.message}`, { cause: error });
   } finally {

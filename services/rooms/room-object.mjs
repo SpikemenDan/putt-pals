@@ -10,6 +10,7 @@ import {
   authorizeRoomFrame, chooseRoomController, createRoomPolicy, decodeRoomFrame,
   encodeRoomFrame, validRoomCode, validRoomId,
 } from '../../src/network/contracts/server-room.js';
+import { ROOM_CREATE_HEADER } from './room-name.mjs';
 
 // Bumper and Orbital Bumper placement (G1e) needs the course floor, so the Worker holds the same course data as the clients.
 const courseDefinitions = createCourseData().definitions;
@@ -131,7 +132,7 @@ export class RoomDurableObject {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     const connection = {
-      socket: server, roomCode: route[1], identity: null, connectionId: null,
+      socket: server, roomCode: route[1], create: request.headers.get(ROOM_CREATE_HEADER) === '1', identity: null, connectionId: null,
       closed: false, lastSeenAt: Date.now(), handshakeTimer: null, livenessTimer: null,
     };
     this.acceptConnection(server, connection);
@@ -262,9 +263,15 @@ export class RoomDurableObject {
   }
 
   async admit(connection, hello) {
-    if (hello.roomCode !== connection.roomCode) return this.reject(connection, 'invalid-message', 1008, 'Room code mismatch');
+    // VIS-M3: a socket the Worker opened for Create may only create, and only a room that does not exist yet; any other
+    // socket may only join an existing room (or resume a seat in one). A join never creates a room.
+    const create = connection.create === true;
+    if (create !== (hello.intent === 'create')) return this.reject(connection, 'invalid-message', 1008, 'Hello intent mismatch');
+    if (!create && hello.roomCode !== connection.roomCode) return this.reject(connection, 'invalid-message', 1008, 'Room code mismatch');
     let room = this.runtime;
-    if (hello.resume === null && room === null) {
+    if (create && room !== null) return this.reject(connection, 'room-exists', 1008, 'Room code taken');
+    if (!create && room === null && hello.resume === null) return this.reject(connection, 'room-not-found', 1008, 'No such room');
+    if (create) {
       room = await this.createRuntime(connection.roomCode, hello.name.trim(), hello.color, hello.rules);
       const token = randomToken();
       const identity = await this.createIdentity(room, room.initialPlayerId, hello.name.trim(), token);

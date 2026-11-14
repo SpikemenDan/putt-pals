@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
   async function test(name,fn) { await fn(); console.log('PASS '+name); passed++; }
   const copy=v=>structuredClone(v);
   const snapshot=createServerRoomFixture();
-  const command=(type='START_VOTING', extra={}) => ({version:8,type:'command',sessionId:snapshot.sessionId,connectionId:'socket_p1',sequence:1,roundNumber:0,puttIndex:0,payload:{type,...extra}});
+  const command=(type='START_VOTING', extra={}) => ({version:c.SERVER_ROOM_VERSION,type:'command',sessionId:snapshot.sessionId,connectionId:'socket_p1',sequence:1,roundNumber:0,puttIndex:0,payload:{type,...extra}});
   const binding={playerId:'p1',connectionId:'socket_p1',lastSequence:0};
   await test('policy defaults and validated future deployment overrides',()=>{
     assert.deepEqual(c.createRoomPolicy(),{reconnectGraceMs:30000,controllerTransferDelayMs:0,emptyRoomTtlMs:900000});
@@ -17,7 +17,7 @@ const assert = require('node:assert/strict');
   });
   await test('server authority separate from controller; versions 4 (peer) and 5 (server room) carry global hazards',async()=>{
     assert.equal((await import('../src/shared/constants.js')).PROTOCOL_VERSION,6);
-    assert.equal(c.SERVER_ROOM_VERSION,8);assert.ok(c.validRoomSnapshot(snapshot));
+    assert.equal(c.SERVER_ROOM_VERSION,9);assert.ok(c.validRoomSnapshot(snapshot));
     const invalid=copy(snapshot);invalid.session.context.hostId='p1';assert.equal(c.validRoomSnapshot(invalid),false);
     assert.equal(c.authorizeRoomFrame(command(),binding,snapshot,snapshot.serverTime),null);
     assert.equal(c.authorizeRoomFrame({...command(),connectionId:'socket_p2'},{...binding,playerId:'p2',connectionId:'socket_p2'},snapshot,snapshot.serverTime),'unauthorized');
@@ -28,13 +28,29 @@ const assert = require('node:assert/strict');
     assert.equal(c.decodeRoomFrame(JSON.stringify(command()),'server'),null);
     assert.equal(c.decodeRoomFrame('{','client'),null);assert.equal(c.decodeRoomFrame(new Uint8Array(1),'client'),null);
     assert.equal(c.decodeRoomFrame(' '.repeat(65537),'client'),null);
-    const hello={version:8,type:'hello',color:null,roomCode:'friends',name:'x'.repeat(14),resume:null,rules:null};
+    const hello={version:c.SERVER_ROOM_VERSION,type:'hello',intent:'join',color:null,roomCode:'friends',name:'x'.repeat(14),resume:null,rules:null};
     assert.ok(c.validClientFrame(hello));assert.equal(c.validClientFrame({...hello,name:'x'.repeat(15)}),false);
     assert.equal(c.decodeRoomFrame(JSON.stringify({...hello,name:'😀'.repeat(20000)}),'client'),null);
     assert.equal(c.validRoomId('__proto__'),false);assert.equal(c.validRoomCode('A B!'),false);
   });
+  await test('VIS-M3: hello states create or join; only a create omits the code, and only a create carries rules',()=>{
+    const join={version:c.SERVER_ROOM_VERSION,type:'hello',intent:'join',color:null,roomCode:'friends',name:'A',resume:null,rules:null};
+    const create={...join,intent:'create',roomCode:null};
+    assert.ok(c.validClientFrame(join));assert.ok(c.validClientFrame(create));
+    assert.ok(c.validClientFrame({...create,rules:{...DEFAULT_RULES,powerups:false}}),'the creator fixes the rules');
+    assert.equal(c.validClientFrame({...join,rules:DEFAULT_RULES}),false,'a join never sets rules');
+    assert.equal(c.validClientFrame({...create,roomCode:'friends'}),false,'the server, not the player, picks a new code');
+    assert.equal(c.validClientFrame({...join,roomCode:null}),false,'a join names its party');
+    assert.equal(c.validClientFrame({...create,resume:{sessionId:'s',playerId:'p',token:'x'.repeat(43)}}),false,'nothing to resume in a new room');
+    for(const intent of [undefined,'host','',null]) { const bad={...join,intent}; if(intent===undefined) delete bad.intent; assert.equal(c.validClientFrame(bad),false,'intent '+intent); }
+    for(const code of ['room-not-found','room-exists']) assert.ok(c.validServerFrame({version:c.SERVER_ROOM_VERSION,type:'error',code,retryAfterMs:null}),code);
+    assert.equal(c.ROOM_CREATE_PATH,'/api/rooms/_new/socket');assert.equal(c.validRoomCode('_new'),false,'the create path is never a room code');
+    let n=0;const codes=new Set(Array.from({length:200},()=>c.generateRoomCode(b=>{for(let i=0;i<b.length;i++)b[i]=(n=(n*1103515245+12345)>>>0)>>>24;return b;})));
+    assert.ok(codes.size>190,'codes vary');for(const code of codes){assert.ok(c.validRoomCode(code));assert.equal(code.length,8);assert.match(code,/^[a-hj-km-np-z2-9]+$/,'no look-alike characters');}
+    assert.equal(c.generateRoomCode(b=>b.fill(255).fill(0,8)),'aaaaaaaa','bytes past the even split are rejected, not wrapped');
+  });
   await test('hello carries validated Custom rules (null for standard)',()=>{
-    const hello={version:8,type:'hello',color:null,roomCode:'friends',name:'A',resume:null,rules:null};
+    const hello={version:c.SERVER_ROOM_VERSION,type:'hello',intent:'create',color:null,roomCode:null,name:'A',resume:null,rules:null};
     assert.ok(c.validClientFrame(hello));
     assert.ok(c.validClientFrame({...hello,rules:{...DEFAULT_RULES,shotPower:120,aimWobble:'high',holeTimer:120,powerups:false}}),'valid non-default rules');
     assert.equal(c.validClientFrame({...hello,rules:{...DEFAULT_RULES,shotPower:999}}),false,'out-of-range value');
@@ -44,9 +60,9 @@ const assert = require('node:assert/strict');
   });
   await test('resume secret only in private handshake/welcome, never shared snapshot',()=>{
     const resume={sessionId:'session_fixture',playerId:'p1',token:'x'.repeat(43)};
-    assert.ok(c.validClientFrame({version:8,type:'hello',color:null,roomCode:'friends',name:'A',resume,rules:null}));
-    assert.equal(c.validClientFrame({version:8,type:'hello',color:null,roomCode:'friends',name:'A',resume:{...resume,token:'short'},rules:null}),false);
-    const welcome={version:8,type:'welcome',playerId:'p1',connectionId:'socket_p1',resumeToken:'x'.repeat(43),snapshot};
+    assert.ok(c.validClientFrame({version:c.SERVER_ROOM_VERSION,type:'hello',intent:'join',color:null,roomCode:'friends',name:'A',resume,rules:null}));
+    assert.equal(c.validClientFrame({version:c.SERVER_ROOM_VERSION,type:'hello',intent:'join',color:null,roomCode:'friends',name:'A',resume:{...resume,token:'short'},rules:null}),false);
+    const welcome={version:c.SERVER_ROOM_VERSION,type:'welcome',playerId:'p1',connectionId:'socket_p1',resumeToken:'x'.repeat(43),snapshot};
     assert.ok(c.decodeRoomFrame(c.encodeRoomFrame(welcome,'server'),'server'));
     const leaked=copy(snapshot);leaked.seats[0].token='secret';assert.equal(c.validRoomSnapshot(leaked),false);
     const leaked2=copy(snapshot);leaked2.session.context.players.p1.tokenHash='a'.repeat(64);assert.equal(c.validRoomSnapshot(leaked2),false);
@@ -180,10 +196,10 @@ const assert = require('node:assert/strict');
     for(const bad of [{type:'DEPLOY_OBJECT',kind:'mag',x:1,y:2},{type:'DEPLOY_OBJECT',kind:'bumper',x:NaN,y:2},{type:'DEPLOY_OBJECT',kind:'bumper',x:1,y:2,z:3},{type:'DEPLOY_OBJECT',kind:'bumper',x:1},{type:'DEPLOY_HIT',id:'__proto__'},{type:'DEPLOY_HIT'},{type:'DEPLOY_HIT',id:'d1',z:1}]) assert.equal(c.validServerCommand(bad),false,JSON.stringify(bad));
   });
   await test('server frames reject unknown errors, malformed ack and client impersonation',()=>{
-    assert.ok(c.validServerFrame({version:8,type:'error',code:'room-full',retryAfterMs:null}));
-    assert.equal(c.validServerFrame({version:8,type:'error',code:'secret exception trace',retryAfterMs:null}),false);
-    assert.equal(c.validServerFrame({version:8,type:'ack',sessionId:'s',connectionId:'c',sequence:0,revision:1}),false);
-    assert.equal(c.validClientFrame({version:8,type:'snapshot',snapshot}),false);
+    assert.ok(c.validServerFrame({version:c.SERVER_ROOM_VERSION,type:'error',code:'room-full',retryAfterMs:null}));
+    assert.equal(c.validServerFrame({version:c.SERVER_ROOM_VERSION,type:'error',code:'secret exception trace',retryAfterMs:null}),false);
+    assert.equal(c.validServerFrame({version:c.SERVER_ROOM_VERSION,type:'ack',sessionId:'s',connectionId:'c',sequence:0,revision:1}),false);
+    assert.equal(c.validClientFrame({version:c.SERVER_ROOM_VERSION,type:'snapshot',snapshot}),false);
   });
   console.log(`${passed} server-room contract scenarios passed (no Cloudflare runtime or real network claim).`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

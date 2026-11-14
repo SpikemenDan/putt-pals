@@ -1,11 +1,11 @@
 import {
-  SERVER_ROOM_VERSION, SERVER_ROOM_LIMITS, DEFAULT_ROOM_POLICY, decodeRoomFrame, encodeRoomFrame,
+  SERVER_ROOM_VERSION, SERVER_ROOM_LIMITS, DEFAULT_ROOM_POLICY, ROOM_CREATE_PATH, decodeRoomFrame, encodeRoomFrame,
   validRoomCode, validRoomId, validRoomSecret, validServerCommand,
 } from './contracts/server-room.js';
 import { createCourseDocument } from '../courses/document.js';
 import { sessionValue } from '../session/recovery.js';
 
-const fatalErrors = new Set(['incompatible-version', 'checkpoint-incompatible', 'session-expired', 'identity-rejected', 'room-full', 'history-full', 'invalid-message', 'course-incompatible']);
+const fatalErrors = new Set(['incompatible-version', 'checkpoint-incompatible', 'session-expired', 'identity-rejected', 'room-full', 'history-full', 'invalid-message', 'course-incompatible', 'room-not-found', 'room-exists']);
 const NO_DEPLOYABLES = Object.freeze([]);
 export const validServerIdentity = identity => !!identity && validRoomId(identity.sessionId)
   && validRoomId(identity.playerId) && validRoomSecret(identity.token);
@@ -16,8 +16,9 @@ export async function browserCourseHash(crypto = globalThis.crypto) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+/** Socket URL for a room code, or for a new room under a server-generated code when `roomCode` is null (VIS-M3). */
 export function serverRoomUrl(roomCode, { endpoint, location = globalThis.location } = {}) {
-  if (!validRoomCode(roomCode)) throw new Error('invalid-message');
+  if (roomCode !== null && !validRoomCode(roomCode)) throw new Error('invalid-message');
   const page = new URL(location?.href ?? 'http://localhost/');
   const target = new URL(endpoint ?? page.origin, page);
   if (target.username || target.password || target.search || target.hash) throw new Error('invalid-endpoint');
@@ -26,23 +27,33 @@ export function serverRoomUrl(roomCode, { endpoint, location = globalThis.locati
   if (!['ws:', 'wss:'].includes(target.protocol)
     || (target.protocol === 'ws:' && (!loopback(page.hostname) || !loopback(target.hostname)))
     || (target.host !== page.host && !(loopback(page.hostname) && loopback(target.hostname)))) throw new Error('invalid-endpoint');
-  target.pathname = `/api/rooms/${roomCode}/socket`;
+  target.pathname = roomCode === null ? ROOM_CREATE_PATH : `/api/rooms/${roomCode}/socket`;
   return target.href;
 }
 
-/** Server-room v2 transport. No host election, physics actor, signaling or ICE. */
-export async function connectServerRoom({ roomCode, name, color = null, resume = null, rules = null, endpoint, location,
+/**
+ * Server-room v2 transport. No host election, physics actor, signaling or ICE.
+ * `create` (VIS-M3): open a new room; the server picks its code, which `room.roomCode` holds once admitted, and `rules`
+ * fix its rules. Otherwise `roomCode` must name an existing room (`room-not-found` if it does not), and `rules` is ignored.
+ */
+export async function connectServerRoom({ roomCode = null, create = false, name, color = null, resume = null, rules = null, endpoint, location,
   clock = { now: () => performance.now(), setTimeout, clearTimeout },
   WebSocket = globalThis.WebSocket, random = Math.random, signal,
   expectedCourseHash, crypto = globalThis.crypto,
 } = {}) {
-  const url = serverRoomUrl(roomCode, { endpoint, location });
+  if (create && resume !== null) throw new Error('invalid-message');
+  if (create) roomCode = null;
+  serverRoomUrl(roomCode, { endpoint, location }); // fails fast on a bad code or endpoint
   if (typeof WebSocket !== 'function') throw new Error('no-websocket');
   if (resume !== null && !validServerIdentity(resume)) throw new Error('session-expired');
   const courseHash = expectedCourseHash ?? await browserCourseHash(crypto);
   if (signal?.aborted) throw new Error('cancelled');
   let identity = resume ? { sessionId: resume.sessionId, playerId: resume.playerId, token: resume.token } : null;
-  if (encodeRoomFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, color, resume: identity, rules }, 'client') === null) throw new Error('invalid-message');
+  // Until admitted, a Create socket creates; every later reconnect resumes the seat in the room it created.
+  const hello = () => identity === null && create
+    ? { version: SERVER_ROOM_VERSION, type: 'hello', intent: 'create', roomCode: null, name, color, resume: null, rules }
+    : { version: SERVER_ROOM_VERSION, type: 'hello', intent: 'join', roomCode, name, color, resume: identity, rules: null };
+  if (encodeRoomFrame(hello(), 'client') === null) throw new Error('invalid-message');
   let localId = null, connectionId = null, snapshot = null, wireSnapshot = null;
   let socket = null, generation = 0, closed = false, connected = false, established = false;
   let commandSequence = 0, presenceSequence = 0, serverPresenceSequence = -1, revision = -1;
@@ -148,12 +159,12 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     if (closed) return;
     const id = ++generation;
     let next;
-    try { next = new WebSocket(url); } catch { lost('service-unavailable'); return; }
+    try { next = new WebSocket(serverRoomUrl(identity === null && create ? null : roomCode, { endpoint, location })); } catch { lost('service-unavailable'); return; }
     socket = next;
     handshakeTimer = clock.setTimeout(() => { if (id === generation) lost('connection-timeout'); }, SERVER_ROOM_LIMITS.handshakeMs);
     next.addEventListener('open', () => {
       if (closed || id !== generation) { next.close(); return; }
-      sendFrame({ version: SERVER_ROOM_VERSION, type: 'hello', roomCode, name, color, resume: identity, rules });
+      sendFrame(hello());
     });
     next.addEventListener('message', event => {
       if (closed || id !== generation) return;
@@ -167,6 +178,7 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
         return;
       }
       if (frame.type === 'welcome') {
+        if (roomCode === null) roomCode = frame.snapshot.roomCode; // Create: the server chose the code
         if (connected || frame.snapshot.roomCode !== roomCode
           || (identity && (frame.playerId !== identity.playerId || frame.snapshot.sessionId !== identity.sessionId))) { end('identity-rejected'); return; }
         localId = frame.playerId; connectionId = frame.connectionId;
@@ -199,7 +211,7 @@ export async function connectServerRoom({ roomCode, name, color = null, resume =
     next.addEventListener('error', () => { if (!closed && id === generation) lost('service-unavailable'); });
   }
   const room = {
-    roomCode, resumed: resume !== null,
+    get roomCode() { return roomCode; }, resumed: resume !== null, created: create,
     get localId() { return localId; },
     get controllerId() { return snapshot?.controllerId ?? null; },
     get isController() { return connected && localId !== null && snapshot?.controllerId === localId; },

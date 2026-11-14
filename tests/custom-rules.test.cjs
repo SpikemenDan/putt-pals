@@ -18,7 +18,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   const { createRoomSession } = await load('src/session/index.js');
   const { createCourseDocument } = await load('src/courses/index.js');
   const { GameModes } = await load('src/shared/session.js');
-  const { validClientFrame } = await load('src/network/contracts/server-room.js');
+  const { validClientFrame, SERVER_ROOM_VERSION } = await load('src/network/contracts/server-room.js');
   const { lobbyView, votingView, createCourseInfo } = await load('src/ui/model.js');
   const { createCourseData } = await load('src/courses/index.js');
   const { DEFAULT_RULES: STD } = rules;
@@ -180,7 +180,7 @@ const FLAT = { tee: [0, 0], hole: [10000, 10000], tiles: [[-20000, -20000, 40000
   assert.equal(series.state().phase, 'lobby', 'after two maps the game is over');
 
   // ---- server hello carries rules (validated)
-  const hello = r => ({ version: 8, type: 'hello', roomCode: 'abc', name: 'Ann', color: null, resume: null, rules: r });
+  const hello = r => ({ version: SERVER_ROOM_VERSION, type: 'hello', intent: 'create', roomCode: null, name: 'Ann', color: null, resume: null, rules: r });
   assert.equal(validClientFrame(hello(null)), true);
   assert.equal(validClientFrame(hello({ ...STD, lunaGravity: 60 })), true);
   assert.equal(validClientFrame(hello({ ...STD, lunaGravity: 61 })), false);

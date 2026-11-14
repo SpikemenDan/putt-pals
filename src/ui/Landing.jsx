@@ -105,10 +105,19 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
           {view === 'party' && <>
             <h2 className={menu.heading}>Party</h2>
             {nameField}
-            {colorField}
-            <label>Room code (friends type the same one)<input maxLength={12} autoComplete="off" value={roomCode} onChange={e => setRoomCode(e.target.value)} /></label>
-            <button type="button" className={menu.go} disabled={connecting || !roomCode.trim()} onClick={() => send(UiCommands.JOIN, { name, roomCode, rules: hostRules })}>Join room</button>
-            {hostRules && <p className={app.small} data-ui="party-custom-rules">Custom rules ({changedRules(hostRules).length} changed) apply if you are first into the room; friends who join play them too. <button type="button" className={menu.inline} onClick={() => setHostRules(null)}>Use standard</button></p>}
+            {/* VIS-M3 #175: Host creates the party and only then gets its code; opening this menu makes no room and no code. */}
+            <div className={menu.partyPart} data-ui="party-host">
+              <p className={menu.question}>Host</p>
+              <button type="button" className={menu.go} disabled={connecting} onClick={() => send(UiCommands.CREATE_PARTY, { name, rules: hostRules })}>Create party</button>
+              {hostRules && <p className={app.small} data-ui="party-custom-rules">Your party uses your Custom rules ({changedRules(hostRules).length} changed); everyone who joins plays them. <button type="button" className={menu.inline} onClick={() => setHostRules(null)}>Use standard</button></p>}
+            </div>
+            <form className={menu.partyPart} data-ui="party-join" onSubmit={e => { e.preventDefault(); if (!connecting && roomCode.trim()) send(UiCommands.JOIN, { name, roomCode }); }}>
+              <p className={menu.question}>Join</p>
+              <div className={menu.joinRow}>
+                <label className={menu.joinCode}>Party code<input maxLength={12} autoComplete="off" spellCheck={false} placeholder="Code from your host" value={roomCode} onChange={e => setRoomCode(e.target.value)} /></label>
+                <button type="submit" className={menu.joinGo} disabled={connecting || !roomCode.trim()}>Join</button>
+              </div>
+            </form>
           </>}
           {view === 'custom' && <>
             <h2 className={menu.heading}>Custom</h2>

@@ -71,3 +71,11 @@
 .menu[data-space] .brand{opacity:0;translate:0 -24px}
 .inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);background:#fff}
 .panel[data-menu-view=custom]{width:min(92vw,580px)}
+/* Party (VIS-M3 #175): Host's Create button, then the Join code box with its Join button beside it. Colour comes after, before the lobby. */
+.partyPart{margin:10px 0 0;padding:8px 0 0;border-top:3px dashed rgba(20,16,42,.25)}
+.partyPart .question{margin:0 0 2px}
+.partyPart .go{margin-top:4px}
+.joinRow{display:flex;align-items:flex-end;gap:8px}
+.joinCode{flex:1;margin:0!important}
+.joinCode input{text-transform:uppercase;letter-spacing:2px}
+.joinGo{margin:0 0 0;padding:10px 18px;font-size:18px;background:var(--sky);color:#fff}

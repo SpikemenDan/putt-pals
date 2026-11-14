@@ -29,7 +29,8 @@ The UI never mutates game or session state. Buttons dispatch the same command ob
 | Command | Meaning |
 | --- | --- |
 | `{ type: 'session', event }` | An L1 `SessionEvents` command without `playerId`; the app binds the local player identity and the room service validates controller permissions. |
-| `join` / `play-solo` | Landing form; `parseJoinRequest()` normalizes the name and room code. |
+| `create-party` / `join` / `play-solo` | Main menu (VIS-M3 #175): Party has Create (no code until the room exists) and a Join code box with a Join button; `parseJoinRequest()` normalizes the name and code. |
+| `enter-lobby` | Leaves the party colour step for the lobby. |
 | `leave`, `invite`, `toggle-quality` | Legacy Leave room, Invite/Copy invite and Quality buttons. |
 
 `createUiDispatcher` applies `toggle-card`/`close-card` to the store first (the scorecard is UI state), then forwards every command. Give the same dispatcher to the input adapter so K and Escape behave like the buttons.
@@ -47,6 +48,7 @@ The view models in `model.js` are pure functions of the room snapshot, local sta
 - **Focus management (new, intentional):** opening the scorecard moves keyboard focus to its Close button and closing returns focus to the opener. The Close button therefore shows a focus ring that the legacy page did not; this is the only visual difference in the parity run.
 - Accessibility attributes that render nothing were added: `role="dialog"` on the scorecard, `role="meter"` with live `aria-valuenow` on the power bar, `aria-pressed` on map cards, `role="status"` live regions for toasts and banners, `role="alert"` for the disconnect notice and a label for the canvas.
 - The legacy "Play selected map" button was permanently hidden and is not ported. The unused `#warp` overlay is not ported.
+- Party flow (VIS-M3 #175): after Create or Join, `RoomLobby` shows the colour step (`lobby.colorStep`): the party code for the host, the picker with taken colours, a preview ball and Enter lobby. The lobby then shows everyone's balls on one plane (`LobbyPlane`, tuned by `display.lobby`), the party code with Copy invite, and a smaller Change ball colour picker. The lobby has no No power-ups box (a Custom rule since 2026-11-11), and a party offers Putt Pong only with exactly two players.
 - Player colours (#161): each player record carries a palette index (`players[id].color`), chosen by the player and unique in the room. The palette is `PLAYER_COLORS` / `PLAYER_COLOR_NAMES` in `src/shared/constants.js` (30 colours; indexes 0-7 are the original eight). `colorOf` reads the room's colour and only falls back to join order for old fixtures. `ColorPicker` (Landing and lobby) disables colours other players hold; picks go out as the `set-color` UI command, which the app saves locally and sends to the room as `SET_COLOR`.
 - Legacy reports join errors with `alert()`. The UI leaves that to the application through `parseJoinRequest()` messages.
 
