@@ -22,7 +22,7 @@ Comic styling for the in-game HUD, scorecard, banners, toasts, power meter and t
 - Pure CSS: no component logic, DOM structure, labels or class names changed (CSS Module names are the same), so the jsdom UI tests and the real-browser flows are unaffected.
 - Cream panels replace the glass: opaque ink-outlined panels stay readable over any course colour, including the new per-map palettes of V1c (PR #78).
 - Colour contrast (WCAG ratios): ink on cream 17.4, ink on yellow 12.8, ink on pink 5.5, ink on cyan 9.5, yellow on ink 12.8, white on red 5.0, dark pink on cream 6.3, muted text on cream 8.5, muted text on yellow 6.3, dark pink on yellow 4.6. The page footer "how to play" text moved into a cream panel because white on the sky background was only 4.0.
-- `scripts/ui-visual-parity.cjs` compares the UI against the legacy pastel page and will no longer match; it is a manual tool (the committed T1 parity test was already dropped when V1/M1 replaced the pastel look).
+- `scripts/ui-visual-parity.cjs` (script since removed) compares the UI against the legacy pastel page and will no longer match; it is a manual tool (the committed T1 parity test was already dropped when V1/M1 replaced the pastel look).
 
 ## Verification
 

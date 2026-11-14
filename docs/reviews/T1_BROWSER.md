@@ -5,7 +5,7 @@ Task: [T1 #15](https://github.com/SpikemenDan/putt-pals/issues/15), browser inte
 ## Delivered
 
 - `playwright.config.cjs`: Chromium, Firefox, and WebKit projects; 1 worker; 300 s test timeout; `webServer` automatically runs `npm run build` then `vite preview` on `127.0.0.1:4173`.
-- `tests/browser/support/global-setup.cjs`: Starts a local PeerServer on `127.0.0.1:9310` path `/pp` via the `peer` package.
+- `tests/browser/support/global-setup.cjs` (file since removed with the PeerJS transport): Starts a local PeerServer on `127.0.0.1:9310` path `/pp` via the `peer` package.
 - `tests/browser/support/app.cjs`: Test helper injecting `window.__PP_PEER_SERVER` (with `iceServers: []` to prevent public network access) and `window.__PP_APP_HOOK` to inspect app state.
 - `tests/integration/out-of-bounds.test.cjs` (`npm run test:integration`, in `npm test` and the baseline CI job): ports the legacy smoke assertion tools.js:202 (a splash after 12 strokes does not end the putt) to `outOfBounds()` in src/simulation/physics.js, which had no test. A check of the other legacy smoke assertions found them already covered by test:app, test:session, test:render, test:input, test:ui and test:audio, so they were not duplicated.
 - Playwright specs:
@@ -50,7 +50,7 @@ Task: [T1 #15](https://github.com/SpikemenDan/putt-pals/issues/15), browser inte
 
 ## Scope Change
 
-The legacy UI screenshot-parity test was dropped from T1 with user approval because the comic redesign (#33 V1, #36 M1) replaces the look it compares against; scripts/ui-visual-parity.cjs stays as a manual tool.
+The legacy UI screenshot-parity test was dropped from T1 with user approval because the comic redesign (#33 V1, #36 M1) replaces the look it compares against; scripts/ui-visual-parity.cjs (since removed) stays as a manual tool.
 
 ## Delegation Note
 

@@ -46,4 +46,4 @@ Task: [I1 #12](https://github.com/SpikemenDan/putt-pals/issues/12), integrate th
 ## Next
 
 - Review the integration-owner changes above, then merge with user approval after green CI.
-- T1 can turn `scripts/ui-visual-parity.cjs` and the I1 browser runs into Playwright tests in `tests/browser`. N2/N3/R2/Q1 are unblocked by this integration.
+- T1 can turn `scripts/ui-visual-parity.cjs` (script since removed) and the I1 browser runs into Playwright tests in `tests/browser`. N2/N3/R2/Q1 are unblocked by this integration.
