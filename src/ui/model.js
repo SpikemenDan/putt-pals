@@ -13,6 +13,7 @@ import { STARTER_COURSE_INDICES } from '../shared/constants.js';
 import { CUSTOM_RULES, changedRules, ruleValueText, seriesMaps, validRules } from '../shared/rules.js';
 import { PLAYER_COLOR_COUNT, isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
+import { courseWorld } from '../shared/worlds.js';
 import { MODE_OPTIONS, VOTE_SECONDS } from './commands.js';
 
 /** HUD names by power-up id, from the gameplay catalog. */
@@ -36,6 +37,7 @@ export function createCourseInfo({ definitions, rules }) {
     desc: d.desc,
     par: d.par,
     starter: STARTER_COURSE_INDICES.includes(index),
+    world: courseWorld(d),
     /** Legacy shows "PUTT k/n" and putt banners only for maps that define putts. */
     hasPutts: Array.isArray(d.putts),
     putts: Object.freeze(rules[index].putts.map(p => Object.freeze({ par: p.par, penalty: p.penalty, limitSeconds: p.limitSeconds }))),
@@ -155,7 +157,7 @@ export function votingView(room, local, now, courses) {
     status,
     cards: STARTER_COURSE_INDICES.map((index, k) => {
       const c = courses[index];
-      return { index, number: pad2(k + 1), name: c.name, desc: c.desc, par: c.par, votes: tally[index] || 0, selected: mine === index, preview: c.preview };
+      return { index, number: pad2(k + 1), name: c.name, desc: c.desc, par: c.par, world: c.world, votes: tally[index] || 0, selected: mine === index, preview: c.preview };
     }),
     puttPicker: pickable ? { mapIndex: mine, putts: courses[mine].putts.map((p, k) => ({ index: k, label: 'Putt ' + (k + 1) + ' · Par ' + p.par })) } : null,
   };

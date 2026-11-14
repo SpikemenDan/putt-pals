@@ -58,11 +58,18 @@ async function openApp(page, name) {
       await expect(button).toBeEnabled();
       await button.click({ force: true });
     },
-    async solo() {
+    /** Solo steps (VIS-M4): pick the mode and Gaia, name, Play solo; lands on the map select with no lobby. */
+    async solo(mode = 'standard') {
       await p.menu('solo');
+      const [kind, sub] = { standard: ['Casual'], tournament_3: ['Tournament', '3 maps'], tournament_5: ['Tournament', '5 maps'], tournament_7: ['Tournament', '7 maps'], practice: ['Practice', 'Whole map'], putt_practice: ['Practice', 'One putt'], pong: ['Practice', 'Putt Pong'] }[mode];
+      const steps = visible('solo-steps');
+      while (await steps.getAttribute('data-step') !== 'mode') await page.locator('[data-ui=menu-back]').click();
+      await steps.getByRole('button', { name: new RegExp('^' + kind) }).click();
+      if (sub) await steps.getByRole('button', { name: new RegExp('^' + sub) }).click();
+      await steps.locator('[data-ui=world-choose]').click();
       await visible('landing').getByLabel('Your name').fill(name);
       await p.button('Play solo').click();
-      await expect(visible('room-lobby')).toBeVisible();
+      await expect(visible('map-select')).toBeVisible();
       await p.loaded();
     },
     /**

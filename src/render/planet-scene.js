@@ -378,6 +378,70 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
   baseOn(luna, [-0.45, 0.42, 0.79], 0.034, 0x8fe6ff); // on the side facing Gaia: barely visible
   baseOn(ares, [-0.3, 0.3, 0.9], 0.012, 0xa8ffcc); // far tinier still
 
+  // ---- The destination view (VIS-M4): the camera pulls back from the horizon into space, where Gaia hangs with Luna slowly orbiting it
+  // and Ares stands far off. Sizes and distances are staged for the view, not real. `setView` picks the planet; the camera flies between
+  // them, and the long trips to and from Ares widen the lens and then zoom in. Reads the live `display.space` settings.
+  const spaceSettings = () => display.space ?? { orbitSeconds: 120, travelSeconds: 1.8, aresZoom: 0.5, nebula: 0.6, distance: 1 };
+  const SPACE_LUNA = { orbit: 520, radius: 34, lean: 0.12 }, SPACE_ARES = { position: new THREE.Vector3(-4200, 700, -3600), radius: 62 };
+  const SPACE_FRAME = { gaia: 1500, luna: 240, ares: 400 }; // camera distance from each planet's centre, before `space.distance`
+  const SPACE_VIEW_DIR = new THREE.Vector3(0.42, 0.16, 1).normalize(); // seen a little from the right and above: the sun lights the near side
+  const space = { goal: 0, t: 0, from: 'gaia', to: 'gaia', travel: 1, orbit: 0.96 };
+  const home = { luna: { position: new THREE.Vector3(), scale: 1 }, ares: { position: new THREE.Vector3(), scale: 1 } };
+  function lunaSpacePosition(phase, out) {
+    const a = phase * Math.PI * 2;
+    return out.set(Math.cos(a) * SPACE_LUNA.orbit, -Math.sin(a) * SPACE_LUNA.orbit * Math.sin(SPACE_LUNA.lean), Math.sin(a) * SPACE_LUNA.orbit * Math.cos(SPACE_LUNA.lean)); // the near side of the orbit passes below Gaia
+  }
+  const bodyCentre = (id, out) => id === 'luna' ? lunaSpacePosition(space.orbit, out) : id === 'ares' ? out.copy(SPACE_ARES.position) : out.set(0, 0, 0);
+  const ease = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const longTrip = () => space.from === 'ares' || space.to === 'ares';
+  // Extra space for the whole frame: stars below the horizon line (hidden by the planet in the horizon view) and soft nebula clouds.
+  const deepSky = new THREE.Group();
+  deepSky.visible = false;
+  sky.add(deepSky);
+  {
+    const position = [], size = [], tone = [], phase = [];
+    const tints = [[1, 1, 1], [0.8, 0.88, 1], [1, 0.9, 0.72], [0.9, 0.8, 1]];
+    for (let k = 0; k < 1100; k++) { const b = random(); position.push((random() * 2 - 1) * skyT * 2.6, (random() * 1.6 - 1.25) * skyT, -skyDistance); size.push(0.8 + b * b * b * 2.4); tone.push(...tints[Math.floor(random() * tints.length)]); phase.push(random()); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+    g.setAttribute('size', new THREE.Float32BufferAttribute(size, 1));
+    g.setAttribute('tone', new THREE.Float32BufferAttribute(tone, 3));
+    g.setAttribute('phase', new THREE.Float32BufferAttribute(phase, 1));
+    const lower = new THREE.Points(own(g), starMaterial);
+    lower.frustumCulled = false;
+    lower.renderOrder = -2;
+    deepSky.add(lower);
+  }
+  const nebulae = [];
+  {
+    const paint = (w, h, blobs) => { // soft clouds of colour, painted once into a small canvas
+      const c = doc.createElement('canvas');
+      c.width = w; c.height = h;
+      const g = c.getContext?.('2d');
+      if (!g) return null;
+      for (const [x, y, r, rgb, a] of blobs) {
+        const grad = g.createRadialGradient(x * w, y * h, 0, x * w, y * h, r * w);
+        grad.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); grad.addColorStop(1, 'rgba(' + rgb + ',0)');
+        g.fillStyle = grad; g.fillRect(0, 0, w, h);
+      }
+      return c;
+    };
+    const blobs = tones => Array.from({ length: 26 }, () => [0.2 + random() * 0.6, 0.25 + random() * 0.5, 0.08 + random() * 0.22, tones[Math.floor(random() * tones.length)], 0.12 + random() * 0.2]);
+    for (const [x, y, sx, sy, tones] of [[-0.9, -0.55, 1.5, 0.9, ['120,70,200', '220,80,160', '80,120,255']], [0.95, 0.35, 1.3, 0.8, ['40,170,200', '90,110,255', '160,90,230']], [0.1, -0.95, 1.1, 0.6, ['255,120,90', '200,70,140']]]) {
+      const canvasTexture = paint(256, 160, blobs(tones));
+      if (!canvasTexture) continue;
+      const texture = own(new THREE.CanvasTexture(canvasTexture));
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = own(new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+      const mesh = new THREE.Mesh(own(new THREE.PlaneGeometry(1, 1)), material);
+      mesh.position.set(x * skyT * 1.6, y * skyT, -skyDistance * 0.99);
+      mesh.scale.set(sx * skyT, sy * skyT, 1);
+      mesh.renderOrder = -3;
+      deepSky.add(mesh);
+      nebulae.push(material);
+    }
+  }
+
   // ---- Per-frame state
   let lastCloudSort = -1, slowFrames = 0, quality = 1, frameId = null, last = null, spin = 0, cloudSpin = 0, clock = 0, disposed = false, sizeKey = '', framing = { y: 0, z: 0 };
   const stats = { limb: 0, deckClouds: 0, tallestCity: 0, ink: 0, lunaPixels: 0 };
@@ -408,6 +472,8 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     const place = ({ mesh, distance }, nx, ny, radius) => { mesh.position.set(nx * distance * t * camera.aspect, framing.y + ny * distance * t, framing.z - distance); mesh.scale.setScalar(radius); };
     place(luna, 0.86, 0.5, LUNA_RADIUS * s.lunaSize);
     place(ares, -0.6, 0.8, ARES_SHARE * ARES_DISTANCE * t * 2);
+    home.luna.position.copy(luna.mesh.position); home.luna.scale = luna.mesh.scale.x;
+    home.ares.position.copy(ares.mesh.position); home.ares.scale = ares.mesh.scale.x;
     stats.lunaPixels = LUNA_RADIUS * s.lunaSize / (LUNA_DISTANCE * t) * h;
     stats.limb = 1 - 2 * s.horizonHeight;
   }
@@ -470,11 +536,59 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
     camera.lookAt(scratch.addScaledVector(out, focus === 'city' ? 6 : 0));
   }
 
+  const horizonQuat = new THREE.Quaternion(), poseQuat = new THREE.Quaternion(), lookAtMatrix = new THREE.Matrix4();
+  const camFrom = new THREE.Vector3(), camTo = new THREE.Vector3(), lookFrom = new THREE.Vector3(), lookTo = new THREE.Vector3(), spacePos = new THREE.Vector3(), spaceLook = new THREE.Vector3(), tmpA = new THREE.Vector3();
+  /** Where the camera stands to show planet `id` in space, and the point it looks at. */
+  function spaceCamera(id, pos, look) {
+    bodyCentre(id, look);
+    pos.copy(look).addScaledVector(SPACE_VIEW_DIR, SPACE_FRAME[id] * spaceSettings().distance);
+    if (id === 'gaia') look.x -= 170; // Gaia sits right of centre, clear of the menu panel on the left
+  }
+  /** The lens on a long trip: wider through the middle of the flight, then a short zoom in on arrival. */
+  function tripFov(e) {
+    if (!longTrip() || space.travel >= 1) return FOV;
+    const z = spaceSettings().aresZoom, wide = Math.sin(Math.PI * Math.min(1, e / 0.8)) * 16 * z, punch = e > 0.8 ? -Math.sin(Math.PI * (e - 0.8) / 0.2) * 6 * z : 0;
+    return FOV + (e < 0.8 ? wide : punch);
+  }
+  /** Blends the horizon view into the space view (`space.t`) and flies between planets (`space.travel`). */
+  function applySpace() {
+    if (focus) return;
+    const k = ease(space.t), e = ease(Math.min(1, space.travel));
+    lunaSpacePosition(space.orbit, tmpA);
+    luna.mesh.position.lerpVectors(home.luna.position, tmpA, k);
+    luna.mesh.scale.setScalar(home.luna.scale + (SPACE_LUNA.radius - home.luna.scale) * k);
+    ares.mesh.position.lerpVectors(home.ares.position, SPACE_ARES.position, k);
+    ares.mesh.scale.setScalar(home.ares.scale + (SPACE_ARES.radius - home.ares.scale) * k);
+    ares.mesh.material.opacity = 0.78 + 0.22 * k;
+    deepSky.visible = k > 0.001;
+    library.inkUniforms.ink.value = stats.ink * (1 - 0.75 * k); // tiny far objects would be all outline: thin the ink in space
+    const ns = spaceSettings().nebula;
+    for (const m of nebulae) m.opacity = ns * k * 0.9;
+    if (k <= 0) { // the approved horizon view, untouched
+      camera.position.set(0, framing.y, framing.z); camera.quaternion.identity();
+      if (camera.fov !== FOV) { camera.fov = FOV; camera.updateProjectionMatrix(); }
+      sky.quaternion.identity();
+      return;
+    }
+    spaceCamera(space.from, camFrom, lookFrom); spaceCamera(space.to, camTo, lookTo);
+    spacePos.lerpVectors(camFrom, camTo, e); spaceLook.lerpVectors(lookFrom, lookTo, e);
+    if (longTrip() && space.travel < 1) spacePos.addScaledVector(SPACE_VIEW_DIR, Math.sin(Math.PI * e) * 900 * spaceSettings().aresZoom); // pull back mid-flight
+    lookAtMatrix.lookAt(spacePos, spaceLook, yAxis);
+    poseQuat.setFromRotationMatrix(lookAtMatrix);
+    camera.position.set(0, framing.y, framing.z).lerp(spacePos, k);
+    camera.quaternion.slerpQuaternions(horizonQuat, poseQuat, k);
+    camera.fov = FOV + (tripFov(e) - FOV) * k;
+    camera.updateProjectionMatrix();
+    // The stars follow part of the camera's turn, so the sky drifts as it flies but its painted field never runs out.
+    sky.quaternion.copy(poseQuat).invert().slerp(horizonQuat, 1 - 0.35 * k);
+  }
+
   function draw() {
     const { w, h } = viewport(), s = settings();
     fit(w, h, s);
     applySettings(s, w);
     followFocus();
+    applySpace();
     renderer?.render?.(scene, camera);
   }
 
@@ -511,6 +625,13 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       luna.mesh.rotation.y += dt * 0.01;
       stepStreak(dt);
     }
+    const sp = spaceSettings();
+    if (reducedMotion) { space.t = space.goal; space.travel = 1; }
+    else {
+      space.t = Math.max(0, Math.min(1, space.t + Math.sign(space.goal - space.t) * dt / 1.4));
+      if (space.travel < 1) space.travel = Math.min(1, space.travel + dt / (sp.travelSeconds * (longTrip() ? 1.6 : 1)));
+      if (space.t > 0) space.orbit = (space.orbit + dt / sp.orbitSeconds) % 1;
+    }
     draw();
   }
 
@@ -533,6 +654,22 @@ export function createPlanetScene({ THREE, canvas, display, random, planet: preb
       frameId = win.requestAnimationFrame(frame);
     },
     step,
+    /**
+     * The destination view (VIS-M4): `space` pulls the camera back from the horizon into space (or returns it), `target` flies to Gaia,
+     * Luna or Ares. Safe to call at any time; a still frame (reduced motion) jumps straight there.
+     */
+    setView({ space: inSpace = space.goal === 1, target = space.to } = {}) {
+      if (!['gaia', 'luna', 'ares'].includes(target)) return;
+      space.goal = inSpace ? 1 : 0;
+      if (target !== space.to) {
+        space.from = space.travel < 0.5 ? space.from : space.to;
+        space.to = target;
+        space.travel = space.t > 0 || inSpace ? 0 : 1;
+      }
+      if (reducedMotion) { space.t = space.goal; space.travel = 1; draw(); }
+    },
+    /** Destination view state, for checks: blend into space (0..1), the planet shown, trip progress, Luna's orbit phase, lens and camera. */
+    get space() { return { t: space.t, goal: space.goal, from: space.from, to: space.to, travel: space.travel, orbit: space.orbit, fov: camera.fov, camera: camera.position.toArray(), luna: luna.mesh.position.toArray(), ares: ares.mesh.position.toArray(), aresRadius: ares.mesh.scale.x, nebula: nebulae[0]?.opacity ?? 0 }; },
     /** How many planes, ships and satellites the current settings show. */
     get traffic() { const s = settings(); return { planes: count(s.planes, MAX_PLANES), boats: Math.min(count(s.boats, MAX_BOATS), ships.length), satellites: count(s.satellites, MAX_SATELLITES) }; },
     /** What the last frame used, for checks. */

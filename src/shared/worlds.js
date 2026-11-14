@@ -23,6 +23,15 @@ export const WORLDS = Object.freeze([
 
 export const WORLD_IDS = Object.freeze(WORLDS.map(world => world.id));
 
+/**
+ * The world a course is on (VIS-M4 mix and match): its `world` field when it names one, else Gaia, where every course ships today.
+ * A map's world sets its gravity, so choosing the next map in a tournament also chooses the planet, and every player derives the same
+ * gravity from the shared course data without any new network message.
+ */
+export function courseWorld(course) {
+  return isWorldId(course?.world) ? course.world : DEFAULT_WORLD;
+}
+
 /** True for a known world id. */
 export function isWorldId(id) {
   return typeof id === 'string' && WORLD_IDS.includes(id);

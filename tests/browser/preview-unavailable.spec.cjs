@@ -44,9 +44,7 @@ test('preview maintenance: backend failure is actionable and solo remains availa
     const roomSocketUrl = worker.origin.replace('http:', 'ws:') + '/api/rooms/maintenance/socket';
     expect(sockets.length).toBeGreaterThan(0);
     expect(sockets.every(url => url === roomSocketUrl)).toBe(true);
-    await player.menu('solo');
-    await player.button('Play solo').click();
-    await expect(player.ui('room-lobby')).toBeVisible();
+    await player.solo();
     expect(await page.evaluate(() => window.__roomSocketAttempts)).toBe(1);
     expect(sockets.every(url => url === roomSocketUrl)).toBe(true);
     expect(await page.evaluate(() => window.__peerConnectionAttempts)).toBe(0);

@@ -19,7 +19,7 @@ function seeded(seed) {
  * it is one still frame.
  */
 export function PlanetStage() {
-  const { display, createLoadingScene } = useUiContext();
+  const { display, createLoadingScene, stage } = useUiContext();
   const [load] = useState(() => loads);
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -29,10 +29,10 @@ export function PlanetStage() {
     const reducedMotion = !!win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let scene = null;
     const build = setTimeout(() => { // after the first paint, so the title and form show at once
-      try { scene = createLoadingScene({ canvas, display, random: seeded(load * 7919 + 1), reducedMotion, win }); scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
+      try { scene = createLoadingScene({ canvas, display, random: seeded(load * 7919 + 1), reducedMotion, win }); stage?.attach(scene); if (import.meta.env?.DEV) win.__ppPlanetScene = scene; scene.start(); } catch { scene = null; } // decoration only: the CSS sky stays
     }, 0);
-    return () => { clearTimeout(build); scene?.dispose(); };
-  }, [display, load, createLoadingScene]);
+    return () => { clearTimeout(build); stage?.detach(scene); scene?.dispose(); };
+  }, [display, load, createLoadingScene, stage]);
   return <div className={styles.stage} aria-hidden="true" data-ui="planet-stage"><canvas ref={canvasRef} className={styles.planet} data-ui="loading-planet" /></div>;
 }
 

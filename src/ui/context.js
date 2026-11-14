@@ -1,7 +1,22 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import { UiCommands } from './commands.js';
 
-/** { store, dispatch, aim, display } supplied by <PuttPalsUi>. */
+/**
+ * The planet stage behind the menu (src/ui/Loading.jsx) as seen by the menus: the live scene, if one is built, and the view the menus
+ * want (VIS-M4 destination view). A scene built later picks the wanted view up, so the order of mounting does not matter.
+ */
+export function createStageHandle() {
+  const handle = {
+    scene: null,
+    view: { space: false, target: 'gaia' },
+    setView(view) { handle.view = { ...handle.view, ...view }; handle.scene?.setView?.(handle.view); },
+    attach(scene) { handle.scene = scene; scene?.setView?.(handle.view); },
+    detach(scene) { if (handle.scene === scene) handle.scene = null; },
+  };
+  return handle;
+}
+
+/** { store, dispatch, aim, display, stage } supplied by <PuttPalsUi>. */
 export const UiContext = createContext(null);
 
 export function useUiContext() {

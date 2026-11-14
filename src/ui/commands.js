@@ -11,7 +11,7 @@ export const UiCommands = Object.freeze({
   ...InputCommands,
   /** { type, name, roomCode, rules? } — Join room (validate with parseJoinRequest). `rules`: Custom rules (VIS-U) a new room is created with; null or omitted is standard. */
   JOIN: 'join',
-  /** { type, name, rules? } — Play solo, optionally with Custom rules (VIS-U). */
+  /** { type, name, mode?, world?, rules? } — Play solo. With a mode (from the Solo steps) the room opens straight onto the level select; `rules`: Custom rules (VIS-U), null or omitted is standard. */
   PLAY_SOLO: 'play-solo',
   /** { type } — Leave room (legacy closes the room and reloads). */
   LEAVE: 'leave',

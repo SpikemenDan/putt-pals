@@ -68,10 +68,8 @@ test('lifecycle: repeated join/leave keeps one loop and no leaked listeners, tim
   expect(base.frames, "one animation loop and the planet's").toBeLessThanOrEqual(2);
 
   for (let i = 0; i < 5; i++) {
-    await ana.solo();
     // Putt practice is the mode with an in-game Exit; other modes leave from the lobby or map picker.
-    await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
-    await ana.button('Start Game').click();
+    await ana.solo('putt_practice');
     await pickMap(ana.page);
     await ana.button('Putt 1 · Par 2').click();
     await until(() => ana.ready(), { label: `cycle ${i + 1}: ready` });
