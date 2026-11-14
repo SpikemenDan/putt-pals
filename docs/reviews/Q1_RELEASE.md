@@ -14,7 +14,7 @@ Branch `chore/q1-release-readiness` from main `97ec6e3` (2026-11-14). This branc
 | `npm run build` | Passed (`BUILD_OK`) |
 | `npm run test:rooms:local` | Passed: routing and isolation, admission, eight-member capacity, controller succession, resumed identity, and a four-player six-putt game on local workerd |
 | `npm run test:browser` (Chromium) | **Not verified locally.** The pinned Playwright 1.64.0 browser build is not installed in this container. Against the pre-installed Chromium (scratch config, software WebGL, solver running alongside): 10 passed, including the four-page multiplayer map, reload/drop recovery, controller handover and server-room flows; 10 failed at the same step (clicking "Choose Gaia" in the solo world view timed out after 15 s) and 1 could not launch. Main CI at `97ec6e3` passed this suite, so treat this as environmental; this PR's CI is the browser evidence |
-| PR CI | __CI__ |
+| PR #226 CI at `7057dba` ([run 43551205550](https://github.com/SpikemenDan/putt-planet/actions/runs/43551205550)) | Passed: `baseline-ci` (full suite on Node 26.10, including `test:input` and `test:rooms:local`) and `browser-ci` on Chromium, Firefox and WebKit |
 
 ## Par routes on every putt (SV1)
 
@@ -30,7 +30,7 @@ Fast sweep, 2026-11-14, commit `e936daf` (main `97ec6e3` plus the world-gravity 
 
 **Playable pool: met.** Every putt of the eight playable maps (`STARTER_COURSE_INDICES`; 48 putts) has a robust route within its shipped par, and `rank --routes` reports every starter measurement current. Obsidian Spiral putts 2, 5 and 6 have no slack (route strokes equal par 3, 2 and 3).
 
-**All maps: not met.** `check --routes` fails on the four unresolved putts above, the same set as the SV1 report. They are single-putt non-starter maps that map cards and session votes do not offer, so no released mode reaches them. One `--full` retry (`--only 4/0,13/0,16/0,18/0`) __FULL__ An owner decision is needed before any of them joins the playable pool: redesign, a time-aware solver for moving hazards, or a wider robustness rule.
+**All maps: not met.** The fast sweep's `check --routes` fails on the four putts above, the same set as the SV1 report. One `--full` retry (`--only 4/0,13/0,16/0,18/0 --jobs 2`, 69 minutes) found a robust 3-stroke route for Hourglass (par 3) and a 4-stroke route for Crescent Coast (par 5), both within shipped par. Comet Run still has none with the full grid exhausted, and Clockwork Maze ran out of its 6 M trial budget. Those two are single-putt non-starter maps that map cards and session votes do not offer, so no released mode reaches them. An owner decision is needed before any of them joins the playable pool: redesign, a time-aware solver for moving hazards, or a wider robustness rule.
 
 **Re-run when new maps land** (Ares/Luna maps, #165, or any course, physics or gravity change). Each course is solved at its own world's gravity (`courseWorld`), so the same commands cover all worlds:
 
