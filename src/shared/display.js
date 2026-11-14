@@ -6,7 +6,8 @@
  * used before they were parameterized. Every field is validated at load: finite numbers inside a sane range.
  *
  * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier. The `loading` group
- * (loading screen, src/render/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field.
+ * (loading screen, src/render/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field;
+ * the `menu` group (main menu, src/ui/Landing.jsx) uses a multiplier, seconds, CSS px and degrees.
  */
 
 /** Field spec: [dotted path, min, max, description]. Drives validation and docs/DISPLAY.md. */
@@ -32,6 +33,10 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['loading.planes', 0, 12, 'Loading screen: planes flying between cities, with contrails (rounded to whole planes; 0 hides them).'],
   ['loading.boats', 0, 20, 'Loading screen: boats on the sea (rounded to whole boats; 0 hides them).'],
   ['loading.satellites', 0, 8, 'Loading screen: satellites orbiting the planet (rounded to whole satellites; 0 hides them).'],
+  ['menu.buttonScale', 0.7, 1.5, 'Main menu: size of the Solo, Party, Custom and Settings buttons as a multiplier.'],
+  ['menu.stagger', 0, 0.3, 'Main menu: delay between each button dropping in, in seconds (0 brings them in together).'],
+  ['menu.bob', 0, 8, 'Main menu: how far the big buttons bob up and down while idle, in CSS px (0 holds them still). Off under reduced motion.'],
+  ['menu.tilt', 0, 8, 'Main menu: how far the buttons lean, alternating left and right, in degrees (0 keeps them straight).'],
 ]);
 
 /** Values the renderer used before they were parameterized. */
@@ -39,6 +44,7 @@ export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
   loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2 },
+  menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5 },
 };
 
 const read = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

@@ -1,16 +1,45 @@
-/* Main menu over the planet (src/ui/Loading.jsx, PlanetStage): the big title sits exactly where the loading screen's does, so one becomes the
-   other without a jump, and the form docks at the left so the planet stays in view. While a room opens the menu fades away. */
-/* The menu covers the screen (so it has a real box) but lets clicks through to the planet; only the panel takes them. */
-.menu{position:fixed;inset:0;z-index:1;pointer-events:none;transition:opacity .35s}
-.menu>.panel{pointer-events:auto}
+/* Main menu over the planet (src/ui/Loading.jsx, PlanetStage), VIS-M2 #174: the big title sits exactly where the loading screen's
+   does, so one becomes the other without a jump. Solo, Party and Custom stack at the left with Settings under them, so the planet stays
+   in view; a sub-menu opens in the same spot. The look is tunable live through display.menu (src/shared/display.js), copied onto
+   --menu-scale, --menu-stagger, --menu-bob and --menu-tilt. While a room opens the menu fades away. */
+/* The menu covers the screen (so it has a real box) but lets clicks through to the planet; only the stack and panel take them. */
+.menu{--menu-scale:1;--menu-stagger:.07s;--menu-bob:2px;--menu-tilt:1.5deg;position:fixed;inset:0;z-index:1;pointer-events:none;transition:opacity .35s}
+.menu>.panel,.menu>.stack{pointer-events:auto}
 .menu[data-connecting]{opacity:0}
-.menu[data-connecting]>.panel{pointer-events:none}
+.menu[data-connecting]>.panel,.menu[data-connecting]>.stack{pointer-events:none}
 .brand{position:fixed;left:0;right:0;top:clamp(24px,8vh,80px);margin:0;text-align:center;pointer-events:none;font:400 clamp(52px,9.6vw,116px)/1 var(--pp-display,'Titan One','Arial Black',sans-serif);letter-spacing:2px;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:6px 7px 0 var(--ink)}
-.panel{position:fixed;left:clamp(12px,2.4vw,32px);bottom:20px;width:min(92vw,340px);max-height:calc(100vh - clamp(150px,30vh,240px));overflow:auto;box-sizing:border-box;background:rgba(255,248,228,.92);color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:16px 18px;box-shadow:6px 6px 0 var(--ink);text-align:center}
-.panel label{text-align:left}
-.panel p,.panel details{text-align:left}
-.solo{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;background:var(--pink);color:#fff;text-shadow:2px 2px 0 var(--ink)}
-.join{display:block;width:100%;margin:8px 0}
-.panel p.or{text-align:center;margin:14px 0 0;font:900 12px var(--font);letter-spacing:3px;text-transform:uppercase;color:var(--mut)}
-@media (max-width:640px){.panel{left:50%;translate:-50% 0;bottom:10px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
+
+/* Home: three big comic buttons and a smaller Settings button, each tilted a little the other way, dropping in one after another. */
+.stack{position:fixed;left:clamp(12px,2.6vw,36px);bottom:clamp(44px,9vh,96px);display:flex;flex-direction:column;align-items:flex-start;gap:calc(12px*var(--menu-scale))}
+.big{display:flex;flex-direction:column;align-items:flex-start;width:calc(260px*var(--menu-scale));margin:0;padding:calc(10px*var(--menu-scale)) calc(18px*var(--menu-scale));border-width:4px;border-radius:16px;box-shadow:6px 6px 0 var(--ink);color:#fff;text-align:left;
+  rotate:calc(var(--menu-tilt)*-1);animation:drop .42s cubic-bezier(.2,1.4,.4,1) both,bob 3.2s ease-in-out infinite}
+.big:nth-child(2){rotate:var(--menu-tilt);animation-delay:var(--menu-stagger),calc(var(--menu-stagger) + .4s)}
+.big:nth-child(3){animation-delay:calc(var(--menu-stagger)*2),calc(var(--menu-stagger)*2 + .8s)}
+.big:hover:not(:disabled){rotate:0deg;scale:1.04}
+.label{font:400 calc(40px*var(--menu-scale))/1 var(--font);letter-spacing:1.5px;text-transform:uppercase;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink)}
+.sub{margin-top:2px;font:700 calc(13px*var(--menu-scale)) var(--pp-body,'Nunito',sans-serif);letter-spacing:.2px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.solo{background:var(--pink)}
+.party{background:var(--sky)}
+.custom{background:var(--yellow)}
+.custom .sub{color:var(--ink);text-shadow:none}
+.settings{margin:4px 0 0;padding:calc(6px*var(--menu-scale)) calc(16px*var(--menu-scale));font-size:calc(18px*var(--menu-scale));background:var(--paper);rotate:calc(var(--menu-tilt)*.6);animation:drop .42s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(var(--menu-stagger)*3)}
+@keyframes drop{from{opacity:0;translate:-40px 0}to{opacity:1;translate:0 0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(calc(var(--menu-bob)*-1))}}
+.big:active:not(:disabled){animation-play-state:paused}
+
+/* Sub-menus (Solo, Party, Custom, Settings) open in a paper panel in the same corner. */
+.panel{position:fixed;left:clamp(12px,2.4vw,32px);bottom:clamp(44px,9vh,96px);width:min(92vw,430px);max-height:calc(100vh - clamp(180px,32vh,270px));overflow:auto;box-sizing:border-box;background:rgba(255,248,228,.95);color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:14px 18px 16px;box-shadow:6px 6px 0 var(--ink);text-align:left;animation:drop .3s ease-out both}
+.heading{margin:0 0 4px;font:400 30px/1 var(--font);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);text-shadow:3px 3px 0 var(--yellow)}
+.field{margin:8px 0;font-size:14px;font-weight:700;color:var(--mut)}
+.panel label{margin:8px 0}
+/* Smaller swatches here so all 30 colours fit in three rows and Join stays on screen without scrolling. */
+.panel [data-ui=color-picker]{grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:6px}
+.go{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;letter-spacing:1.5px;background:var(--pink);color:#fff;text-shadow:none} /* no text shadow: the pixel font reads cleanly (owner, 2026-11-13) */
+.back{margin:12px 0 0;background:#fff;text-shadow:none;letter-spacing:1px}
 .style{display:grid;gap:8px;margin-top:8px}
+.version{position:fixed;left:clamp(12px,2.4vw,32px);bottom:8px;margin:0;pointer-events:none;font:700 12px var(--pp-body,'Nunito',sans-serif);letter-spacing:.4px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
+
+@media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
+@media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
+.inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);background:#fff}
+.panel[data-menu-view=custom]{width:min(92vw,580px)}

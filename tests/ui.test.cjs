@@ -51,7 +51,7 @@ function fakeClock() {
   const click = async el => { assert.ok(el, 'element to click'); await act(async () => { el.click(); }); };
 
   /** Mounts the UI with a host L1 session; session events from the UI are bound to the local player. */
-  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null } = {}) {
+  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null, mountProps = {} } = {}) {
     const clock = fakeClock();
     const store = ui.createUiStore({ courses, clock });
     let listeners = 0;
@@ -65,7 +65,7 @@ function fakeClock() {
     const root = doc.createElement('div');
     doc.body.appendChild(root);
     let unmount;
-    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene }); });
+    await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene, ...mountProps }); });
     await act(async () => { store.setLocal({ active: true, id: localId, isHost, roomCode, mode: 'lobby' }); store.setRoom(session.getSnapshot(), clock.now()); });
     const step = async ms => { await act(async () => { clock.advance(ms); store.tick(clock.now()); }); };
     const send = async event => { let r; await act(async () => { r = session.send(event); }); return r; };
@@ -152,6 +152,133 @@ function fakeClock() {
     assert.ok(t.within('[data-ui=loading]'), 'still up partway through the default 0.8 s');
     await waitGone(t, 1500);
     await t.teardown();
+  });
+
+  await scenario('main menu (VIS-M2): Solo, Party, Custom and Settings, Escape steps back, version label, display.menu look', async () => {
+    const { createDisplay } = await import('../src/shared/display.js');
+    const live = structuredClone(createDisplay());
+    live.menu.buttonScale = 1.3; live.menu.tilt = 4; live.menu.stagger = 0.2; live.menu.bob = 5;
+    const t = await setup({ mountProps: { display: live } });
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    const landing = t.within('[data-ui=landing]');
+    assert.equal(landing.dataset.view, 'home');
+    const nav = landing.querySelector('nav[aria-label="Main menu"]');
+    assert.deepEqual([...nav.querySelectorAll('button')].map(b => b.getAttribute('aria-label') || b.textContent), ['Solo', 'Party', 'Custom', 'Settings'], 'three main buttons, then Settings');
+    assert.ok([...nav.querySelectorAll('button')].every(b => !b.disabled && b.tabIndex === 0), 'every button is reachable by keyboard');
+    assert.equal(landing.querySelectorAll('input').length, 0, 'the home view asks nothing yet');
+    assert.match(t.within('[data-ui=version]').textContent, /^v\S/, 'the version shows bottom-left');
+    assert.equal(landing.style.getPropertyValue('--menu-scale'), '1.3', 'display.menu reaches the buttons');
+    assert.equal(landing.style.getPropertyValue('--menu-tilt'), '4deg');
+    assert.equal(landing.style.getPropertyValue('--menu-stagger'), '0.2s');
+    assert.equal(landing.style.getPropertyValue('--menu-bob'), '5px');
+    live.menu.buttonScale = 0.8; // the dev tuner edits the live object in place: the menu follows on the next frame
+    await act(async () => { await new Promise(r => setTimeout(r, 40)); });
+    assert.equal(landing.style.getPropertyValue('--menu-scale'), '0.8', 'a live display object updates the menu without a re-render');
+    await click(nav.querySelector('[data-menu=custom]'));
+    assert.equal(landing.dataset.view, 'custom');
+    assert.ok(landing.querySelector('[data-ui=custom-rules]'), 'Custom opens the rules editor (VIS-U)');
+    assert.equal(doc.activeElement?.closest('[data-menu-view]')?.dataset.menuView, 'custom', 'focus moves into the sub-menu');
+    await act(async () => { doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    assert.equal(landing.dataset.view, 'home', 'Escape steps back');
+    await act(async () => { await new Promise(r => setTimeout(r, 5)); });
+    assert.equal(doc.activeElement?.dataset.menu, 'custom', 'focus returns to the button that opened it');
+    await click(landing.querySelector('[data-menu=solo]'));
+    assert.ok(button('Play solo'), 'Solo keeps the solo flow');
+    assert.ok(!button('Join room'), 'and not the party one');
+    await t.teardown();
+    const invited = await setup({ mountProps: { initialView: 'party' } });
+    await act(async () => invited.store.setLocal({ active: false, connecting: false }));
+    assert.equal(invited.within('[data-ui=landing]').dataset.view, 'party', 'an invite link opens on Party');
+    assert.ok(button('Join room'));
+    await invited.teardown();
+  });
+
+  await scenario('custom rules (VIS-U): values shown, per-rule and full reset, draft remembered, Play solo and Host party carry the rules', async () => {
+    const { DEFAULT_RULES } = await import('../src/shared/rules.js');
+    dom.window.localStorage.removeItem('puttplanet.customRules');
+    const t = await setup({ mountProps: { initialView: 'custom' } });
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    const landing = t.within('[data-ui=landing]');
+    const editor = landing.querySelector('[data-ui=custom-rules]');
+    const row = id => editor.querySelector('[data-rule=' + id + ']');
+    const summary = () => editor.querySelector('[data-ui=rules-changed]').textContent;
+    assert.deepEqual([...editor.querySelectorAll('h3')].map(h => h.textContent), ['Match', 'Shots', 'Worlds']);
+    assert.equal(editor.querySelectorAll('[data-rule]').length, 9);
+    assert.equal(summary(), 'Standard rules');
+    assert.equal(row('gaiaGravity').querySelector('output').textContent, '100%', 'sliders show their value');
+    assert.ok(editor.querySelectorAll('[data-rule] button[aria-label^=Reset]').length === 9 && [...editor.querySelectorAll('[data-rule] button[aria-label^=Reset]')].every(b => b.tabIndex === -1), 'reset buttons stay hidden until a rule changes');
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+    const slide = async (el, value) => act(async () => { setter.call(el, String(value)); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
+    await slide(row('lunaGravity').querySelector('input'), 60);
+    assert.equal(row('lunaGravity').querySelector('output').textContent, '60%');
+    assert.equal(row('lunaGravity').dataset.changed, 'true');
+    await click([...row('aimWobble').querySelectorAll('[role=radio]')].find(b => b.textContent === 'Off'));
+    assert.equal(row('aimWobble').querySelector('[aria-checked=true]').textContent, 'Off');
+    await click(row('powerups').querySelector('[role=switch]'));
+    assert.equal(row('powerups').querySelector('[role=switch]').getAttribute('aria-checked'), 'false');
+    await click([...row('holeTimer').querySelectorAll('[role=radio]')].find(b => b.textContent === '5 min'));
+    assert.equal(summary(), '4 rules changed');
+    assert.deepEqual(JSON.parse(dom.window.localStorage.getItem('puttplanet.customRules')), { ...DEFAULT_RULES, lunaGravity: 60, aimWobble: 'off', powerups: false, holeTimer: 300 }, 'the draft is remembered locally');
+    // Game length: a typed entry starting at 1 Map; above 10 warns, out of range or blank is refused
+    const mapsBox = row('maps').querySelector('input');
+    const note = () => row('maps').querySelector('[data-ui=rule-maps-note]').textContent;
+    assert.equal(mapsBox.value, '1');
+    assert.equal(row('maps').querySelector('output').textContent, '1 Map');
+    const unit = () => mapsBox.nextElementSibling.textContent;
+    assert.equal(unit(), 'Map', 'the unit sits right after the box');
+    await slide(mapsBox, '2');
+    assert.equal(row('maps').querySelector('output').textContent, '2 Maps');
+    assert.equal(unit(), 'Maps');
+    await slide(mapsBox, '6');
+    assert.equal(row('maps').querySelector('output').textContent, '6 Maps');
+    assert.equal(note(), '', 'no warning up to 10 maps');
+    await slide(mapsBox, '12');
+    assert.equal(row('maps').querySelector('output').textContent, '12 Maps');
+    assert.match(note(), /might make the game too long/, 'more than 10 maps warns');
+    await slide(mapsBox, '25');
+    assert.match(note(), /whole number from 1 to 20/);
+    assert.equal(mapsBox.getAttribute('aria-invalid'), 'true');
+    assert.equal(row('maps').querySelector('output').textContent, '12 Maps', 'an out-of-range entry is not applied');
+    for (const junk of ['x', '', '0']) {
+      await slide(mapsBox, junk);
+      assert.equal(row('maps').querySelector('output').textContent, '12 Maps', JSON.stringify(junk) + ' is not applied');
+    }
+    await act(async () => { mapsBox.dispatchEvent(new dom.window.FocusEvent('blur')); mapsBox.dispatchEvent(new dom.window.FocusEvent('focusout', { bubbles: true })); });
+    assert.equal(mapsBox.value, '12', 'leaving the box restores the current value');
+    await click(row('maps').querySelector('button[aria-label="Reset Game Length"]'));
+    assert.equal(mapsBox.value, '1', 'reset goes back to 1');
+    assert.equal(row('maps').querySelector('output').textContent, '1 Map');
+    assert.equal(note(), '');
+    await click(row('holeTimer').querySelector('button[aria-label="Reset Time Per Hole"]'));
+    assert.equal(row('holeTimer').querySelector('[aria-checked=true]').textContent, 'Course', 'per-rule reset restores the standard value');
+    assert.equal(summary(), '3 rules changed');
+    t.commands.length = 0;
+    await click(editor.querySelector('[data-ui=rules-play-solo]'));
+    const chosen = { ...DEFAULT_RULES, lunaGravity: 60, aimWobble: 'off', powerups: false };
+    assert.deepEqual(t.commands, [{ type: 'play-solo', name: 'Ana', rules: chosen }]);
+    await click(editor.querySelector('[data-ui=rules-host-party]'));
+    assert.equal(landing.dataset.view, 'party', 'Host party continues to the Party room code');
+    assert.match(t.within('[data-ui=party-custom-rules]').textContent, /Custom rules \(3 changed\)/);
+    t.commands.length = 0;
+    await click(button('Join room'));
+    assert.deepEqual(t.commands.map(c => c.rules), [chosen], 'the room is created with the edited rules');
+    await click(t.within('[data-ui=party-custom-rules] button'));
+    assert.equal(landing.querySelector('[data-ui=party-custom-rules]'), null, 'Use standard drops them');
+    await t.teardown();
+    const again = await setup({ mountProps: { initialView: 'custom' } });
+    await act(async () => again.store.setLocal({ active: false, connecting: false }));
+    const editor2 = again.within('[data-ui=custom-rules]');
+    assert.equal(editor2.querySelector('[data-rule=lunaGravity] output').textContent, '60%', 'the draft comes back next time');
+    await click(editor2.querySelector('[data-ui=rules-reset-all]'));
+    assert.equal(editor2.querySelector('[data-ui=rules-changed]').textContent, 'Standard rules', 'Reset all restores every default');
+    assert.deepEqual(JSON.parse(dom.window.localStorage.getItem('puttplanet.customRules')), { ...DEFAULT_RULES });
+    dom.window.localStorage.setItem('puttplanet.customRules', '{"shotPower":9999,"evil":true}');
+    await again.teardown();
+    const tampered = await setup({ mountProps: { initialView: 'custom' } });
+    await act(async () => tampered.store.setLocal({ active: false, connecting: false }));
+    assert.equal(tampered.within('[data-ui=custom-rules] [data-ui=rules-changed]').textContent, 'Standard rules', 'a tampered draft is ignored');
+    await tampered.teardown();
+    dom.window.localStorage.removeItem('puttplanet.customRules');
   });
 
   await scenario('main menu: the planet stays up from the menu through the loading screen', async () => {
@@ -251,6 +378,22 @@ function fakeClock() {
     await pause();
     assert.ok(calls.includes('world'));
     assert.equal(doc.activeElement, region('desert'), 'Back to world returns focus to the region');
+    { // a fly-in that rejects must leave the world view usable, not a half-opened region
+      const failing = { ...scene, openRegion: async () => { throw new Error('fly-in failed'); } }, logged = [], realError = console.error;
+      const t2 = await setup({ createAtlasScene: () => failing });
+      await t2.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
+      await t2.send({ type: 'SET_MODE', playerId: 'host', mode: 'tournament_3' });
+      await t2.send({ type: 'START_VOTING', playerId: 'host' });
+      console.error = (...args) => logged.push(args);
+      try {
+        await act(async () => { t2.within('[data-region=desert]').click(); });
+        await pause();
+      } finally { console.error = realError; }
+      assert.ok(logged.length >= 1, 'the failure is reported');
+      assert.equal(t2.within('[data-ui=world-select]').dataset.view, 'world', 'the menu returns to the world view');
+      assert.ok(!t2.within('[data-region=desert]').disabled, 'regions can be opened again');
+      await t2.teardown();
+    }
     await t.teardown();
   });
 
@@ -504,6 +647,7 @@ function fakeClock() {
   await scenario('landing: the style picker lists the cosmetics catalog and dispatches validated ids', async () => {
     const t = await setup();
     await act(async () => t.store.setLocal({ active: false }));
+    await click(t.within('[data-menu=settings]'));
     const selects = [...t.within('[data-ui=landing]').querySelectorAll('[data-ui=cosmetics] select')];
     assert.equal(selects.length, 3, 'ball, trail and celebration');
     assert.deepEqual(selects.map(s => s.value), ['classic', 'classic', 'confetti'], 'defaults selected');
@@ -535,10 +679,10 @@ function fakeClock() {
     await act(async () => t.store.setLocal({ active: false }));
     const landing = t.within('[data-ui=landing]');
     assert.ok(shown(landing));
+    await click(landing.querySelector('[data-menu=party]'));
     const [nameInput, codeInput] = landing.querySelectorAll('input');
     assert.equal(nameInput.maxLength, 14); assert.equal(codeInput.maxLength, 12);
     const join = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Join room');
-    const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     assert.equal(join.disabled, false, 'prefilled room code enables Join');
     const setValue = async (el, value) => {
       const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
@@ -550,10 +694,14 @@ function fakeClock() {
     await setValue(nameInput, '  Zed  ');
     t.commands.length = 0;
     await click(join);
+    await click(landing.querySelector('[data-ui=menu-back]'));
+    await click(landing.querySelector('[data-menu=solo]'));
+    assert.equal(landing.querySelector('input').value, '  Zed  ', 'the name carries from Party to Solo');
+    const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     await click(solo);
-    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' }, { type: 'play-solo', name: '  Zed  ' }]);
+    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', rules: null }, { type: 'play-solo', name: '  Zed  ' }], 'Party from the home menu creates rooms with standard rules');
     await act(async () => t.store.setLocal({ connecting: true }));
-    assert.equal(join.disabled, true); assert.equal(solo.disabled, true);
+    assert.equal(solo.disabled, true);
     assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
     assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Enter a room code.' });
     assert.equal(ui.parseJoinRequest({ multi: false, name: '' }).name, 'Player');

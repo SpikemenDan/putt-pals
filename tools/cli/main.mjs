@@ -21,7 +21,7 @@ function main(argv) {
   if (argv[0] === 'config') return finish(runConfig(argv.slice(1)));
   // `checks` takes its own options (--since, --json) and paths, so it bypasses the course-oriented argument parser.
   if (argv[0] === 'checks') return finish(runChecks(argv.slice(1)));
-  const { command, args, courseFile, routesFile } = parseCliArguments(argv);
+  const { command, args, courseFile, routesFile, world } = parseCliArguments(argv);
   if (!['list', 'validate', 'shot', 'solve', 'arena', 'check', 'rank', 'export'].includes(command)) {
     return finish({ code: command ? 1 : 0, lines: command ? [`Unknown command: ${command}`, ...USAGE] : USAGE });
   }
@@ -40,11 +40,11 @@ function main(argv) {
 
   const courses = toSimulationCourses(document);
   if (command === 'shot') return finish(runShot(courses, ...args));
-  const output = runSolve(courses, ...args);
+  const output = runSolve(courses, args[0], args[1], args[2], world === undefined ? {} : { world });
   if (output.result) {
     const map = Number(args[0]);
     const putt = Number(args[1]);
-    const provenance = createDifficultyProvenance(document.courses[map], putt, { full: args[2] === '--full' });
+    const provenance = createDifficultyProvenance(document.courses[map], putt, { full: args[2] === '--full', gravity: output.result.gravity });
     output.lines = [JSON.stringify({ schemaVersion: 2, map, putt, ...output.result, provenance })];
   }
   finish(output);

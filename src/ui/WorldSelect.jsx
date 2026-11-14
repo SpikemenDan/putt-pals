@@ -103,12 +103,17 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
     comeBack.current = id;
     light(null);
     setSettled(false); setOpen(id);
-    await scene.openRegion(id);
-    if (openRef.current !== id) return;
-    placeCourses(id);
-    scene.step(0);
-    setSettled(true);
-    scene.highlight(id);
+    try {
+      await scene.openRegion(id);
+      if (openRef.current !== id) return;
+      placeCourses(id);
+      scene.step(0);
+      setSettled(true);
+      scene.highlight(id);
+    } catch (error) { // a failed fly-in must not strand the menu on a half-opened region: fall back to the world view
+      console.error('World select: could not open region', id, error);
+      if (openRef.current === id) { setOpen(null); setSettled(false); }
+    }
   };
   useEffect(() => { // focus lands on the first course as they appear
     if (settled && open) setTimeout(() => { courseRefs.current[pinsOf[open]?.[0]?.index]?.focus(); sceneRef.current?.step(0); }, 0);
@@ -116,12 +121,14 @@ export function WorldSelect({ cards, onPick, onUnavailable, children }) {
   const back = async () => {
     const scene = sceneRef.current, from = comeBack.current;
     setOpen(null); setSettled(false);
-    scene?.highlight(null);
-    await scene?.openWorld();
+    try {
+      scene?.highlight(null);
+      await scene?.openWorld();
+    } catch (error) { console.error('World select: could not return to the world view', error); }
     regionRefs.current[from]?.focus();
   };
   const canvasHover = e => { if (e.pointerType === 'touch' || open) return; const id = sceneRef.current?.hit(e.nativeEvent.offsetX, e.nativeEvent.offsetY); const usable = id && pinsOf[id]?.length ? id : null; if (usable !== hover) light(usable); };
-  const canvasClick = e => { if (open) return; const id = sceneRef.current?.hit(e.nativeEvent.offsetX, e.nativeEvent.offsetY); if (id) openRegion(id); };
+  const canvasClick = e => { if (open) return; const id = sceneRef.current?.hit(e.nativeEvent.offsetX, e.nativeEvent.offsetY); if (id) openRegion(id).catch(error => console.error('World select: region click failed', error)); };
 
   return (
     <div className={styles.stage} data-ui="world-select" data-view={open ?? 'world'} data-settled={settled || undefined}>

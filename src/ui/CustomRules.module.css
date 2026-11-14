@@ -1,0 +1,75 @@
+/* Custom rules editor (VIS-U #168), layout A, in the menu's comic paper panel (Landing.module.css; owner, 2026-11-13).
+   Each category is an inked card with a coloured header tab (Match pink, Shots blue, Worlds green); the colour also
+   fills its slider tracks and chosen chips. Values sit in semi-white inked chips. Rows are label | control | value |
+   reset and share their card's columns (subgrid), so every label stays on one line. A changed rule is highlighted
+   with a star and its reset button appears. The Play buttons stay pinned to the bottom of the panel while it scrolls.
+   Button text has no drop shadow: the pixel font stays readable on the solid fills. */
+.editor{display:flex;flex-direction:column;gap:12px}
+
+/* "3 rules changed" is a tilted sticker; standard rules are a quiet note. */
+.summary{align-self:flex-start;margin:0;font:800 13px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
+.summary:not([data-count="0"]){padding:3px 12px;font:400 15px/1.2 var(--font);letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);background:var(--yellow);border:var(--line) solid var(--ink);border-radius:999px;box-shadow:3px 3px 0 var(--ink);rotate:-2deg}
+
+/* Category cards. */
+.group{--cat:var(--pink);display:grid;grid-template-columns:max-content minmax(0,1fr) 100px 30px;align-items:center;margin:0;padding:0 8px 6px;background:#fff;border:var(--line) solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink)}
+.group[data-category=shots]{--cat:var(--sky)}
+.group[data-category=worlds]{--cat:var(--green)}
+.groupTitle{grid-column:1 / -1;margin:0 -8px 4px;padding:5px 12px 4px;font:400 17px/1.1 var(--font);letter-spacing:2px;text-transform:uppercase;color:#fff;background:var(--cat);border-bottom:var(--line) solid var(--ink);border-radius:10px 10px 0 0}
+
+.row{grid-column:1 / -1;display:grid;grid-template-columns:subgrid;align-items:center;column-gap:10px;min-height:34px;padding:3px 4px;border-radius:8px}
+.row + .row{border-top:2px dotted rgba(20,16,42,.18)}
+.row[data-changed]{background:rgba(255,210,63,.28)}
+.label{margin:0;white-space:nowrap;font:800 13px/1.15 var(--pp-body,'Nunito',sans-serif);color:var(--ink)}
+.row[data-changed] .label::after{content:'★';margin-left:5px;color:var(--pink-d)}
+.control{min-width:0}
+/* Value chip: semi-white with an ink outline (owner, 2026-11-13), as wide as its column with the text centred, so every
+   chip lines up and the widest value (+0 strokes) fits without clipping or meeting the slider. */
+.value{justify-self:stretch;box-sizing:border-box;padding:4px 4px 3px;font:400 15px/1 var(--font);letter-spacing:.3px;text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px}
+.row[data-kind=select] .control,.row[data-kind=toggle] .control,.row[data-kind=number] .control{grid-column:2 / 4}
+.row[data-kind=select] .value,.row[data-kind=toggle] .value,.row[data-kind=number] .value{display:none}
+
+/* Sliders: an inked track filled with the card colour up to a yellow comic thumb. The global input rule gives inputs
+   padding and a frame; undo that here. --fill is set per slider from its value. */
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:24px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer}
+.slider::-webkit-slider-runnable-track{height:10px;border:2px solid var(--ink);border-radius:6px;background:linear-gradient(to right,var(--cat) var(--fill,50%),#fff var(--fill,50%))}
+.slider::-moz-range-track{height:10px;border:2px solid var(--ink);border-radius:6px;background:linear-gradient(to right,var(--cat) var(--fill,50%),#fff var(--fill,50%))}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-8px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.slider::-moz-range-thumb{width:16px;height:16px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.slider:focus-visible{outline:3px solid var(--cat);outline-offset:2px}
+
+/* Typed number entry (Game Length): the unit sits right after the box, a hint or long-game warning goes under it. */
+.row[data-kind=number] .control{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.entry{width:56px;margin:0;padding:3px 6px;font:400 18px/1.1 var(--font);letter-spacing:.5px;color:var(--ink);background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:6px;box-shadow:2px 2px 0 var(--cat);text-align:center}
+.entry:focus{outline:3px solid var(--cat);outline-offset:1px}
+.entry[aria-invalid=true]{border-color:var(--red);background:#ffe9e6}
+.unit{font:400 18px/1 var(--font);letter-spacing:.5px;color:var(--ink)}
+.note{flex-basis:100%;margin:0;font:800 12px/1.25 var(--pp-body,'Nunito',sans-serif);color:var(--pink-d)}
+.note:empty{display:none}
+
+/* Buttons keep the comic ink outline and offset shadow, but their text has no shadow so the pixel font reads cleanly. */
+.choice,.switch,.reset,.resetAll,.solo,.party{text-shadow:none}
+
+/* Selectors: a row of small chips; the chosen one takes the card colour. */
+.choices{display:flex;flex-wrap:wrap;gap:4px}
+.choice{margin:0;padding:3px 7px;font-size:14px;letter-spacing:.5px;border-width:2px;border-radius:8px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
+.choice[aria-checked=true]{background:var(--cat);color:#fff}
+
+/* Toggle: a chunky switch. */
+.switch{position:relative;width:52px;height:28px;margin:0;padding:0;border-width:3px;border-radius:16px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
+.switch[aria-checked=true]{background:var(--green)}
+.knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border:2px solid var(--ink);border-radius:50%;background:var(--yellow);transition:left .12s}
+.switch[aria-checked=true] .knob{left:26px}
+
+.reset{margin:0;padding:0;width:28px;height:28px;font:900 16px/1 var(--pp-body,'Nunito',sans-serif);border-width:2px;border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.reset[aria-hidden=true]{visibility:hidden}
+
+/* Play buttons pinned to the bottom of the scrolling panel (the panel has 16px bottom padding). */
+.actions{position:sticky;bottom:-16px;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin:0 -18px;padding:10px 18px 14px;background:var(--paper);border-top:var(--line) dashed var(--ink)}
+.actions button{margin:0}
+.resetAll{background:#fff;font-size:15px;letter-spacing:1px}
+.solo,.party{flex:1;font-size:20px;letter-spacing:1.5px;color:#fff}
+.solo{background:var(--pink)}
+.party{background:var(--sky)}
+
+@media (prefers-reduced-motion:reduce){.knob{transition:none}}
+@media (max-width:640px){.actions{margin:0 -12px;padding:10px 12px 12px;bottom:-12px}}

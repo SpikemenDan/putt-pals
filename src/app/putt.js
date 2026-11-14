@@ -32,10 +32,12 @@ import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECON
  * @param {string[]} [options.inventory=[]] Power-ups carried into this putt (see gameplay powerupPolicy / startingInventory)
  * @param {{spawn:boolean, pool:object[]}} [options.powerups] Box rules from gameplay powerupPolicy; omitted: boxes award nothing
  * @param {() => number} [options.now] Local monotonic ms (effect flashes, sunk → waiting)
+ * @param {number} [options.gravity] World gravity in units/s^2 (VIS-W); omitted: Gaia's TUNING.gravity
+ * @param {number} [options.shotPower] Launch speed at full charge (units/s) from the room's Custom rules (VIS-U); omitted: TUNING.shotPower
  */
-export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now() }) {
+export function createPutt({ definition, rule, puttIndex, id, name, playing, timed, roundStartTime, limitSeconds, roomNow, random = Math.random, inventory = [], powerups = { spawn: false, pool: [] }, now: localNow = () => performance.now(), gravity = TUNING.gravity, shotPower = TUNING.shotPower }) {
   const hazardTime = () => Math.max(0, (roomNow() - roundStartTime) / 1000);
-  const engine = new SimulationEngine(definition, puttIndex, { hazardTime });
+  const engine = new SimulationEngine(definition, puttIndex, { hazardTime, gravity });
   const course = engine.course;
   const player = engine.addPlayer(id, name);
   player.mode = playing ? 'play' : 'spectator';
@@ -80,7 +82,7 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
     /** Legacy launch(); one-shot effects clear at launch. */
     shoot(angle, power) {
       if (disposed || player.mode !== 'play' || player.moving) return null;
-      const event = engine.launch(id, angle, power);
+      const event = engine.launch(id, angle, power, shotPower);
       clearAtLaunch(player);
       stall = 0; accumulator = 0;
       return event;

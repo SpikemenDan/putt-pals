@@ -15,6 +15,8 @@ async function explained(log, label, fn) {
   try { await fn(); } catch (error) { error.message += `\n--- ${label}: page console ---\n` + (log.join('\n') || '(empty)'); throw error; }
 }
 
+const ROOM_SOCKET_UNLOAD = /The connection to wss?:\/\/[^\s"]+\/api\/rooms\/[a-z0-9]+\/socket was interrupted while the page was loading/;
+
 /** Opens the app in a page and returns a player handle. Collects page errors for assertions. */
 async function openApp(page, name) {
   const errors = [], log = [];
@@ -22,7 +24,9 @@ async function openApp(page, name) {
   page.on('console', message => {
     log.push(message.type() + ': ' + message.text());
     // Headed browsers request /favicon.ico, which the app does not ship; that 404 is not an app error.
-    if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico')) errors.push(message.text());
+    // Firefox reports an open room socket cut by a navigation (a spec's own page.reload()) as a console error; the
+    // browser writes it, not the app, and whether it appears depends on timing. Only that exact message is ignored.
+    if (message.type() === 'error' && !message.location().url.endsWith('/favicon.ico') && !ROOM_SOCKET_UNLOAD.test(message.text())) errors.push(message.text());
   });
   await page.addInitScript(() => {
     window.__PP_APP_HOOK = true;
@@ -42,16 +46,39 @@ async function openApp(page, name) {
     banners: () => page.evaluate(() => window.__ppBanners),
     ui: visible,
     button: label => page.getByRole('button', { name: label, exact: true }),
+    /** Main menu (VIS-M2): open Solo, Party, Custom or Settings, stepping back first from another sub-menu. */
+    async menu(id) {
+      const view = await visible('landing').getAttribute('data-view');
+      if (view === id) return;
+      if (view !== 'home') await page.locator('[data-ui=menu-back]').click();
+      // The main buttons bob while idle (display.menu.bob), so they are never "stable" for Playwright's
+      // actionability wait. Check what a player needs (visible, enabled), then click without that wait.
+      const button = page.locator(`[data-menu=${id}]`);
+      await expect(button).toBeVisible();
+      await expect(button).toBeEnabled();
+      await button.click({ force: true });
+    },
     async solo() {
+      await p.menu('solo');
       await visible('landing').getByLabel('Your name').fill(name);
       await p.button('Play solo').click();
       await expect(visible('room-lobby')).toBeVisible();
+      await p.loaded();
+    },
+    /**
+     * Waits for the loading screen to close. Opening a room from the menu shows it over the lobby while the planet renders;
+     * on slow (software) WebGL that keeps the page too busy for Playwright's actionability checks until it closes.
+     */
+    async loaded() {
+      await expect(page.locator('[data-ui=loading]')).toHaveCount(0, { timeout: 60_000 });
     },
     async join(code) {
+      await p.menu('party');
       await visible('landing').getByLabel('Your name').fill(name);
       await visible('landing').getByLabel(/room code/i).fill(code);
       await p.button('Join room').click();
       await explained(log, name + ' join', () => expect(page.locator('[data-ui=room-lobby], [data-ui=map-select], [data-ui=game]').locator('visible=true').first()).toBeVisible());
+      await p.loaded();
     },
     /** Room snapshot fields the specs compare, read from the running app. */
     snapshot: () => page.evaluate(() => {

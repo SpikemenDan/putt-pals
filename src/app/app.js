@@ -18,6 +18,8 @@ import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, p
 import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
+import { worldGravity } from '../shared/worlds.js';
+import { AIM_WOBBLE, DEFAULT_RULES, rulesTuning, seriesMaps, validateRules, validRules } from '../shared/rules.js';
 import { createAtlasScene } from '../render/atlas-scene.js';
 import { createPlanetScene } from '../render/planet-scene.js';
 import { colorOf, connectErrorMessage, createCourseInfo, createUiDispatcher, createUiStore, initialRoomCode, MESSAGES, mountUi, parseJoinRequest, UiCommands } from '../ui/index.js';
@@ -40,8 +42,9 @@ const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
  * @param {() => object} [options.createAudio] Audio seam (tests)
  * @param {typeof DISPLAY} [options.display] Presentation settings; development builds pass a live, tunable object
  * @param {(options: object) => object} [options.createTransport] Online transport seam (tests use the in-memory hub)
+ * @param {{active: boolean, gravity: number}|null} [options.worldPreview] Development only (src/devtools/world-preview.js): world gravity used in solo rooms; parties always use Gaia's shipped gravity
  */
-export function createApp({ soloHazards = false, root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket, display = DISPLAY }) {
+export function createApp({ worldPreview = null, soloHazards = false, root, THREE, window: win = root.ownerDocument.defaultView, random = Math.random, createWebGLRenderer, createAudio = () => createAudioAdapter(), createTransport, serverEndpoint, WebSocket = win.WebSocket, display = DISPLAY }) {
   const clock = { now: () => win.performance.now(), setTimeout: (f, d) => win.setTimeout(f, d), clearTimeout: id => win.clearTimeout(id) };
   const data = createCourseData();
   const courses = createCourseInfo(data);
@@ -54,6 +57,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   store.setLocal({ cosmetics, colorPref });
   const audio = createAudio();
   const unbindGestures = audio.bindGestures(win);
+  let aimWobble = 1; // aim sway multiple from the current room's Custom rules (VIS-U)
   let room = null, putt = null, puttPolicy = null, carriedInventory = [], activeRound = null, lastPhase = null, renderer = null, view = null, input = null;
   let quality = true, leaving = false, disposed = false, frameId = null, lastFrame = 0, lastPresence = -Infinity, lastSound = null, lastLocal = '';
   const remoteSeen = new Map(); // id -> {strokes, done, fx}
@@ -82,9 +86,11 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   };
 
   // ---------------------------------------------------------------- rooms
-  async function join({ multi, name, roomCode }) {
+  async function join({ multi, name, roomCode, rules = null }) {
     const request = parseJoinRequest({ multi, name, roomCode });
     if (!request.ok) { alert(request.message); return; }
+    // Custom rules (VIS-U) from the menu are validated here, at the UI boundary; null plays standard rules.
+    if (rules !== null && !validRules(rules)) { alert('Those custom rules are not valid. Reset them and try again.'); return; }
     if (room) leave(true);
     joining?.abort();
     const generation = ++joinGeneration;
@@ -93,7 +99,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     setLocal({ connecting: true, connectError: '' });
     try {
       const stored = multi ? resume.read(request.roomCode) : null;
-      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, clock, random, createTransport, identity: stored, soloHazards, floorAt: (map, puttIndex, x, y) => placementFloor(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
+      const opened = await openRoom({ multi, name: request.name, color: colorPref, roomCode: request.roomCode, rules: rules === null ? null : validateRules(rules), clock, random, createTransport, identity: stored, soloHazards, floorAt: (map, puttIndex, x, y) => placementFloor(resolveRenderCourse(data.definitions[map], puttIndex), x, y), endpoint: serverEndpoint, location: win.location, WebSocket, crypto: win.crypto, signal: controller.signal });
       if (disposed || controller.signal.aborted || generation !== joinGeneration) { opened.close({ leave: true }); return; }
       joining = null;
       reloadRecovery = !!opened.resumed;
@@ -200,11 +206,18 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     const definition = data.definitions[s.mapIndex];
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false });
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false, maps: seriesMaps(s.mode, s.rules) });
+    // The room's Custom rules (VIS-U): fixed at room creation and the same for every participant.
+    const ruleTuning = rulesTuning(validRules(s.rules) ? s.rules : DEFAULT_RULES);
+    aimWobble = AIM_WOBBLE[validRules(s.rules) ? s.rules.aimWobble : 'normal'];
+    // Every player must simulate the same gravity, so the development world preview applies to solo rooms only.
+    const previewGravity = worldPreview?.active && s.roster.length <= 1 ? worldPreview.gravity : null;
+    if (worldPreview?.active && previewGravity === null) toast('World gravity preview is off in party rooms: everyone plays Gaia gravity.');
     putt = createPutt({
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
       inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
+      gravity: previewGravity ?? worldGravity(undefined, ruleTuning), shotPower: ruleTuning.shotPower,
     });
     if (room.serverOwned) {
       putt.player.strokes = ownState?.strokes ?? 0;
@@ -454,8 +467,8 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   // ---------------------------------------------------------------- commands
   function handle(command) {
     switch (command.type) {
-      case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText }); break;
-      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name }); break;
+      case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText, rules: command.rules ?? null }); break;
+      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, rules: command.rules ?? null }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT:
@@ -562,7 +575,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
       },
       getState: () => ({
         active: !!room, mode: putt ? putt.mode : 'lobby', moving: !!putt?.player.moving, connected: !!room?.connected,
-        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '',
+        transitioning: view.rig.transitioning, steady: !!putt?.player.armedPowerups.steady, aimMode: putt ? aimModeOf(putt.player) : '', wobble: aimWobble,
       }),
     });
     // Placement mode takes the pointer before the shot handlers see it (capture phase).
@@ -595,6 +608,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   }
 
   const startCode = initialRoomCode(win.location?.hash || '', random);
+  const inviteLink = /(^#|&)room=[^&]/.test(win.location?.hash || ''); // a #room= link opens the menu on Party
   // Menu feedback (M1d): a soft tick when the pointer enters an enabled button and a click cue when one is pressed.
   let hovered = null;
   const buttonOf = event => { const b = event.target?.closest?.('button'); return b && !b.disabled ? b : null; };
@@ -603,7 +617,7 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
   root.addEventListener('pointerover', onHover);
   root.addEventListener('click', onPress);
   setLocal({ volume: audio.getStatus?.().volume ?? 1 });
-  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }), createAtlasScene: options => createAtlasScene({ THREE, ...options }) });
+  const unmount = mountUi(root, { store, dispatch, aim, onCanvas, initialRoomCode: startCode, initialView: inviteLink ? 'party' : 'home', initialName: resume.read(startCode)?.name || '', display, createLoadingScene: options => createPlanetScene({ THREE, ...options }), createAtlasScene: options => createAtlasScene({ THREE, ...options }) });
 
   return {
     store,
@@ -613,6 +627,13 @@ export function createApp({ soloHazards = false, root, THREE, window: win = root
     grantItem(kind) {
       if (!putt || !room?.connected || putt.player.mode !== 'play' || !addToInventory(putt.player.inventory, kind)) return false;
       setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
+      return true;
+    },
+    /** Development preview only (src/devtools/world-preview.js): rebuilds the current putt from its tee so a staged gravity applies. Returns whether a putt restarted. */
+    restartPutt() {
+      const s = room?.snapshot;
+      if (!putt || !s || s.phase !== SessionPhases.PLAY || activeRound !== s.roundNumber) return false;
+      startRound(s);
       return true;
     },
     get view() { return view; },
