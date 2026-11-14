@@ -34,10 +34,12 @@
 .panel label{margin:8px 0}
 /* Smaller swatches here so all 30 colours fit in three rows and Join stays on screen without scrolling. */
 .panel [data-ui=color-picker]{grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:6px}
-.go{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;background:var(--pink);color:#fff;text-shadow:2px 2px 0 var(--ink)}
-.back{margin:12px 0 0;background:#fff}
+.go{display:block;width:100%;margin:12px 0 4px;padding:12px 16px;font-size:22px;letter-spacing:1.5px;background:var(--pink);color:#fff;text-shadow:none} /* no text shadow: the pixel font reads cleanly (owner, 2026-11-13) */
+.back{margin:12px 0 0;background:#fff;text-shadow:none;letter-spacing:1px}
 .style{display:grid;gap:8px;margin-top:8px}
 .version{position:fixed;left:clamp(12px,2.4vw,32px);bottom:8px;margin:0;pointer-events:none;font:700 12px var(--pp-body,'Nunito',sans-serif);letter-spacing:.4px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
 
 @media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
 @media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
+.inline{margin:0 0 0 4px;padding:2px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);background:#fff}
+.panel[data-menu-view=custom]{width:min(92vw,580px)}

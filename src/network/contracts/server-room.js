@@ -2,6 +2,7 @@
 import { GameModes } from '../../shared/session.js';
 import { MAX_PLAYERS, MAX_DEPLOYABLES, MAX_TIMEOUT_SECONDS, MIN_TIMEOUT_SECONDS, RECONNECT_GRACE_PERIOD_MS, STARTER_COURSE_INDICES } from '../../shared/constants.js';
 import { isColorIndex } from '../../shared/colors.js';
+import { DEFAULT_RULES, MAX_SERIES_MAPS, validRules } from '../../shared/rules.js';
 import { auraIds } from '../../gameplay/catalog.js';
 import { validEffectMessage } from '../../gameplay/effects.js';
 import { validDeployable, validDeployCommand } from '../../gameplay/deployables.js';
@@ -10,7 +11,9 @@ import { GLOBAL_HAZARD_LIMIT, validGlobalHazard, validGlobalHazardCommand } from
 import { MAP_COUNT } from '../../shared/map-count.js';
 // 5: the room snapshot may carry synchronized G1f hazard records.
 // 6: Tornado and Hurricane are placed: ACTIVATE_HAZARD and their records carry x and y.
-export const SERVER_ROOM_VERSION = 7; // 7: map indices run to MAP_COUNT (24) with the VIS-G maps
+// 7: hello carries the Custom rules a new room is created with (VIS-U); the session context carries the room's rules.
+// 8: map indices run to MAP_COUNT (24) with the VIS-G maps.
+export const SERVER_ROOM_VERSION = 8;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -85,7 +88,7 @@ export function validServerPresence(p) {
 const validResume = r => exact(r, ['sessionId', 'playerId', 'token']) && validRoomId(r.sessionId) && validRoomId(r.playerId) && validRoomSecret(r.token);
 export function validClientFrame(m) {
   if (!object(m) || m.version !== SERVER_ROOM_VERSION) return false;
-  if (m.type === 'hello') return exact(m, ['version', 'type', 'roomCode', 'name', 'color', 'resume']) && validRoomCode(m.roomCode) && name(m.name) && nullable(m.color, isColorIndex) && nullable(m.resume, validResume);
+  if (m.type === 'hello') return exact(m, ['version', 'type', 'roomCode', 'name', 'color', 'resume', 'rules']) && validRoomCode(m.roomCode) && name(m.name) && nullable(m.color, isColorIndex) && nullable(m.resume, validResume) && nullable(m.rules, validRules);
   if (m.type === 'ping') return exact(m, ['version', 'type', 'nonce', 'clientTime']) && validRoomId(m.nonce) && Number.isFinite(m.clientTime) && m.clientTime >= 0;
   return exact(m, ['version','type','sessionId','connectionId','sequence','roundNumber','puttIndex','payload'])
     && ['command','presence'].includes(m.type) && validRoomId(m.sessionId) && validRoomId(m.connectionId)
@@ -99,7 +102,7 @@ const player = p => object(p) && ['id','name','color','connected','strokes','don
   && nullable(p.score,count) && Array.isArray(p.scores) && p.scores.length <= 6 && p.scores.every(s => nullable(s,score))
   && (p.token === undefined || typeof p.token === 'string') && (p.missed === undefined || typeof p.missed === 'boolean');
 const mapOf = (v, max, validator) => object(v) && Object.keys(v).length <= max && Object.entries(v).every(([id, p]) => validRoomId(id) && validator(p,id));
-const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last'];
+const CONTEXT_KEYS = ['mode','powerups','mapIndex','puttIndex','roundNumber','roundLimitSeconds','roundStartTime','votingDeadline','votes','roster','players','completedMaps','totals','last','rules'];
 /** Complete domain context, no XState executable/internal objects and no hostId/isHost. */
 export function validSessionContext(c) {
   const hasPong = object(c) && Object.hasOwn(c, 'pong');
@@ -117,12 +120,12 @@ export function validSessionContext(c) {
     if (!Array.isArray(c.tie.options) || c.tie.options.length < 2 || !c.tie.options.every(n => index(n, MAP_COUNT))) return false;
     if (!index(c.tie.winner, MAP_COUNT) || !c.tie.options.includes(c.tie.winner)) return false;
   }
-  if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !index(c.mapIndex, MAP_COUNT) || !index(c.puttIndex,6) || !count(c.roundNumber)
+  if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !validRules(c.rules) || c.rules.powerups !== c.powerups || !index(c.mapIndex, MAP_COUNT) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < MIN_TIMEOUT_SECONDS || c.roundLimitSeconds > MAX_TIMEOUT_SECONDS || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
     || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && STARTER_COURSE_INDICES.includes(v))
-    || !Array.isArray(c.completedMaps) || c.completedMaps.length > 9 || !c.completedMaps.every(n => index(n, MAP_COUNT))
+    || !Array.isArray(c.completedMaps) || c.completedMaps.length > MAX_SERIES_MAPS || !c.completedMaps.every(n => index(n, MAP_COUNT))
     || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
   return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex, MAP_COUNT) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
     && Array.isArray(c.last.winners) && c.last.winners.length <= MAX_PLAYERS && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));
@@ -230,6 +233,8 @@ export function decodeRoomCheckpoint(raw) {
     // Checkpoints saved before GM1 have no `powerups`; those rooms had power-ups on.
     const ctx=c?.snapshot?.session?.context;
     if (object(ctx) && !Object.hasOwn(ctx,'powerups')) ctx.powerups=true;
+    // Checkpoints saved before VIS-U have no `rules`; those rooms played standard rules (with their power-ups setting).
+    if (object(ctx) && !Object.hasOwn(ctx,'rules')) ctx.rules={ ...DEFAULT_RULES, powerups: ctx.powerups === true };
     // server-room-2 snapshots predate G1f; migrate them with no active hazards.
     if (c?.rulesVersion === 'server-room-2' && c?.snapshot?.rulesVersion === 'server-room-2') {
       c.rulesVersion = ROOM_RULES_VERSION;

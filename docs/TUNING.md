@@ -106,6 +106,28 @@ Worlds (VIS-W #164): `src/shared/worlds.js` names Gaia, Ares and Luna and resolv
 | `aim.shotMinCharge` | 0.025 | 0 to 1 | Below this charge a release cancels the shot. |
 
 
+## Custom rules (VIS-U)
+
+The player-facing Custom rules editor (main menu, Custom) edits a small validated rule set in
+`src/shared/rules.js`, not this tuning table directly. Each rule has one standard value that reproduces the
+shipped game exactly (`rulesTuning(DEFAULT_RULES)` is `TUNING` itself), and `rulesTuning(rules)` builds a
+validated tuning from a rule set:
+
+| Rule | Range | Standard | Becomes |
+| --- | --- | --- | --- |
+| Gaia, Ares and Luna Gravity | 20 to 200 % of Gaia's shipped gravity, step 5 | Gaia 100 %, Ares 70 %, Luna 45 % | `gravity`, `worlds.ares.gravity`, `worlds.luna.gravity` = 700 x percentage / 100 |
+| Shot Power | 50 to 150 %, step 5 | 100 % | `shotPower` scaled from 600 |
+| Aim Sway | Off, Low, Normal, High | Normal | `aim.spreadBase` and `aim.spreadGain` times 0, 0.5, 1 or 1.6 |
+| Power-Ups | On or Off | On | the room's `powerups` flag (No Power-Ups) |
+| Time Per Hole | Course, 2, 3, 5 or 10 min | Course | each putt's time limit (Course keeps the course's own limit) |
+| Game Length | 1 to 20 maps, typed; the editor warns above 10 | 1 (keeps the lobby mode) | maps in one game for Standard and Tournament modes (`seriesMaps`); a multi-map game carries its inventory like a tournament |
+| Missed Hole Penalty | 0 to 5 strokes | 2 | `scoring.missedHolePenalty` |
+
+A room fixes its rules when it is created (Play solo, or the first player into a Party room code); they are
+carried in the session and the same for every participant, and never change mid-match. The editor remembers
+its draft in local storage (validated on load). Ares and Luna gravity only take effect on maps from those
+worlds, so they need world selection (VIS-M4) to be reachable in play.
+
 ## Configuration expansion policy
 
 The catalog above describes the supplied documentation snapshot; no code was

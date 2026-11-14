@@ -44,7 +44,7 @@ Only bounded JSON **text** is accepted; no binary or executable payloads. `decod
 
 | Direction/type | Fields after `version`, `type` |
 | --- | --- |
-| Client `hello` | `roomCode`, `name`, `color: null \| palette index` (preferred ball colour; the room gives the lowest free one if it is taken), `resume: null \| {sessionId, playerId, token}` |
+| Client `hello` | `roomCode`, `name`, `color: null \| palette index` (preferred ball colour; the room gives the lowest free one if it is taken), `resume: null \| {sessionId, playerId, token}`, `rules: null \| Custom rules` (wire version 7; used only when this hello creates the room) |
 | Client `command` | `sessionId`, `connectionId`, `sequence`, `roundNumber`, `puttIndex`, `payload` |
 | Client `presence` | Same envelope fields as command; payload is current ball movement/effect data |
 | Client `ping` | `nonce`, `clientTime` (local monotonic ms, opaque to the server) |
@@ -81,6 +81,14 @@ The list lives in the room snapshot, so every checkpoint contains it and a recon
 ## Global hazards (G1f, wire version 6)
 
 `SERVER_ROOM_VERSION` is 6. `ACTIVATE_HAZARD` accepts a catalog kind and, for Wind, a finite direction, for Lightning, a target id, or, for Tornado and Hurricane, the placed `x` and `y`. The room assigns activation id, owner, synchronized start/expiry, scope and seed. It rejects activations outside play, when power-ups are disabled, from non-roster players, or toward an invalid Lightning target. Global records are optional in the snapshot and durable checkpoint, are validated at the boundary and are cleared when the room leaves play, power-ups are disabled, or the round/map/putt scope changes. Inventory remains client-held; the room cannot verify possession. Peers derive Tornado and Hurricane paths from the shared seed and server time instead of receiving frame positions.
+
+## Custom rules (VIS-U, wire version 7)
+
+`SERVER_ROOM_VERSION` is 7. `hello.rules` is `null` (standard) or a complete rule set that passes `validRules` in `src/shared/rules.js`; anything else rejects the frame. Only the hello that creates a room uses it: the room keeps those rules for its whole lifetime, and later hellos (new players or resumes) never change them, so every participant plays the same values. The session context carries `rules`, and `rules.powerups` always equals `powerups` (the lobby No power-ups toggle updates both before a match). Checkpoints saved before version 7 have no `rules`; decode restores them as standard rules with the saved power-ups flag. The browser applies gravity, shot power and aim wobble from the snapshot's rules; the session applies the hole timer and missed-hole penalty. Secrets, authentication, policy and quotas are never rules.
+
+## Gaia region maps (VIS-G, wire version 8)
+
+`SERVER_ROOM_VERSION` is 8 (`PROTOCOL_VERSION` 6 for peer rooms). Map indices in votes, ties, `mapIndex`, `completedMaps` and `last.mapIndex` run to `MAP_COUNT` (24, `src/shared/map-count.js`) instead of 22, so clients older than the VIS-G maps are rejected at the version check rather than failing validation on a new map index. The room-object name carries the version (`putt-pals:<environment>:v8:<code>`).
 
 ## Identity and connection handling
 
