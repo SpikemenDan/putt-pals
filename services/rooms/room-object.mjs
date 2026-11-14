@@ -16,7 +16,7 @@ const courseDefinitions = createCourseData().definitions;
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket$/;
 const CONTEXT_FIELDS = [
   'mode', 'powerups', 'mapIndex', 'puttIndex', 'roundNumber', 'roundLimitSeconds', 'roundStartTime',
-  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last',
+  'votingDeadline', 'votes', 'roster', 'players', 'completedMaps', 'totals', 'last', 'rules',
 ];
 const commandRate = { burst: SERVER_ROOM_LIMITS.commandBurst, perSecond: SERVER_ROOM_LIMITS.commandsPerSecond };
 const presenceRate = { burst: SERVER_ROOM_LIMITS.presenceBurst, perSecond: SERVER_ROOM_LIMITS.presencePerSecond };
@@ -265,7 +265,7 @@ export class RoomDurableObject {
     if (hello.roomCode !== connection.roomCode) return this.reject(connection, 'invalid-message', 1008, 'Room code mismatch');
     let room = this.runtime;
     if (hello.resume === null && room === null) {
-      room = await this.createRuntime(connection.roomCode, hello.name.trim(), hello.color);
+      room = await this.createRuntime(connection.roomCode, hello.name.trim(), hello.color, hello.rules);
       const token = randomToken();
       const identity = await this.createIdentity(room, room.initialPlayerId, hello.name.trim(), token);
       const now = this.now(room);
@@ -354,7 +354,8 @@ export class RoomDurableObject {
     this.setRoomTimer(room);
   }
 
-  async createRuntime(roomCode, name, color = null) {
+  /** `rules`: the validated Custom rules from the creating player's hello (null: standard), fixed for the room's lifetime. Later hellos never change them. */
+  async createRuntime(roomCode, name, color = null, rules = null) {
     const courseHash = await createCourseHash();
     const sessionId = randomId();
     const playerId = randomId();
@@ -369,7 +370,7 @@ export class RoomDurableObject {
       globalHazards: [], hazardSeq: 0,
     };
     room.session = this.makeSession(room, {
-      controllerId: playerId, hostName: name, hostColor: color ?? undefined, serverOwned: true, isReserved: id => {
+      controllerId: playerId, hostName: name, hostColor: color ?? undefined, ...(rules === null ? {} : { rules }), serverOwned: true, isReserved: id => {
         const seat = room.seats.get(id);
         return !!seat && seat.connectedSince === null && seat.resumeUntil !== null && seat.resumeUntil > this.now(room);
       },

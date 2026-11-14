@@ -59,14 +59,14 @@ async function fresh(ctx, roomCode = 'recover1', resume = null) {
   const ws = socket(ctx);
   const conn = { socket: ws, roomCode, identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null };
   room.acceptConnection(ws, conn);
-  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode, name: 'Player', resume }));
+  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode, name: 'Player', resume, rules: null }));
   return { room, ws, welcome: ws.frames.find(frame => frame.type === 'welcome') };
 }
 async function join(room, ctx, resume = null) {
   const ws = socket(ctx);
   const conn = { socket: ws, roomCode: 'recover1', identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null };
   room.acceptConnection(ws, conn);
-  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'recover1', name: 'Guest', resume }));
+  await room.webSocketMessage(ws, JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'recover1', name: 'Guest', resume, rules: null }));
   return ws;
 }
 async function command(room, ws, payload, sequence) {

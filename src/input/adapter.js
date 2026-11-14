@@ -20,12 +20,15 @@ const isTextEntry = target => !!(target && target.matches && target.matches('inp
  * @param {ReturnType<import('../camera/rig.js').createCameraRig>} options.camera
  * @param {(clientX: number, clientY: number) => ({x:number, z:number}|null)} options.pickGround
  *   World point under the pointer on the horizontal plane through the ball (legacy planePoint)
- * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean, aimMode?:string}} options.getState
+ * @param {() => {active:boolean, mode:string, moving:boolean, connected:boolean, transitioning:boolean, steady?:boolean, aimMode?:string, wobble?:number}} options.getState
  *   active: joined a room; mode: local simulation mode (play/sunk/wait/spectator/lobby)
  * @param {(command: object) => void} options.dispatch
  * @param {{fullPullPx:number, canvasPullFraction:number}} [options.aimSettings] Validated development-preview power mapping; reset the preview before changing it. Omitted uses TUNING defaults.
  * @param {typeof DISPLAY} [options.display] Presentation settings; the aim arrow length comes from display.aim.arrowMaxLength
  */
+/** Aim sway multiple from the room's Custom rules (VIS-U); anything but a finite non-negative number is the shipped 1. */
+const wobbleOf = s => (Number.isFinite(s.wobble) && s.wobble >= 0 ? s.wobble : 1);
+
 export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.defaultView, camera, pickGround, getState, dispatch, display = DISPLAY, aimSettings }) {
   if (!canvas || !camera || typeof pickGround !== 'function' || typeof getState !== 'function' || typeof dispatch !== 'function') {
     throw new TypeError('canvas, camera, pickGround, getState and dispatch are required');
@@ -36,7 +39,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
   const bindings = [];
   const on = (target, type, handler, options) => { target.addEventListener(type, handler, options); bindings.push([target, type, handler, options]); };
 
-  const notifyAim = () => { for (const listener of aimListeners) listener(charging, charge); };
+  const notifyAim = () => { const wobble = wobbleOf(getState()); for (const listener of aimListeners) listener(charging, charge, wobble); };
   function cancel() {
     const changed = charging || charge !== 0;
     pull = null; orbit = null; charging = false; charge = 0;
@@ -75,7 +78,7 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
   on(canvas, 'pointerup', e => {
     const s = getState();
     if (s.connected && pull && pull.id === e.pointerId && charge > SHOT_MIN_CHARGE && s.mode === 'play' && !s.moving) {
-      dispatch({ type: InputCommands.SHOT, angle: shotAngle({ aimAngle, charge, time: swayTime, steady: !!s.steady, aimMode: s.aimMode || '' }), power: charge });
+      dispatch({ type: InputCommands.SHOT, angle: shotAngle({ aimAngle, charge, time: swayTime, steady: !!s.steady, aimMode: s.aimMode || '', wobble: wobbleOf(s) }), power: charge });
     }
     cancel();
   });
@@ -146,10 +149,10 @@ export function createInputAdapter({ canvas, window: win = canvas.ownerDocument.
       const s = getState();
       if (!(s.mode === 'play' && !s.moving && charging && charge > GUIDE_MIN_CHARGE)) return null;
       swayTime = time;
-      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady, aimMode: s.aimMode || '' }), spread: s.steady ? 0 : spread(charge), length: charge * display.aim.arrowMaxLength };
+      return { charge, aimAngle, angle: shotAngle({ aimAngle, charge, time, steady: !!s.steady, aimMode: s.aimMode || '', wobble: wobbleOf(s) }), spread: s.steady ? 0 : spread(charge, wobbleOf(s)), length: charge * display.aim.arrowMaxLength };
     },
     /** Power meter updates (charging, charge) on pointer changes; keeps per-frame values out of React state. */
-    subscribeAim(listener) { aimListeners.add(listener); listener(charging, charge); return () => aimListeners.delete(listener); },
+    subscribeAim(listener) { aimListeners.add(listener); listener(charging, charge, wobbleOf(getState())); return () => aimListeners.delete(listener); },
     /** Removes every listener. Idempotent. */
     dispose() {
       if (disposed) return;

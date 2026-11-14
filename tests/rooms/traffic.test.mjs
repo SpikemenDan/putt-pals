@@ -39,7 +39,7 @@ try {
       send(raw) { const f = JSON.parse(raw); this.frames.push(f); metrics.outputs++; metrics.outputBytes += bytes(raw); if (f.snapshot) metrics.maxSnapshotBytes = Math.max(metrics.maxSnapshotBytes, bytes(JSON.stringify(f.snapshot))); },
       close() { this.readyState = 3; }, serializeAttachment(a) { this.attachment = structuredClone(a); }, deserializeAttachment() { return this.attachment; } };
     room.acceptConnection(ws, { socket: ws, roomCode: 'traffic', identity: null, connectionId: null, closed: false, lastSeenAt: now, handshakeTimer: null, livenessTimer: null });
-    await receive(ws, { version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'traffic', name: `Player ${i + 1}`, resume: null });
+    await receive(ws, { version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: 'traffic', name: `Player ${i + 1}`, resume: null, rules: null });
     assert.equal(ws.frames[0].type, 'welcome'); clients.push(ws);
   }
   await command(clients[0], { type: 'SET_MODE', mode: 'tournament_3' });

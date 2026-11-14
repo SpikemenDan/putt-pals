@@ -8,6 +8,7 @@ import {
   MAX_PLAYERS,
   VOTING_COUNTDOWN_SECONDS,
 } from './constants.js';
+import { DEFAULT_RULES } from './rules.js';
 
 export const SessionPhases = Object.freeze({
   LOBBY: 'lobby',
@@ -51,7 +52,8 @@ export function createInitialSessionState(options = {}) {
   return {
     phase: SessionPhases.LOBBY,
     mode: options.mode ?? GameModes.STANDARD,
-    powerups: options.powerups ?? true, // false = No Power-Ups: no boxes, no inventory (GM1)
+    powerups: options.powerups ?? options.rules?.powerups ?? true, // false = No Power-Ups: no boxes, no inventory (GM1)
+    rules: { ...(options.rules ?? DEFAULT_RULES) }, // Custom rules (VIS-U #168), fixed when the room is created
     mapIndex: 0,
     puttIndex: 0,
     roundNumber: 0,
