@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import './inbound-queue.test.mjs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
@@ -17,7 +19,14 @@ await import('./preview-config.test.mjs');
 await import('./hibernation-runtime.test.mjs');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');
+// Run Wrangler's JS entry with the current Node instead of the .bin shim:
+// the shim is wrangler.cmd on Windows, which cannot be spawned without a shell.
+const wranglerPackage = createRequire(import.meta.url).resolve('wrangler/package.json');
+const wranglerBin = JSON.parse(readFileSync(wranglerPackage, 'utf8')).bin;
+const wrangler = path.resolve(
+  path.dirname(wranglerPackage),
+  typeof wranglerBin === 'string' ? wranglerBin : wranglerBin.wrangler,
+);
 const assetsDir = path.join(root, 'dist', 'assets');
 const persistDir = await mkdtemp(path.join(os.tmpdir(), 'putt-pals-n4b-'));
 const logs = [];
@@ -171,18 +180,28 @@ async function waitForServer(url, timeoutMs = 30_000) {
 
 async function stopServer() {
   if (!child || child.exitCode !== null) return;
-  child.kill('SIGTERM');
+  killTree('SIGTERM');
   await Promise.race([
     new Promise(resolve => child.once('exit', resolve)),
     new Promise(resolve => setTimeout(resolve, 5_000)),
   ]);
-  if (child.exitCode === null) child.kill('SIGKILL');
+  if (child.exitCode === null) killTree('SIGKILL');
+}
+
+function killTree(signal) {
+  // child.kill does not reach workerd grandchildren on Windows.
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    child.kill(signal);
+  }
 }
 
 async function main() {
   const port = await availablePort();
   const baseUrl = `http://127.0.0.1:${port}`;
-  child = spawn(wrangler, [
+  child = spawn(process.execPath, [
+    wrangler,
     'dev',
     '--local',
     '--ip', '127.0.0.1',
@@ -383,5 +402,6 @@ try {
   process.exitCode = 1;
 } finally {
   await stopServer();
-  await rm(persistDir, { recursive: true, force: true });
+  // Windows may briefly keep workerd file handles open after the process dies.
+  await rm(persistDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
