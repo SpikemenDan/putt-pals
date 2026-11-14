@@ -4,9 +4,17 @@ Preparation and verification only. Nothing here was deployed, published or chang
 
 ## Evidence
 
-Main at `__COMMIT__` (2026-11-14), branch `chore/q1-release-readiness`.
+Branch `chore/q1-release-readiness` from main `97ec6e3` (2026-11-14). This branch changes only `tools/cli` (world gravity for the solver), its test and docs, so app evidence applies to main. Local runs used Node 22.23.4 in a Linux container; CI uses Node 26.10.
 
-__CHECKS__
+| Check | Result |
+| --- | --- |
+| `npm run checks` | Recommended the full suite for the `tools/cli` change |
+| `npm test` | **Stopped at `test:input`**: `tests/input.test.cjs:76` expects `spread(0.8125)` to equal a recorded value exactly and differs in the 17th digit (`…135` vs `…133`) on Node 22.23.4. Pre-existing and unrelated (this branch changes no input code; main CI passes on Node 26.10). The rest of `input.test.cjs` did not run locally |
+| Suites after `test:input` (camera, aim-preview, ui, app, courses, cli, physics, integration, overnight, gemini) | Passed, run one by one |
+| `npm run build` | Passed (`BUILD_OK`) |
+| `npm run test:rooms:local` | Passed: routing and isolation, admission, eight-member capacity, controller succession, resumed identity, and a four-player six-putt game on local workerd |
+| `npm run test:browser` (Chromium) | **Not verified locally.** The pinned Playwright 1.64.0 browser build is not installed in this container. Against the pre-installed Chromium (scratch config, software WebGL, solver running alongside): 10 passed, including the four-page multiplayer map, reload/drop recovery, controller handover and server-room flows; 10 failed at the same step (clicking "Choose Gaia" in the solo world view timed out after 15 s) and 1 could not launch. Main CI at `97ec6e3` passed this suite, so treat this as environmental; this PR's CI is the browser evidence |
+| PR CI | __CI__ |
 
 ## Par routes on every putt (SV1)
 
@@ -78,4 +86,8 @@ Run on the build to be released (`npm run rooms:dev` locally, or the hosted prev
 
 ## Remaining before release
 
-__REMAINING__
+- Owner playtests from the checklist above, on the release build.
+- Separate-network four-player validation on the hosted preview (N4G checklist), and recording a rollback target compatible with the build being deployed. Both need owner authorization for the hosted steps; nothing was deployed here.
+- When #165 (Ares/Luna maps) lands: re-run the par sweep and record it here. Each map is then solved at its own world's gravity.
+- Owner decision on Clockwork Maze and Comet Run (no robust route found) before they join the playable pool. Shipped par values were not changed.
+- Release notes, production hosting and publication are separate, owner-authorized steps.
