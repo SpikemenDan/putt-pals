@@ -9,6 +9,8 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
 (async () => {
   const { buildCourseCatalog, normalizeLegacyCourse, slugify, detectStaleCourses, detectStaleHashes, createCourseDocument, validateCourseDocument, parseCourseDocument, toSimulationCourses, createCourseData, validateCourseDefinitions } = await load('src/courses/index.js');
   const { STARTER_COURSE_INDICES } = await load('src/shared/constants.js');
+  const { MAP_COUNT } = await load('src/shared/map-count.js');
+  const { REGION_COURSES } = await load('src/shared/gaia-map.js');
   let failed = 0;
   const run = (name, fn) => {
     try { fn(); console.log('PASS:', name); }
@@ -16,20 +18,37 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
   };
 
   const raw = reference.rules();
-  const catalog = buildCourseCatalog(raw);
+  // The legacy reference holds the 22 exported maps; its starters are the constant's entries below 22. The VIS-G placeholder
+  // maps (22, 23) are later additions, checked against the live data below.
+  const LEGACY_STARTERS = STARTER_COURSE_INDICES.filter(index => index < raw.length);
+  const catalog = buildCourseCatalog(raw, LEGACY_STARTERS);
 
   run('all 22 legacy maps pass the shared course schema', () => {
     assert.equal(raw.length, 22);
     assert.deepEqual(catalog.errors, []);
     assert.equal(catalog.courses.length, 22);
   });
-  run('legacy STARTERS list equals the shared constant', () => {
-    assert.deepEqual(reference.starters(), [...STARTER_COURSE_INDICES]);
+  run('MAP_COUNT (the wire bound for map indices) equals the shipped courses, and every course sits in exactly one Gaia region', () => {
+    const data = createCourseData();
+    assert.equal(data.definitions.length, MAP_COUNT, 'network validators accept exactly the shipped map indices');
+    const homed = Object.values(REGION_COURSES).flat().sort((a, b) => a - b);
+    assert.deepEqual(homed, Array.from({ length: MAP_COUNT }, (_, i) => i), 'each map index appears in one region, once');
+  });
+  run('legacy STARTERS list equals the shared constant, which adds the two VIS-G placeholder maps', () => {
+    assert.deepEqual(reference.starters(), LEGACY_STARTERS);
+    assert.deepEqual([...STARTER_COURSE_INDICES], [...reference.starters(), 22, 23]);
   });
   run('six starter maps are flagged and have exactly six putts', () => {
     const starters = catalog.courses.filter(c => c.starter);
-    assert.deepEqual(starters.map(c => c.index), [...STARTER_COURSE_INDICES].sort((a, b) => a - b));
+    assert.deepEqual(starters.map(c => c.index), [...LEGACY_STARTERS].sort((a, b) => a - b));
     starters.forEach(c => assert.equal(c.putts.length, 6));
+    assert.equal(starters.length, 6, 'six legacy starters');
+  });
+  run('the live data has eight playable maps, each with six putts (six legacy starters plus two placeholders)', () => {
+    const live = createCourseData().catalog.filter(c => c.starter);
+    assert.deepEqual(live.map(c => c.index), [...STARTER_COURSE_INDICES].sort((a, b) => a - b));
+    assert.equal(live.length, 8);
+    live.forEach(c => assert.equal(c.putts.length, 6, c.name));
   });
   run('ids are unique slugs', () => {
     assert.equal(new Set(catalog.courses.map(c => c.id)).size, 22);
@@ -84,7 +103,8 @@ const load = rel => import(pathToFileURL(path.join(__dirname, '..', rel)).href);
   const { runShot } = await load('tools/cli/commands.mjs');
   run('versioned document round-trips all maps with persistent course and putt IDs', () => {
     assert.equal(document.schemaVersion, 1);
-    assert.equal(document.courses.length, 22);
+    assert.equal(document.courses.length, MAP_COUNT);
+    assert.equal(document.courses.length, 24, 'the 22 legacy maps plus the two VIS-G placeholders');
     assert.deepEqual(parseCourseDocument(JSON.stringify(document)), document);
     assert.equal(document.courses[0].putts[0].id, 'switchback-garden-putt-1');
     const ids = document.courses.flatMap(c => [c.id, ...c.putts.map(p => p.id)]);

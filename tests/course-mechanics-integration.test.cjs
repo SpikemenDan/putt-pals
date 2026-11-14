@@ -24,9 +24,10 @@ const assert=require('node:assert/strict');
   assert.equal(validCourseMechanic({...wedge,vertices:[[1e200,0],[0,1],[1,0]]}),false,'coordinates must remain numerically safe for simulation/rendering');
   const document=createMechanicChamberDocument();assert.equal(validateCourseDocument(document).valid,true);
   const decoded=parseCourseDocument(JSON.stringify(document)),courses=toSimulationCourses(decoded);
-  assert.deepEqual(courses[22].mechanics,chambers.wedge.mechanics);
-  courses[22].mechanics[0].vertices[0][0]=999;
-  assert.equal(decoded.courses[22].geometry.mechanics[0].vertices[0][0],300,'adapters own their mechanics data');
+  const {MAP_COUNT}=await import('../src/shared/map-count.js'),W=MAP_COUNT; // chambers are appended after the shipped maps (first chamber = wedge)
+  assert.deepEqual(courses[W].mechanics,chambers.wedge.mechanics);
+  courses[W].mechanics[0].vertices[0][0]=999;
+  assert.equal(decoded.courses[W].geometry.mechanics[0].vertices[0][0],300,'adapters own their mechanics data');
   const invalidPortal=structuredClone(chambers.portal);invalidPortal.mechanics[0].b=[795,150,0];
   assert.ok(checkGeometryIntegrity({geometry:invalidPortal}).violations.length,'off-floor portal exit is rejected');
   const blockedPortal=structuredClone(chambers.portal);blockedPortal.w=[[590,170,20,30]];

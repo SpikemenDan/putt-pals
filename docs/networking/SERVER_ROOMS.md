@@ -86,6 +86,10 @@ The list lives in the room snapshot, so every checkpoint contains it and a recon
 
 `SERVER_ROOM_VERSION` is 7. `hello.rules` is `null` (standard) or a complete rule set that passes `validRules` in `src/shared/rules.js`; anything else rejects the frame. Only the hello that creates a room uses it: the room keeps those rules for its whole lifetime, and later hellos (new players or resumes) never change them, so every participant plays the same values. The session context carries `rules`, and `rules.powerups` always equals `powerups` (the lobby No power-ups toggle updates both before a match). Checkpoints saved before version 7 have no `rules`; decode restores them as standard rules with the saved power-ups flag. The browser applies gravity, shot power and aim wobble from the snapshot's rules; the session applies the hole timer and missed-hole penalty. Secrets, authentication, policy and quotas are never rules.
 
+## Gaia region maps (VIS-G, wire version 8)
+
+`SERVER_ROOM_VERSION` is 8 (`PROTOCOL_VERSION` 6 for peer rooms). Map indices in votes, ties, `mapIndex`, `completedMaps` and `last.mapIndex` run to `MAP_COUNT` (24, `src/shared/map-count.js`) instead of 22, so clients older than the VIS-G maps are rejected at the version check rather than failing validation on a new map index. The room-object name carries the version (`putt-pals:<environment>:v8:<code>`).
+
 ## Identity and connection handling
 
 Backend uses Web Crypto to generate player/session/socket IDs and 32 random bytes encoded as 43 base64url characters for resume tokens. Persist only a SHA-256 token hash bound to environment/code/session/player. Compare hashes without leaking them; never broadcast or log raw tokens or hashes. Name or claimed player ID alone is never proof of identity. Tokens remain stable until explicit leave or grace expiry so ack/welcome loss cannot strand the previously issued token. Hash issuance and seat reservation are committed before welcome. No unacknowledged welcome token retry is guaranteed on first-ever admission; abandoned pending joins release their seat after liveness/grace bounds.

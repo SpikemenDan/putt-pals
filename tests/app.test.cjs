@@ -531,7 +531,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       c: o.children.map(describe),
     });
     let builds = 0;
-    for (let map = 0; map < definitions.length; map++) {
+    // The r128 recording exists only for the 22 legacy maps; maps added after them (22+) have no legacy page to record.
+    const legacyMaps = Object.keys(recorded.sha256ByMap).length;
+    assert.equal(legacyMaps, 22);
+    assert.ok(definitions.length >= legacyMaps);
+    for (let map = 0; map < legacyMaps; map++) {
       const scenes = [THREE].map(T => {
         // V1a #58: the legacy style, as on r128; the toon layout is compared with it in render-modern.test.cjs.
         const library = createMaterialLibrary({ THREE: T, createCanvas: canvas, random: () => 0.5, style: 'legacy' });

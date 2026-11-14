@@ -12,6 +12,7 @@ import { cupOf, surfaceHeight } from '../simulation/physics.js';
 import { getPowerup, POWERUP_CATALOG, PowerupTargets } from './catalog.js';
 
 import { DEPLOYABLE_PARAMS, DEPLOYABLE_HIT } from '../simulation/deployables.js';
+import { MAP_COUNT } from '../shared/map-count.js';
 // The pure contact maths lives in the simulation (no gameplay or catalog imports there); re-exported for existing callers.
 export { DEPLOYABLE_PARAMS, DEPLOYABLE_HIT, bumperContact, orbitalAcceleration, orbitalHolds } from '../simulation/deployables.js';
 
@@ -29,7 +30,7 @@ export function validDeployable(d, catalog = POWERUP_CATALOG, params = DEPLOYABL
   return validId(d.id) && validId(d.owner) && getPowerup(d.kind, catalog)?.target === PowerupTargets.COURSE
     && [d.x, d.y, d.z].every(n => Number.isFinite(n) && Math.abs(n) <= COORD_LIMIT)
     && count(d.impacts) && d.impacts < params.maxImpacts
-    && Number.isFinite(d.placedAt) && index(d.map, 22) && index(d.putt, 6);
+    && Number.isFinite(d.placedAt) && index(d.map, MAP_COUNT) && index(d.putt, 6);
 }
 
 /** The records that apply on this putt: valid, right map and putt, not yet used up. */

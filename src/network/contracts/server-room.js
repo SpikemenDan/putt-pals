@@ -8,10 +8,12 @@ import { validEffectMessage } from '../../gameplay/effects.js';
 import { validDeployable, validDeployCommand } from '../../gameplay/deployables.js';
 import { GLOBAL_HAZARD_LIMIT, validGlobalHazard, validGlobalHazardCommand } from '../../gameplay/global-hazards.js';
 
+import { MAP_COUNT } from '../../shared/map-count.js';
 // 5: the room snapshot may carry synchronized G1f hazard records.
 // 6: Tornado and Hurricane are placed: ACTIVATE_HAZARD and their records carry x and y.
 // 7: hello carries the Custom rules a new room is created with (VIS-U); the session context carries the room's rules.
-export const SERVER_ROOM_VERSION = 7;
+// 8: map indices run to MAP_COUNT (24) with the VIS-G maps.
+export const SERVER_ROOM_VERSION = 8;
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -115,17 +117,17 @@ export function validSessionContext(c) {
   }
   if (hasTie && c.tie !== null) {
     if (!object(c.tie) || !exact(c.tie, ['options', 'winner'])) return false;
-    if (!Array.isArray(c.tie.options) || c.tie.options.length < 2 || !c.tie.options.every(n => index(n, 22))) return false;
-    if (!index(c.tie.winner, 22) || !c.tie.options.includes(c.tie.winner)) return false;
+    if (!Array.isArray(c.tie.options) || c.tie.options.length < 2 || !c.tie.options.every(n => index(n, MAP_COUNT))) return false;
+    if (!index(c.tie.winner, MAP_COUNT) || !c.tie.options.includes(c.tie.winner)) return false;
   }
-  if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !validRules(c.rules) || c.rules.powerups !== c.powerups || !index(c.mapIndex,22) || !index(c.puttIndex,6) || !count(c.roundNumber)
+  if (!modes.includes(c.mode) || typeof c.powerups !== 'boolean' || !validRules(c.rules) || c.rules.powerups !== c.powerups || !index(c.mapIndex, MAP_COUNT) || !index(c.puttIndex,6) || !count(c.roundNumber)
     || !count(c.roundLimitSeconds) || c.roundLimitSeconds < MIN_TIMEOUT_SECONDS || c.roundLimitSeconds > MAX_TIMEOUT_SECONDS || !time(c.roundStartTime) || !time(c.votingDeadline)
     || !mapOf(c.players,SERVER_ROOM_LIMITS.history,(p,id) => player(p) && p.id === id)
     || !Array.isArray(c.roster) || c.roster.length > MAX_PLAYERS || new Set(c.roster).size !== c.roster.length || !c.roster.every(id => validRoomId(id) && Object.hasOwn(c.players,id))
     || !mapOf(c.votes,MAX_PLAYERS,(v,id) => Object.hasOwn(c.players,id) && STARTER_COURSE_INDICES.includes(v))
-    || !Array.isArray(c.completedMaps) || c.completedMaps.length > MAX_SERIES_MAPS || !c.completedMaps.every(n => index(n,22))
+    || !Array.isArray(c.completedMaps) || c.completedMaps.length > MAX_SERIES_MAPS || !c.completedMaps.every(n => index(n, MAP_COUNT))
     || !mapOf(c.totals,SERVER_ROOM_LIMITS.history,t => exact(t,['name','total','par','wins']) && name(t.name) && count(t.total) && count(t.par) && count(t.wins))) return false;
-  return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex,22) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
+  return c.last === null || (exact(c.last,['mapIndex','scores','pars','winners']) && index(c.last.mapIndex, MAP_COUNT) && mapOf(c.last.scores,MAX_PLAYERS,count) && mapOf(c.last.pars,MAX_PLAYERS,(v,id) => count(v) && Object.hasOwn(c.last.scores,id))
     && Array.isArray(c.last.winners) && c.last.winners.length <= MAX_PLAYERS && new Set(c.last.winners).size === c.last.winners.length && c.last.winners.every(id => validRoomId(id) && Object.hasOwn(c.last.scores,id)));
 }
 const seat = s => exact(s,['playerId','joinOrder','connectedSince','resumeUntil']) && validRoomId(s.playerId) && positive(s.joinOrder)
