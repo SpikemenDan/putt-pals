@@ -199,10 +199,11 @@ let TUNING;
     view.dispose();
   });
 
-  await scenario('scene: every putt of all 22 courses builds the identical scene graph', async () => {
+  await scenario('scene: every putt of the 22 legacy courses builds the identical scene graph', async () => {
     const view = makeView();
     let builds = 0;
-    for (let map = 0; map < definitions.length; map++) {
+    // The legacy tape records only the 22 legacy maps; later maps (22+) have no legacy oracle, so they are not replayed here.
+    for (let map = 0; map < 22; map++) {
       const putts = definitions[map].putts ? definitions[map].putts.length : 1;
       for (let putt = 0; putt < putts; putt++) {
         const expected = await ora('course');

@@ -12,10 +12,10 @@ import { REFERENCE_REGIONS, toGlobe } from './gaia-reference-regions.js';
 const REGION_TEXT = [
   { id: 'polar', name: 'Frostreach', biome: 'Polar and alpine', blurb: 'The roof of the world: snow and bare rock on the great eastern range.', maps: ['Frostbite Falls', 'Glacier Glide', 'Aurora Ridge', 'Summit Drift'] },
   { id: 'temperate', name: 'Evergreen Vale', biome: 'Temperate forest', blurb: 'Deciduous woods, mills and farm country across the north of the west.', maps: ['Maple Hollow', 'Mossy Mill', 'Fernwood Bend', 'Bramble Bridge'] },
-  { id: 'desert', name: 'Sunspire Sands', biome: 'Desert', blurb: 'Dry grass and dunes in the sunbaked heart of the western continent.', maps: ['Dune Crossing', 'Mirage Mesa', 'Oasis Run'] },
+  { id: 'desert', name: 'Sunspire Sands', biome: 'Desert', blurb: 'Dry grass and dunes in the sunbaked heart of the western continent.', maps: ['Dune Crossing', 'Mirage Mesa', 'Oasis Run', 'Sandstorm Spire'] },
   { id: 'tropical', name: 'Palm Reef', biome: 'Tropical', blurb: 'A forested island of lagoons and coral shallows in the central sea.', maps: ['Coral Cove', 'Lagoon Loop', 'Jungle Vines', 'Mango Falls'] },
   { id: 'wetland', name: 'Mirewater', biome: 'Wetlands', blurb: 'A long marsh peninsula of reeds and channels at the far east.', maps: ['Lily Pad Lane', 'Mangrove Maze', 'Foggy Bayou', 'Reed Rapids'] },
-  { id: 'volcanic', name: 'Emberfall Isles', biome: 'Volcanic', blurb: 'A chain of fire-mountain islands in the southern sea.', maps: ['Cinder Steps', 'Magma Run', 'Ashen Caldera'] },
+  { id: 'volcanic', name: 'Emberfall Isles', biome: 'Volcanic', blurb: 'A chain of fire-mountain islands in the southern sea.', maps: ['Cinder Steps', 'Magma Run', 'Ashen Caldera', 'Obsidian Spiral'] },
 ];
 
 /** Regions with their centre (the mean of their sites) as `u`/`lat`, the flat map's caption point as `label` [u, lat], a `reach` [east-west, north-south] in degrees that covers every site, and their maps. */
@@ -29,11 +29,12 @@ export const GAIA_REGIONS = Object.freeze(REGION_TEXT.map(({ maps, ...text }) =>
 
 /**
  * Which real courses sit in which region, by theme: lists of map indices (the course ids used by voting, see src/courses). Each takes the site
- * at the same position in its region's `maps`. All 22 courses appear once.
+ * at the same position in its region's `maps`. All 24 courses appear once: four per region (owner, 2026-11-11), Sandstorm Spire (22) and
+ * Obsidian Spiral (23) being the two maps added for that (VIS-G #165).
  */
 export const REGION_COURSES = Object.freeze({
-  polar: Object.freeze([20, 9, 6, 2]), temperate: Object.freeze([0, 1, 7, 4]), desert: Object.freeze([8, 13, 11]),
-  tropical: Object.freeze([12, 16, 3, 15]), wetland: Object.freeze([21, 5, 10, 14]), volcanic: Object.freeze([18, 19, 17]),
+  polar: Object.freeze([20, 9, 6, 2]), temperate: Object.freeze([0, 1, 7, 4]), desert: Object.freeze([8, 13, 11, 22]),
+  tropical: Object.freeze([12, 16, 3, 15]), wetland: Object.freeze([21, 5, 10, 14]), volcanic: Object.freeze([18, 19, 17, 23]),
 });
 
 /** How far inside region `r` a place is: 1 in the heart, falling to 0 at its edge. */

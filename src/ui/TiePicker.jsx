@@ -9,12 +9,15 @@ import styles from './TiePicker.module.css';
  * @param {{ tie: { options: Array<{ index: number, name: string }>, winner: number, winnerName: string } | null }} props
  */
 export function TiePicker({ tie }) {
-  if (!tie || !tie.options || tie.options.length < 2) return null;
-
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [settled, setSettled] = useState(false);
 
+  const optionCount = tie?.options?.length ?? 0;
+  const winner = tie?.winner;
+  const active = optionCount >= 2;
+
   useEffect(() => {
+    if (!active) return undefined;
     let frame = 0;
     setSettled(false);
     setHighlightIndex(0);
@@ -24,11 +27,13 @@ export function TiePicker({ tie }) {
         clearInterval(interval);
         setSettled(true);
       } else {
-        setHighlightIndex(prev => (prev + 1) % tie.options.length);
+        setHighlightIndex(prev => (prev + 1) % optionCount);
       }
     }, 120);
     return () => clearInterval(interval);
-  }, [tie.winner, tie.options.length]);
+  }, [active, winner, optionCount]);
+
+  if (!active) return null;
 
   return (
     <div className={styles.tiePicker} data-ui="tie-picker">

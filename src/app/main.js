@@ -18,9 +18,11 @@ if (tuner) {
   window.__ppTuner = tuner;
   if (new URLSearchParams(window.location.search).has('map')) setTimeout(() => { // ?map: straight to the level select, through the real solo flow
     const press = text => [...document.querySelectorAll('button')].find(b => b.textContent === text)?.click();
-    document.querySelector('[data-menu=solo]')?.click();
-    setTimeout(() => press('Play solo'), 50);
-    const poll = setInterval(() => { if (document.querySelector('[data-ui=map-select]')?.offsetParent !== undefined && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start Game')) { press('Start Game'); clearInterval(poll); } }, 200);
+    const step = (k, fn) => setTimeout(fn, 60 * k); // Solo steps (VIS-M4): Casual, Gaia, Play solo
+    step(0, () => document.querySelector('[data-menu=solo]')?.click());
+    step(1, () => [...document.querySelectorAll('[data-ui=solo-steps] button')].find(b => b.textContent.startsWith('Casual'))?.click());
+    step(2, () => document.querySelector('[data-ui=solo-steps] [data-world=gaia]')?.click());
+    step(3, () => press('Play solo')); // the Solo steps open the level select directly, with no lobby
   }, 300);
   if (new URLSearchParams(window.location.search).has('art')) import('../devtools/map-art.js').then(({ mountMapArt }) => mountMapArt(document)).catch(error => console.error('Dev tool failed to load (?art)', error)); // ?art: the flat master map on its own
   if (new URLSearchParams(window.location.search).has('gallery')) import('../devtools/planet-gallery.js').then(({ mountPlanetGallery }) => mountPlanetGallery(document)).catch(error => console.error('Dev tool failed to load (?gallery)', error)); // ?gallery: live close-ups of the loading-screen city, ship and plane

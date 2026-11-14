@@ -6,9 +6,8 @@ const { pickMap } = require('./support/maps.cjs');
 test('solo: a full six-putt map renders in WebGL and scores six holes in one', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
   await ana.solo();
-  await expect(ana.ui('room-lobby').locator('p').first()).toHaveText('Solo practice');
+  await expect(ana.ui('room-lobby')).toBeHidden();
   await expect(ana.button('Copy invite')).toBeHidden();
-  await ana.button('Start Game').click();
   await expect(ana.ui('map-select')).toBeVisible();
   await pickMap(ana.page);
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });

@@ -29,7 +29,6 @@ test('webgl unavailable: start screen, a text-only hint and a solo game without 
   expect(await notice.locator('*').count(), 'the notice is plain text').toBe(0);
 
   await ana.solo();
-  await ana.button('Start Game').click();
   await pickMap(ana.page);
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });
   await expect(ana.ui('hud-info')).toContainText('Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0');

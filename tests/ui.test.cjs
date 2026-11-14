@@ -51,7 +51,7 @@ function fakeClock() {
   const click = async el => { assert.ok(el, 'element to click'); await act(async () => { el.click(); }); };
 
   /** Mounts the UI with a host L1 session; session events from the UI are bound to the local player. */
-  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null, mountProps = {} } = {}) {
+  async function setup({ localId = 'host', hostName = 'Ana', isHost = true, roomCode = 'abcd', createAtlasScene = null, mountProps = {}, inRoom = true } = {}) {
     const clock = fakeClock();
     const store = ui.createUiStore({ courses, clock });
     let listeners = 0;
@@ -66,7 +66,8 @@ function fakeClock() {
     doc.body.appendChild(root);
     let unmount;
     await act(async () => { unmount = ui.mountUi(root, { store, dispatch, initialName: hostName, initialRoomCode: roomCode, createAtlasScene, ...mountProps }); });
-    await act(async () => { store.setLocal({ active: true, id: localId, isHost, roomCode, mode: 'lobby' }); store.setRoom(session.getSnapshot(), clock.now()); });
+    // `inRoom: false` leaves the player on the menu, as on a fresh page load (no room opened yet).
+    if (inRoom) await act(async () => { store.setLocal({ active: true, id: localId, isHost, roomCode, mode: 'lobby' }); store.setRoom(session.getSnapshot(), clock.now()); });
     const step = async ms => { await act(async () => { clock.advance(ms); store.tick(clock.now()); }); };
     const send = async event => { let r; await act(async () => { r = session.send(event); }); return r; };
     const within = sel => root.querySelector(sel);
@@ -183,20 +184,139 @@ function fakeClock() {
     await act(async () => { await new Promise(r => setTimeout(r, 5)); });
     assert.equal(doc.activeElement?.dataset.menu, 'custom', 'focus returns to the button that opened it');
     await click(landing.querySelector('[data-menu=solo]'));
-    assert.ok(button('Play solo'), 'Solo keeps the solo flow');
+    assert.equal($('[data-ui=solo-steps]').dataset.step, 'mode', 'Solo opens on its first step');
+    assert.ok(!button('Play solo'), 'Play solo waits for the last step');
     assert.ok(!button('Join room'), 'and not the party one');
     await t.teardown();
-    const invited = await setup({ mountProps: { initialView: 'party' } });
+    const invited = await setup({ mountProps: { initialView: 'party' }, inRoom: false });
     await act(async () => invited.store.setLocal({ active: false, connecting: false }));
     assert.equal(invited.within('[data-ui=landing]').dataset.view, 'party', 'an invite link opens on Party');
     assert.ok(button('Join room'));
     await invited.teardown();
   });
 
+  await scenario('solo steps (VIS-M4): mode, world, ready; Back steps back; chosen mode reaches play-solo', async () => {
+    const views = [];
+    const createLoadingScene = () => ({ start() {}, dispose() {}, setView: v => views.push({ space: v.space, target: v.target }) });
+    const t = await setup({ mountProps: { createLoadingScene } });
+    await act(async () => t.store.setLocal({ active: false, connecting: false }));
+    await act(async () => { await new Promise(r => setTimeout(r, 20)); }); // the scene attaches after the first paint
+    const landing = t.within('[data-ui=landing]');
+    const steps = () => $('[data-ui=solo-steps]');
+    const step = () => steps().dataset.step;
+    const inSteps = label => [...steps().querySelectorAll('button')].find(b => (b.getAttribute('aria-label') ?? b.textContent).startsWith(label));
+    const labels = () => [...steps().querySelectorAll('button:not([data-ui=menu-back])')].map(b => b.getAttribute('aria-label') || b.querySelector('span')?.textContent || b.textContent);
+    const first = () => steps().querySelector('button:not(:disabled), input');
+
+    await click(landing.querySelector('[data-menu=solo]'));
+    assert.equal(step(), 'mode');
+    assert.deepEqual(labels(), ['Casual', 'Tournament', 'Practice'], 'Casual, Tournament and the smaller Practice button');
+    assert.ok(inSteps('Practice').className !== inSteps('Casual').className, 'Practice is styled smaller than the main options');
+    assert.equal(doc.activeElement, first(), 'focus starts on the first button');
+    assert.ok(!button('Play solo'), 'no name or Play yet');
+
+    // Tournament lengths
+    await click(inSteps('Tournament'));
+    assert.equal(step(), 'mode:tournament');
+    assert.deepEqual([...steps().querySelectorAll('button[aria-label$=" maps"]')].map(b => b.getAttribute('aria-label')), ['3 maps', '5 maps', '7 maps']);
+    assert.equal(doc.activeElement, first());
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(step(), 'mode', 'Back from the lengths returns to the first step');
+    assert.deepEqual(labels(), ['Casual', 'Tournament', 'Practice']);
+
+    // Practice kinds
+    await click(inSteps('Practice'));
+    assert.equal(step(), 'mode:practice');
+    assert.deepEqual(labels(), ['Whole map', 'One putt', 'Putt Pong'], 'Pong practice lives under Solo > Practice (owner, 2026-11-11)');
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(step(), 'mode');
+
+    // World step: a carousel of planets; Ares and Luna cannot be chosen yet
+    await click(inSteps('Tournament'));
+    await click(inSteps('5 maps'));
+    assert.equal(step(), 'world');
+    assert.deepEqual(views.at(-1), { space: true, target: 'gaia' }, 'the stage flies to space, focused on Gaia');
+    const choose = () => steps().querySelector('[data-ui=world-choose]');
+    const carousel = () => landing.querySelector('[data-ui=world-carousel]');
+    const key = async k => act(async () => { doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: k, bubbles: true })); });
+    assert.equal(carousel().dataset.world, 'gaia');
+    assert.equal(choose().dataset.world, 'gaia');
+    assert.equal(choose().textContent, 'Choose Gaia');
+    assert.equal(choose().disabled, false);
+    assert.equal(doc.activeElement, choose(), 'focus lands on the choose button');
+    const arrow = id => landing.querySelector(`[data-ui=world-${id}]`);
+    const seen = [];
+    for (let k = 0; k < 3; k++) { await click(arrow('left')); seen.push(carousel().dataset.world); }
+    assert.deepEqual(seen, ['luna', 'ares', 'gaia'], 'left cycles gaia, luna, ares, gaia');
+    seen.length = 0;
+    for (let k = 0; k < 3; k++) { await click(arrow('right')); seen.push(carousel().dataset.world); }
+    assert.deepEqual(seen, ['ares', 'luna', 'gaia'], 'right goes the other way');
+    await click(arrow('left'));
+    assert.equal(choose().dataset.world, 'luna');
+    assert.equal(choose().textContent, 'Luna: coming soon');
+    assert.equal(choose().disabled, true, 'Luna cannot be chosen');
+    assert.deepEqual(views.at(-1), { space: true, target: 'luna' }, 'the stage follows the focused planet');
+    await click(choose());
+    assert.equal(step(), 'world', 'a disabled planet does not advance');
+    await click(arrow('left'));
+    assert.equal(choose().textContent, 'Ares: coming soon');
+    assert.equal(choose().disabled, true);
+    assert.deepEqual(views.at(-1), { space: true, target: 'ares' });
+    await act(async () => { choose().focus(); });
+    await key('ArrowRight');
+    assert.equal(carousel().dataset.world, 'luna', 'ArrowRight turns right');
+    await key('ArrowLeft'); await key('ArrowLeft');
+    assert.equal(carousel().dataset.world, 'gaia', 'ArrowLeft turns left');
+    assert.equal(choose().textContent, 'Choose Gaia');
+
+    // Ready step: summary, name, colour, Play solo
+    await click(choose());
+    assert.equal(step(), 'ready');
+    assert.deepEqual(views.at(-1), { space: true, target: 'gaia' }, 'the ready step stays in space');
+    assert.equal($('[data-ui=solo-summary]').textContent, 'Tournament · 5 maps on Gaia');
+    assert.equal(doc.activeElement, first(), 'focus lands on the first field');
+    assert.ok(button('Play solo'));
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(step(), 'world', 'Back from ready returns to the world');
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(step(), 'mode', 'and then to the mode');
+    assert.equal(doc.activeElement, first());
+
+    // Casual summary, then each mode reaches the command
+    const expected = [
+      [['Casual'], 'standard', 'Casual · 1 map on Gaia'],
+      [['Tournament', '3 maps'], 'tournament_3', 'Tournament · 3 maps on Gaia'],
+      [['Tournament', '5 maps'], 'tournament_5', 'Tournament · 5 maps on Gaia'],
+      [['Tournament', '7 maps'], 'tournament_7', 'Tournament · 7 maps on Gaia'],
+      [['Practice', 'Whole map'], 'practice', 'Practice · whole map on Gaia'],
+      [['Practice', 'One putt'], 'putt_practice', 'Practice · one putt on Gaia'],
+      [['Practice', 'Putt Pong'], 'pong', 'Practice · Putt Pong on Gaia'],
+    ];
+    for (const [path, mode, summary] of expected) {
+      for (const label of path) await click(inSteps(label));
+      await click(choose());
+      assert.equal($('[data-ui=solo-summary]').textContent, summary);
+      const typed = steps().querySelector('input').value;
+      t.commands.length = 0;
+      await click(button('Play solo'));
+      assert.deepEqual(t.commands, [{ type: 'play-solo', name: typed, mode, world: 'gaia' }], mode);
+      for (let i = 0; i < 2; i++) await click(steps().querySelector('[data-ui=menu-back]'));
+      assert.equal(step(), 'mode');
+    }
+
+    // Back from the first step leaves Solo
+    assert.deepEqual(views.at(-1), { space: false, target: 'gaia' }, 'the first step brings the horizon back');
+    await click(steps().querySelector('[data-ui=menu-back]'));
+    assert.equal(landing.dataset.view, 'home');
+    assert.equal($('[data-ui=solo-steps]'), null);
+    assert.deepEqual(views.at(-1), { space: false, target: 'gaia' }, 'leaving Solo keeps the horizon');
+    await t.teardown();
+  });
+
   await scenario('custom rules (VIS-U): values shown, per-rule and full reset, draft remembered, Play solo and Host party carry the rules', async () => {
     const { DEFAULT_RULES } = await import('../src/shared/rules.js');
     dom.window.localStorage.removeItem('puttplanet.customRules');
-    const t = await setup({ mountProps: { initialView: 'custom' } });
+    const t = await setup({ mountProps: { initialView: 'custom' }, inRoom: false });
     await act(async () => t.store.setLocal({ active: false, connecting: false }));
     const landing = t.within('[data-ui=landing]');
     const editor = landing.querySelector('[data-ui=custom-rules]');
@@ -265,7 +385,7 @@ function fakeClock() {
     await click(t.within('[data-ui=party-custom-rules] button'));
     assert.equal(landing.querySelector('[data-ui=party-custom-rules]'), null, 'Use standard drops them');
     await t.teardown();
-    const again = await setup({ mountProps: { initialView: 'custom' } });
+    const again = await setup({ mountProps: { initialView: 'custom' }, inRoom: false });
     await act(async () => again.store.setLocal({ active: false, connecting: false }));
     const editor2 = again.within('[data-ui=custom-rules]');
     assert.equal(editor2.querySelector('[data-rule=lunaGravity] output').textContent, '60%', 'the draft comes back next time');
@@ -274,7 +394,7 @@ function fakeClock() {
     assert.deepEqual(JSON.parse(dom.window.localStorage.getItem('puttplanet.customRules')), { ...DEFAULT_RULES });
     dom.window.localStorage.setItem('puttplanet.customRules', '{"shotPower":9999,"evil":true}');
     await again.teardown();
-    const tampered = await setup({ mountProps: { initialView: 'custom' } });
+    const tampered = await setup({ mountProps: { initialView: 'custom' }, inRoom: false });
     await act(async () => tampered.store.setLocal({ active: false, connecting: false }));
     assert.equal(tampered.within('[data-ui=custom-rules] [data-ui=rules-changed]').textContent, 'Standard rules', 'a tampered draft is ignored');
     await tampered.teardown();
@@ -329,7 +449,7 @@ function fakeClock() {
 
   await scenario('level select: world, region, course and back, with the real vote', async () => {
     const data = await import('../src/render/planet-data.js'), { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
-    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 22 }, (_, i) => i), 'all 22 course ids appear once');
+    assert.deepEqual(Object.values(REGION_COURSES).flat().sort((a, b) => a - b), Array.from({ length: 24 }, (_, i) => i), 'all 24 course ids appear once');
     const foot = data.gaiaRegions();
     for (const r of GAIA_REGIONS) {
       assert.ok(foot.byId[r.id].area > 40, `${r.name} has terrain`);
@@ -445,8 +565,8 @@ function fakeClock() {
     const { GAIA_REGIONS, REGION_COURSES } = await import('../src/shared/gaia-map.js');
     assert.equal(GAIA_REGIONS.length, 6);
     assert.ok(GAIA_REGIONS.every(r => r.maps.length === REGION_COURSES[r.id].length), 'one site per course in every region');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 22, 'every site has its own name');
-    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 22, 'every site has its own id');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.name))).size, 24, 'every site has its own name');
+    assert.equal(new Set(GAIA_REGIONS.flatMap(r => r.maps.map(m => m.id))).size, 24, 'every site has its own id');
     const gaia = scene.gaiaPlanet();
     assert.equal(gaia, scene.gaiaPlanet(), 'Gaia is built once and kept');
     // The globe's land is the reference coast: the shoreline of the field runs along it, lakes included.
@@ -577,7 +697,7 @@ function fakeClock() {
     assert.ok(Math.min(...alt('planes')) > PLANET_RADIUS + 23 && Math.min(...alt('satellites')) > PLANET_RADIUS + 40, 'each has its own layer, above the clouds');
     full.scene.dispose();
     assert.ok(a.frames() > 400, 'each step draws');
-    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 22, 'the living world is in the scene');
+    assert.ok(a.scene.stats.places.ports === planet.ports.length && a.scene.stats.places.turbines > 3 && a.scene.stats.places.balloons > 3 && a.scene.stats.places.volcanoes >= 2 && a.scene.stats.places.flags === 24, 'the living world is in the scene');
     // The size audit, measured from the real models: a sensible order from trees up.
     const sz = a.scene.sizes;
     assert.ok(sz.tree < sz.house * 1.3 && sz.house < sz.mill && sz.mill < sz.lighthouse + 1 && sz.lighthouse < sz.city && sz.city <= sz.peak, `trees < houses < mills < lighthouses < cities <= mountains (${JSON.stringify(sz)})`);
@@ -696,10 +816,12 @@ function fakeClock() {
     await click(join);
     await click(landing.querySelector('[data-ui=menu-back]'));
     await click(landing.querySelector('[data-menu=solo]'));
+    await click([...landing.querySelectorAll('button')].find(b => b.textContent.startsWith('Casual')));
+    await click(landing.querySelector('[data-ui=world-choose]'));
     assert.equal(landing.querySelector('input').value, '  Zed  ', 'the name carries from Party to Solo');
     const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     await click(solo);
-    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', rules: null }, { type: 'play-solo', name: '  Zed  ' }], 'Party from the home menu creates rooms with standard rules');
+    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', rules: null }, { type: 'play-solo', name: '  Zed  ', mode: 'standard', world: 'gaia' }], 'Party from the home menu creates rooms with standard rules');
     await act(async () => t.store.setLocal({ connecting: true }));
     assert.equal(solo.disabled, true);
     assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
@@ -805,7 +927,7 @@ function fakeClock() {
     const status = () => t.within('[data-ui=map-select] p').textContent;
     assert.equal(status(), 'Map 1/3 · Vote for a map. The first vote starts a 15s countdown.');
     const cards = [...t.within('[data-ui=map-select]').querySelectorAll('button[data-v]')];
-    assert.deepEqual(cards.map(c => c.querySelector('strong').textContent), ['01 · Switchback Garden', '02 · Dune Serpent', '03 · Frost Hollow', '04 · Slime Springs', '05 · Cyclone Ring', '06 · Grand Finale']);
+    assert.deepEqual(cards.map(c => c.querySelector('strong').textContent), ['01 · Switchback Garden', '02 · Dune Serpent', '03 · Frost Hollow', '04 · Slime Springs', '05 · Cyclone Ring', '06 · Grand Finale', '07 · Sandstorm Spire', '08 · Obsidian Spiral']);
     assert.equal(cards[1].querySelectorAll('svg rect').length > 0, true, 'course preview drawn as SVG');
     await click(cards[1]);
     assert.equal(cards[1].dataset.v, '1'); assert.equal(cards[1].getAttribute('aria-pressed'), 'true');
@@ -899,6 +1021,35 @@ function fakeClock() {
     await click(t.within('[data-ui=results] button'));
     assert.equal(t.session.getSnapshot().phase, 'lobby');
     assert.ok(shown(t.within('[data-ui=room-lobby]')));
+    await t.teardown();
+  });
+
+  await scenario('level select planet switcher: left/right order, an empty message on Luna and Ares, and Gaia restores the cards', async () => {
+    const t = await setup({ roomCode: '' });
+    await t.send({ type: 'SET_MODE', playerId: 'host', mode: 'practice' });
+    await t.send({ type: 'START_VOTING', playerId: 'host' });
+    const select = () => t.within('[data-ui=map-select]');
+    const sw = () => select().querySelector('[data-ui=planet-switcher]');
+    const cards = () => select().querySelectorAll('button[data-v]').length;
+    assert.equal(sw().dataset.world, 'gaia', 'starts on Gaia');
+    const gaiaCards = cards();
+    assert.ok(gaiaCards > 0 && !select().querySelector('[data-ui=planet-empty]'));
+    const seen = [];
+    for (const id of ['left', 'left', 'left']) { await click(sw().querySelector(`[data-ui=planet-${id}]`)); seen.push(sw().dataset.world); }
+    assert.deepEqual(seen, ['luna', 'ares', 'gaia'], 'left cycles gaia, luna, ares, gaia');
+    seen.length = 0;
+    for (const id of ['right', 'right', 'right']) { await click(sw().querySelector(`[data-ui=planet-${id}]`)); seen.push(sw().dataset.world); }
+    assert.deepEqual(seen, ['ares', 'luna', 'gaia'], 'right goes the other way');
+    for (const [dir, id] of [['left', 'luna'], ['left', 'ares']]) {
+      await click(sw().querySelector(`[data-ui=planet-${dir}]`));
+      assert.equal(sw().dataset.world, id);
+      assert.equal(cards(), 0, id + ' has no course cards');
+      assert.match(select().querySelector('[data-ui=planet-empty]').textContent, /No courses on/, id + ' says so');
+    }
+    await click(sw().querySelector('[data-ui=planet-left]'));
+    assert.equal(sw().dataset.world, 'gaia');
+    assert.equal(cards(), gaiaCards, 'back on Gaia the cards return');
+    assert.equal(select().querySelector('[data-ui=planet-empty]'), null);
     await t.teardown();
   });
 

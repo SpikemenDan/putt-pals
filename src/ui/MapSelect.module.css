@@ -18,3 +18,10 @@
 /* Over the atlas only the header's controls take clicks; its text lets them through to the map below. */
 .bar{pointer-events:none}
 .bar button,.bar select,.bar input{pointer-events:auto}
+
+/* Planet switcher (VIS-M4 mix and match): arrows either side of the planet's name, the same order as the Solo destination view. */
+.planets{display:flex;align-items:center;gap:10px;margin:8px 0 0;pointer-events:auto}
+.planets b{min-width:90px;text-align:center;font:400 24px/1 var(--font);letter-spacing:2px;text-transform:uppercase}
+.planets small{color:var(--mut);font-weight:700}
+.planets button{margin:0;padding:2px 14px;font-size:22px;line-height:1.2}
+.empty{margin:16px 0;padding:14px;border:3px dashed var(--ink);border-radius:12px;font-weight:700;color:var(--mut)}

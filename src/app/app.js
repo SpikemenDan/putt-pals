@@ -28,6 +28,9 @@ import { openRoom } from './room.js';
 import { frameSounds, PRESENCE_INTERVAL_MS, TICK_MS } from './rules.js';
 
 
+
+/** Modes the Solo steps may start directly (VIS-M4 #176). Putt Pong here is solo practice (owner, 2026-11-11: Pong practice under Solo > Practice). */
+const SOLO_START_MODES = Object.freeze([GameModes.STANDARD, GameModes.TOURNAMENT_3, GameModes.TOURNAMENT_5, GameModes.TOURNAMENT_7, GameModes.PRACTICE, GameModes.PUTT_PRACTICE, GameModes.PONG]);
 const PRESENCE_MODES = { play: 'play', sunk: 'sunk', wait: 'sunk', spectator: 'spectator' };
 /** Per-tab room identity for each code, so a reload can resume the same seat. */
 const RESUME_KEY = code => 'putt-pals:server-resume:' + code;
@@ -86,7 +89,8 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   };
 
   // ---------------------------------------------------------------- rooms
-  async function join({ multi, name, roomCode, rules = null }) {
+  /** `start`: a solo mode from the Solo steps (VIS-M4); the room opens straight onto the level select in that mode. */
+  async function join({ multi, name, roomCode, start = null, rules = null }) {
     const request = parseJoinRequest({ multi, name, roomCode });
     if (!request.ok) { alert(request.message); return; }
     // Custom rules (VIS-U) from the menu are validated here, at the UI boundary; null plays standard rules.
@@ -109,6 +113,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       setLocal({ active: true, connecting: false, connected: true, id: room.localId, isHost: room.isHost, serverOwned: !!room.serverOwned, roomCode: room.roomCode, mode: 'lobby', strokes: 0, inventory: [], name: request.name });
       roomStops.push(room.onSnapshot(onSnapshot), room.onPresence(onPresence), room.onStatus(onStatus));
       if (room.isHost) publish(true);
+      if (start && !multi) { room.command({ type: 'SET_MODE', mode: start }); room.command({ type: 'START_VOTING' }); }
     } catch (error) {
       if (disposed || controller.signal.aborted || generation !== joinGeneration) return;
       joining = null;
@@ -220,7 +225,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       definition, rule: data.rules[s.mapIndex].putts[s.puttIndex], puttIndex: s.puttIndex, id: room.localId, name: s.players[room.localId]?.name || 'Player',
       playing, timed: s.mode !== GameModes.PUTT_PRACTICE, roundStartTime: s.roundStartTime, limitSeconds: s.roundLimitSeconds, roomNow: () => room.now(), random, now: () => win.performance.now(),
       inventory: reloadRecovery ? [] : startingInventory(puttPolicy, carriedInventory), powerups: puttPolicy,
-      gravity: previewGravity ?? worldGravity(undefined, ruleTuning), shotPower: ruleTuning.shotPower,
+      gravity: previewGravity ?? worldGravity(courseWorld(definition), ruleTuning), shotPower: ruleTuning.shotPower, // each map's planet sets its gravity (VIS-M4), scaled by the room's Custom rules (VIS-U)
     });
     if (room.serverOwned) {
       putt.player.strokes = ownState?.strokes ?? 0;
@@ -471,7 +476,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   function handle(command) {
     switch (command.type) {
       case UiCommands.JOIN: join({ multi: true, name: command.name, roomCode: command.roomCode, iceText: command.iceText, rules: command.rules ?? null }); break;
-      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, rules: command.rules ?? null }); break;
+      case UiCommands.PLAY_SOLO: join({ multi: false, name: command.name, start: SOLO_START_MODES.includes(command.mode) ? command.mode : null, rules: command.rules ?? null }); break;
       case UiCommands.LEAVE: leave(true); break;
       case UiCommands.SESSION: room?.command(command.event); break;
       case UiCommands.SHOT:

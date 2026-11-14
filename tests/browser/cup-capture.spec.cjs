@@ -13,9 +13,7 @@ test("cup: a grazing shot misses, while a centred shot still sinks", async ({
   page,
 }, testInfo) => {
   const ana = await openApp(page, "Cup tester");
-  await ana.solo();
-  await ana.ui("room-lobby").locator("select").selectOption("putt_practice");
-  await ana.button("Start Game").click();
+  await ana.solo('putt_practice');
   await pickMap(ana.page);
   await ana.button("Putt 1 · Par 2").click();
   await until(() => ana.ready(), { label: "ready for cup regression" });

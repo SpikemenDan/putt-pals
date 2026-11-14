@@ -3,6 +3,7 @@ import { BALL_SKINS, CELEBRATIONS, TRAIL_SKINS } from '../cosmetics/catalog.js';
 import { UiCommands } from './commands.js';
 import { useCommands, useUiContext, useView } from './context.js';
 import { ColorPicker } from './ColorPicker.jsx';
+import { SoloSteps } from './SoloSteps.jsx';
 import { CustomRules } from './CustomRules.jsx';
 import { changedRules, rulesFromPartial } from '../shared/rules.js';
 import app from './App.module.css';
@@ -63,6 +64,11 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
   const root = useRef(null);
   const homeButtons = useRef({});
   useMenuLook(root, display, hidden);
+  const wasShown = useRef(!hidden);
+  useEffect(() => { // once a room opens (the menu goes from shown to hidden), coming back starts from the main buttons
+    if (hidden && wasShown.current) setView('home');
+    wasShown.current = !hidden;
+  }, [hidden]);
 
   const open = next => { if (next === 'party') setHostRules(null); setView(next); };
   const back = () => {
@@ -95,13 +101,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
         </nav>
       ) : (
         <section className={menu.panel} data-menu-view={view} aria-label={view[0].toUpperCase() + view.slice(1)} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); back(); } }}>
-          {view === 'solo' && <>
-            <h2 className={menu.heading}>Solo</h2>
-            {nameField}
-            {colorField}
-            <button type="button" className={menu.go} disabled={connecting} onClick={() => send(UiCommands.PLAY_SOLO, { name })}>Play solo</button>
-            <p className={app.small}>Casual, tournaments and practice all start from the solo lobby for now.</p>
-          </>}
+          {view === 'solo' && <SoloSteps name={name} onName={setName} colorField={colorField} connecting={connecting} send={send} onExit={back} overlay={root.current} />}
           {view === 'party' && <>
             <h2 className={menu.heading}>Party</h2>
             {nameField}
@@ -135,7 +135,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
             </details>
           </>}
           <p className={app.status} role="status" data-ui="connect-error" hidden={!error}>{error}</p>
-          {backButton}
+          {view !== 'solo' && backButton}
         </section>
       )}
       {view === 'home' && <p className={app.status} role="status" data-ui="connect-error" hidden={!error}>{error}</p>}

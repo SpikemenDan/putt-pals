@@ -6,7 +6,6 @@ const { pickMap } = require('./support/maps.cjs');
 test('input: a real drag through the canvas shoots through the input adapter and counts the stroke', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
   await ana.solo();
-  await ana.button('Start Game').click();
   await pickMap(ana.page);
   await expect(ana.ui('game')).toBeVisible({ timeout: 20_000 });
   await until(() => ana.ready(), { label: 'ready' });

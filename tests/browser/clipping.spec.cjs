@@ -12,9 +12,7 @@ const VIEWS = ['default', 'hole', 'world', 'close'];
 test('clipping: every map renders non-blank from every camera view without page errors @slow', async ({ page }, testInfo) => {
   test.setTimeout(1_800_000);
   const ana = await openApp(page, 'Ana');
-  await ana.solo();
-  await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
-  await ana.button('Start Game').click();
+  await ana.solo('putt_practice');
   await expect(ana.ui('map-select')).toBeVisible();
   const maps = await mapCount(ana.page);
   expect(maps, 'map picker lists the courses').toBeGreaterThan(0);

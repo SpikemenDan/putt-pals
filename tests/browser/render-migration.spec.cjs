@@ -15,7 +15,6 @@ test('WebGL1-only desktop: explains unavailable 3D and keeps solo controls usabl
   expect(await page.evaluate(() => !!document.createElement('canvas').getContext('webgl')), 'WebGL1 remains available').toBe(true);
   await expect(player.ui('webgl-notice')).toBeVisible();
   await player.solo();
-  await player.button('Start Game').click();
   await pickMap(player.page);
   await expect(player.ui('game')).toBeVisible({ timeout: 20_000 });
   expect(await page.evaluate(() => window.__ppApp.renderer)).toBeNull();

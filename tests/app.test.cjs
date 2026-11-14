@@ -65,7 +65,19 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
           if (view && view !== 'home') await c.click(doc.querySelector('[data-ui=menu-back]'));
           await c.click(doc.querySelector(`[data-menu=${id}]`));
         },
-        async solo() { await c.menu('solo'); await c.fill(doc.querySelector('[data-ui=landing] input'), name); await c.click('Play solo'); await until(() => c.shown('[data-ui=room-lobby]'), 2000, name + ' lobby'); },
+        /** Solo steps (VIS-M4): pick the mode and Gaia, name, Play solo; lands on the map select with no lobby. */
+        async solo(mode = 'standard') {
+          await c.menu('solo');
+          const [kind, sub] = { standard: ['Casual'], tournament_3: ['Tournament', '3 maps'], tournament_5: ['Tournament', '5 maps'], tournament_7: ['Tournament', '7 maps'], practice: ['Practice', 'Whole map'], putt_practice: ['Practice', 'One putt'] }[mode];
+          const step = () => doc.querySelector('[data-ui=solo-steps]')?.dataset.step;
+          while (step() && step() !== 'mode') await c.click(doc.querySelector('[data-ui=menu-back]'));
+          await c.click([...doc.querySelectorAll('[data-ui=solo-steps] button')].find(b => b.textContent.startsWith(kind) && shown(b)));
+          if (sub) await c.click([...doc.querySelectorAll('[data-ui=solo-steps] button')].find(b => (b.getAttribute('aria-label') ?? b.textContent).startsWith(sub) && shown(b)));
+          await c.click(doc.querySelector('[data-ui=solo-steps] [data-ui=world-choose]'));
+          await c.fill(doc.querySelector('[data-ui=landing] input'), name);
+          await c.click('Play solo');
+          await until(() => c.shown('[data-ui=map-select]'), 2000, name + ' map select');
+        },
         async join(code) {
           await c.menu('party');
           const [n, r] = doc.querySelectorAll('[data-ui=landing] input');
@@ -128,9 +140,24 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.ok(!ana.shown('[data-ui=game]'), 'the game screen stays hidden');
     assert.equal(ana.app.putt, null, 'no putt or input is involved');
     await ana.solo();
-    assert.ok(ana.shown('[data-ui=room-lobby]') && !ana.shown('[data-ui=landing]'), 'the menu is gone');
+    assert.ok(ana.shown('[data-ui=map-select]') && !ana.shown('[data-ui=landing]'), 'the menu is gone');
     while (ana.$('[data-ui=loading]')) await act(async () => { await new Promise(r => setTimeout(r, 50)); });
     assert.equal(ana.$('[data-ui=planet-stage]'), null, 'and the planet with it, once loading has closed');
+  });
+
+  await scenario('solo steps (VIS-M4): Play solo with Tournament 3 opens a tournament_3 room straight onto the map select, never the lobby', async () => {
+    const W = world();
+    const ana = await W.client('Ana');
+    let lobbySeen = false;
+    const watch = new ana.win.w.MutationObserver(() => { if (ana.shown('[data-ui=room-lobby]')) lobbySeen = true; });
+    watch.observe(ana.doc.body, { childList: true, subtree: true, attributes: true });
+    await ana.solo('tournament_3');
+    watch.disconnect();
+    assert.ok(ana.shown('[data-ui=map-select]'), 'on the map select');
+    assert.ok(!ana.shown('[data-ui=room-lobby]') && !lobbySeen, 'the lobby never showed');
+    assert.equal(ana.snapshot.mode, 'tournament_3');
+    assert.equal(ana.snapshot.phase, 'select');
+    await ana.dispose();
   });
 
   await scenario('feedback cues: a resting ball pulses the ring cue; disabled buttons and sinks stay silent', async () => {
@@ -175,9 +202,8 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const ana = await W.client('Ana');
     assert.ok(ana.shown('[data-ui=landing]'));
     await ana.solo();
-    assert.equal(ana.text('[data-ui=room-lobby] p'), 'Solo practice');
+    assert.ok(!ana.shown('[data-ui=room-lobby]'), 'solo skips the lobby');
     assert.equal(ana.button('Copy invite'), undefined, 'no invite in solo');
-    await ana.click('Start Game');
     assert.ok(ana.shown('[data-ui=map-select]'));
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await W.run(100);
@@ -228,7 +254,6 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     const W = world();
     const ana = await W.client('Ana');
     await ana.solo();
-    await ana.click('Start Game');
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await W.until(() => ana.ready(), 10000, 'ready');
     await W.run(500);
@@ -255,9 +280,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   await scenario('practice: a timeout scores par + penalty, the rest of the map finishes, results offer another map', async () => {
     const W = world();
     const ana = await W.client('Ana');
-    await ana.solo();
-    await ana.select('practice');
-    await ana.click('Start Game');
+    await ana.solo('practice');
     assert.equal(ana.text('[data-ui=map-select] p'), 'Practice · pick any map to start. No voting, no opponents.');
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await W.until(() => ana.ready(), 10000, 'ready');
@@ -285,9 +308,7 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
   await scenario('putt practice: the picker starts a putt, completion replays it, the bar steps putts and returns to maps', async () => {
     const W = world();
     const ana = await W.client('Ana');
-    await ana.solo();
-    await ana.select('putt_practice');
-    await ana.click('Start Game');
+    await ana.solo('putt_practice');
     await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
     await ana.click('Putt 3 · Par 2');
     await W.until(() => ana.ready() && ana.putt.puttIndex === 2, 10000, 'putt 3');
@@ -464,7 +485,6 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(W.scheduler.frameCount(), 1, 'one animation loop');
     for (let i = 0; i < 10; i++) {
       await ana.solo();
-      await ana.click('Start Game');
       await ana.click(ana.$('[data-ui=map-select] button[data-v]'));
       await W.until(() => ana.ready(), 10000, 'ready');
       const shot = best(0, 0);
@@ -531,7 +551,11 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
       c: o.children.map(describe),
     });
     let builds = 0;
-    for (let map = 0; map < definitions.length; map++) {
+    // The r128 recording exists only for the 22 legacy maps; maps added after them (22+) have no legacy page to record.
+    const legacyMaps = Object.keys(recorded.sha256ByMap).length;
+    assert.equal(legacyMaps, 22);
+    assert.ok(definitions.length >= legacyMaps);
+    for (let map = 0; map < legacyMaps; map++) {
       const scenes = [THREE].map(T => {
         // V1a #58: the legacy style, as on r128; the toon layout is compared with it in render-modern.test.cjs.
         const library = createMaterialLibrary({ THREE: T, createCanvas: canvas, random: () => 0.5, style: 'legacy' });
@@ -559,7 +583,6 @@ async function scenario(name, fn) { await fn(); passed++; console.log('PASS ' + 
     assert.equal(c.app.view, null);
     assert.equal(c.app.input, null);
     await c.solo();
-    await c.click('Start Game');
     await c.click(c.$('[data-ui=map-select] button[data-v]'));
     await w.until(() => c.shown('[data-ui=game]'), 5000, 'game screen');
     assert.equal(c.text('[data-ui=hud-info]'), 'Switchback Garden · PUTT 1/6 · PAR 2 · STROKES 0 · 2:00');

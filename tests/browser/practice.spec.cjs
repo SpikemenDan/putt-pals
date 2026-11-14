@@ -5,9 +5,7 @@ const { pickMap } = require('./support/maps.cjs');
 
 test('putt practice: the picker starts a putt, completion replays it, the bar steps putts and returns to maps', async ({ page }) => {
   const ana = await openApp(page, 'Ana');
-  await ana.solo();
-  await ana.ui('room-lobby').locator('select').selectOption('putt_practice');
-  await ana.button('Start Game').click();
+  await ana.solo('putt_practice');
   await expect(ana.ui('map-select')).toBeVisible();
   await pickMap(ana.page);
   await ana.button('Putt 3 · Par 2').click();
@@ -42,12 +40,12 @@ test('putt practice: the picker starts a putt, completion replays it, the bar st
 });
 
 test('course practice: a real two-minute timeout scores par + penalty and the map still finishes', async ({ page }) => {
-  await page.clock.install();
   const ana = await openApp(page, 'Ana');
-  await ana.solo();
-  await ana.ui('room-lobby').locator('select').selectOption('practice');
-  await ana.button('Start Game').click();
+  await ana.solo('practice');
   await expect(ana.ui('map-select').locator('p').first()).toHaveText('Practice · pick any map to start. No voting, no opponents.');
+  // The fake clock is only for the hole timer, which starts when the map is picked. Installed earlier, it slows the menu's planet
+  // animation enough on software WebGL (CI's Chromium) that clicks in the Solo steps stall.
+  await page.clock.install();
   await pickMap(ana.page);
   await until(() => ana.ready(), { label: 'ready' });
 
