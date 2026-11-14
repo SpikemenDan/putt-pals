@@ -3,7 +3,7 @@
    in view; a sub-menu opens in the same spot. The look is tunable live through display.menu (src/shared/display.js), copied onto
    --menu-scale, --menu-stagger, --menu-bob and --menu-tilt. While a room opens the menu fades away. */
 /* The menu covers the screen (so it has a real box) but lets clicks through to the planet; only the stack and panel take them. */
-.menu{--menu-scale:1;--menu-stagger:.07s;--menu-bob:2px;--menu-tilt:1.5deg;position:fixed;inset:0;z-index:1;pointer-events:none;transition:opacity .35s}
+.menu{--menu-scale:1;--menu-stagger:.07s;--menu-bob:2px;--menu-tilt:1.5deg;--menu-shine:5s;--menu-tint:22%;position:fixed;inset:0;z-index:1;pointer-events:none;transition:opacity .35s}
 .menu>.panel,.menu>.stack{pointer-events:auto}
 .menu[data-connecting]{opacity:0}
 .menu[data-connecting]>.panel,.menu[data-connecting]>.stack{pointer-events:none}
@@ -18,7 +18,13 @@
 .big:hover:not(:disabled){rotate:0deg;scale:1.04}
 .label{font:400 calc(40px*var(--menu-scale))/1 var(--font);letter-spacing:1.5px;text-transform:uppercase;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink)}
 .sub{margin-top:2px;font:700 calc(13px*var(--menu-scale)) var(--pp-body,'Nunito',sans-serif);letter-spacing:.2px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
-.solo{background:var(--pink)}
+.solo{position:relative;overflow:hidden;padding-right:calc(70px*var(--menu-scale));background:linear-gradient(160deg,#ff6aa8 0%,var(--pink) 55%,#e02473 100%)}
+/* Solo comes alive (owner, 2026-11-14): a ball-and-flag icon that tips on hover, and a shine sweeping across every --menu-shine seconds. */
+.bigIcon{position:absolute;right:calc(12px*var(--menu-scale));top:50%;width:calc(52px*var(--menu-scale));height:calc(52px*var(--menu-scale));translate:0 -50%;filter:drop-shadow(2px 2px 0 var(--ink));transition:rotate .25s cubic-bezier(.3,1.6,.5,1)}
+.solo:hover:not(:disabled) .bigIcon{rotate:-12deg}
+.solo::after{content:"";position:absolute;inset:-20% auto -20% 0;width:38%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55) 45%,rgba(255,255,255,.55) 55%,transparent);rotate:18deg;translate:-160% 0;pointer-events:none;animation:shine var(--menu-shine) ease-in-out 1.2s infinite}
+.menu[data-shine=off] .solo::after{display:none}
+@keyframes shine{0%{translate:-160% 0}16%,100%{translate:380% 0}}
 .party{background:var(--sky)}
 .custom{background:var(--yellow)}
 .custom .sub{color:var(--ink);text-shadow:none}
@@ -40,22 +46,34 @@
 .version{position:fixed;left:clamp(12px,2.4vw,32px);bottom:8px;margin:0;pointer-events:none;font:700 12px var(--pp-body,'Nunito',sans-serif);letter-spacing:.4px;color:#fff;text-shadow:1px 1px 0 var(--ink)}
 
 @media (max-width:640px){.stack{left:50%;translate:-50% 0;align-items:center;bottom:36px}.panel{left:50%;translate:-50% 0;animation:none;bottom:30px;padding:12px;box-shadow:5px 5px 0 var(--ink)}.brand{-webkit-text-stroke-width:3px}}
-@media (prefers-reduced-motion:reduce){.big,.settings,.panel{animation:none}}
+@media (prefers-reduced-motion:reduce){.big,.settings,.panel,.solo::after{animation:none}.solo::after{display:none}}
 
 /* Solo steps (VIS-M4 #176): one question per screen, with step dots; options are big comic buttons, Practice a smaller one. */
 .steps{display:flex;gap:6px;margin:6px 0 4px;padding:0;list-style:none}
 .steps li{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:#fff}
 .steps li[data-on]{background:var(--pink)}
 .question{margin:8px 0 6px;font:900 15px var(--font);letter-spacing:.4px;color:var(--ink)}
-.option{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin:0 0 8px;padding:calc(8px*var(--menu-scale)) 14px;text-align:left;background:#fff}
-.option span{font:400 calc(26px*var(--menu-scale))/1 var(--font);letter-spacing:1px;text-transform:uppercase}
-.option small{margin-top:2px;font:700 12px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
-.option:not(:disabled):hover{background:var(--yellow)}
+/* Solo choices (owner, 2026-11-14): each card has its own colour (--tone, set per button in SoloSteps.jsx), tinted by
+   --menu-tint, with an icon badge; on hover the card lifts, its shadow grows and the badge wiggles. */
+.option{--tone:var(--yellow);position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;width:100%;margin:0 0 10px;padding:calc(8px*var(--menu-scale)) 14px calc(8px*var(--menu-scale)) 10px;text-align:left;
+  background:color-mix(in srgb,var(--tone) var(--menu-tint),#fff);transition:translate .16s ease-out,box-shadow .16s ease-out,background-color .16s}
+.option .icon{grid-row:1/3;width:calc(44px*var(--menu-scale));height:calc(44px*var(--menu-scale));padding:5px;box-sizing:border-box;border:3px solid var(--ink);border-radius:12px;background:var(--tone);box-shadow:2px 2px 0 var(--ink)}
+.option span{align-self:end;font:400 calc(26px*var(--menu-scale))/1 var(--font);letter-spacing:1px;text-transform:uppercase}
+.option small{align-self:start;margin-top:2px;font:700 12px var(--pp-body,'Nunito',sans-serif);color:var(--mut)}
+.option:not(:disabled):hover,.option:not(:disabled):focus-visible{background:color-mix(in srgb,var(--tone) calc(var(--menu-tint) + 18%),#fff);translate:-2px -3px;box-shadow:7px 8px 0 var(--ink)}
+.option:not(:disabled):hover .icon{animation:wiggle .45s ease-in-out}
+.option:not(:disabled):active{translate:1px 1px;box-shadow:2px 2px 0 var(--ink)}
+@keyframes wiggle{0%,100%{rotate:0deg}30%{rotate:-10deg}65%{rotate:8deg}}
 .option:disabled{opacity:.55}
 .lengths{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.lengths .option{align-items:center;margin:0}
-.lengths .option span{font-size:calc(34px*var(--menu-scale))}
-.minor{margin:2px 0 0;padding:6px 14px;font-size:14px;background:var(--paper)}
+.lengths .option{display:flex;flex-direction:column;align-items:center;margin:0;padding:8px 6px;background:var(--tone)}
+.lengths .option:not(:disabled):hover{background:var(--tone);filter:brightness(1.08)}
+.lengths .option span{align-self:center;font-size:calc(40px*var(--menu-scale));color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:2px 2px 0 var(--ink)}
+.lengths .option small{align-self:center;color:var(--ink)}
+.minor{display:flex;width:fit-content;align-items:center;gap:8px;margin:2px 0 0;padding:5px 14px 5px 8px;font-size:15px;color:#fff;text-shadow:1px 1px 0 var(--ink);background:var(--tone,var(--paper));transition:translate .16s ease-out,box-shadow .16s ease-out}
+.minor .icon{width:24px;height:24px}
+.minor:not(:disabled):hover{translate:-2px -2px;box-shadow:6px 6px 0 var(--ink)}
+@media (prefers-reduced-motion:reduce){.option,.minor{transition:none}.option:not(:disabled):hover .icon{animation:none}}
 .hint{margin:8px 0 0;font-size:12px;color:var(--mut)}
 .summary{margin:6px 0 2px;padding:6px 10px;border:3px solid var(--ink);border-radius:10px;background:var(--yellow);font:900 14px var(--font);letter-spacing:.3px}
 

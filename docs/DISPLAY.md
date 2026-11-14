@@ -42,6 +42,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `menu.stagger` | 0.07 | 0 to 0.3 | Main menu: seconds between each button dropping in (0 brings them in together). |
 | `menu.bob` | 2 | 0 to 8 | Main menu: idle bob of the big buttons, CSS px (0 holds them still; off under reduced motion). |
 | `menu.tilt` | 1.5 | 0 to 8 | Main menu: alternating lean of the buttons, degrees (0 keeps them straight). |
+| `menu.shineSeconds` | 5 | 0 to 20 | Main menu: seconds between shine sweeps across the Solo button (0 is off). Off under reduced motion. |
+| `menu.cardTint` | 0.22 | 0 to 1 | Solo steps: how strongly each choice card is tinted with its own colour (0 white, 1 full colour). |
 | `environment.aresWind` | 1 | 0 to 2 | Ares courses: wind scenery strength, multiplier: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). |
 | `environment.aresWindDensity` | 1 | 0 to 2 | Ares courses: wind streaks and dust grains, multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). |
 | `environment.lunaDust` | 1 | 0 to 2 | Luna courses: brightness of the floating dust motes, multiplier (0 hides them). |

@@ -4,6 +4,7 @@ import { UiCommands } from './commands.js';
 import { useCommands, useUiContext, useView } from './context.js';
 import { ColorPicker } from './ColorPicker.jsx';
 import { SoloSteps } from './SoloSteps.jsx';
+import { MenuIcon } from './MenuIcons.jsx';
 import { CustomRules } from './CustomRules.jsx';
 import { changedRules, rulesFromPartial } from '../shared/rules.js';
 import app from './App.module.css';
@@ -36,6 +37,9 @@ function useMenuLook(ref, display, hidden) {
       el.style.setProperty('--menu-stagger', m.stagger + 's');
       el.style.setProperty('--menu-bob', m.bob + 'px');
       el.style.setProperty('--menu-tilt', m.tilt + 'deg');
+      el.style.setProperty('--menu-shine', Math.max(m.shineSeconds, 0.01) + 's');
+      el.style.setProperty('--menu-tint', m.cardTint * 100 + '%');
+      el.dataset.shine = m.shineSeconds > 0 ? 'on' : 'off';
     };
     apply();
     const raf = el.ownerDocument.defaultView?.requestAnimationFrame;
@@ -83,9 +87,10 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
   const nameField = <label>Your name<input maxLength={14} autoComplete="off" value={name} onChange={e => setName(e.target.value)} /></label>;
   const colorField = <div className={menu.field}>Ball colour<ColorPicker selected={color} onPick={c => send(UiCommands.SET_COLOR, { color: c })} /></div>;
   const backButton = <button type="button" className={menu.back} onClick={back} data-ui="menu-back">Back</button>;
-  const homeButton = (id, label, sub, cls) => (
+  const homeButton = (id, label, sub, cls, icon) => (
     <button type="button" ref={el => { homeButtons.current[id] = el; }} className={menu.big + ' ' + cls} disabled={connecting} onClick={() => open(id)} data-menu={id} aria-label={label}>
       <span className={menu.label}>{label}</span><span className={menu.sub} aria-hidden="true">{sub}</span>
+      {icon && <MenuIcon name={icon} className={menu.bigIcon} />}
     </button>
   );
 
@@ -94,7 +99,7 @@ export function Landing({ hidden, initialName = '', initialRoomCode = '', initia
       <h1 className={menu.brand}>Putt Planet</h1>
       {view === 'home' ? (
         <nav className={menu.stack} aria-label="Main menu">
-          {homeButton('solo', 'Solo', 'Practice and play alone', menu.solo)}
+          {homeButton('solo', 'Solo', 'Practice and play alone', menu.solo, 'solo')}
           {homeButton('party', 'Party', 'Play with friends', menu.party)}
           {homeButton('custom', 'Custom', 'Make your own rules', menu.custom)}
           <button type="button" ref={el => { homeButtons.current.settings = el; }} className={menu.settings} onClick={() => open('settings')} data-menu="settings">Settings</button>

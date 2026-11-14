@@ -91,6 +91,8 @@ export const DISPLAY_UNITS = Object.freeze({
   'menu.stagger': 'seconds',
   'menu.bob': 'CSS px',
   'menu.tilt': 'degrees',
+  'menu.shineSeconds': 'seconds',
+  'menu.cardTint': 'fraction, 0 to 1',
   'environment.aresWind': 'multiplier',
   'environment.aresWindDensity': 'multiplier of the base count',
   'environment.lunaDust': 'multiplier',

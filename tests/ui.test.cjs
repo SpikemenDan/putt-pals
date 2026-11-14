@@ -177,7 +177,7 @@ function fakeClock() {
   await scenario('main menu (VIS-M2): Solo, Party, Custom and Settings, Escape steps back, version label, display.menu look', async () => {
     const { createDisplay } = await import('../src/shared/display.js');
     const live = structuredClone(createDisplay());
-    live.menu.buttonScale = 1.3; live.menu.tilt = 4; live.menu.stagger = 0.2; live.menu.bob = 5;
+    live.menu.buttonScale = 1.3; live.menu.tilt = 4; live.menu.stagger = 0.2; live.menu.bob = 5; live.menu.shineSeconds = 0; live.menu.cardTint = 0.5;
     const t = await setup({ mountProps: { display: live } });
     await act(async () => t.store.setLocal({ active: false, connecting: false }));
     const landing = t.within('[data-ui=landing]');
@@ -191,6 +191,9 @@ function fakeClock() {
     assert.equal(landing.style.getPropertyValue('--menu-tilt'), '4deg');
     assert.equal(landing.style.getPropertyValue('--menu-stagger'), '0.2s');
     assert.equal(landing.style.getPropertyValue('--menu-bob'), '5px');
+    assert.equal(landing.style.getPropertyValue('--menu-tint'), '50%', 'display.menu.cardTint tints the Solo choice cards');
+    assert.equal(landing.dataset.shine, 'off', 'display.menu.shineSeconds 0 turns the Solo shine off');
+    assert.ok(nav.querySelector('[data-menu=solo] svg[data-icon=solo][aria-hidden=true]'), 'Solo carries its decorative icon');
     live.menu.buttonScale = 0.8; // the dev tuner edits the live object in place: the menu follows on the next frame
     await act(async () => { await new Promise(r => setTimeout(r, 40)); });
     assert.equal(landing.style.getPropertyValue('--menu-scale'), '0.8', 'a live display object updates the menu without a re-render');
@@ -249,6 +252,9 @@ function fakeClock() {
     assert.deepEqual(labels(), ['Whole map', 'One putt', 'Putt Pong'], 'Pong practice lives under Solo > Practice (owner, 2026-11-11)');
     assert.ok(!/practis/i.test(steps().textContent), 'US spelling "practice" in the Solo steps (owner, 2026-11-14)');
     assert.match(steps().textContent, /What do you want to practice\?/);
+    const cards = [...steps().querySelectorAll('button:not([data-ui=menu-back])')];
+    assert.ok(cards.every(b => b.querySelector('svg[aria-hidden=true]')), 'each practice card has a decorative icon (owner, 2026-11-14)');
+    assert.equal(new Set(cards.map(b => b.style.getPropertyValue('--tone'))).size, 3, 'and its own colour');
     await click(steps().querySelector('[data-ui=menu-back]'));
     assert.equal(step(), 'mode');
 

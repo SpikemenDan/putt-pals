@@ -46,6 +46,8 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['menu.stagger', 0, 0.3, 'Main menu: delay between each button dropping in, in seconds (0 brings them in together).'],
   ['menu.bob', 0, 8, 'Main menu: how far the big buttons bob up and down while idle, in CSS px (0 holds them still). Off under reduced motion.'],
   ['menu.tilt', 0, 8, 'Main menu: how far the buttons lean, alternating left and right, in degrees (0 keeps them straight).'],
+  ['menu.shineSeconds', 0, 20, 'Main menu: seconds between shine sweeps across the Solo button (0 turns the shine off). Off under reduced motion.'],
+  ['menu.cardTint', 0, 1, 'Solo steps: how strongly each choice card is tinted with its own colour (0 is white, 1 is the full colour).'],
   ['environment.aresWind', 0, 2, 'Ares courses: strength of the wind scenery: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). Visual only.'],
   ['environment.aresWindDensity', 0, 2, 'Ares courses: how many wind streaks and dust grains fill the air, as a multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). Visual only.'],
   ['environment.lunaDust', 0, 2, 'Luna courses: brightness of the floating dust motes (0 hides them). Visual only.'],
@@ -59,7 +61,7 @@ export const DEFAULT_DISPLAY = {
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
   loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2, ballPulse: 1.6, ballBounce: 3 },
   space: { orbitSeconds: 120, travelSeconds: 1.8, aresZoom: 0.5, nebula: 0.6, distance: 1 },
-  menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5 },
+  menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5, shineSeconds: 5, cardTint: 0.22 },
   environment: { aresWind: 1, aresWindDensity: 1, lunaDust: 1, lunaDustDensity: 1, lunaSolar: 1 },
 };
 
