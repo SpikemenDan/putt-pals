@@ -5,6 +5,17 @@ import { WORLDS } from '../shared/worlds.js';
 import { UiCommands } from './commands.js';
 import { useUiContext } from './context.js';
 import menu from './Landing.module.css';
+import { MenuIcon } from './MenuIcons.jsx';
+
+/** Colour and icon of each Solo choice (owner, 2026-11-14). Presentation only. */
+const TONES = Object.freeze({
+  casual: { tone: '#2fbf5b', icon: 'flag' },
+  tournament: { tone: '#ff8a1f', icon: 'trophy' },
+  practice: { tone: '#8b5cf6', icon: 'target' },
+  wholeMap: { tone: '#27c8ff', icon: 'map' },
+  onePutt: { tone: '#ff3d8b', icon: 'putt' },
+  pong: { tone: '#ffd23f', icon: 'pong' },
+});
 
 /** Worlds with playable courses. Ares and Luna have none yet (VIS-G), so they show as coming soon. */
 export const PLAYABLE_WORLDS = Object.freeze(['gaia']);
@@ -59,8 +70,11 @@ export function SoloSteps({ name, onName, colorField, connecting, send, onExit, 
     else if (step === 'world') setStep('mode');
     else onExit();
   };
-  const option = (label, sub, onClick, props = {}) => (
-    <button type="button" className={menu.option} onClick={onClick} {...props}><span>{label}</span>{sub && <small>{sub}</small>}</button>
+  // Each choice has its own colour (--tone) and icon (owner, 2026-11-14); the label stays the first <span>.
+  const option = (label, sub, onClick, look, props = {}) => (
+    <button type="button" className={menu.option} style={{ '--tone': look.tone }} data-tone={look.icon} onClick={onClick} {...props}>
+      <MenuIcon name={look.icon} className={menu.icon} /><span>{label}</span>{sub && <small>{sub}</small>}
+    </button>
   );
   const index = STEPS.indexOf(step);
 
@@ -73,24 +87,24 @@ export function SoloSteps({ name, onName, colorField, connecting, send, onExit, 
 
       {step === 'mode' && !pick && <>
         <p className={menu.question}>How do you want to play?</p>
-        {option('Casual', 'One map, just for fun', () => choose(GameModes.STANDARD))}
-        {option('Tournament', '3, 5 or 7 maps; your scores add up', () => setPick('tournament'))}
-        <button type="button" className={menu.minor} onClick={() => setPick('practice')}>Practice</button>
+        {option('Casual', 'One map, just for fun', () => choose(GameModes.STANDARD), TONES.casual)}
+        {option('Tournament', '3, 5 or 7 maps; your scores add up', () => setPick('tournament'), TONES.tournament)}
+        <button type="button" className={menu.minor} style={{ '--tone': TONES.practice.tone }} onClick={() => setPick('practice')}><MenuIcon name="target" className={menu.icon} />Practice</button>
       </>}
       {step === 'mode' && pick === 'tournament' && <>
         <p className={menu.question}>How many maps?</p>
         <div className={menu.lengths}>
-          {[[3, GameModes.TOURNAMENT_3], [5, GameModes.TOURNAMENT_5], [7, GameModes.TOURNAMENT_7]].map(([n, m]) => (
-            <button key={n} type="button" className={menu.option} onClick={() => choose(m)} aria-label={n + ' maps'}><span>{n}</span><small>maps</small></button>
+          {[[3, GameModes.TOURNAMENT_3, '#ffb547'], [5, GameModes.TOURNAMENT_5, '#ff8a1f'], [7, GameModes.TOURNAMENT_7, '#f2560b']].map(([n, m, tone]) => (
+            <button key={n} type="button" className={menu.option} style={{ '--tone': tone }} data-length={n} onClick={() => choose(m)} aria-label={n + ' maps'}><span>{n}</span><small>maps</small></button>
           ))}
         </div>
         <p className={menu.hint}>After each map you pick the next one.</p>
       </>}
       {step === 'mode' && pick === 'practice' && <>
-        <p className={menu.question}>What do you want to practise?</p>
-        {option('Whole map', 'Play a map with no timer or score', () => choose(GameModes.PRACTICE))}
-        {option('One putt', 'Replay a single hole as often as you like', () => choose(GameModes.PUTT_PRACTICE))}
-        {option('Putt Pong', 'Practise the 1v1 cup game on your own', () => choose(GameModes.PONG))}
+        <p className={menu.question}>What do you want to practice?</p>
+        {option('Whole map', 'Play a map with no timer or score', () => choose(GameModes.PRACTICE), TONES.wholeMap)}
+        {option('One putt', 'Replay a single hole as often as you like', () => choose(GameModes.PUTT_PRACTICE), TONES.onePutt)}
+        {option('Putt Pong', 'Practice the 1v1 cup game on your own', () => choose(GameModes.PONG), TONES.pong)}
       </>}
 
       {step === 'world' && (() => {

@@ -31,6 +31,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.planes` | 3 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
 | `loading.boats` | 9 | 0 to 20 | Loading screen: boats on the sea (whole boats; 0 hides them). |
 | `loading.satellites` | 2 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |
+| `loading.ballPulse` | 1.6 | 0.6 to 4 | Loading screen: seconds for the glow to run once across the three progress balls. Off under reduced motion. |
+| `loading.ballBounce` | 3 | 0 to 10 | Loading screen: CSS px each progress ball lifts while it glows (0 keeps them still). |
 | `space.orbitSeconds` | 120 | 20 to 600 | Destination view (Solo → Where to?): seconds Luna takes to orbit Gaia once. |
 | `space.travelSeconds` | 1.8 | 0.4 to 6 | Destination view: seconds to fly between Gaia and Luna; trips to and from Ares take 1.6 times as long. |
 | `space.aresZoom` | 0.5 | 0 to 1 | Destination view: how strongly the lens widens then zooms in on the long Ares trips (0 is a plain glide). |
@@ -40,6 +42,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `menu.stagger` | 0.07 | 0 to 0.3 | Main menu: seconds between each button dropping in (0 brings them in together). |
 | `menu.bob` | 2 | 0 to 8 | Main menu: idle bob of the big buttons, CSS px (0 holds them still; off under reduced motion). |
 | `menu.tilt` | 1.5 | 0 to 8 | Main menu: alternating lean of the buttons, degrees (0 keeps them straight). |
+| `menu.shineSeconds` | 5 | 0 to 20 | Main menu: seconds between shine sweeps across the Solo button (0 is off). Off under reduced motion. |
+| `menu.cardTint` | 0.22 | 0 to 1 | Solo steps: how strongly each choice card is tinted with its own colour (0 white, 1 full colour). |
 | `environment.aresWind` | 1 | 0 to 2 | Ares courses: wind scenery strength, multiplier: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). |
 | `environment.aresWindDensity` | 1 | 0 to 2 | Ares courses: wind streaks and dust grains, multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). |
 | `environment.lunaDust` | 1 | 0 to 2 | Luna courses: brightness of the floating dust motes, multiplier (0 hides them). |
