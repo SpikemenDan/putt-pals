@@ -228,6 +228,8 @@ function fakeClock() {
     await click(inSteps('Practice'));
     assert.equal(step(), 'mode:practice');
     assert.deepEqual(labels(), ['Whole map', 'One putt', 'Putt Pong'], 'Pong practice lives under Solo > Practice (owner, 2026-11-11)');
+    assert.ok(!/practis/i.test(steps().textContent), 'US spelling "practice" in the Solo steps (owner, 2026-11-14)');
+    assert.match(steps().textContent, /What do you want to practice\?/);
     await click(steps().querySelector('[data-ui=menu-back]'));
     assert.equal(step(), 'mode');
 

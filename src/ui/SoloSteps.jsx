@@ -87,10 +87,10 @@ export function SoloSteps({ name, onName, colorField, connecting, send, onExit, 
         <p className={menu.hint}>After each map you pick the next one.</p>
       </>}
       {step === 'mode' && pick === 'practice' && <>
-        <p className={menu.question}>What do you want to practise?</p>
+        <p className={menu.question}>What do you want to practice?</p>
         {option('Whole map', 'Play a map with no timer or score', () => choose(GameModes.PRACTICE))}
         {option('One putt', 'Replay a single hole as often as you like', () => choose(GameModes.PUTT_PRACTICE))}
-        {option('Putt Pong', 'Practise the 1v1 cup game on your own', () => choose(GameModes.PONG))}
+        {option('Putt Pong', 'Practice the 1v1 cup game on your own', () => choose(GameModes.PONG))}
       </>}
 
       {step === 'world' && (() => {
