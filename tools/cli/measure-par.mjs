@@ -12,8 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { createCourseDocument, toSimulationCourses } from '../../src/courses/index.js';
 import { TUNING } from '../../src/shared/tuning.js';
+import { courseWorld } from '../../src/shared/worlds.js';
 import { solvePar, PAR_SOLVER_CONFIG } from './par-solver.mjs';
-import { createDifficultyProvenance, hashSimulationSources } from './provenance.mjs';
+import { courseGravity, createDifficultyProvenance, hashSimulationSources } from './provenance.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(here), '../..');
@@ -23,7 +24,8 @@ if (!isMainThread) {
   const courses = toSimulationCourses(document);
   parentPort.on('message', ({ map, putt, full }) => {
     const started = Date.now();
-    const result = solvePar(courses[map], putt, { full });
+    // Each course is solved at its own world's gravity (Gaia unless the course data names another world).
+    const result = solvePar(courses[map], putt, { full, gravity: courseGravity(document.courses[map]) });
     parentPort.postMessage({ map, putt, seconds: +((Date.now() - started) / 1000).toFixed(1), result });
   });
 } else {
@@ -51,6 +53,7 @@ if (!isMainThread) {
       solverConfig: PAR_SOLVER_CONFIG,
       results: results.map(({ map, putt, result }) => ({
         schemaVersion: 2, map, putt, name: document.courses[map].name, ...result,
+        world: courseWorld(document.courses[map]),
         provenance: createDifficultyProvenance(document.courses[map], putt, { full, simulationHash }),
       })),
     };

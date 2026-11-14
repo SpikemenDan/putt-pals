@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PAR_SOLVER_CONFIG } from './par-solver.mjs';
-import { TUNING } from '../../src/shared/tuning.js';
+import { courseWorld, worldGravity } from '../../src/shared/worlds.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -42,7 +42,10 @@ export function hashSimulationSources() {
   return hashJson(simulationSourceFiles().map(file => [file, digest(fs.readFileSync(path.join(root, file)))]));
 }
 
-export function createDifficultyProvenance(course, puttIndex, { full = false, simulationHash = hashSimulationSources(), configuration = PAR_SOLVER_CONFIG, gravity = TUNING.gravity } = {}) {
+/** Gravity a course is played and solved at: its world's (VIS-W #164), Gaia when it names none. */
+export const courseGravity = course => worldGravity(courseWorld(course));
+
+export function createDifficultyProvenance(course, puttIndex, { full = false, simulationHash = hashSimulationSources(), configuration = PAR_SOLVER_CONFIG, gravity = courseGravity(course) } = {}) {
   const putt = course?.putts?.[puttIndex];
   if (!course?.id || !putt?.id) throw new Error('A normalized course and valid putt index are required');
   return { version: 2, courseId: course.id, puttId: putt.id, gravity,

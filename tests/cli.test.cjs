@@ -180,6 +180,16 @@ const cli = (...args) => spawnSync(process.execPath, [main, ...args], { encoding
       assert.deepEqual(provenanceTools.assessDifficultyResult(entry, expected).differences, []);
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
   });
+  run('par-route provenance follows the course world: Gaia by default, the world gravity when the course names one', () => {
+    const course = createCourseDocument().courses[0];
+    assert.equal(provenanceTools.createDifficultyProvenance(course, 0).gravity, 700);
+    // Owner-accepted VIS-W values (2026-11-12): Ares 490, Luna 315.
+    assert.equal(provenanceTools.createDifficultyProvenance({ ...course, world: 'ares' }, 0).gravity, 490);
+    assert.equal(provenanceTools.createDifficultyProvenance({ ...course, world: 'luna' }, 0).gravity, 315);
+    const lunaEntry = { ...syntheticRoutes().results[0], provenance: provenanceTools.createDifficultyProvenance(course, 0) };
+    assert.match(provenanceTools.assessDifficultyResult(lunaEntry, provenanceTools.createDifficultyProvenance({ ...course, world: 'luna' }, 0)).differences.join('\n'), /gravity differs/,
+      'a Gaia-gravity measurement is stale for a course moved to Luna');
+  });
   run('process: --routes feeds check and rank; check and rank run without it', () => {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'putt-routes-'));
     try {
