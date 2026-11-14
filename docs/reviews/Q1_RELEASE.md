@@ -10,7 +10,19 @@ __CHECKS__
 
 ## Par routes on every putt (SV1)
 
-__PAR__
+Fast sweep, 2026-11-14, commit `e936daf` (main `97ec6e3` plus the world-gravity fix to `tools/cli`, which changes no Gaia result), simulation SHA-256 `460d138248db…`, all 24 maps on Gaia (gravity 700; no map on main names another world yet). `npm run measure:par -- --jobs 4` took 17 minutes.
+
+| Result | Putts |
+| --- | --- |
+| Robust 1-stroke route | 48 |
+| 2 strokes | 9: 1/0, 7/0, 9/0, 10/0, 15/0, 17/0, 19/0, 19/2, 23/4 |
+| 3 strokes | 3: 11/0, 23/1, 23/5 |
+| No route found (trial budget) | 3: 4/0 Clockwork Maze, 13/0 Hourglass, 16/0 Crescent Coast |
+| No route found (candidate grid) | 1: 18/0 Comet Run |
+
+**Playable pool: met.** Every putt of the eight playable maps (`STARTER_COURSE_INDICES`; 48 putts) has a robust route within its shipped par, and `rank --routes` reports every starter measurement current. Obsidian Spiral putts 2, 5 and 6 have no slack (route strokes equal par 3, 2 and 3).
+
+**All maps: not met.** `check --routes` fails on the four unresolved putts above, the same set as the SV1 report. They are single-putt non-starter maps that map cards and session votes do not offer, so no released mode reaches them. One `--full` retry (`--only 4/0,13/0,16/0,18/0`) __FULL__ An owner decision is needed before any of them joins the playable pool: redesign, a time-aware solver for moving hazards, or a wider robustness rule.
 
 **Re-run when new maps land** (Ares/Luna maps, #165, or any course, physics or gravity change). Each course is solved at its own world's gravity (`courseWorld`), so the same commands cover all worlds:
 
