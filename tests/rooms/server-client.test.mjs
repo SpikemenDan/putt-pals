@@ -132,4 +132,33 @@ for (const failure of ['course', 'version', 'timeout', 'abort']) {
   const count = Socket.all.length; f.clock.increment(60000);
   assert.equal(Socket.all.length, count, 'retries stop at the grace boundary');
 }
+{
+  // VIS-M3: Create asks the Worker for a new room (no code yet), carries the rules, and adopts the code the server chose;
+  // its reconnects join that room by code and resume the seat. A plain join never sends rules.
+  const rules = { ...(await import('../../src/shared/rules.js')).DEFAULT_RULES, powerups: false };
+  const f = start({ create: true, roomCode: 'ignored', rules });
+  assert.equal(new URL(f.socket.url).pathname, '/api/rooms/_new/socket', 'Create opens the server-generated-code path');
+  f.socket.open();
+  assert.deepEqual({ ...f.socket.frames[0], name: undefined }, { version: SERVER_ROOM_VERSION, type: 'hello', intent: 'create', roomCode: null, name: undefined, color: null, resume: null, rules });
+  f.socket.receive(welcome());
+  const room = await f.promise;
+  assert.equal(room.roomCode, 'friends', 'the code comes from the server');
+  f.socket.close(); f.clock.increment(500);
+  const next = Socket.all.at(-1); next.open();
+  assert.equal(new URL(next.url).pathname, '/api/rooms/friends/socket', 'a reconnect goes to the created room');
+  assert.equal(next.frames[0].intent, 'join'); assert.equal(next.frames[0].roomCode, 'friends'); assert.equal(next.frames[0].rules, null);
+  assert.equal(next.frames[0].resume.playerId, 'p1');
+  room.close();
+  const j = start({ rules }); j.socket.open();
+  assert.equal(j.socket.frames[0].intent, 'join'); assert.equal(j.socket.frames[0].roomCode, 'friends'); assert.equal(j.socket.frames[0].rules, null, 'a join takes the party\'s rules');
+  const missing = assert.rejects(j.promise, /room-not-found/);
+  j.socket.receive({ version: SERVER_ROOM_VERSION, type: 'error', code: 'room-not-found', retryAfterMs: null });
+  await missing;
+  const taken = start({ create: true }); taken.socket.open();
+  const exists = assert.rejects(taken.promise, /room-exists/);
+  taken.socket.receive({ version: SERVER_ROOM_VERSION, type: 'error', code: 'room-exists', retryAfterMs: null });
+  await exists;
+  await assert.rejects(connectServerRoom({ create: true, resume: { sessionId: 's', playerId: 'p', token: 'T'.repeat(43) }, name: 'P', WebSocket: Socket, location: { href: 'http://localhost/' }, expectedCourseHash: 'a'.repeat(64) }), /invalid-message/, 'nothing to resume in a new room');
+  assert.equal(serverRoomUrl(null, { location: { href: 'https://golf.example/' } }), 'wss://golf.example/api/rooms/_new/socket');
+}
 console.log('PASS: server client validation, authority, generations, retries, cancellation, heartbeat/clock, presence and compatibility (fake sockets).');

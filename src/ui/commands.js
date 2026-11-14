@@ -9,7 +9,9 @@ import { GameModes } from '../shared/session.js';
 
 export const UiCommands = Object.freeze({
   ...InputCommands,
-  /** { type, name, roomCode, rules? } — Join room (validate with parseJoinRequest). `rules`: Custom rules (VIS-U) a new room is created with; null or omitted is standard. */
+  /** { type, name, rules? } — Create a party (VIS-M3): the room service opens a new room and only then gives it a code. `rules`: Custom rules (VIS-U) the party is created with; null or omitted is standard. */
+  CREATE_PARTY: 'create-party',
+  /** { type, name, roomCode } — Join an existing party by its code (validate with parseJoinRequest). Never creates a room; the party's own rules apply. */
   JOIN: 'join',
   /** { type, name, mode?, world?, rules? } — Play solo. With a mode (from the Solo steps) the room opens straight onto the level select; `rules`: Custom rules (VIS-U), null or omitted is standard. */
   PLAY_SOLO: 'play-solo',
@@ -17,6 +19,8 @@ export const UiCommands = Object.freeze({
   LEAVE: 'leave',
   /** { type } — Invite / Copy invite. */
   INVITE: 'invite',
+  /** { type } — Leave the colour step for the party lobby (VIS-M3): every player, host included, picks a colour first. */
+  ENTER_LOBBY: 'enter-lobby',
   /** { type, color } — Choose a ball colour (palette index). Saved locally; in a lobby it also asks the room for it. */
   SET_COLOR: 'set-color',
   /** { type, kind, id } — Choose a cosmetic (kind: ball, trail or celebration; id from the cosmetics catalog). */
@@ -45,7 +49,7 @@ export const MODE_OPTIONS = Object.freeze([
 ].map(Object.freeze));
 
 export const MESSAGES = Object.freeze({
-  roomCodeRequired: 'Enter a room code.',
+  roomCodeRequired: 'Type the party code your host shared.',
   connectFailed: 'Could not reach the room service. Check your connection and try again, or play solo.',
   connectionLost: 'Connection lost. Gameplay is paused. Leave and rejoin the room, or try again when the service is available.',
   reconnecting: 'Connection dropped. Reconnecting… your place is reserved while the room allows recovery.',
@@ -72,6 +76,8 @@ export const CONNECT_ERRORS = Object.freeze({
   'history-full': 'This room has reached its history limit. Use a new room code.',
   'invalid-endpoint': 'The room service address is invalid. Open the hosted game, or play solo.',
   'invalid-message': 'The room service rejected a message. Reload the game before rejoining.',
+  'room-not-found': 'No party has that code. Check it with your host, or create a party.',
+  'room-exists': 'Could not get a free party code. Try Create again.',
 });
 export const connectErrorMessage = reason => CONNECT_ERRORS[reason] || MESSAGES.connectFailed;
 
@@ -88,30 +94,17 @@ export function sanitizeName(value) {
 }
 
 /**
- * Validates the landing form like the legacy begin().
- * @returns {{ok:true, multi:boolean, name:string, roomCode:string} | {ok:false, message:string}}
+ * Validates the menu form like the legacy begin(). A Create (VIS-M3) takes no code: the room service gives one.
+ * @returns {{ok:true, multi:boolean, create:boolean, name:string, roomCode:string} | {ok:false, message:string}}
  */
-export function parseJoinRequest({ multi, name, roomCode = '' }) {
-  const code = multi ? sanitizeRoomCode(roomCode) : '';
-  if (multi && !code) return { ok: false, message: MESSAGES.roomCodeRequired };
-  return { ok: true, multi: !!multi, name: sanitizeName(name), roomCode: code };
+export function parseJoinRequest({ multi, create = false, name, roomCode = '' }) {
+  const creating = !!multi && !!create;
+  const code = multi && !creating ? sanitizeRoomCode(roomCode) : '';
+  if (multi && !creating && !code) return { ok: false, message: MESSAGES.roomCodeRequired };
+  return { ok: true, multi: !!multi, create: creating, name: sanitizeName(name), roomCode: code };
 }
 
-const ROOM_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
-
-/** Initial room code: `#room=` from the address, else eight random unambiguous characters. */
-export function initialRoomCode(hash = '', random = Math.random) {
-  const fromHash = sanitizeRoomCode(new URLSearchParams(String(hash).replace(/^#/, '')).get('room'));
-  if (fromHash) return fromHash;
-  let code = '';
-  if (random === Math.random && globalThis.crypto?.getRandomValues) {
-    while (code.length < 8) {
-      for (const byte of globalThis.crypto.getRandomValues(new Uint8Array(16))) {
-        if (byte >= 256 - (256 % ROOM_ALPHABET.length)) continue;
-        code += ROOM_ALPHABET[byte % ROOM_ALPHABET.length];
-        if (code.length === 8) break;
-      }
-    }
-  } else for (let i = 0; i < 8; i++) code += ROOM_ALPHABET[Math.floor(random() * ROOM_ALPHABET.length)];
-  return code;
+/** The party code from a `#room=` invite link, or '' (VIS-M3: the menu never makes up a code; only Create gets one). */
+export function initialRoomCode(hash = '') {
+  return sanitizeRoomCode(new URLSearchParams(String(hash).replace(/^#/, '')).get('room'));
 }

@@ -1,0 +1,17 @@
+/* Party lobby plane (VIS-M3 #175): a putting-green plane leaning back in perspective, with every player's ball standing on it
+   in their colour. Tunable live through display.lobby (src/shared/display.js), copied onto --lobby-ball, --lobby-tilt,
+   --lobby-spacing and --lobby-bob. Comic look: ink outlines, hard shadows, a flat highlight on each ball. */
+.stage{--lobby-ball:56px;--lobby-tilt:52deg;--lobby-spacing:1;--lobby-bob:3px;position:relative;margin:12px 0 16px;padding:calc(var(--lobby-ball)*.5) 8px 10px;min-height:calc(var(--lobby-ball)*2.3);perspective:600px}
+.plane{position:absolute;left:4%;right:4%;bottom:8px;height:calc(var(--lobby-ball)*1.5);transform-origin:50% 100%;transform:rotateX(var(--lobby-tilt));border:var(--line) solid var(--ink);border-radius:14px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 18px,transparent 18px 36px),linear-gradient(#5fd97d,var(--green));box-shadow:0 6px 0 var(--ink)}
+.balls{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px calc(var(--lobby-ball)*.35*var(--lobby-spacing))}
+.player{position:relative;display:flex;flex-direction:column;align-items:center;width:calc(var(--lobby-ball)*1.6);animation:arrive .45s cubic-bezier(.2,1.4,.4,1) both}
+.ball{position:relative;z-index:1;width:var(--lobby-ball);height:var(--lobby-ball);border-radius:50%;border:var(--line) solid var(--ink);
+  background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.85) 0 12%,transparent 13%),radial-gradient(circle at 60% 70%,rgba(0,0,0,.18),transparent 60%),var(--ball);
+  animation:bob 2.6s ease-in-out infinite;animation-delay:var(--delay)}
+.shadow{width:calc(var(--lobby-ball)*.8);height:calc(var(--lobby-ball)*.18);margin-top:-4px;border-radius:50%;background:rgba(20,16,42,.35)}
+.name{margin-top:4px;max-width:100%;padding:1px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:900 13px var(--font);letter-spacing:.4px;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:6px;box-shadow:2px 2px 0 var(--ink)}
+.you .name{background:var(--yellow)}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 calc(var(--lobby-bob)*-1)}}
+@keyframes arrive{from{opacity:0;translate:0 -24px}to{opacity:1;translate:0 0}}
+@media (prefers-reduced-motion:reduce){.ball,.player{animation:none}}

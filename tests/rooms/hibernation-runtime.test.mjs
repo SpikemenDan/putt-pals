@@ -29,7 +29,7 @@ const options = {
   log: new Log(LogLevel.ERROR),
 };
 let mf = new Miniflare(options);
-const code = 'hibernate1';
+let code = null; // VIS-M3: the Worker picks it when the host creates the room
 const clients = [];
 function observe(socket) {
   socket.accept();
@@ -56,15 +56,29 @@ function next(client, test, timeout = 8000) {
     client.waiters.push(waiter);
   });
 }
+/** The first open creates the room (rules apply); later ones join it by code. */
 async function open(resume = null, rules = null) {
-  const response = await mf.dispatchFetch(`http://localhost/api/rooms/${code}/socket`, { headers: { Upgrade: 'websocket' } });
+  const create = code === null;
+  const response = await mf.dispatchFetch(`http://localhost/api/rooms/${create ? '_new' : code}/socket`, { headers: { Upgrade: 'websocket' } });
   assert.equal(response.status, 101);
   const client = observe(response.webSocket);
   const welcome = next(client, frame => frame.type === 'welcome' || frame.type === 'error');
-  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, roomCode: code, name: 'Player', resume, rules }));
+  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', intent: create ? 'create' : 'join', color: null, roomCode: create ? null : code, name: 'Player', resume, rules: create ? rules : null }));
   const frame = await welcome;
   assert.equal(frame.type, 'welcome', JSON.stringify(frame));
+  if (create) code = frame.snapshot.roomCode;
   return client;
+}
+/** Sends one hello on a fresh socket and returns the first frame the room answers with. */
+async function handshake(path, hello, headers = {}) {
+  const response = await mf.dispatchFetch(`http://localhost${path}`, { headers: { Upgrade: 'websocket', ...headers } });
+  assert.equal(response.status, 101);
+  const client = observe(response.webSocket);
+  const answer = next(client, frame => frame.type === 'welcome' || frame.type === 'error');
+  client.socket.send(JSON.stringify({ version: SERVER_ROOM_VERSION, type: 'hello', color: null, name: 'Probe', resume: null, rules: null, ...hello }));
+  const frame = await answer;
+  client.socket.close();
+  return frame;
 }
 async function command(client, payload, sequence = ++client.sequence) {
   const answer = next(client, frame => (frame.type === 'ack' && frame.sequence === sequence) || frame.type === 'error');
@@ -80,12 +94,18 @@ const evict = mode => mf.unsafeEvictDurableObject('recovery-test', 'RoomDurableO
   name: roomObjectName('development', code), webSockets: mode,
 });
 try {
-  // VIS-U: the hello that creates the room fixes its Custom rules; a later hello's rules are ignored.
+  // VIS-M3: a join never creates a room, and only the Worker's Create path can create one.
+  assert.equal((await handshake('/api/rooms/nosuch1/socket', { intent: 'join', roomCode: 'nosuch1' })).code, 'room-not-found', 'joining an uncreated code fails clearly');
+  assert.equal((await handshake('/api/rooms/nosuch1/socket', { intent: 'join', roomCode: 'nosuch1' }, { 'x-putt-room-create': '1' })).code, 'room-not-found', 'a client cannot forge the create marker');
+  assert.equal((await handshake('/api/rooms/nosuch1/socket', { intent: 'create', roomCode: null })).code, 'invalid-message', 'a create hello on a join socket is refused');
+  assert.equal((await handshake('/api/rooms/_new/socket', { intent: 'join', roomCode: 'nosuch1' })).code, 'invalid-message', 'a join hello on a create socket is refused');
+  // VIS-U: the hello that creates the room fixes its Custom rules; joining players get the room's rules.
   const custom = { ...DEFAULT_RULES, lunaGravity: 60, shotPower: 120, holeTimer: 300 };
   const host = await open(null, custom);
-  const guest = await open(null, { ...DEFAULT_RULES, shotPower: 50 });
+  assert.match(code, /^[a-hj-km-np-z2-9]{8}$/, 'the Worker generated the party code');
+  const guest = await open(null);
   assert.deepEqual(host.snapshot.session.context.rules, custom, 'the creating hello sets the room rules');
-  assert.deepEqual(guest.snapshot.session.context.rules, custom, 'a joining player gets the room rules, not their own');
+  assert.deepEqual(guest.snapshot.session.context.rules, custom, 'a joining player gets the room rules');
   assert.equal((await command(host, { type: 'START_VOTING' })).type, 'ack');
   assert.equal((await command(host, { type: 'CAST_VOTE', mapIndex: 0 })).type, 'ack');
   const deadline = host.snapshot.session.context.votingDeadline;

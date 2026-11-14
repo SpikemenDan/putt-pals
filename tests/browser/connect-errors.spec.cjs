@@ -1,6 +1,6 @@
 // Server-room capacity and browser capabilities are exercised against the real local Worker.
 const { test, expect } = require('@playwright/test');
-const { openApp } = require('./support/app.cjs');
+const { openApp, partyCode } = require('./support/app.cjs');
 const { roomCode, openPlayer } = require('./support/rooms.cjs');
 
 test('connect errors: a player past the cap is told the room is full and stays on the start screen @slow', async ({ browser }, testInfo) => {
@@ -17,21 +17,21 @@ test('connect errors: a player past the cap is told the room is full and stays o
       players.push(p);
     }
     const [host] = players;
-    await expect(host.lobbyStatus()).toHaveText(`Room ${code} · ${MAX_PLAYERS} players · You control the room`, { timeout: 30_000 });
+    await expect(host.lobbyStatus()).toHaveText(`Room ${partyCode(code)} · ${MAX_PLAYERS} players · You control the room`, { timeout: 30_000 });
 
     const extraName = 'P' + (MAX_PLAYERS + 1);
     const extra = await openPlayer(browser, testInfo, extraName, { contexts });
     await extra.menu('party');
     await extra.ui('landing').getByLabel('Your name').fill(extraName);
-    await extra.ui('landing').getByLabel(/room code/i).fill(code);
-    await extra.button('Join room').click();
+    await extra.ui('landing').getByLabel('Party code').fill(partyCode(code));
+    await extra.button('Join').click();
     await expect(extra.ui('connect-error')).toHaveText('That room is full. Ask someone to leave, or use a different room code.', { timeout: 30_000 });
     await expect(extra.ui('landing')).toBeVisible();
     await expect(extra.ui('room-lobby')).toBeHidden();
     expect(await extra.peerId(), 'the refused player holds no room').toBeNull();
     // The full room is unchanged, and the Join button is usable again.
-    await expect(extra.button('Join room')).toBeEnabled();
-    await expect(host.lobbyStatus()).toHaveText(`Room ${code} · ${MAX_PLAYERS} players · You control the room`);
+    await expect(extra.button('Join')).toBeEnabled();
+    await expect(host.lobbyStatus()).toHaveText(`Room ${partyCode(code)} · ${MAX_PLAYERS} players · You control the room`);
     expect(Object.keys((await host.snapshot()).players)).toHaveLength(MAX_PLAYERS);
     for (const p of [...players, extra]) expect(p.errors, p.name + ': no page or console errors').toEqual([]);
   } finally {
@@ -44,10 +44,7 @@ test('connect errors: online rooms work without WebRTC', async ({ page }) => {
   await page.addInitScript(() => { for (const key of ['RTCPeerConnection', 'webkitRTCPeerConnection']) { try { delete window[key]; } catch { /* not configurable */ } window[key] = undefined; } });
   const ana = await openApp(page, 'Ana');
   expect(await page.evaluate(() => typeof window.RTCPeerConnection)).toBe('undefined');
-  await ana.menu('party');
-  await ana.ui('landing').getByLabel('Your name').fill('Ana');
-  await ana.ui('landing').getByLabel(/room code/i).fill(roomCode('N2W'));
-  await ana.button('Join room').click();
+  await ana.create();
   await expect(ana.ui('room-lobby')).toBeVisible();
   await expect(ana.ui('room-lobby').locator('p').first()).toContainText('You control the room');
   expect(ana.errors, 'no page or console errors').toEqual([]);

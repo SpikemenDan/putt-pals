@@ -152,7 +152,10 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       },
       canLeave: ({ context: c, event: e }) => member(c, e),
       canSetColor: ({ context: c, event: e }) => member(c, e) && isColorIndex(e.color) && !heldColors(c, e.playerId).has(e.color),
-      powerups: ({ context: c, event: e }) => host(c, e) && typeof e.enabled === 'boolean',
+      // Online rooms fix their rules (power-ups included) when they are created (VIS-U, VIS-M3): No Power-Ups is a Custom rule.
+      powerups: ({ context: c, event: e }) => !serverOwned && host(c, e) && typeof e.enabled === 'boolean',
+      // Putt Pong is 1v1 (solo plays it as practice): it never starts with more than two players.
+      canStartVoting: ({ context: c, event: e }) => host(c, e) && (c.mode !== GameModes.PONG || ids(c).length <= 2),
       mode: ({ context: c, event: e }) => host(c, e) && modes.includes(e.mode) && (![GameModes.PRACTICE, GameModes.PUTT_PRACTICE].includes(e.mode) || ids(c).length === 1),
       vote: ({ context: c, event: e }) => validVote(c, e),
       practice: ({ context: c }) => c.mode === GameModes.PRACTICE,
@@ -308,7 +311,7 @@ export function createRoomSession({ hostId, controllerId = hostId, hostName = 'H
       } : {}),
     },
     states: {
-      lobby: { on: { SET_COLOR: { guard: 'canSetColor', actions: 'setColor' }, SET_MODE: { guard: 'mode', actions: 'mode' }, SET_POWERUPS: { guard: 'powerups', actions: 'powerups' }, START_VOTING: { guard: 'host', target: 'select', actions: 'clearSeries' } } },
+      lobby: { on: { SET_COLOR: { guard: 'canSetColor', actions: 'setColor' }, SET_MODE: { guard: 'mode', actions: 'mode' }, SET_POWERUPS: { guard: 'powerups', actions: 'powerups' }, START_VOTING: { guard: 'canStartVoting', target: 'select', actions: 'clearSeries' } } },
       select: {
         initial: 'waiting',
         states: {

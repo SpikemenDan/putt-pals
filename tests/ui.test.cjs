@@ -186,12 +186,13 @@ function fakeClock() {
     await click(landing.querySelector('[data-menu=solo]'));
     assert.equal($('[data-ui=solo-steps]').dataset.step, 'mode', 'Solo opens on its first step');
     assert.ok(!button('Play solo'), 'Play solo waits for the last step');
-    assert.ok(!button('Join room'), 'and not the party one');
+    assert.ok(!button('Create party'), 'and not the party one');
     await t.teardown();
     const invited = await setup({ mountProps: { initialView: 'party' }, inRoom: false });
     await act(async () => invited.store.setLocal({ active: false, connecting: false }));
     assert.equal(invited.within('[data-ui=landing]').dataset.view, 'party', 'an invite link opens on Party');
-    assert.ok(button('Join room'));
+    assert.ok(button('Create party')); assert.ok(button('Join'));
+    assert.equal(invited.within('[data-ui=party-join] input').value, 'abcd', "the link's code waits in the Join box");
     await invited.teardown();
   });
 
@@ -377,11 +378,14 @@ function fakeClock() {
     const chosen = { ...DEFAULT_RULES, lunaGravity: 60, aimWobble: 'off', powerups: false };
     assert.deepEqual(t.commands, [{ type: 'play-solo', name: 'Ana', rules: chosen }]);
     await click(editor.querySelector('[data-ui=rules-host-party]'));
-    assert.equal(landing.dataset.view, 'party', 'Host party continues to the Party room code');
+    assert.equal(landing.dataset.view, 'party', 'Host party continues to the Party menu');
     assert.match(t.within('[data-ui=party-custom-rules]').textContent, /Custom rules \(3 changed\)/);
     t.commands.length = 0;
-    await click(button('Join room'));
-    assert.deepEqual(t.commands.map(c => c.rules), [chosen], 'the room is created with the edited rules');
+    await click(button('Create party'));
+    assert.deepEqual(t.commands, [{ type: 'create-party', name: 'Ana', rules: chosen }], 'the party is created with the edited rules');
+    t.commands.length = 0;
+    await click(button('Join'));
+    assert.deepEqual(t.commands, [{ type: 'join', name: 'Ana', roomCode: 'abcd' }], 'joining takes the party\'s own rules: none are sent');
     await click(t.within('[data-ui=party-custom-rules] button'));
     assert.equal(landing.querySelector('[data-ui=party-custom-rules]'), null, 'Use standard drops them');
     await t.teardown();
@@ -794,16 +798,23 @@ function fakeClock() {
     await t.teardown();
   });
 
-  await scenario('landing: join needs a room code, both buttons dispatch, connecting disables them; join validation matches legacy', async () => {
-    const t = await setup();
+  await scenario('landing (VIS-M3): Party has Create and a Join code box; no code exists until Create; Join needs a code', async () => {
+    const t = await setup({ roomCode: '' });
     await act(async () => t.store.setLocal({ active: false }));
     const landing = t.within('[data-ui=landing]');
     assert.ok(shown(landing));
     await click(landing.querySelector('[data-menu=party]'));
+    assert.equal(landing.querySelectorAll('[data-ui=color-picker]').length, 0, 'the colour is picked after Create or Join, before the lobby');
+    assert.equal(landing.querySelector('[data-ui=party-code]'), null, 'opening Party shows no code');
     const [nameInput, codeInput] = landing.querySelectorAll('input');
     assert.equal(nameInput.maxLength, 14); assert.equal(codeInput.maxLength, 12);
-    const join = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Join room');
-    assert.equal(join.disabled, false, 'prefilled room code enables Join');
+    assert.equal(codeInput.value, '', 'the Join box starts empty: the menu never makes up a code');
+    assert.equal(codeInput.closest('form').dataset.ui, 'party-join');
+    const create = button('Create party');
+    const join = [...landing.querySelectorAll('[data-ui=party-join] button')].find(b => b.textContent === 'Join');
+    assert.equal(join.parentElement, codeInput.closest('label').parentElement, 'Join sits beside the code box');
+    assert.equal(create.disabled, false, 'Create needs no code');
+    assert.equal(join.disabled, true, 'an empty code disables Join');
     const setValue = async (el, value) => {
       const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
       await act(async () => { setter.call(el, value); el.dispatchEvent(new dom.window.Event('input', { bubbles: true })); });
@@ -814,6 +825,8 @@ function fakeClock() {
     await setValue(nameInput, '  Zed  ');
     t.commands.length = 0;
     await click(join);
+    await act(async () => { codeInput.closest('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })); });
+    await click(create);
     await click(landing.querySelector('[data-ui=menu-back]'));
     await click(landing.querySelector('[data-menu=solo]'));
     await click([...landing.querySelectorAll('button')].find(b => b.textContent.startsWith('Casual')));
@@ -821,17 +834,58 @@ function fakeClock() {
     assert.equal(landing.querySelector('input').value, '  Zed  ', 'the name carries from Party to Solo');
     const solo = [...landing.querySelectorAll('button')].find(b => b.textContent === 'Play solo');
     await click(solo);
-    assert.deepEqual(t.commands, [{ type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!', rules: null }, { type: 'play-solo', name: '  Zed  ', mode: 'standard', world: 'gaia' }], 'Party from the home menu creates rooms with standard rules');
+    assert.deepEqual(t.commands, [
+      { type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' },
+      { type: 'join', name: '  Zed  ', roomCode: 'Fun-Room!' },
+      { type: 'create-party', name: '  Zed  ', rules: null },
+      { type: 'play-solo', name: '  Zed  ', mode: 'standard', world: 'gaia' },
+    ], 'Join (button or Enter) sends the code; Create from the home menu uses standard rules');
     await act(async () => t.store.setLocal({ connecting: true }));
     assert.equal(solo.disabled, true);
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, name: 'Zed', roomCode: 'funroom' });
-    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Enter a room code.' });
+    assert.deepEqual(ui.parseJoinRequest({ multi: true, name: '  Zed  ', roomCode: 'Fun-Room!' }), { ok: true, multi: true, create: false, name: 'Zed', roomCode: 'funroom' });
+    assert.deepEqual(ui.parseJoinRequest({ multi: true, roomCode: '!!' }), { ok: false, message: 'Type the party code your host shared.' });
+    assert.deepEqual(ui.parseJoinRequest({ multi: true, create: true, name: 'Zed', roomCode: 'ignored' }), { ok: true, multi: true, create: true, name: 'Zed', roomCode: '' }, 'Create takes no code');
     assert.equal(ui.parseJoinRequest({ multi: false, name: '' }).name, 'Player');
     assert.equal(ui.initialRoomCode('#room=AB-cd9'), 'abcd9');
     assert.equal(ui.parseJoinRequest({ multi: true, roomCode: 'abcdefghijklmnop' }).roomCode, 'abcdefghijkl', 'room codes keep 12 characters');
     assert.equal(ui.sanitizeName('abcdefghijklmnopq'), 'abcdefghijklmn', 'names keep 14 characters');
-    assert.equal(ui.initialRoomCode('', () => 0.3), 'kkkkkkkk');
+    assert.equal(ui.initialRoomCode(''), '', 'no invite link: no code');
+    assert.match(ui.connectErrorMessage('room-not-found'), /No party has that code/);
     await t.teardown();
+  });
+
+  await scenario('colour step (VIS-M3): after Create the host sees the code, picks a free colour, then enters the plane lobby', async () => {
+    const t = await setup();
+    await act(async () => t.store.setLocal({ colorStep: true, createdParty: true }));
+    assert.equal(t.within('[data-ui=room-lobby]'), null, 'the lobby waits for the colour pick');
+    const step = t.within('[data-ui=party-colour]');
+    assert.ok(step && shown(step));
+    assert.equal(step.querySelector('h1').textContent, 'Party created');
+    assert.equal(step.querySelector('[data-ui=party-code] strong').textContent, 'ABCD', 'the code appears once the party exists');
+    await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben', color: 3 });
+    const swatches = [...step.querySelectorAll('[data-ui=color-picker] button')];
+    assert.equal(swatches[3].disabled, true, "Ben's colour is taken");
+    assert.match(swatches[3].getAttribute('aria-label'), /taken by Ben/);
+    t.commands.length = 0;
+    await click(swatches[5]);
+    assert.deepEqual(t.commands, [{ type: ui.UiCommands.SET_COLOR, color: 5 }]);
+    await click(swatches[3]);
+    assert.equal(t.commands.length, 1, 'a taken colour sends nothing');
+    t.commands.length = 0;
+    await click(button('Enter lobby'));
+    assert.deepEqual(t.commands, [{ type: ui.UiCommands.ENTER_LOBBY }]);
+    await act(async () => t.store.setLocal({ colorStep: false }));
+    assert.equal(t.within('[data-ui=party-colour]'), null);
+    assert.ok(shown(t.within('[data-ui=room-lobby]')));
+    await t.teardown();
+    // A joiner's step names the party instead; the step never shows outside the lobby phase or in solo.
+    const g = await setup({ localId: 'host', isHost: false });
+    await act(async () => g.store.setLocal({ colorStep: true }));
+    assert.equal(g.within('[data-ui=party-colour] h1').textContent, 'Joined the party');
+    assert.equal(g.within('[data-ui=party-colour] [data-ui=party-code]'), null, 'the joiner already knows the code');
+    await act(async () => g.store.setLocal({ roomCode: '' }));
+    assert.equal(g.within('[data-ui=party-colour]'), null, 'solo rooms have no colour step');
+    await g.teardown();
   });
 
   await scenario('lobby: roster, host-only controls, solo-only modes disable for two players, Start sends SET_MODE then START_VOTING', async () => {
@@ -839,7 +893,8 @@ function fakeClock() {
     const lobby = t.within('[data-ui=room-lobby]');
     assert.ok(shown(lobby));
     assert.equal(lobby.querySelector('p').textContent, 'Room ABCD · 1 player · You are the host');
-    assert.equal(lobby.querySelector('.' + [...lobby.querySelector('p + div').children[0].classList][0]).textContent, 'Ana (you)Joined');
+    assert.deepEqual([...lobby.querySelectorAll('[data-ui=lobby-plane] [role=listitem]')].map(b => b.textContent), ['Ana (you)'], 'the lobby plane holds my ball');
+    assert.equal(lobby.querySelector('[data-ui=party-code] strong').textContent, 'ABCD');
     const select = lobby.querySelector('select');
     const setMode = async v => { await act(async () => { select.value = v; select.dispatchEvent(new dom.window.Event('change', { bubbles: true })); }); };
     await setMode('practice');
@@ -848,6 +903,11 @@ function fakeClock() {
     assert.equal(lobby.querySelector('p').textContent, 'Room ABCD · 2 players · You are the host');
     assert.equal(select.value, 'standard', 'a second player resets a solo-only mode');
     assert.deepEqual([...select.options].filter(o => o.disabled).map(o => o.value), ['practice', 'putt_practice']);
+    {
+      const plane = [...lobby.querySelectorAll('[data-ui=lobby-plane] [role=listitem]')];
+      const players = t.session.getSnapshot().players;
+      assert.deepEqual(plane.map(b => [b.textContent, Number(b.dataset.color)]), [['Ana (you)', players.host.color], ['Ben', players.g1.color]], 'both balls stand on the plane in their own colours');
+    }
     assert.ok(button('Copy invite'));
     // Ball colour picker (#161): the room's colours, taken ones disabled with the holder's name, picks sent as a command.
     {
@@ -888,35 +948,45 @@ function fakeClock() {
     await g.teardown();
   });
 
-  await scenario('lobby: the No power-ups box (host only, not for practice) is sent with Start only when it changes, and the status says so', async () => {
+  await scenario('lobby (owner, 2026-11-11): No Power-Ups is a Custom rule, not a lobby box; a party offers Putt Pong only with exactly two players', async () => {
     const t = await setup();
     const lobby = t.within('[data-ui=room-lobby]');
-    const box = lobby.querySelector('[data-ui=no-powerups]');
-    assert.equal(box.checked, false, 'power-ups are on by default');
+    assert.equal(lobby.querySelector('[data-ui=no-powerups]'), null, 'no lobby toggle: rules are fixed when the party is created');
+    const modes = () => [...lobby.querySelectorAll('select option')].map(o => o.value);
+    assert.ok(!modes().includes('pong'), 'one player: no Putt Pong');
+    await t.send({ type: 'JOIN_ROOM', playerId: 'g1', name: 'Ben' });
+    assert.ok(modes().includes('pong'), 'exactly two players: Putt Pong is offered');
+    const select = lobby.querySelector('select');
+    await act(async () => { select.value = 'pong'; select.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+    await t.send({ type: 'JOIN_ROOM', playerId: 'g2', name: 'Cy' });
+    assert.ok(!modes().includes('pong'), 'three players: Putt Pong is gone');
+    assert.equal(select.value, 'standard', 'a Pong choice falls back to Standard');
     t.commands.length = 0;
     await click(button('Start Game'));
-    assert.deepEqual(t.commands.map(c => c.event.type), ['SET_MODE', 'START_VOTING'], 'unchanged: no extra command');
+    assert.deepEqual(t.commands.map(c => c.event), [{ type: 'SET_MODE', mode: 'standard' }, { type: 'START_VOTING' }], 'Start never sends SET_POWERUPS');
     await t.teardown();
-    const u = await setup();
-    const check = u.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]');
-    await act(async () => { check.click(); });
-    assert.equal(check.checked, true);
-    u.commands.length = 0;
-    await click(button('Start Game'));
-    assert.deepEqual(u.commands.map(c => c.event), [{ type: 'SET_MODE', mode: 'standard' }, { type: 'SET_POWERUPS', enabled: false }, { type: 'START_VOTING' }]);
-    await u.teardown();
-    const p = await setup();
-    await act(async () => { p.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').click(); });
-    const sel = p.within('[data-ui=room-lobby]').querySelector('select');
-    await act(async () => { sel.value = 'practice'; sel.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
-    assert.equal(p.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').closest('label').hidden, true, 'practice is solo and never has the box');
-    p.commands.length = 0;
-    await click(button('Start Game'));
-    assert.deepEqual(p.commands.map(c => c.event.type), ['SET_MODE', 'START_VOTING'], 'practice keeps power-ups on');
-    await p.teardown();
-    const g = await setup({ localId: 'host', isHost: false });
-    assert.equal(g.within('[data-ui=room-lobby]').querySelector('[data-ui=no-powerups]').closest('label').hidden, true, 'guests do not see it');
-    await g.teardown();
+    const solo = await setup({ roomCode: '' });
+    assert.ok([...solo.within('[data-ui=room-lobby]').querySelectorAll('select option')].some(o => o.value === 'pong'), 'solo keeps Putt Pong as practice');
+    await solo.teardown();
+  });
+
+  await scenario('lobby plane (VIS-M3): display.lobby reaches the plane, live from the development tuner', async () => {
+    const { createDisplay } = await import('../src/shared/display.js');
+    const live = structuredClone(createDisplay());
+    live.lobby.ballSize = 80; live.lobby.tilt = 30; live.lobby.spacing = 1.5; live.lobby.bob = 0;
+    const t = await setup({ mountProps: { display: live } });
+    const plane = t.within('[data-ui=lobby-plane]');
+    assert.equal(plane.style.getPropertyValue('--lobby-ball'), '80px');
+    assert.equal(plane.style.getPropertyValue('--lobby-tilt'), '30deg');
+    assert.equal(plane.style.getPropertyValue('--lobby-spacing'), '1.5');
+    assert.equal(plane.style.getPropertyValue('--lobby-bob'), '0px');
+    live.lobby.tilt = 10;
+    await act(async () => { await new Promise(r => setTimeout(r, 40)); });
+    assert.equal(plane.style.getPropertyValue('--lobby-tilt'), '10deg', 'a live display object updates the plane without a re-render');
+    await t.teardown();
+    const shipped = await setup();
+    assert.equal(shipped.within('[data-ui=lobby-plane]').style.getPropertyValue('--lobby-ball'), '56px', 'the shipped defaults apply');
+    await shipped.teardown();
   });
 
   await scenario('tournament: voting countdown, votes, start countdown, putt banners, HUD, hole in one, map results and the champion', async () => {

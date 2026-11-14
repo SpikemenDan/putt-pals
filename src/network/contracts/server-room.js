@@ -13,7 +13,29 @@ import { MAP_COUNT } from '../../shared/map-count.js';
 // 6: Tornado and Hurricane are placed: ACTIVATE_HAZARD and their records carry x and y.
 // 7: hello carries the Custom rules a new room is created with (VIS-U); the session context carries the room's rules.
 // 8: map indices run to MAP_COUNT (24) with the VIS-G maps.
-export const SERVER_ROOM_VERSION = 8;
+// 9: hello states its intent (VIS-M3): 'create' opens a new room under a server-generated code (roomCode null, the only
+//    hello that may carry rules); 'join' needs an existing room. New errors room-not-found and room-exists.
+export const SERVER_ROOM_VERSION = 9;
+/** Hello intents (VIS-M3): only the host's Create makes a room; a Join never does. */
+export const HELLO_INTENTS = Object.freeze(['create', 'join']);
+/** Socket path that asks the Worker for a new room under a code it generates (VIS-M3). Never a valid room code (`_`). */
+export const ROOM_CREATE_PATH = '/api/rooms/_new/socket';
+/** Server-generated party codes: eight characters from an alphabet without look-alikes (0/o, 1/l/i). */
+export const ROOM_CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+export const ROOM_CODE_LENGTH = 8;
+/** A fresh party code from a uniform byte source (`crypto.getRandomValues`), rejection-sampled so every character is equally likely. */
+export function generateRoomCode(getRandomValues = bytes => globalThis.crypto.getRandomValues(bytes)) {
+  const limit = 256 - (256 % ROOM_CODE_ALPHABET.length);
+  let code = '';
+  while (code.length < ROOM_CODE_LENGTH) {
+    for (const byte of getRandomValues(new Uint8Array(16))) {
+      if (byte >= limit) continue;
+      code += ROOM_CODE_ALPHABET[byte % ROOM_CODE_ALPHABET.length];
+      if (code.length === ROOM_CODE_LENGTH) break;
+    }
+  }
+  return code;
+}
 export const CHECKPOINT_VERSION = 1;
 export const ROOM_RULES_VERSION = 'server-room-3';
 export const SERVER_ROOM_LIMITS = Object.freeze({
@@ -88,7 +110,13 @@ export function validServerPresence(p) {
 const validResume = r => exact(r, ['sessionId', 'playerId', 'token']) && validRoomId(r.sessionId) && validRoomId(r.playerId) && validRoomSecret(r.token);
 export function validClientFrame(m) {
   if (!object(m) || m.version !== SERVER_ROOM_VERSION) return false;
-  if (m.type === 'hello') return exact(m, ['version', 'type', 'roomCode', 'name', 'color', 'resume', 'rules']) && validRoomCode(m.roomCode) && name(m.name) && nullable(m.color, isColorIndex) && nullable(m.resume, validResume) && nullable(m.rules, validRules);
+  if (m.type === 'hello') {
+    if (!exact(m, ['version', 'type', 'intent', 'roomCode', 'name', 'color', 'resume', 'rules']) || !HELLO_INTENTS.includes(m.intent)
+      || !name(m.name) || !nullable(m.color, isColorIndex) || !nullable(m.resume, validResume) || !nullable(m.rules, validRules)) return false;
+    // Create: the server picks the code, there is nothing to resume, and the creator's rules (or null) fix the room's rules.
+    // Join: an existing room's code; rules are the room's, so a joining hello carries none.
+    return m.intent === 'create' ? m.roomCode === null && m.resume === null : validRoomCode(m.roomCode) && m.rules === null;
+  }
   if (m.type === 'ping') return exact(m, ['version', 'type', 'nonce', 'clientTime']) && validRoomId(m.nonce) && Number.isFinite(m.clientTime) && m.clientTime >= 0;
   return exact(m, ['version','type','sessionId','connectionId','sequence','roundNumber','puttIndex','payload'])
     && ['command','presence'].includes(m.type) && validRoomId(m.sessionId) && validRoomId(m.connectionId)
@@ -156,7 +184,7 @@ export function validRoomSnapshot(s) {
   return s.controllerId === null ? !s.seats.some(seat => seat.connectedSince !== null)
     : validRoomId(s.controllerId) && !!controller && (controller.connectedSince !== null || s.policy.controllerTransferDelayMs > 0);
 }
-export const ROOM_ERRORS = Object.freeze(['incompatible-version','invalid-message','room-full','identity-rejected','session-expired','stale-round','stale-connection','sequence-rejected','unauthorized','rate-limited','service-unavailable','checkpoint-incompatible','history-full']);
+export const ROOM_ERRORS = Object.freeze(['incompatible-version','invalid-message','room-full','identity-rejected','session-expired','stale-round','stale-connection','sequence-rejected','unauthorized','rate-limited','service-unavailable','checkpoint-incompatible','history-full','room-not-found','room-exists']);
 export function validServerFrame(m) {
   if (!object(m) || m.version !== SERVER_ROOM_VERSION) return false;
   switch(m.type) {

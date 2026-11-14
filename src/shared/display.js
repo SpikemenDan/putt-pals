@@ -7,7 +7,8 @@
  *
  * Units: distances in world units (the ball radius is 5). Opacity is 0..1; scale is a multiplier. The `loading` group
  * (loading screen, src/render/planet-scene.js) uses degrees, seconds, CSS px and a screen-height fraction as listed per field;
- * the `menu` group (main menu, src/ui/Landing.jsx) uses a multiplier, seconds, CSS px and degrees; the `space` group (the Solo
+ * the `menu` group (main menu, src/ui/Landing.jsx) uses a multiplier, seconds, CSS px and degrees; the `lobby` group (the party
+ * lobby's plane of balls, src/ui/LobbyPlane.jsx) uses CSS px, degrees and a multiplier; the `space` group (the Solo
  * destination view in src/render/planet-scene.js) uses seconds, fractions and a multiplier. The `environment` group (VIS-E
  * world atmosphere, src/render/atmosphere.js) holds multipliers for the Ares and Luna scenery.
  */
@@ -44,6 +45,10 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['menu.stagger', 0, 0.3, 'Main menu: delay between each button dropping in, in seconds (0 brings them in together).'],
   ['menu.bob', 0, 8, 'Main menu: how far the big buttons bob up and down while idle, in CSS px (0 holds them still). Off under reduced motion.'],
   ['menu.tilt', 0, 8, 'Main menu: how far the buttons lean, alternating left and right, in degrees (0 keeps them straight).'],
+  ['lobby.ballSize', 24, 96, 'Party lobby: diameter of each player\'s ball on the lobby plane, in CSS px.'],
+  ['lobby.tilt', 0, 70, 'Party lobby: how far the plane under the balls leans back, in degrees (0 faces the player flat on).'],
+  ['lobby.spacing', 0.6, 2, 'Party lobby: gap between the balls as a multiplier of the ball size.'],
+  ['lobby.bob', 0, 12, 'Party lobby: how far each ball bobs while it waits, in CSS px (0 holds them still). Off under reduced motion.'],
   ['environment.aresWind', 0, 2, 'Ares courses: strength of the wind scenery: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). Visual only.'],
   ['environment.aresWindDensity', 0, 2, 'Ares courses: how many wind streaks and dust grains fill the air, as a multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). Visual only.'],
   ['environment.lunaDust', 0, 2, 'Luna courses: brightness of the floating dust motes (0 hides them). Visual only.'],
@@ -58,6 +63,7 @@ export const DEFAULT_DISPLAY = {
   loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2 },
   space: { orbitSeconds: 120, travelSeconds: 1.8, aresZoom: 0.5, nebula: 0.6, distance: 1 },
   menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5 },
+  lobby: { ballSize: 56, tilt: 52, spacing: 1, bob: 3 },
   environment: { aresWind: 1, aresWindDensity: 1, lunaDust: 1, lunaDustDensity: 1, lunaSolar: 1 },
 };
 

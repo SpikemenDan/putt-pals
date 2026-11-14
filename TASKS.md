@@ -67,7 +67,7 @@ Existing tasks changed by the vision:
 - **G1e #92 (Deployables):** delivered in PR #157 (merged 2026-11-04, issue closed) with the owner-approved force and designs, the vertical extent and airborne rules (contract revision 2) and server-room placement and hit checks; `PROTOCOL_VERSION` 3, `SERVER_ROOM_VERSION` 4. Separate-network validation stays with N4 #65.
 - **K0 #104, K1a-K1d, W2 #105, W3 #106, SV1 #87, G1b Chip In:** all need airborne behaviour and per-world gravity in their acceptance checks.
 - **M1 #36:** its menus scope is now part of VIS-M.
-- **GM1 #95 (No Power-Ups):** becomes a Custom rule flag (owner, 2026-11-11); VIS-U (PR #222) has a Power-Ups rule, and the lobby No power-ups toggle (`src/ui/RoomLobby.jsx`) is still present.
+- **GM1 #95 (No Power-Ups):** becomes a Custom rule flag (owner, 2026-11-11); VIS-U (PR #222) has a Power-Ups rule, and VIS-M3 (#175) removes the lobby No power-ups toggle; server-owned rooms refuse `SET_POWERUPS`.
 
 ## Delivered
 

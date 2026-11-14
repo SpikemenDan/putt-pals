@@ -1,6 +1,6 @@
 // Four players in separate browser contexts over the local room Worker: one room, one full map, identical results.
 const { test, expect } = require('@playwright/test');
-const { openApp, until, playPutt } = require('./support/app.cjs');
+const { openApp, until, playPutt, partyCode } = require('./support/app.cjs');
 const { pickMap } = require('./support/maps.cjs');
 
 const NAMES = ['Ana', 'Ben', 'Cy', 'Dee'];
@@ -22,8 +22,8 @@ test('multiplayer: four pages on real WebSockets play a full map and agree on th
       players.push(p);
     }
     const [ana, ...guests] = players;
-    await expect(ana.ui('room-lobby').locator('p').first()).toHaveText(`Room ${code} · 4 players · You control the room`, { timeout: 30_000 });
-    for (const g of guests) await expect(g.ui('room-lobby').locator('p').first()).toHaveText(`Room ${code} · 4 players · Waiting for room controller`);
+    await expect(ana.ui('room-lobby').locator('p').first()).toHaveText(`Room ${partyCode(code)} · 4 players · You control the room`, { timeout: 30_000 });
+    for (const g of guests) await expect(g.ui('room-lobby').locator('p').first()).toHaveText(`Room ${partyCode(code)} · 4 players · Waiting for room controller`);
     await expect(guests[0].ui('room-lobby').getByLabel('Game mode')).toBeHidden();
 
     await ana.button('Start Game').click();

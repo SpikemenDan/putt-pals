@@ -30,13 +30,14 @@ export class RoomDurableObject extends RoomCoordinator {
       const a = socket.deserializeAttachment();
       if (!a || a.schema !== 1 || !validRoomCode(a.roomCode) || !Number.isSafeInteger(a.lastSeenAt) || a.lastSeenAt < 0
         || !Number.isSafeInteger(a.handshakeAt) || a.handshakeAt < 0 || typeof a.rejected !== 'boolean'
+        || (a.create !== undefined && typeof a.create !== 'boolean')
         || !(a.playerId === null && a.sessionId === null && a.connectionId === null
           || validRoomId(a.playerId) && validRoomId(a.sessionId) && validRoomId(a.connectionId))) {
         socket.close(1008, 'Invalid socket attachment');
         continue;
       }
       const connection = {
-        socket, roomCode: a.roomCode, identity: null, connectionId: null,
+        socket, roomCode: a.roomCode, create: a.create === true, identity: null, connectionId: null,
         lastSeenAt: a.lastSeenAt, handshakeAt: a.handshakeAt,
         closed: false, rejected: a.rejected === true, handshakeTimer: null, livenessTimer: null,
       };
@@ -94,7 +95,7 @@ export class RoomDurableObject extends RoomCoordinator {
 
   attach(connection) {
     connection.socket.serializeAttachment({
-      schema: 1, roomCode: connection.roomCode,
+      schema: 1, roomCode: connection.roomCode, create: connection.create === true, // a Create socket (VIS-M3) awaiting its hello
       sessionId: connection.identity?.sessionId ?? null,
       playerId: connection.identity?.playerId ?? null,
       connectionId: connection.connectionId,
