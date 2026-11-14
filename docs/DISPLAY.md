@@ -2,7 +2,7 @@
 
 Sizes and looks that change what a player sees live in `src/shared/display.js` (`DISPLAY`, frozen, validated at load). Nothing here is read by the simulation, so a client may override these without desyncing a room or invalidating recorded difficulty. Anything that changes how the ball moves belongs in `TUNING` (docs/TUNING.md) instead. `createDisplay(overrides)` builds a validated variant; invalid values and unknown keys (typos) throw and are never partially applied.
 
-Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). The `loading` group is read by the planet behind the main menu and loading screen (`src/ui/Loading.jsx`, `src/render/planet-scene.js`); `mountUi(root, { display })` passes the live object, and the dev panel's "Loading screen preview" button (top left) shows that screen without a room. The `menu` group is read by the main menu (`src/ui/Landing.jsx`, VIS-M2), which copies it onto CSS variables, every frame while a live display object is in use. Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
+Consumers: `createAimGuide(THREE, display)` (arrow width, head, opacity, length fallback), `createInputAdapter({ display })` (the arrow length reported by `frameAim`) and `createGameRenderer({ display })` (ball scale). The `loading` group is read by the planet behind the main menu and loading screen (`src/ui/Loading.jsx`, `src/render/planet-scene.js`); `mountUi(root, { display })` passes the live object, and the dev panel's "Loading screen preview" button (top left) shows that screen without a room. The `menu` group is read by the main menu (`src/ui/Landing.jsx`, VIS-M2), which copies it onto CSS variables, every frame while a live display object is in use. The `environment` group (VIS-E #166) is read every frame by the course renderer's world atmosphere (`src/render/atmosphere.js`): Ares wind, and Luna dust and solar activity, drawn on courses whose world (`courseWorld`, `src/shared/worlds.js`) is Ares or Luna. That scenery is visual only: no physics, power-up or room state reads it. The gameplay weather is separate: the Precipitation power-up is Rain or Snow on Gaia (by the map's climate), a Dust Storm on Ares and the Solar Wind on Luna, with the same slippery effect, and Lightning is a Solar Bolt on Luna (`src/gameplay/world-weather.js`). No Ares or Luna course ships yet, so `npm run dev` with `?world` previews the scenery on any course: the world buttons in the top-left box switch it live, while gravity still waits for the putt restart. Each defaults to `DISPLAY`; the aim guide reads its display on every frame, so a live display object takes effect immediately.
 
 `aim.arrowMaxLength` here is the authoritative arrow length. The older TUNING `aim.arrowMaxLength` (300) is read by nothing; removing it changes the simulation fingerprint and is a separate follow-up.
 
@@ -40,6 +40,11 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `menu.stagger` | 0.07 | 0 to 0.3 | Main menu: seconds between each button dropping in (0 brings them in together). |
 | `menu.bob` | 2 | 0 to 8 | Main menu: idle bob of the big buttons, CSS px (0 holds them still; off under reduced motion). |
 | `menu.tilt` | 1.5 | 0 to 8 | Main menu: alternating lean of the buttons, degrees (0 keeps them straight). |
+| `environment.aresWind` | 1 | 0 to 2 | Ares courses: wind scenery strength, multiplier: speed and opacity of the wind streaks and blown dust, and the rust haze (0 hides it). |
+| `environment.aresWindDensity` | 1 | 0 to 2 | Ares courses: wind streaks and dust grains, multiplier of 1100 streaks and 2400 grains (plus 140 and 360 close around the camera). |
+| `environment.lunaDust` | 1 | 0 to 2 | Luna courses: brightness of the floating dust motes, multiplier (0 hides them). |
+| `environment.lunaDustDensity` | 1 | 0 to 2 | Luna courses: dust motes and sun particles, multiplier of 2400 motes and 600 particles (plus 420 and 60 close around the camera). |
+| `environment.lunaSolar` | 1 | 0 to 2 | Luna courses: solar activity strength, multiplier: the sun particles and the gold wash of each solar flare (0 hides them). |
 
 ## Development tuning panel
 
@@ -62,6 +67,8 @@ npm run config:report -- display --overrides exported-overrides.json   # validat
 ```
 
 Units and the restart rule are the only things written by hand (`config-meta.js`); `tests/config-meta.test.cjs` fails if a setting has none, if a setting is read by nothing (the one known exception is the superseded `TUNING.aim.arrowMaxLength`), or if the derivation stops following a supported pattern. `tests/config-reach.test.cjs` checks that every DISPLAY setting changes its real consumers and that representative TUNING settings reach the simulation, input and effects code.
+
+The Ares and Luna atmosphere (VIS-E #166) at the `environment.*` defaults above was tried in the local `?world` preview and approved by the owner on 2026-11-13 ("Looks good"). The Dust Storm (Ares), Snow (Frost Hollow) and Solar Wind (Luna) power-up looks were approved the same day. The Luna Solar Bolt was approved from a mockup of its colours and shape the same day; a live two-player check remains.
 
 The traceability view (units, live notes, readers, the differences list and the read-only simulation section) was tried in the local preview and approved by the owner on 2026-11-03.
 

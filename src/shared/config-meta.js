@@ -89,6 +89,11 @@ export const DISPLAY_UNITS = Object.freeze({
   'menu.stagger': 'seconds',
   'menu.bob': 'CSS px',
   'menu.tilt': 'degrees',
+  'environment.aresWind': 'multiplier',
+  'environment.aresWindDensity': 'multiplier of the base count',
+  'environment.lunaDust': 'multiplier',
+  'environment.lunaDustDensity': 'multiplier of the base count',
+  'environment.lunaSolar': 'multiplier',
 });
 
 /** How a change takes effect. */

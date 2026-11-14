@@ -14,6 +14,7 @@ import { SimulationEngine } from '../simulation/index.js';
 import { activatePowerup, addToInventory, armedState, auraOf, ballRadiusOf, clearAtLaunch, pendingState, powerupName, receiveEffect, rollPowerup, takeFromInventory } from '../gameplay/index.js';
 import { DEPLOYABLE_HIT } from '../gameplay/deployables.js';
 import { courseBounds, hazardHoldsBall, lightningImpulse } from '../gameplay/global-hazards.js';
+import { hazardVariant, isPrecipitationItem, precipitationVariant } from '../gameplay/world-weather.js';
 import { aimAtHole, EFFECT_FLASH_MS, environmentAwake, SINK_WAIT_MS, STALL_SECONDS, touchedBlocks } from './rules.js';
 
 /**
@@ -138,10 +139,13 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
       const item = player.inventory[index];
       if (disposed || !item || player.mode !== 'play') return out;
       const activation = activatePowerup(player, item, fxCount + 1);
-      if (activation.toast && !activation.deploy) out.toasts.push(activation.toast);
+      // VIS-E #166: Precipitation becomes this place's weather (Rain or Snow on Gaia by biome; Dust Storm, Solar Wind off Gaia),
+      // and Lightning is a Solar Bolt on Luna. Same effect everywhere; the toast names what happens here.
+      const hazardKind = activation.global ? (isPrecipitationItem(item) ? precipitationVariant(powerups.place).kind : activation.global.kind) : null;
+      if (activation.toast && !activation.deploy) out.toasts.push(hazardKind && activation.ok ? hazardVariant(hazardKind, powerups.place).toast : activation.toast);
       if (!activation.ok) return out;
       if (activation.deploy) { out.placement = { kind: activation.deploy.kind, index }; return out; } // G1e: the slot is spent by consumeItem once the host accepts the placement
-      if (activation.global) { out.globalHazard = { kind: activation.global.kind, index }; return out; }
+      if (activation.global) { out.globalHazard = { kind: hazardKind, index }; return out; }
       out.banners.push([name, activation.entry.banner + ' ACTIVATED', 'power', item]);
       if (activation.message) { fx = activation.message; fxCount = fx.id; }
       player.flashType = item; player.flashUntil = now + EFFECT_FLASH_MS;
@@ -169,7 +173,8 @@ export function createPutt({ definition, rule, puttIndex, id, name, playing, tim
 
     /** Spends the slot of a placed deployable (G1e) after the host accepted DEPLOY_OBJECT. Returns false when the slot no longer holds `kind`. */
     consumeItem(kind) {
-      const at = player.inventory.indexOf(kind);
+      // Either weather item is Precipitation, whichever weather it became here.
+      const at = isPrecipitationItem(kind) ? player.inventory.findIndex(isPrecipitationItem) : player.inventory.indexOf(kind);
       if (disposed || at < 0) return false;
       takeFromInventory(player.inventory, at);
       return true;

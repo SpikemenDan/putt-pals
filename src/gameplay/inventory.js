@@ -5,7 +5,9 @@
  */
 
 import { GameModes } from '../shared/session.js';
-import { spawnPool } from './catalog.js';
+import { POWERUP_CATALOG, spawnPool } from './catalog.js';
+import { weatherPool } from './world-weather.js';
+import { DEFAULT_WORLD } from '../shared/worlds.js';
 
 export const MAX_INVENTORY = 3;
 
@@ -14,19 +16,23 @@ const SOLO_MODES = Object.freeze([GameModes.PRACTICE, GameModes.PUTT_PRACTICE]);
 
 /**
  * Power-up rules for a session.
- * @param {{mode: string, rosterSize?: number, powerups?: boolean, maps?: number}} session
+ * @param {{mode: string, rosterSize?: number, powerups?: boolean, maps?: number, place?: {world: string, climate: string}}} session
  *   maps: maps in the game (Custom rules Game length, VIS-U); a multi-map game carries its inventory like a tournament.
  *   powerups=false is the No Power-Ups mode (GM1 supplies the flag): no boxes spawn.
- * @returns {{spawn: boolean, boxes: boolean, solo: boolean, carryover: boolean, pool: object[]}}
+ *   place: where the course is (src/gameplay/world-weather.js `coursePlace`, default warm Gaia); it picks how Precipitation
+ *   and Lightning show (Rain, Snow, Dust Storm, Solar Wind; Lightning or Solar Bolt; VIS-E #166).
+ * @returns {{spawn: boolean, boxes: boolean, solo: boolean, carryover: boolean, pool: object[], place: {world: string, climate: string}}}
  *   boxes: whether `?` blocks exist at all; false in the No Power-Ups mode, where they are hidden.
  *   carryover: tournaments keep the inventory across putts and rounds; every other mode resets it each putt.
+ *   pool: one Precipitation entry (`rain`); `snow` never spawns, because the place decides which weather it becomes.
  */
-export function powerupPolicy({ mode, rosterSize = 1, powerups = true, maps = 1 }, catalog) {
+export function powerupPolicy({ mode, rosterSize = 1, powerups = true, maps = 1, place = { world: DEFAULT_WORLD, climate: 'warm' } }, catalog = POWERUP_CATALOG) {
   const solo = rosterSize <= 1 || SOLO_MODES.includes(mode);
   // Practice modes always keep power-ups on, whatever the room flag says.
   if (SOLO_MODES.includes(mode)) powerups = true;
-  const pool = spawnPool({ powerups, solo }, catalog);
-  return { spawn: powerups && pool.length > 0, boxes: powerups, solo, carryover: TOURNAMENT_MODES.includes(mode) || (!SOLO_MODES.includes(mode) && mode !== GameModes.PONG && maps > 1), pool };
+  const pool = weatherPool(spawnPool({ powerups, solo }, catalog));
+  const carryover = TOURNAMENT_MODES.includes(mode) || (!SOLO_MODES.includes(mode) && mode !== GameModes.PONG && maps > 1);
+  return { spawn: powerups && pool.length > 0, boxes: powerups, solo, carryover, pool, place: { ...place } };
 }
 
 /** Inventory for the next putt: the carried slots in a tournament, empty otherwise. */

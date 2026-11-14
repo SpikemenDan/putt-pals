@@ -14,7 +14,7 @@ import { createInputAdapter } from '../input/index.js';
 import { DISPLAY } from '../shared/display.js';
 import { createRemoteInterpolator } from '../network/interpolation.js';
 import { createGameRenderer, createGameView, resolveRenderCourse } from '../render/index.js';
-import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, placementFloor, aimModeOf, auraSourcesOf, ballRadiusOf, getPowerup, powerupPolicy, startingInventory } from '../gameplay/index.js';
+import { DEPLOYABLE_PARAMS, activeDeployables, addToInventory, placementClear, placementFloor, aimModeOf, auraSourcesOf, ballRadiusOf, coursePlace, getPowerup, hazardVariant, powerupPolicy, startingInventory } from '../gameplay/index.js';
 import { BALL_RADIUS, MAX_DEPLOYABLES } from '../shared/constants.js';
 import { isColorIndex } from '../shared/colors.js';
 import { GameModes, SessionPhases } from '../shared/session.js';
@@ -211,7 +211,10 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
     const definition = data.definitions[s.mapIndex];
     const ownState = s.players[room.localId];
     const playing = !spectate && s.roster.includes(room.localId) && !ownState?.done;
-    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false, maps: seriesMaps(s.mode, s.rules) });
+    // VIS-E #166: the map's place (world and biome) picks how Precipitation and Lightning show; the ?world preview stands in for the world in solo rooms.
+    const place = { ...coursePlace(definition), ...(worldPreview?.active && s.roster.length <= 1 ? { world: worldPreview.world } : {}) };
+    puttPolicy = powerupPolicy({ mode: s.mode, rosterSize: s.roster.length, powerups: s.powerups !== false, maps: seriesMaps(s.mode, s.rules), place });
+    setLocal({ place });
     // The room's Custom rules (VIS-U): fixed at room creation and the same for every participant.
     const ruleTuning = rulesTuning(validRules(s.rules) ? s.rules : DEFAULT_RULES);
     aimWobble = AIM_WOBBLE[validRules(s.rules) ? s.rules.aimWobble : 'normal'];
@@ -378,7 +381,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
   function acceptGlobalHazard(kind) {
     hazardAwaiting = null;
     if (!putt?.consumeItem(kind)) return;
-    const entry = getPowerup(kind);
+    const entry = hazardVariant(kind, puttPolicy?.place);
     store.announce(s0name(), (entry?.banner || kind) + ' ACTIVATED', 'power');
     audio.handleEvent({ type: 'powerup', id: kind });
     setLocalIfChanged({ mode: putt.mode, strokes: putt.player.strokes, inventory: [...putt.player.inventory] });
@@ -554,7 +557,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
 
   const dispatch = createUiDispatcher(store, handle);
 
-  let webglFailed = false;
+  let webglFailed = false, stopScenery = null;
   function onCanvas(canvas) {
     if (!canvas || renderer || webglFailed || disposed) return;
     // Without WebGL (disabled, blocklisted driver, GPU-less machine) the UI keeps working without the 3D view.
@@ -568,6 +571,8 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
     }
     renderer.setCosmetics(cosmetics);
     renderer.canvasWidth = () => Math.floor(canvas.parentNode?.clientWidth || 0);
+    // VIS-E #166: the ?world preview also draws that world's scenery. Visual only, so it follows the world buttons at once.
+    if (worldPreview) { const scenery = () => renderer?.setSceneryWorld(worldPreview.active ? worldPreview.world : null); scenery(); stopScenery = worldPreview.subscribe(scenery); }
     view = createGameView({ renderer });
     const ray = new THREE.Raycaster();
     input = createInputAdapter({
@@ -657,6 +662,7 @@ export function createApp({ worldPreview = null, soloHazards = false, root, THRE
       unsubscribeInputAim?.();
       unbindPlacement?.();
       input?.dispose();
+      stopScenery?.();
       view?.dispose();
       root.removeEventListener('pointerover', onHover);
       root.removeEventListener('click', onPress);
