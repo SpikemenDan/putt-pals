@@ -177,6 +177,14 @@ The owner accepted these from the decision brief on 2026-11-11.
 - **Menu homes (VIS-M #174-#176).** The main menu keeps Solo, Party and Custom. Practice is a choice inside Solo beside Casual and Tournament, and includes Putt Pong practice. Putt Pong is a format in the Party vote, offered only when exactly two players are in the party. No Power-Ups becomes a Custom rule (the GM1 flag); today's lobby toggle stays until the Custom editor (VIS-U #168) exists.
 - **Weather power-up on Ares and Luna (VIS-E #166).** Superseded on 2026-11-12: the owner now wants Precipitation on every world with the same effect, shown per place (Rain on warm Gaia maps, Snow on cold ones, Dust Storm on Ares, Solar Wind on Luna), and Lightning shown as a Solar Bolt on Luna. The 2026-11-11 rule left it out of the Ares and Luna pools. Ares wind and Luna dust and solar activity stay visual-only scenery.
 
+### Decided 2026-11-14
+
+The owner settled the three defaults left open in VIS-E #166 (PR #221); all three stay as shipped.
+
+- **Off-Gaia slipperiness.** Dust Storm and Solar Wind use Rain's strength, for visual consistency. It matters little for play: weather belongs to the putt it was cast on and clears when the next putt starts (today it can also end sooner, after `globalHazards.durationSeconds`, 20 s).
+- **How often Precipitation appears.** One Precipitation item in boxes on every world and map, as often as Rain or Snow each appeared before (half of the two together).
+- **Cold maps.** Only Frost Hollow counts as cold for now; more cold maps will be tagged with a course `climate` as they are added.
+
 ## Technology
 
 | Responsibility | Choice (installed) |
