@@ -147,10 +147,29 @@ function fakeClock() {
     assert.ok(stage?.querySelector('canvas[data-ui=loading-planet]'), 'the planet stands behind it');
     assert.equal(stage.getAttribute('aria-hidden'), 'true', 'decorative art is hidden from assistive tech');
     assert.equal(loading.querySelectorAll('[data-ui=loading-balls] i').length, 3, 'three balls, no putts or cups');
+    assert.equal(loading.style.getPropertyValue('--ball-pulse'), '1.6s', 'display.loading.ballPulse reaches the progress balls');
+    assert.equal(loading.style.getPropertyValue('--ball-bounce'), '3px', 'display.loading.ballBounce reaches the progress balls');
     await act(async () => t.store.setLocal({ connecting: false }));
     assert.equal(t.within('[data-ui=loading]').dataset.state, 'done', 'stays up, all lit, for the finish pause');
     await act(async () => { await new Promise(r => setTimeout(r, 400)); });
     assert.ok(t.within('[data-ui=loading]'), 'still up partway through the default 0.8 s');
+    await waitGone(t, 1500);
+    await t.teardown();
+  });
+
+  await scenario('loading screen: a live display object retimes the progress balls without a re-render', async () => {
+    const { createDisplay } = await import('../src/shared/display.js');
+    const live = structuredClone(createDisplay());
+    live.loading.ballPulse = 2.4; live.loading.ballBounce = 0;
+    const t = await setup({ mountProps: { display: live } });
+    await act(async () => t.store.setLocal({ active: false, connecting: true }));
+    const loading = t.within('[data-ui=loading]');
+    assert.equal(loading.style.getPropertyValue('--ball-pulse'), '2.4s');
+    assert.equal(loading.style.getPropertyValue('--ball-bounce'), '0px');
+    live.loading.ballBounce = 7;
+    await act(async () => { await new Promise(r => setTimeout(r, 40)); });
+    assert.equal(loading.style.getPropertyValue('--ball-bounce'), '7px', 'the dev tuner edits the live object in place');
+    await act(async () => t.store.setLocal({ connecting: false }));
     await waitGone(t, 1500);
     await t.teardown();
   });

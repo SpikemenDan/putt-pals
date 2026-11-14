@@ -10,15 +10,33 @@
 .copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px}
 .brand{margin:0;font:400 clamp(52px,9.6vw,116px)/1 var(--pp-display,'Titan One','Arial Black',sans-serif);letter-spacing:2px;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:6px 7px 0 var(--ink)}
 .status{margin:0;font:700 clamp(17px,2.6vw,24px)/1.2 var(--body);letter-spacing:.5px;color:#fff;text-shadow:2px 3px 0 var(--ink)}
-/* Progress: three golf balls. A highlight runs across them left to right, again and again, until the game is ready; then all three stay lit. */
-.balls{display:flex;gap:clamp(14px,2.4vw,24px);margin-top:6px}
-.ball{--size:clamp(30px,4vw,42px);display:block;width:var(--size);height:var(--size);border-radius:50%;border:3px solid var(--ink);box-sizing:border-box;
-  background:radial-gradient(circle at 50% 50%,rgba(20,16,42,.2) 0 22%,transparent 26%) 0 0/28% 28%,radial-gradient(circle at 34% 28%,#fff 0 30%,#d9dfee 72%,#aeb7d0);
-  filter:brightness(.62) saturate(.6);box-shadow:2px 3px 0 var(--ink);animation:sweep 1.35s linear infinite}
-.ball:nth-child(2){animation-delay:.225s}
-.ball:nth-child(3){animation-delay:.45s}
-@keyframes sweep{0%,46%,100%{filter:brightness(.62) saturate(.6);transform:none;box-shadow:2px 3px 0 var(--ink)}14%{filter:brightness(1.08);transform:translateY(-5px) scale(1.14);box-shadow:2px 3px 0 var(--ink),0 0 0 4px var(--yellow)}}
-.loading[data-state="done"] .ball{animation:none;filter:brightness(1.08);box-shadow:2px 3px 0 var(--ink),0 0 0 4px var(--yellow)}
+/* Progress: three golf balls. A glow runs across them left to right, again and again, until the game is ready; then all three stay lit.
+   Each ball is a clean cel-shaded sphere (light face, one soft shadow crescent, a small glint, a few tidy dimples). The pulse only
+   fades opacity and moves transforms, so it stays smooth: ::before is the yellow ring and halo, ::after the dimming veil.
+   --ball-pulse and --ball-bounce come from display.loading (Loading.jsx); the fallbacks equal the shipped defaults. */
+.balls{display:flex;gap:clamp(14px,2.4vw,24px);margin-top:6px;--pulse:var(--ball-pulse,1.6s);--lift:var(--ball-bounce,3px)}
+.ball{--size:clamp(30px,4vw,42px);--delay:0s;position:relative;display:block;width:var(--size);height:var(--size);border-radius:50%;border:3px solid var(--ink);box-sizing:border-box;
+  background:
+    radial-gradient(ellipse 15% 10% at 31% 24%,#fff 0 60%,transparent 100%),
+    radial-gradient(circle at 50% 50%,rgba(30,36,72,.12) 0 4.5%,transparent 5.5%),
+    radial-gradient(circle at 30% 52%,rgba(30,36,72,.1) 0 4%,transparent 5%),
+    radial-gradient(circle at 70% 48%,rgba(30,36,72,.14) 0 4.5%,transparent 5.5%),
+    radial-gradient(circle at 40% 72%,rgba(30,36,72,.13) 0 4%,transparent 5%),
+    radial-gradient(circle at 62% 70%,rgba(30,36,72,.15) 0 4%,transparent 5%),
+    radial-gradient(circle at 56% 30%,rgba(30,36,72,.08) 0 4%,transparent 5%),
+    radial-gradient(circle at 36% 30%,#fdfdff 0 46%,#e4e8f3 66%,#bcc4da 100%);
+  box-shadow:2px 3px 0 var(--ink);will-change:transform;animation:lift var(--pulse) ease-in-out var(--delay) infinite}
+.ball::before,.ball::after{content:"";position:absolute;inset:-3px;border-radius:50%;pointer-events:none;animation:inherit;animation-name:glow}
+.ball::before{box-shadow:0 0 0 4px var(--yellow),0 0 16px 5px rgba(255,240,170,.6);opacity:0}
+.ball::after{background:#0b1030;opacity:.4;animation-name:veil}
+.ball:nth-child(2){--delay:calc(var(--pulse) * .2)}
+.ball:nth-child(3){--delay:calc(var(--pulse) * .4)}
+@keyframes lift{0%,60%,100%{transform:none}30%{transform:translateY(calc(var(--lift) * -1)) scale(1.06)}}
+@keyframes glow{0%,60%,100%{opacity:0}20%,40%{opacity:1}}
+@keyframes veil{0%,60%,100%{opacity:.4}20%,40%{opacity:0}}
+.loading[data-state="done"] .ball{animation:none;transform:none}
+.loading[data-state="done"] .ball::before{animation:none;opacity:1}
+.loading[data-state="done"] .ball::after{animation:none;opacity:0}
 .tip{position:relative;margin:auto 0 0;max-width:min(90vw,520px);padding:14px 18px;background:var(--paper);color:var(--ink);border:var(--line) solid var(--ink);border-radius:12px;box-shadow:var(--shadow);font:700 18px/1.3 var(--body)}
 .tip b{background:var(--ink);color:var(--yellow);padding:2px 8px;border-radius:6px;margin-right:8px;font:400 15px var(--display);letter-spacing:2px}
-@media (prefers-reduced-motion:reduce){.ball{animation:none;filter:none}.loading{animation:none}}
+@media (prefers-reduced-motion:reduce){.ball,.ball::before,.ball::after{animation:none}.ball::after{opacity:0}.loading{animation:none}}

@@ -80,6 +80,8 @@ export const DISPLAY_UNITS = Object.freeze({
   'loading.planes': 'count',
   'loading.boats': 'count',
   'loading.satellites': 'count',
+  'loading.ballPulse': 'seconds',
+  'loading.ballBounce': 'CSS px',
   'space.orbitSeconds': 'seconds',
   'space.travelSeconds': 'seconds',
   'space.aresZoom': 'fraction, 0 to 1',

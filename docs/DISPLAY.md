@@ -31,6 +31,8 @@ Units: world units (ball radius 5) and multipliers. Opacity is 0..1. The shaft h
 | `loading.planes` | 3 | 0 to 12 | Loading screen: planes flying between cities with contrails (whole planes; 0 hides them). |
 | `loading.boats` | 9 | 0 to 20 | Loading screen: boats on the sea (whole boats; 0 hides them). |
 | `loading.satellites` | 2 | 0 to 8 | Loading screen: satellites orbiting the planet (whole satellites; 0 hides them). |
+| `loading.ballPulse` | 1.6 | 0.6 to 4 | Loading screen: seconds for the glow to run once across the three progress balls. Off under reduced motion. |
+| `loading.ballBounce` | 3 | 0 to 10 | Loading screen: CSS px each progress ball lifts while it glows (0 keeps them still). |
 | `space.orbitSeconds` | 120 | 20 to 600 | Destination view (Solo → Where to?): seconds Luna takes to orbit Gaia once. |
 | `space.travelSeconds` | 1.8 | 0.4 to 6 | Destination view: seconds to fly between Gaia and Luna; trips to and from Ares take 1.6 times as long. |
 | `space.aresZoom` | 0.5 | 0 to 1 | Destination view: how strongly the lens widens then zooms in on the long Ares trips (0 is a plain glide). |

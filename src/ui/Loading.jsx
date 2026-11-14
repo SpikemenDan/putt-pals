@@ -37,6 +37,28 @@ export function PlanetStage() {
 }
 
 /**
+ * Copies `display.loading.ballPulse` and `ballBounce` onto the loading screen as CSS variables for the progress balls. The shipped
+ * DISPLAY is frozen, so that is done once; the development tuner's live object is re-read every frame while the screen shows.
+ */
+function useBallLook(ref, display) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const apply = () => {
+      el.style.setProperty('--ball-pulse', display.loading.ballPulse + 's');
+      el.style.setProperty('--ball-bounce', display.loading.ballBounce + 'px');
+    };
+    apply();
+    const win = el.ownerDocument.defaultView;
+    if (Object.isFrozen(display.loading) || !win?.requestAnimationFrame) return undefined;
+    let id = 0;
+    const tick = () => { apply(); id = win.requestAnimationFrame(tick); };
+    id = win.requestAnimationFrame(tick);
+    return () => win.cancelAnimationFrame(id);
+  }, [ref, display]);
+}
+
+/**
  * Loading screen shown while a room is being opened (M1c, VIS-M1): over the planet stage, the brand, a rotating gameplay tip and three golf
  * balls with a highlight running across them until the game is ready. When `done` is set all three stay lit for
  * `display.loading.finishTime` seconds, then `onDone` closes the screen. Mounted only while loading, so its timers never outlive the wait.
@@ -46,6 +68,8 @@ export function Loading({ done = false, onDone }) {
   const { display } = useUiContext();
   const [load] = useState(() => loads++);
   const [step, setStep] = useState(0);
+  const root = useRef(null);
+  useBallLook(root, display);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   useEffect(() => {
@@ -58,7 +82,7 @@ export function Loading({ done = false, onDone }) {
     return () => clearTimeout(id);
   }, [done, display]);
   return (
-    <div className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
+    <div ref={root} className={styles.loading} role="status" aria-live="polite" data-ui="loading" data-state={done ? 'done' : 'loading'}>
       <div className={styles.copy}>
         <h2 className={styles.brand} data-ui="loading-title">Putt Planet</h2>
         <p className={styles.status}>Setting up your game…</p>

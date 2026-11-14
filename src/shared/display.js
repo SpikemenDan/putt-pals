@@ -35,6 +35,8 @@ export const DISPLAY_FIELDS = Object.freeze([
   ['loading.planes', 0, 12, 'Loading screen: planes flying between cities, with contrails (rounded to whole planes; 0 hides them).'],
   ['loading.boats', 0, 20, 'Loading screen: boats on the sea (rounded to whole boats; 0 hides them).'],
   ['loading.satellites', 0, 8, 'Loading screen: satellites orbiting the planet (rounded to whole satellites; 0 hides them).'],
+  ['loading.ballPulse', 0.6, 4, 'Loading screen: seconds for the glow to run once across the three progress balls (lower is faster). Off under reduced motion.'],
+  ['loading.ballBounce', 0, 10, 'Loading screen: how far each progress ball lifts while it glows, in CSS px (0 keeps them still).'],
   ['space.orbitSeconds', 20, 600, 'Destination view: seconds Luna takes to orbit Gaia once (slow by default).'],
   ['space.travelSeconds', 0.4, 6, 'Destination view: seconds the camera takes to fly between Gaia and Luna; the long trips to and from Ares take 1.6 times as long.'],
   ['space.aresZoom', 0, 1, 'Destination view: how strongly the lens widens and then zooms in on the long trips to and from Ares (0 is a plain glide).'],
@@ -55,7 +57,7 @@ export const DISPLAY_FIELDS = Object.freeze([
 export const DEFAULT_DISPLAY = {
   ball: { visualScale: 1 },
   aim: { arrowMaxLength: 100, arrowShaftHalfWidth: 2.6, arrowHeadHalfWidth: 7, arrowHeadLength: 14, arrowOpacity: 0.92 },
-  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2 },
+  loading: { spinSpeed: 4, axisTilt: 12, horizonHeight: 0.48, cameraAltitude: 0.4, cloudCover: 0.6, cloudDrift: 1.4, finishTime: 0.8, atmosphere: 0.75, atmosphereHeight: 0.62, citySize: 1, lunaSize: 2.6, outlineWidth: 1.6, planes: 3, boats: 9, satellites: 2, ballPulse: 1.6, ballBounce: 3 },
   space: { orbitSeconds: 120, travelSeconds: 1.8, aresZoom: 0.5, nebula: 0.6, distance: 1 },
   menu: { buttonScale: 1, stagger: 0.07, bob: 2, tilt: 1.5 },
   environment: { aresWind: 1, aresWindDensity: 1, lunaDust: 1, lunaDustDensity: 1, lunaSolar: 1 },
